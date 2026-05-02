@@ -8,13 +8,13 @@ A Claude Code plugin scaffold that implements best practices from [Anthropic](ht
 
 Version: `1.1.4`
 
-This repo has been tested as a local Claude Code plugin and as a scaffolded project install.
+Canonical repository:
 
-Latest smoke target before the v4 rename:
-
-```text
-<local scaffold test project>
+```bash
+git clone https://github.com/cwijayasundara/claude_harness_eng_v4.git
 ```
+
+This repo has been tested as a local Claude Code plugin, a local marketplace plugin, and a scaffolded project install. It is currently checked in on `main` at GitHub with the v4 scaffold, optional tracker orchestration skills, and tracker templates.
 
 Verified:
 
@@ -25,6 +25,8 @@ Verified:
 - Hook JavaScript files pass `node --check`.
 - Simple SDLC smoke created BRD-derived stories, dependency graph, valid `features.json`, and minimal design contracts.
 - Brownfield smoke produced `codebase-map.md`, `architecture-map.md`, `test-map.md`, `risk-map.md`, and `change-strategy.md`.
+- Optional tracker mode scaffolds `.claude/tracker-config.json`, `.claude/state/tracker-runs/`, and the `tracker` / `tracker-publish` skill pair.
+- A companion `symphony_clone` orchestrator has been prototyped outside this plugin repo as a Docker-capable process that polls Linear, launches Claude Code workspaces, pushes branches, creates GitHub PRs, and posts proof comments.
 
 Known caveat: non-interactive `claude -p` scaffold runs can be interrupted by upstream API retries. The scaffold copy path is validated, but long runs may need a retry or completion from the copied scaffold instructions if the API terminates mid-run.
 
@@ -55,7 +57,7 @@ Use this when developing the harness or bootstrapping one fresh project.
 
 ```bash
 # Clone the harness
-git clone <repo-url> ~/claude_harness_eng_v4
+git clone https://github.com/cwijayasundara/claude_harness_eng_v4.git ~/claude_harness_eng_v4
 
 # Start Claude Code from your target project with the harness plugin loaded
 cd /path/to/fresh-project
@@ -206,6 +208,22 @@ After `/spec` and `/design` are approved, publish one tracker issue per dependen
 The tracker issue represents a group such as `A` or `B`; the external orchestrator schedules groups, while `/auto --group <id>` creates the internal Claude Code agent team for the group's independent stories.
 
 Tracker orchestration is optional. The default harness remains local-only and does not require Linear, Jira, Docker, or the standalone orchestrator.
+
+Tracker mode adds these project-local files:
+
+```text
+.claude/tracker-config.json
+.claude/state/tracker-map.json        # written by /tracker-publish
+.claude/state/tracker-runs/<group>/   # result contract read by the orchestrator
+```
+
+The standalone orchestrator expects Claude Code to write:
+
+```text
+.claude/state/tracker-runs/<group>/result.json
+```
+
+with status `human_review` or `blocked`, proof summaries, test results, reports, branch, and commit metadata.
 
 ### Path A: Start From a BRD
 

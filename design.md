@@ -1,8 +1,12 @@
-# Claude Harness Engine v1 — Architecture Reference
+# Claude Harness Engine v4 — Architecture Reference
 
 Comprehensive design document for the Claude Harness Engine: a GAN-inspired orchestration system for autonomous, long-running application development with Claude Code.
 
 Copied into target projects by `/scaffold`.
+
+Current scaffold version: `1.1.4`.
+
+Canonical repository: `https://github.com/cwijayasundara/claude_harness_eng_v4.git`.
 
 Based on:
 - [Anthropic: Harness Design for Long-Running Apps](https://www.anthropic.com/engineering/harness-design-long-running-apps)
@@ -79,14 +83,15 @@ Together: the GAN ensures honest verification at each step, and the ratchet ensu
          |                  |                    |
          v                  v                    v
 +---------------------------------------------------------------------+
-|                   ENFORCEMENT LAYER (12 hooks)                       |
+|                   ENFORCEMENT LAYER (15 hooks)                       |
 |  All hooks include remediation instructions ("Fix: ...")             |
 |                                                                      |
 |  Security: scope-directory | protect-env | detect-secrets            |
 |  Quality:  lint-on-save | typecheck | check-architecture             |
 |            check-function-length | check-file-length                 |
-|  Gates:    pre-commit-gate | sprint-contract-gate                    |
+|  Gates:    enforce-length-pre | pre-commit-gate | sprint-contract-gate|
 |  Teams:    teammate-idle-check                                       |
+|  Review:   track-writes | require-review                            |
 |  Info:     task-completed                                            |
 +--------+------------------+--------------------+--------------------+
          |                  |                    |
@@ -106,7 +111,7 @@ Together: the GAN ensures honest verification at each step, and the ratchet ensu
 | **Human Interface** | Constraints, steering, configuration | Human edits `program.md` mid-run |
 | **Orchestration** | Pipeline sequencing, iteration control, mode selection | `/auto` skill (reads `program.md` every iteration) |
 | **Agent** | Code generation, evaluation, design scoring, security scanning | 7 specialized agents with model tiering |
-| **Enforcement** | Real-time quality gates on every edit and commit | 12 hooks (block, warn, or auto-fix) |
+| **Enforcement** | Real-time quality gates on every edit and commit | 15 hooks (block, warn, auto-fix, or review-enforce) |
 | **State** | Session chaining, learned rules, feature tracking | Append-only files (never lose progress) |
 
 ---
@@ -459,12 +464,93 @@ Full templates in `code-gen/references/api-integration-patterns.md`.
 
 ---
 
-## 9. Hook Enforcement
+## 9. Optional Tracker Orchestration
 
-All 12 hooks include **remediation instructions** ("Fix: ...") to guide agents toward corrections rather than just blocking.
+Tracker orchestration is an optional add-on. The default harness remains local-only: `/brd`, `/spec`, `/design`, and `/auto` run inside one Claude Code workspace without requiring Linear, Jira, Dockerized orchestration, or a server process.
+
+When enabled during `/scaffold`, the harness adds:
+
+```text
+.claude/tracker-config.json
+.claude/state/tracker-runs/
+```
+
+After `/spec` and `/design` are human-approved, `/tracker-publish` mirrors each dependency group into a Linear/Jira-style tracker issue. A group issue carries the harness command, story list, dependencies, feature IDs, and expected proof:
+
+```text
+/auto --group A
+```
+
+Recommended responsibility split:
+
+| Component | Responsibility |
+|---|---|
+| Harness planning | Creates BRD, stories, dependency graph, `features.json`, and design contracts |
+| Tracker system | Holds visible group queue, blocker links, status workflow, proof comments, and human review state |
+| External orchestrator | Polls or receives tracker events, claims eligible unblocked groups, creates isolated workspaces, launches Claude Code, and records run state |
+| Claude Code workspace | Runs `/auto --group <id>`, forms the internal agent team, implements/tests/reviews, commits the branch, and writes the result contract |
+| Delivery repo | Receives the branch/PR; human review and merge decide when tracker work is actually `Done` |
+
+The result contract lives at:
+
+```text
+.claude/state/tracker-runs/<group>/result.json
+```
+
+Success shape:
+
+```json
+{
+  "group": "A",
+  "status": "human_review",
+  "summary": "Implemented group A.",
+  "branch": "agent/ENG-101",
+  "commit": "abc123",
+  "tests": ["npm test: passed"],
+  "reports": ["specs/reviews/evaluator-report.md"],
+  "features_updated": ["F001"]
+}
+```
+
+Blocked shape:
+
+```json
+{
+  "group": "A",
+  "status": "blocked",
+  "summary": "Could not complete group A.",
+  "blocker": "Missing required API credential for integration verification.",
+  "tests": [],
+  "reports": []
+}
+```
+
+The current companion `symphony_clone` prototype lives outside this plugin repo. Its hardened operating model is:
+
+- Read secrets from `.env`, never from committed scaffold files.
+- Poll Linear for ready issues with the configured ready label.
+- Resolve Linear states using workspace-specific aliases, e.g. `Human Review` -> `In Review`.
+- Persist run state and retry metadata in `STATE_DIR/state.json`.
+- Write JSONL logs to `LOG_ROOT/orchestrator.jsonl`.
+- Optionally expose `/`, `/health`, and `/state` when `STATUS_PORT` is set.
+- Retry failed runs with exponential backoff before moving the tracker issue to a blocked state.
+
+Safety boundaries:
+
+- Do not dispatch work unless tracker state/label and local dependency rules both allow it.
+- Do not mark work `Done` automatically.
+- Do not skip `/design`, sprint contracts, evaluator gates, security review, or human PR review.
+- Prefer one tracker issue per dependency group; `/auto` handles story-level agent teams inside the workspace.
+
+---
+
+## 10. Hook Enforcement
+
+All 15 hooks include **remediation instructions** ("Fix: ...") to guide agents toward corrections rather than just blocking.
 
 | Hook | Trigger | Behavior |
 |------|---------|----------|
+| `enforce-length-pre.js` | PreToolUse Write/Edit | Block — proposed source edit would exceed hard file length limit |
 | `scope-directory.js` | Edit/Write | Block — writes outside project |
 | `protect-env.js` | Edit/Write | Block — .env modifications (allows .env.example) |
 | `detect-secrets.js` | Edit/Write | Block — API keys, tokens, PII |
@@ -476,13 +562,15 @@ All 12 hooks include **remediation instructions** ("Fix: ...") to guide agents t
 | `pre-commit-gate.js` | Bash (git commit) | Block — full architecture scan |
 | `sprint-contract-gate.js` | Bash (git commit) | Block — evaluator verdict required |
 | `teammate-idle-check.js` | TeammateIdle | Block — no tests = no idle |
+| `track-writes.js` | Edit/Write | Info — records production files that need reviewer agents |
+| `require-review.js` | Stop | Block — production edits require clean-code and security reviewer invocation |
 | `task-completed.js` | TaskCompleted | Info — architecture scan + /review reminder |
 
 Complemented by official `security-guidance` plugin for real-time XSS/eval/unsafe-code pattern detection on edits.
 
 ---
 
-## 10. State Files
+## 11. State Files
 
 | File | Growth | Purpose |
 |------|--------|---------|
@@ -497,10 +585,12 @@ Complemented by official `security-guidance` plugin for real-time XSS/eval/unsaf
 | `sprint-contracts/` | One file per group | Negotiated done-criteria; immutable after negotiation |
 | `specs/reviews/eval-scores.json` | Appended per critique | User-visible design scores over time |
 | `calibration-profile.json` | Edited by human/scaffold | Scoring weights, threshold, plateau detection config |
+| `.claude/state/tracker-map.json` | Updated by `/tracker-publish` | Maps local dependency groups and stories to Linear/Jira issue keys |
+| `.claude/state/tracker-runs/<group>/result.json` | Written by `/auto --group <id>` in tracker mode | Proof contract consumed by the external orchestrator |
 
 ---
 
-## 11. Superpowers Integration
+## 12. Superpowers Integration
 
 The harness integrates with the [Superpowers](https://github.com/obra/superpowers) plugin (by Jesse Vincent) to augment key pipeline stages with proven developer workflow patterns.
 
@@ -544,7 +634,7 @@ The harness handles **what** to build (SDLC pipeline, sprint contracts, ratchet 
 
 ---
 
-## 12. Pipeline Commands
+## 13. Pipeline Commands
 
 | Command | Purpose | Human Gate? | Superpowers |
 |---------|---------|-------------|-------------|
@@ -562,12 +652,14 @@ The harness handles **what** to build (SDLC pipeline, sprint contracts, ratchet 
 | `/refactor` | Quality-driven refactoring | No | writing-plans |
 | `/improve` | Feature enhancement | No | — |
 | `/lint-drift` | Entropy scanner for pattern drift | No | — |
+| `/tracker` | Optional Linear/Jira orchestration overview | Yes | — |
+| `/tracker-publish` | Publish approved dependency groups to tracker issues | Yes | — |
 
 Phases 1-3 (`/brd`, `/spec`, `/design`) require human approval. Phases 4-8 run autonomously via `/auto`.
 
 ---
 
-## 13. Quality Principles
+## 14. Quality Principles
 
 Detailed rules in `.claude/skills/code-gen/SKILL.md`. Summary:
 

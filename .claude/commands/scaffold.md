@@ -1,6 +1,6 @@
 ---
 name: scaffold
-description: Initialize a new project with the Claude Harness Engine v1 scaffold.
+description: Initialize a new project with the Claude Harness Engine v4 scaffold.
 ---
 
 # /scaffold — Project Initialization
@@ -320,7 +320,7 @@ Architecture reference document (~200-300 lines):
 - System architecture ASCII diagram
 - Karpathy ratchet loop diagram
 - Agent roles table (7 agents)
-- Hook execution order (12 hooks)
+- Hook execution order (15 hooks)
 - State files description
 - Sprint contract format summary
 - Quality principles (6)
@@ -328,7 +328,7 @@ Architecture reference document (~200-300 lines):
 ### design.md Template
 
 ```markdown
-# Claude Harness Engine v1 — Design Reference
+# Claude Harness Engine v4 — Design Reference
 
 ## System Architecture
 
@@ -524,13 +524,13 @@ next_action: Run /brd to start
 
 Print:
 ```
-✓ Claude Harness Engine v1 scaffolded successfully.
+✓ Claude Harness Engine v4 scaffolded successfully.
 
 Installed:
   7 agents      → .claude/agents/
-  21 skills     → .claude/skills/
-  12 hooks      → .claude/hooks/
-  8 templates   → .claude/templates/
+  23 skills     → .claude/skills/
+  15 hooks      → .claude/hooks/
+  10 templates  → .claude/templates/
   6 state files → .claude/state/
   1 manifest    → .claude/.claude-plugin/plugin.json
 
