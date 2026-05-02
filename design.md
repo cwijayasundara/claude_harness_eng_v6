@@ -525,7 +525,7 @@ Blocked shape:
 }
 ```
 
-The current companion `symphony_clone` prototype lives outside this plugin repo. Its hardened operating model is:
+The companion `symphony_clone` orchestrator is checked into this repo as a sibling project, not inside `.claude/`. It is versioned with the scaffold but is not copied into target projects by `/scaffold`. Its hardened operating model is:
 
 - Read secrets from `.env`, never from committed scaffold files.
 - Poll Linear for ready issues with the configured ready label.

@@ -1,0 +1,37 @@
+services:
+  symphony-clone:
+    build: .
+    env_file:
+      - .env
+    environment:
+      TRACKER_PROVIDER: ${TRACKER_PROVIDER:-linear}
+      LINEAR_API_KEY: ${LINEAR_API_KEY}
+      LINEAR_PROJECT_SLUG: ${LINEAR_PROJECT_SLUG}
+      TARGET_REPO_URL: ${TARGET_REPO_URL}
+      WORKSPACE_ROOT: /workspaces
+      READY_STATE: ${READY_STATE:-Ready for Agent}
+      RUNNING_STATE: ${RUNNING_STATE:-In Progress}
+      REVIEW_STATE: ${REVIEW_STATE:-Human Review}
+      BLOCKED_STATE: ${BLOCKED_STATE:-Blocked}
+      REVIEW_STATE_CANDIDATES: ${REVIEW_STATE_CANDIDATES:-Human Review,In Review,Review}
+      BLOCKED_STATE_CANDIDATES: ${BLOCKED_STATE_CANDIDATES:-Blocked,Canceled,Cancelled}
+      TERMINAL_STATES: ${TERMINAL_STATES:-Done,Closed,Canceled,Cancelled,Duplicate}
+      READY_LABEL: ${READY_LABEL:-agent-ready}
+      MAX_CONCURRENT_RUNS: ${MAX_CONCURRENT_RUNS:-1}
+      POLL_INTERVAL_MS: ${POLL_INTERVAL_MS:-60000}
+      MAX_RETRY_ATTEMPTS: ${MAX_RETRY_ATTEMPTS:-3}
+      RETRY_BASE_DELAY_MS: ${RETRY_BASE_DELAY_MS:-60000}
+      RETRY_MAX_DELAY_MS: ${RETRY_MAX_DELAY_MS:-900000}
+      STATE_DIR: ${STATE_DIR:-/workspaces/.symphony}
+      LOG_ROOT: ${LOG_ROOT:-/workspaces/.symphony/logs}
+      STATUS_PORT: ${STATUS_PORT:-0}
+      CLAUDE_COMMAND: ${CLAUDE_COMMAND:-claude --print --permission-mode bypassPermissions}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+    volumes:
+      - symphony-workspaces:/workspaces
+      - ${HOME}/.claude:/root/.claude:ro
+      - ${HOME}/.ssh:/root/.ssh:ro
+    restart: unless-stopped
+
+volumes:
+  symphony-workspaces:

@@ -11,3 +11,9 @@ __pycache__/
 .env
 .env.local
 .env.*.local
+.symphony/
+symphony_clone/.symphony/
+symphony_clone/workspaces/
+symphony_clone/logs/
+*.jsonl
+!.claude/state/*.jsonl

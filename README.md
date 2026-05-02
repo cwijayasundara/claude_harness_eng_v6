@@ -14,7 +14,7 @@ Canonical repository:
 git clone https://github.com/cwijayasundara/claude_harness_eng_v4.git
 ```
 
-This repo has been tested as a local Claude Code plugin, a local marketplace plugin, and a scaffolded project install. It is currently checked in on `main` at GitHub with the v4 scaffold, optional tracker orchestration skills, and tracker templates.
+This repo has been tested as a local Claude Code plugin, a local marketplace plugin, and a scaffolded project install. It now contains both the v4 scaffold and the compatible optional `symphony_clone` tracker orchestrator.
 
 Verified:
 
@@ -26,7 +26,7 @@ Verified:
 - Simple SDLC smoke created BRD-derived stories, dependency graph, valid `features.json`, and minimal design contracts.
 - Brownfield smoke produced `codebase-map.md`, `architecture-map.md`, `test-map.md`, `risk-map.md`, and `change-strategy.md`.
 - Optional tracker mode scaffolds `.claude/tracker-config.json`, `.claude/state/tracker-runs/`, and the `tracker` / `tracker-publish` skill pair.
-- A companion `symphony_clone` orchestrator has been prototyped outside this plugin repo as a Docker-capable process that polls Linear, launches Claude Code workspaces, pushes branches, creates GitHub PRs, and posts proof comments.
+- `symphony_clone/` is checked in as a separate Docker-capable orchestrator project. It polls Linear, launches Claude Code workspaces, pushes branches, creates GitHub PRs, and posts proof comments.
 
 Known caveat: non-interactive `claude -p` scaffold runs can be interrupted by upstream API retries. The scaffold copy path is validated, but long runs may need a retry or completion from the copied scaffold instructions if the API terminates mid-run.
 
@@ -48,6 +48,37 @@ Known caveat: non-interactive `claude -p` scaffold runs can be interrupted by up
 - **Self-healing** — 10 error categories with targeted fixes before reverting
 - **Superpowers integration** — Brainstorming, systematic debugging, TDD, and verification workflows at key pipeline stages
 - **4 execution modes** — Full ($100-300), Lean ($30-80), Solo ($5-15), Turbo ($30-50)
+
+## Repository Layout
+
+This repository has two related deliverables:
+
+```text
+.claude/          Claude Code plugin/scaffold source
+CLAUDE.md         Project-local Claude guide copied by the scaffold
+design.md         Architecture reference copied/read by scaffolded projects
+README.md         Repository setup and user guide
+symphony_clone/   Optional standalone tracker orchestrator
+```
+
+The scaffolded target project receives the Claude Harness project contract, not the orchestrator app:
+
+```text
+Copied/generated into target repos:
+  .claude/
+  CLAUDE.md
+  design.md
+  project-manifest.json
+  calibration-profile.json when UI scoring is enabled
+  init.sh
+  specs/ and state/output directories
+  .claude/tracker-config.json only when tracker mode is enabled
+
+Not copied into target repos:
+  symphony_clone/
+```
+
+`symphony_clone` runs separately. It clones target repos on demand, then invokes Claude Code inside those isolated workspaces.
 
 ## Installation
 
@@ -224,6 +255,40 @@ The standalone orchestrator expects Claude Code to write:
 ```
 
 with status `human_review` or `blocked`, proof summaries, test results, reports, branch, and commit metadata.
+
+### Running the Optional Orchestrator
+
+Use `symphony_clone` only after a target repo has been scaffolded and tracker mode has been enabled.
+
+Minimal flow:
+
+```bash
+# 1. Scaffold a target repo and run /spec + /design there.
+cd /path/to/target-repo
+claude --plugin-dir ~/claude_harness_eng_v4/.claude
+# then run /claude_harness_eng_v4:scaffold, /spec, /design, /tracker-publish
+
+# 2. Configure the external orchestrator from this repo.
+cd ~/claude_harness_eng_v4/symphony_clone
+cp .env.example .env
+$EDITOR .env
+
+# 3. Run it.
+docker compose up --build
+```
+
+Key `.env` values:
+
+```text
+LINEAR_API_KEY=...
+LINEAR_PROJECT_SLUG=...
+TARGET_REPO_URL=git@github.com:your-org/your-target-repo.git
+READY_LABEL=agent-ready
+CREATE_PR=true
+STATUS_PORT=0
+```
+
+Set `STATUS_PORT=8787` if you want the lightweight dashboard/API. Keep real `.env` files out of Git.
 
 ### Path A: Start From a BRD
 
