@@ -1,0 +1,19 @@
+[
+  {
+    "id": "F001",
+    "category": "functional",
+    "story": "E1-S1",
+    "group": "A",
+    "description": "Example: User can create an account via API",
+    "steps": [
+      "POST /users with valid payload",
+      "Verify 201 response with user_id",
+      "GET /users/{id} returns created user",
+      "POST /users with invalid email returns 422"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  }
+]

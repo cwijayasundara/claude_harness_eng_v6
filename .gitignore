@@ -1,0 +1,13 @@
+.claude/state/process-*.log
+node_modules/
+dist/
+build/
+.next/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+.env
+.env.local
+.env.*.local

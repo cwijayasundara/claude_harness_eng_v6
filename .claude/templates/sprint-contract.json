@@ -1,0 +1,59 @@
+{
+  "group": "A",
+  "stories": ["E1-S1", "E1-S2"],
+  "features": ["F001", "F002"],
+  "contract": {
+    "api_checks": [
+      {
+        "id": "api-001",
+        "method": "GET",
+        "path": "/api/health",
+        "headers": {},
+        "expected_status": 200,
+        "expected_body": {},
+        "description": "Health check returns 200"
+      }
+    ],
+    "playwright_checks": [
+      {
+        "id": "pw-001",
+        "description": "Homepage loads and displays title",
+        "url": "/",
+        "steps": [
+          {
+            "action": "navigate",
+            "selector": null,
+            "value": "/",
+            "assertion": "page loaded"
+          },
+          {
+            "action": "assert_visible",
+            "selector": "getByRole('heading', { name: 'Welcome' })",
+            "value": null,
+            "assertion": "heading visible"
+          }
+        ]
+      }
+    ],
+    "design_checks": {
+      "visual_hierarchy": { "required": true, "min_score": 7 },
+      "accessibility": { "required": true, "min_score": 5 },
+      "responsiveness": { "required": true, "min_score": 7 },
+      "interaction_feedback": { "required": true, "min_score": 5 }
+    },
+    "performance_checks": [
+      {
+        "endpoint": "/api/health",
+        "max_response_time_ms": 500,
+        "method": "GET"
+      }
+    ],
+    "architecture_checks": {
+      "layering": { "required": true, "description": "No upward imports across layers" },
+      "typing": { "required": true, "description": "All functions have type annotations" },
+      "folder_structure": { "required": true, "description": "Files match component-map.md" },
+      "env_vars": { "required": false, "description": "No hardcoded secrets" },
+      "migrations": { "required": false, "description": "DB migrations applied" }
+    }
+  }
+}

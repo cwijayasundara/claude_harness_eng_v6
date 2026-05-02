@@ -1,0 +1,25 @@
+#!/bin/bash
+set -euo pipefail
+
+echo "=== Bootstrapping dev environment ==="
+
+# Backend dependencies
+{{BACKEND_INSTALL}}
+
+# Frontend dependencies
+{{FRONTEND_INSTALL}}
+
+# Environment
+if [ -f ".env.example" ] && [ ! -f ".env" ]; then
+  cp .env.example .env
+  echo "Created .env from .env.example — add your API keys"
+fi
+
+# Docker services
+{{DOCKER_COMPOSE_CMD}}
+
+# Health checks
+echo "Waiting for services..."
+{{HEALTH_CHECKS}}
+
+echo "=== Environment ready ==="

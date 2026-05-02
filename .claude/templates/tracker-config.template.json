@@ -1,0 +1,26 @@
+{
+  "enabled": false,
+  "provider": "linear",
+  "mode": "publish-only",
+  "tracker": {
+    "project_slug": "replace-with-linear-project-slug",
+    "team_key": "ENG",
+    "ready_state": "Ready for Agent",
+    "running_state": "In Progress",
+    "review_state": "Human Review",
+    "blocked_state": "Blocked",
+    "terminal_states": ["Done", "Closed", "Canceled", "Cancelled", "Duplicate"],
+    "ready_label": "agent-ready"
+  },
+  "orchestrator": {
+    "repo_url": "git@github.com:your-org/your-repo.git",
+    "workspace_root": "/workspaces",
+    "max_concurrent_runs": 1,
+    "poll_interval_ms": 60000,
+    "claude_command": "claude --print --permission-mode bypassPermissions"
+  },
+  "github": {
+    "base_branch": "main",
+    "branch_prefix": "agent"
+  }
+}

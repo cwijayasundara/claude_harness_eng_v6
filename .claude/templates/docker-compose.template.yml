@@ -1,0 +1,54 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "{{BACKEND_PORT}}:{{BACKEND_PORT}}"
+    environment:
+      - DATABASE_URL={{DATABASE_URL}}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:{{BACKEND_PORT}}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "{{FRONTEND_PORT}}:{{FRONTEND_PORT}}"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:{{FRONTEND_PORT}}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./frontend:/app
+
+  db:
+    image: {{DB_IMAGE}}
+    ports:
+      - "{{DB_PORT}}:{{DB_PORT}}"
+    environment:
+      {{DB_ENV}}
+    healthcheck:
+      test: {{DB_HEALTH_CMD}}
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - db_data:/var/lib/{{DB_VOLUME_PATH}}
+
+volumes:
+  db_data:

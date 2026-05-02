@@ -1,0 +1,163 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SprintContract",
+  "description": "Schema for a sprint evaluation contract",
+  "type": "object",
+  "required": ["group", "stories", "features", "contract"],
+  "additionalProperties": false,
+  "properties": {
+    "group": {
+      "type": "string",
+      "description": "Feature group or sprint identifier"
+    },
+    "stories": {
+      "type": "array",
+      "description": "User story IDs delivered in this sprint",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "features": {
+      "type": "array",
+      "description": "Feature IDs from features.json that this group satisfies. Used by evaluator to update features.json pass/fail state.",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "contract": {
+      "type": "object",
+      "description": "Verification checklist for the sprint",
+      "additionalProperties": false,
+      "properties": {
+        "api_checks": {
+          "type": "array",
+          "description": "HTTP endpoint verifications",
+          "items": {
+            "type": "object",
+            "required": ["id", "method", "path", "expected_status"],
+            "properties": {
+              "id": { "type": "string" },
+              "method": { "type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"] },
+              "path": { "type": "string" },
+              "headers": { "type": "object", "additionalProperties": { "type": "string" } },
+              "body": { "type": "object" },
+              "expected_status": { "type": "integer" },
+              "expected_body": { "type": "object" },
+              "description": { "type": "string" }
+            }
+          }
+        },
+        "playwright_checks": {
+          "type": "array",
+          "description": "Browser-level UI flow verifications",
+          "items": {
+            "type": "object",
+            "required": ["id", "description", "steps"],
+            "properties": {
+              "id": { "type": "string" },
+              "description": { "type": "string" },
+              "url": { "type": "string" },
+              "steps": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["action"],
+                  "properties": {
+                    "action": { "type": "string" },
+                    "selector": { "type": "string" },
+                    "value": { "type": "string" },
+                    "assertion": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "design_checks": {
+          "type": "object",
+          "description": "Visual/UX criteria evaluated against the scoring rubric",
+          "properties": {
+            "visual_hierarchy": {
+              "type": "object",
+              "properties": {
+                "required": { "type": "boolean" },
+                "min_score": { "type": "integer", "minimum": 1, "maximum": 10 }
+              }
+            },
+            "accessibility": {
+              "type": "object",
+              "properties": {
+                "required": { "type": "boolean" },
+                "min_score": { "type": "integer", "minimum": 1, "maximum": 10 }
+              }
+            },
+            "responsiveness": {
+              "type": "object",
+              "properties": {
+                "required": { "type": "boolean" },
+                "min_score": { "type": "integer", "minimum": 1, "maximum": 10 }
+              }
+            },
+            "interaction_feedback": {
+              "type": "object",
+              "properties": {
+                "required": { "type": "boolean" },
+                "min_score": { "type": "integer", "minimum": 1, "maximum": 10 }
+              }
+            }
+          }
+        },
+        "performance_checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "endpoint": { "type": "string" },
+              "max_response_time_ms": { "type": "number" },
+              "method": { "type": "string", "default": "GET" }
+            }
+          }
+        },
+        "architecture_checks": {
+          "type": "object",
+          "description": "Structural code quality checks",
+          "properties": {
+            "layering": {
+              "type": "object",
+              "properties": {
+                "required": { "type": "boolean" },
+                "description": { "type": "string" }
+              }
+            },
+            "typing": {
+              "type": "object",
+              "properties": {
+                "required": { "type": "boolean" },
+                "description": { "type": "string" }
+              }
+            },
+            "folder_structure": {
+              "type": "object",
+              "properties": {
+                "required": { "type": "boolean" },
+                "description": { "type": "string" }
+              }
+            },
+            "env_vars": {
+              "type": "object",
+              "properties": {
+                "required": { "type": "boolean" },
+                "description": { "type": "string" }
+              }
+            },
+            "migrations": {
+              "type": "object",
+              "properties": {
+                "required": { "type": "boolean" },
+                "description": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
