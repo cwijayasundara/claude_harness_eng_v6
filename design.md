@@ -634,7 +634,68 @@ The harness handles **what** to build (SDLC pipeline, sprint contracts, ratchet 
 
 ---
 
-## 13. Pipeline Commands
+## 13. Graph-Grounded Brownfield Discovery
+
+Brownfield discovery is the entry point for existing-codebase work. v4 now uses graph-grounded artifacts so planner and generator agents cite evidence instead of inferring architecture from filenames.
+
+```text
+/brownfield
+    |
+    v
+/code-map -> graphify skill | hex-graph MCP | vendored Node.js scripts
+    |
+    v
+specs/brownfield/code-graph.json
+    |
+    +--> dependency-graph.md
+    +--> coupling-report.md
+    |
+    v
+architecture-map.md, risk-map.md, change-strategy.md
+    |
+    v
+/seam-finder "<goal>" -> seams-<goal>.md
+```
+
+The vendored fallback has zero npm dependencies and covers Python, Node, TypeScript, Java, C#, and Go. It emits file/import/top-level-symbol graphs for all six; Python also gets coarse call edges and `__init__.py` re-export handling. If `graphify` or `hex-graph` is available, `/code-map` prefers the higher-fidelity producer and projects the result into the same schema.
+
+Core graph schema:
+
+```json
+{
+  "nodes": [{"id": "py:src/services/auth.py", "kind": "file",
+             "language": "python", "path": "src/services/auth.py",
+             "symbols": ["AuthService", "verify_token"]}],
+  "edges": [{"source": "py:src/api/routes.py",
+             "target": "py:src/services/auth.py",
+             "kind": "imports",
+             "evidence": "src/api/routes.py:7 from services.auth import AuthService"}],
+  "metrics": {"files": 142, "edges": 318, "cycles": [], "hubs": []},
+  "meta": {"producer": "vendored | graphify | hex-graph"}
+}
+```
+
+`/seam-finder` ranks candidate cut-points for a concrete goal using Fowler-style scoring:
+
+| Component | Weight | Meaning |
+|---|---:|---|
+| Observable | 0.4 | Boundary heuristic: routes, controllers, queues, repositories, services, adapters |
+| Funnel | 0.4 | Normalized fan-in + fan-out from `code-graph.json` |
+| Asymmetry | 0.2 | Read/write imbalance; pure readers or writers are easier to split |
+| Goal bump | x1.5 | Candidate path or symbols match the requested goal |
+
+Agent contract: in brownfield mode, "module X depends on Y" claims must cite `code-graph.json` edge evidence. Refactor targets, hub warnings, cycle warnings, and first safe next steps must read from `coupling-report.md` and `seams-<goal>.md` rather than being invented.
+
+Lane selection examples:
+
+- High fan-in + low instability -> preserve and extend at existing seam with `/improve`.
+- High fan-in + high instability -> unstable hub; plan `/refactor`.
+- Cycle member -> explicit human approval before structural change.
+- No high-scoring seam -> use `/spec` rather than forcing a parallel implementation.
+
+---
+
+## 14. Pipeline Commands
 
 | Command | Purpose | Human Gate? | Superpowers |
 |---------|---------|-------------|-------------|
@@ -652,6 +713,9 @@ The harness handles **what** to build (SDLC pipeline, sprint contracts, ratchet 
 | `/refactor` | Quality-driven refactoring | No | writing-plans |
 | `/improve` | Feature enhancement | No | — |
 | `/lint-drift` | Entropy scanner for pattern drift | No | — |
+| `/brownfield` | Graph-grounded map of an existing codebase | No | — |
+| `/code-map` | Deterministic dependency graph for brownfield/refactor work | No | — |
+| `/seam-finder` | Ranked cut-points for a concrete goal | No | — |
 | `/tracker` | Optional Linear/Jira orchestration overview | Yes | — |
 | `/tracker-publish` | Publish approved dependency groups to tracker issues | Yes | — |
 
@@ -659,7 +723,7 @@ Phases 1-3 (`/brd`, `/spec`, `/design`) require human approval. Phases 4-8 run a
 
 ---
 
-## 14. Quality Principles
+## 15. Quality Principles
 
 Detailed rules in `.claude/skills/code-gen/SKILL.md`. Summary:
 

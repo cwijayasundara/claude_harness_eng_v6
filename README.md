@@ -19,12 +19,13 @@ This repo has been tested as a local Claude Code plugin, a local marketplace plu
 Verified:
 
 - Plugin manifest validates with `claude plugin validate .claude`.
-- Scaffold target contains 7 agents, 23 skills, 15 hooks, 10 templates, and 6 seeded state files.
+- Scaffold target contains 7 agents, 25 skills, 15 hooks, 10 templates, and 6 seeded state files.
 - Scaffold copies `.claude/.claude-plugin/plugin.json`, so the scaffolded `.claude/` is also plugin-valid.
 - `.claude/settings.json`, `features.json`, `project-manifest.json`, and generated design schemas parse as JSON.
 - Hook JavaScript files pass `node --check`.
 - Simple SDLC smoke created BRD-derived stories, dependency graph, valid `features.json`, and minimal design contracts.
 - Brownfield smoke produced `codebase-map.md`, `architecture-map.md`, `test-map.md`, `risk-map.md`, and `change-strategy.md`.
+- Graph-grounded brownfield support adds `/code-map` and `/seam-finder`, producing deterministic code graphs, coupling reports, and ranked seam candidates for safer existing-code changes.
 - Optional tracker mode scaffolds `.claude/tracker-config.json`, `.claude/state/tracker-runs/`, and the `tracker` / `tracker-publish` skill pair.
 - `symphony_clone/` is checked in as a separate Docker-capable orchestrator project. It polls Linear, launches Claude Code workspaces, pushes branches, creates GitHub PRs, and posts proof comments.
 
@@ -40,7 +41,7 @@ Known caveat: non-interactive `claude -p` scaffold runs can be interrupted by up
 - **Sprint contracts** — Generator and evaluator negotiate "done" criteria before coding
 - **Bounded clarification** — Load-bearing questions only, with a 10-question default and 15-question hard cap
 - **Controlled vibe coding** — Small low-risk changes use a micro-contract and targeted verification instead of full SDLC ceremony
-- **Brownfield discovery** — Existing repos get factual architecture, test, risk, and change-strategy maps before broad edits
+- **Graph-grounded brownfield discovery** — Existing repos get factual architecture, test, risk, deterministic code graph, coupling, and seam maps before broad edits
 - **Optional tracker orchestration** — Publish approved story groups to Linear/Jira and let a standalone Symphony-style orchestrator launch Claude Code workspaces
 - **Deep-module bias** — Prefer small public interfaces with meaningful hidden behavior; avoid pass-through abstractions
 - **Public-interface testing** — Tests verify observable behavior, not private helper calls or internal wiring
@@ -488,12 +489,32 @@ It writes:
 
 ```text
 specs/brownfield/
-  codebase-map.md
-  architecture-map.md
-  test-map.md
-  risk-map.md
-  change-strategy.md
+  codebase-map.md           # languages, frameworks, entry points, services
+  code-graph.json           # deterministic file/import/symbol graph
+  code-graph.meta.json      # producer, language counts, warnings, timestamp
+  dependency-graph.md       # Mermaid render of file/module edges
+  coupling-report.md        # fan-in, fan-out, cycles, unstable hubs
+  architecture-map.md       # modules, layers, data flow; cites graph evidence
+  test-map.md               # test commands, coverage signals, gaps
+  risk-map.md               # domain risks + structural risks
+  change-strategy.md        # recommended lane: /vibe, /improve, /refactor, /spec
+  seams-<goal>.md           # ranked cut-points when /seam-finder is run
 CONTEXT.md                  # optional domain glossary
+```
+
+`/brownfield` invokes `/code-map` internally. You can also run `/code-map` by itself before `/refactor` or `/improve`, and run `/seam-finder "<goal>"` to rank safe cut-points using observable boundary, funnel, read/write asymmetry, and goal-relevance scoring.
+
+Producer chain for `/code-map`:
+
+1. `graphify`, if installed by the user, for higher-fidelity tree-sitter graphs.
+2. `hex-graph` MCP, if available.
+3. Vendored zero-dependency Node.js scripts for Python, Node, TypeScript, Java, C#, and Go.
+
+Optional graphify install:
+
+```bash
+npm install -g @safishamsi/graphify   # or: brew install graphify
+graphify install                      # writes ~/.claude/skills/graphify/SKILL.md
 ```
 
 Use the output to choose the right lane:
@@ -522,6 +543,8 @@ See `design.md` for full architecture reference (system diagram, agent roles, ho
 | `clarify` | Bounded clarification for load-bearing product/design decisions |
 | `vibe` | Controlled small-change lane with micro-contract and targeted verification |
 | `brownfield` | Discover architecture, tests, risks, and change strategy for existing repos |
+| `code-map` | Build deterministic dependency graph for brownfield/refactor work |
+| `seam-finder` | Rank safe cut-points for a concrete goal |
 | `brd` | Socratic interview -> BRD |
 | `spec` | BRD -> stories + dependency graph + features.json |
 | `design` | Architecture + schemas + mockups |

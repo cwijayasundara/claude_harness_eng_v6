@@ -31,10 +31,15 @@ Write these files:
 | File | Purpose |
 |---|---|
 | `specs/brownfield/codebase-map.md` | Languages, frameworks, package managers, entry points, services, commands |
-| `specs/brownfield/architecture-map.md` | Modules, layers, data flow, public interfaces, external dependencies |
+| `specs/brownfield/code-graph.json` | Deterministic dependency graph produced by `/code-map` |
+| `specs/brownfield/code-graph.meta.json` | Producer, language counts, scan warnings, timestamp |
+| `specs/brownfield/dependency-graph.md` | Mermaid render of file/module-level edges |
+| `specs/brownfield/coupling-report.md` | Fan-in, fan-out, cycles, hubs, unstable modules |
+| `specs/brownfield/architecture-map.md` | Modules, layers, data flow, public interfaces, external dependencies — cites graph evidence |
 | `specs/brownfield/test-map.md` | Test commands, coverage signals, public interfaces covered/missing, slow/flaky tests |
-| `specs/brownfield/risk-map.md` | Sensitive areas, fragile zones, migrations, auth/security/billing/data risks |
+| `specs/brownfield/risk-map.md` | Sensitive areas, fragile zones, structural risks, auth/security/billing/data risks |
 | `specs/brownfield/change-strategy.md` | Recommended lane for future work: `/vibe`, `/fix-issue`, `/improve`, `/refactor`, `/spec`, `/auto` |
+| `specs/brownfield/seams-<goal>.md` | Optional ranked seam candidates produced by `/seam-finder "<goal>"` |
 | `CONTEXT.md` | Optional domain glossary, created only when meaningful domain terms are discovered |
 
 ---
@@ -58,21 +63,46 @@ Use `rg`, `find`, package manifests, config files, and existing docs. Prefer pri
 
 ---
 
+## Step 1.5 — Build the Dependency Graph
+
+Run `/code-map` or invoke the vendored script directly to produce deterministic graph artifacts the rest of this skill cites as evidence:
+
+```bash
+node .claude/skills/code-map/scripts/build_graph.js \
+  --root . --out specs/brownfield/code-graph.json
+node .claude/skills/code-map/scripts/build_graph.js \
+  --render-mermaid specs/brownfield/code-graph.json \
+  --out specs/brownfield/dependency-graph.md
+node .claude/skills/code-map/scripts/build_graph.js \
+  --coupling-report specs/brownfield/code-graph.json \
+  --out specs/brownfield/coupling-report.md
+```
+
+Producer resolution order:
+
+1. `graphify` skill, if installed by the user.
+2. `hex-graph` MCP, if available.
+3. Vendored zero-dependency Node.js scripts in `.claude/skills/code-map/scripts/`.
+
+If `graphify` or `hex-graph` is available, prefer it and project the result into the same `code-graph.json` schema. If the graph is empty or has only warnings, stop and report. Do not invent architecture from filenames.
+
+---
+
 ## Step 2 — Map Architecture
 
 Write `architecture-map.md` with:
 
-- Major modules and their responsibilities
-- Public interfaces for each major module
-- Data flow through the system
-- External integrations
+- Major modules and their responsibilities — cite specific edges from `code-graph.json`
+- Public interfaces for each major module — use the graph symbols list where available
+- Data flow through the system — follow `imports` / `calls` chains
+- External integrations — cite `ext:*` targets from the graph where available
 - Persistence boundaries
 - Auth/session boundaries
-- Existing layering conventions
-- Deep modules worth preserving
-- Shallow/pass-through modules that may be refactor candidates
+- Existing layering conventions — confirm with directional fan-in/fan-out from `coupling-report.md`
+- Deep modules worth preserving — high fan-in and low instability
+- Shallow/pass-through modules that may be refactor candidates — high instability and little domain logic
 
-Do not redesign the system. Capture what exists.
+Every "module X depends on Y" claim must reference graph evidence, preferably an edge with file:line evidence. Do not redesign the system. Capture what exists.
 
 ---
 
@@ -95,14 +125,24 @@ If commands are obvious and safe, run lightweight discovery commands such as `np
 
 Write `risk-map.md` with:
 
+### Domain risks
+
 - Auth, permissions, privacy, billing, payment, and security-sensitive paths
 - Database migrations and irreversible data operations
 - External APIs and side-effecting integrations
 - Generated code or vendored code that should not be edited manually
-- Files with high churn or high coupling if visible from imports/callers
 - Areas where tests are weak or missing
 
-For each risk, include the evidence path.
+### Structural risks
+
+Read these from `coupling-report.md` and `code-graph.json`:
+
+- **Cycles** — files inside strongly connected components; refactors across cycle boundaries need explicit approval.
+- **Hub modules without tests** — high fan-in files without corresponding test coverage in `test-map.md`.
+- **Unstable hubs** — fan_in >= 5 and instability >= 0.8.
+- **Orphan files** — fan_in == 0 and not an entry point.
+
+For each risk, include the evidence path or graph node id.
 
 ---
 
@@ -118,6 +158,8 @@ Write `change-strategy.md` with:
 - What should require explicit human approval before touching
 
 Include a short "first safe next steps" list.
+
+If the requested work has a concrete goal, recommend running `/seam-finder "<goal>"` after `/brownfield`. Use `seams-<goal>.md` to choose whether the next lane should extend an existing seam, wrap a boundary, introduce an adapter, split a read/write path, or avoid a poor seam.
 
 ---
 

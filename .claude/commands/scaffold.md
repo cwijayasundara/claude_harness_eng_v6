@@ -36,7 +36,14 @@ Ask the user these questions (one at a time):
    - A) Yes, install all eight (recommended)
    - B) Let me pick which ones
    - C) No, skip official plugins
-6. "Enable optional external tracker orchestration?" (default: No)
+6. "Install graphify for higher-fidelity brownfield code graphs? (optional)" — only meaningful for existing codebases
+   - `graphify` is a community user-scope skill that produces tree-sitter code graphs for more languages and richer call/inheritance edges.
+   - When installed, `/code-map` detects it and prefers it over the vendored zero-dependency scripts.
+   - Without it, v4 still works: vendored scripts produce file, import, symbol, coupling, and Python call-graph artifacts.
+   - It is not a marketplace plugin and must not be added to `enabledPlugins`.
+   - A) Yes, print the install command
+   - B) No, use vendored scripts
+7. "Enable optional external tracker orchestration?" (default: No)
    - A) No, keep this project local-only
    - B) Publish generated story groups to Linear/Jira only
    - C) Publish + sync proof/status
@@ -149,12 +156,14 @@ Before copying, validate the source:
 ```bash
 test -f "$PLUGIN_SOURCE/.claude-plugin/plugin.json"
 test -d "$PLUGIN_SOURCE/skills/brownfield"
+test -d "$PLUGIN_SOURCE/skills/code-map"
+test -d "$PLUGIN_SOURCE/skills/seam-finder"
 test -d "$PLUGIN_SOURCE/skills/vibe"
 test -f "$PLUGIN_SOURCE/templates/context.template.md"
 test -f "$PLUGIN_SOURCE/templates/story.template.md"
 SKILL_COUNT=$(find "$PLUGIN_SOURCE/skills" -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')
 TEMPLATE_COUNT=$(find "$PLUGIN_SOURCE/templates" -maxdepth 1 -type f | wc -l | tr -d ' ')
-test "$SKILL_COUNT" = "23"
+test "$SKILL_COUNT" = "25"
 test "$TEMPLATE_COUNT" = "10"
 ```
 
@@ -216,6 +225,21 @@ These plugins are complementary to the harness and do not conflict:
 - `feature-dev` — competes with our `/brd` -> `/spec` -> `/design` -> `/implement` pipeline
 - `hookify` — dynamically generated hooks could interfere with our purpose-built hooks
 
+### Graphify (question 6) — user-scope skill, not a marketplace plugin
+
+If the user answered A) to question 6, do not modify `enabledPlugins`. Instead, append this exact installation reminder to the Step 10 report:
+
+```text
+Optional graphify install (higher-fidelity brownfield code graphs):
+  npm install -g @safishamsi/graphify   # or: brew install graphify
+  graphify install                      # writes ~/.claude/skills/graphify/SKILL.md
+
+When installed, /code-map detects it automatically and prefers it over
+the vendored Node.js scripts.
+```
+
+If the user answered B) to question 6, do not print the install reminder.
+
 ## Step 4: Create Output Directories
 
 ```bash
@@ -276,6 +300,8 @@ One-way dependencies only. See `.claude/architecture.md` for full rules.
 | Playwright patterns | `.claude/skills/evaluation/references/playwright-patterns.md` |
 | Human control knobs | `.claude/program.md` |
 | Small work lane | `.claude/skills/vibe/SKILL.md` |
+| Code graph mapping | `.claude/skills/code-map/SKILL.md` |
+| Seam ranking | `.claude/skills/seam-finder/SKILL.md` |
 | Session recovery | `claude-progress.txt` |
 | Feature tracking | `features.json` |
 | Learned rules | `.claude/state/learned-rules.md` |
@@ -291,6 +317,8 @@ One-way dependencies only. See `.claude/architecture.md` for full rules.
 | `/build` | Full 8-phase pipeline |
 | `/vibe` | Controlled small-change lane |
 | `/brownfield` | Map an existing codebase before changing it |
+| `/code-map` | Build deterministic dependency graph for brownfield/refactor work |
+| `/seam-finder` | Rank safe cut-points for a concrete goal |
 | `/auto` | Autonomous ratcheting loop |
 | `/implement` | Code gen with agent teams |
 | `/evaluate` | Run app, verify contract |
@@ -528,7 +556,7 @@ Print:
 
 Installed:
   7 agents      → .claude/agents/
-  23 skills     → .claude/skills/
+  25 skills     → .claude/skills/
   15 hooks      → .claude/hooks/
   10 templates  → .claude/templates/
   6 state files → .claude/state/
