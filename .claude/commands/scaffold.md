@@ -20,6 +20,9 @@ Ask the user these questions (one at a time):
    - A) Consumer-facing app (high design bar)
    - B) Internal tool / dashboard (functional focus)
    - C) API-only / backend service (no UI scoring)
+   - D) Minimal — CLI tool, single-script utility, or small library (recommends `/lite` lane)
+
+If the user picks D, treat this as a hint that the full SDLC pipeline is likely disproportionate. The scaffold still installs the full harness (so the user can escalate to `/brd → /spec → /design → /auto` if scope grows), but the report at Step 10 will recommend `/lite` as the default entry point and skip `calibration-profile.json` (no UI scoring).
 4. "How will the evaluator reach the running app?" (verification mode):
    - A) Docker Compose (default — app runs in containers)
    - B) Local dev servers (app runs via npm/uvicorn/etc.)
@@ -128,6 +131,8 @@ Based on their answers, write `project-manifest.json` to the project root. Fill 
 
 **If API-only (C):** Do not create `calibration-profile.json` (no UI scoring needed).
 
+**If Minimal (D):** Do not create `calibration-profile.json` (no UI scoring needed). The Step 10 report should lead with `/lite` as the recommended entry point.
+
 Preset mappings:
 - A) backend: python/3.12/fastapi/uv/ruff/mypy/pytest, frontend: typescript/react/vite/npm/eslint/tsc/vitest, db: postgresql
 - B) backend: python/3.12/fastapi/uv/ruff/mypy/pytest, frontend: typescript/nextjs/16/npm/eslint/tsc/vitest, db: postgresql
@@ -163,7 +168,7 @@ test -f "$PLUGIN_SOURCE/templates/context.template.md"
 test -f "$PLUGIN_SOURCE/templates/story.template.md"
 SKILL_COUNT=$(find "$PLUGIN_SOURCE/skills" -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')
 TEMPLATE_COUNT=$(find "$PLUGIN_SOURCE/templates" -maxdepth 1 -type f | wc -l | tr -d ' ')
-test "$SKILL_COUNT" = "25"
+test "$SKILL_COUNT" = "26"
 test "$TEMPLATE_COUNT" = "10"
 ```
 
@@ -315,6 +320,7 @@ One-way dependencies only. See `.claude/architecture.md` for full rules.
 | `/spec` | BRD → stories + features.json |
 | `/design` | Architecture + schemas + mockups |
 | `/build` | Full 8-phase pipeline |
+| `/lite` | Compressed greenfield lane for small projects (CLI / library / single-script) |
 | `/vibe` | Controlled small-change lane |
 | `/brownfield` | Map an existing codebase before changing it |
 | `/code-map` | Build deterministic dependency graph for brownfield/refactor work |
@@ -329,6 +335,7 @@ One-way dependencies only. See `.claude/architecture.md` for full rules.
 ## Code Style
 
 - For existing codebases, run `/brownfield` before broad planning or refactoring
+- Small new projects (CLI tools, single-script utilities, small libraries) should use `/lite` instead of `/brd → /spec → /design`; see `.claude/skills/lite/SKILL.md`
 - Small low-risk fixes may use `/vibe` instead of the full SDLC pipeline; see `.claude/skills/vibe/SKILL.md`
 - TDD mandatory: test first, then implement
 - 100% meaningful coverage target, 80% floor
@@ -550,13 +557,20 @@ next_action: Run /brd to start
 
 ## Step 10: Report
 
-Print:
+The skill count is now 26 (lite added). Update the totals printed below if more skills are added in the future.
+
+Tailor the "Next steps" ordering based on the answer to question 3:
+
+- If the user picked **D — Minimal** at question 3, lead with `/lite` and demote `/brd`.
+- Otherwise, keep `/brd` as the default first action.
+
+**Default report (questions 3 = A / B / C):**
 ```
 ✓ Claude Harness Engine v4 scaffolded successfully.
 
 Installed:
   7 agents      → .claude/agents/
-  25 skills     → .claude/skills/
+  26 skills     → .claude/skills/
   15 hooks      → .claude/hooks/
   10 templates  → .claude/templates/
   6 state files → .claude/state/
@@ -566,5 +580,24 @@ Next steps:
   1. Run /brd to create your Business Requirements Document
   2. For an existing codebase, run /brownfield first
   3. Or run /build to execute the full pipeline
-  4. For tiny safe changes, use /vibe with a micro-contract
+  4. For small new projects (CLI / library / single-script), use /lite
+  5. For tiny safe changes, use /vibe with a micro-contract
+```
+
+**Minimal report (question 3 = D):**
+```
+✓ Claude Harness Engine v4 scaffolded successfully (minimal project mode).
+
+Installed:
+  7 agents      → .claude/agents/
+  26 skills     → .claude/skills/
+  15 hooks      → .claude/hooks/
+  10 templates  → .claude/templates/
+  6 state files → .claude/state/
+  1 manifest    → .claude/.claude-plugin/plugin.json
+
+Next steps:
+  1. Run /lite "<one-paragraph project description>"  ← recommended for this project type
+  2. Escalate to /brd → /spec → /design → /auto if scope grows past the /lite eligibility cap
+  3. For tiny safe changes later, use /vibe with a micro-contract
 ```
