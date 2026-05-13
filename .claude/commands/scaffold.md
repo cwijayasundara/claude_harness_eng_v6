@@ -136,7 +136,7 @@ If the user picks D, the full harness is still installed (in case scope grows) b
    - B) Publish generated story groups to Linear/Jira only
    - C) Publish + sync proof/status
    - D) Publish + external orchestrator dispatch
-7. "Install agent-framework skill packs?" (multi-select; default: None) — opt-in packs installed project-locally via `npx skills` into `.agents/skills/`.
+7. "Install agent-framework skill packs?" (multi-select; default: None) — opt-in packs installed project-locally via `npx skills` into `.claude/skills/` (when `-a claude-code` is passed, they land alongside the harness skills).
    - A) LangChain / LangGraph / DeepAgents — `cwijayasundara/agent_cli_langchain` (9 skills)
    - B) Google ADK — `google/agents-cli` (7 skills)
    - C) None
@@ -344,50 +344,53 @@ Do not write tracker API keys into `.claude/tracker-config.json`. Use environmen
 
 ### Optional Agent-Framework Skill Packs
 
-If the user selected one or more skill packs (LangChain or Google ADK) at the confirmation card or wizard, install them project-locally via the open agent skills CLI (`npx skills`). These skills land in `.agents/skills/` — Claude Code picks them up from both `.claude/skills/` and `.agents/skills/`.
+If the user selected one or more skill packs (LangChain or Google ADK) at the confirmation card or wizard, install them via the open agent skills CLI (`npx skills`). With `-a claude-code`, the CLI installs the skills directly into `.claude/skills/<pack-prefix>-*/` alongside the harness skills — they're picked up automatically.
 
 **Important:** Run these commands inside the target project directory. Do NOT use `-g`/`--global` — the user has explicitly chosen to scope framework skills per-project so the harness scaffold remains generic.
 
-The `Bash(npx --yes skills add:*)` permission is allowlisted in `.claude/settings.json`, so the install should run without prompting. If it still gets denied (older settings.json, auto-mode classifier in a different mode), do NOT silently continue — fall through to the manual-fallback block below.
+**CLI syntax (critical):** the **package source goes FIRST** as a positional argument. Putting flags before the package will fail with `ERROR  Missing required argument: source`. Use `-y` only AFTER the package source.
+
+The `Bash(npx --yes skills add:*)` and `Bash(npx skills add:*)` permissions are allowlisted in `.claude/settings.json`. The auto-mode classifier may still block external package installs as a separate safety gate (independent of allowlist) — if that happens, fall through to the manual-fallback block below.
 
 **A) LangChain / LangGraph / DeepAgents — 9 skills**
 
 ```bash
-npx --yes skills add -y --agent claude-code cwijayasundara/agent_cli_langchain
+npx --yes skills add cwijayasundara/agent_cli_langchain -a claude-code -s '*' -y
 ```
 
-Expected: 9 skills under `.agents/skills/langchain-agents-*` (scaffold, workflow, langchain-code, langgraph-code, deepagents-code, middleware, langsmith-evals, deploy, observability). Source: <https://github.com/cwijayasundara/agent_cli_langchain>.
+Expected: 9 skills under `.claude/skills/langchain-agents-*` (scaffold, workflow, langchain-code, langgraph-code, deepagents-code, middleware, langsmith-evals, deploy, observability). Source: <https://github.com/cwijayasundara/agent_cli_langchain>. Two skills (`deepagents-code`, `deploy`) carry a "Med Risk" Snyk flag — surface this in the install report and recommend the user review those SKILL.md files before letting them drive code generation.
 
 **B) Google ADK — 7 skills**
 
 ```bash
-npx --yes skills add -y --agent claude-code google/agents-cli
+npx --yes skills add google/agents-cli -a claude-code -s '*' -y
 ```
 
-Expected: 7 skills under `.agents/skills/google-agents-cli-*` (scaffold, workflow, adk-code, eval, deploy, observability, publish).
+Expected: 7 skills under `.claude/skills/google-agents-cli-*` (scaffold, workflow, adk-code, eval, deploy, observability, publish).
 
 Verify the install ran successfully:
 
 ```bash
-test -d .agents/skills && find .agents/skills -mindepth 1 -maxdepth 1 -type d | wc -l
+ls .claude/skills/ | grep -E '^(langchain-agents|google-agents-cli)-' | wc -l
 ```
 
 #### Manual-fallback block (if install was denied or failed)
 
-If the `npx skills add` command was denied, errored, or could not run for any reason, do NOT skip silently. Instead, print this block to the user verbatim and ADD it to the Step 10 report under a "Manual follow-ups" heading:
+If the `npx skills add` command was denied (auto-mode classifier), errored, or could not run for any reason, do NOT skip silently. Print this block verbatim and ADD it to the Step 10 report under a "Manual follow-ups" heading:
 
 ```text
-[!] Framework skill pack(s) were NOT installed automatically. Run this manually:
+[!] Framework skill pack(s) were NOT installed automatically. Run this manually
+    in a regular terminal (the auto-mode classifier blocks external installs):
 
   cd <project-root>
-  npx --yes skills add -y --agent claude-code cwijayasundara/agent_cli_langchain   # if LangChain
-  npx --yes skills add -y --agent claude-code google/agents-cli                     # if Google ADK
+  npx --yes skills add cwijayasundara/agent_cli_langchain -a claude-code -s '*' -y   # if LangChain
+  npx --yes skills add google/agents-cli -a claude-code -s '*' -y                     # if Google ADK
 
-After running, verify:
-  find .agents/skills -mindepth 1 -maxdepth 1 -type d
+After running, verify (the packs land in .claude/skills/ alongside the harness skills):
+  ls .claude/skills/ | grep -E '^(langchain-agents|google-agents-cli)-'
 ```
 
-Also explain the most likely cause in one line based on the actual error: auto-mode classifier denial → "re-run /scaffold; the latest scaffold allowlists this command in .claude/settings.json"; network error → "check your network / npm proxy and retry"; node not installed → "install Node 20+ and retry".
+Also explain the most likely cause in one line based on the actual error: auto-mode classifier denial → "the classifier blocks external package installs regardless of settings.json allowlist; run the command in your own terminal"; network error → "check your network / npm proxy and retry"; node not installed → "install Node 20+ and retry".
 
 #### Record selected packs in project-manifest.json
 
@@ -738,7 +741,7 @@ Next steps:
 If the user installed any framework skill packs (selected on the confirmation card or wizard), append a section after the `Installed:` block (before `Next steps:`), listing each pack with its skill count and storage path. Example:
 
 ```
-Framework skill packs (.agents/skills/):
+Framework skill packs (.claude/skills/):
   + LangChain / LangGraph / DeepAgents — 9 skills (cwijayasundara/agent_cli_langchain)
   + Google ADK                          — 7 skills (google/agents-cli)
 ```

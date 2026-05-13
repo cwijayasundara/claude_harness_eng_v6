@@ -54,7 +54,7 @@ The harness is now an **agent factory**: one scaffold, optional framework skill 
 │                                                                            │
 │  Optional packs injected at scaffold time:                                 │
 │    • Official Claude Code plugins (superpowers, code-review, …)            │
-│    • Framework skill packs in .agents/skills/                              │
+│    • Framework skill packs into .claude/skills/ (-a claude-code)            │
 │        – LangChain / LangGraph / DeepAgents (9 skills)                     │
 │        – Google ADK (7 skills)                                             │
 │    • Tracker config (Linear / Jira) — opt-in                               │
@@ -143,7 +143,7 @@ Neither runtime changes how `/auto` runs inside the workspace. The only differen
 | Templates | 10 | `.claude/templates/*` | Sprint contract, story, init.sh, tracker config, etc. |
 | State files | 6+ | `.claude/state/`, project root | Append-only continuity + ratchet memory |
 | Official plugins (default-on) | 8 | `enabledPlugins` in `settings.json` | Superpowers, code-review, frontend-design, … |
-| Framework skill packs | 2 (opt-in) | `.agents/skills/<pack>` | LangChain (9 skills) · Google ADK (7 skills) |
+| Framework skill packs | 2 (opt-in) | `.claude/skills/<pack-prefix>-*` (via `-a claude-code`) | LangChain (9 skills) · Google ADK (7 skills) |
 | Tracker orchestrator | 1 sibling project | `symphony_clone/` | Docker service for Linear-driven dispatch |
 
 ### The 26 skills, grouped by lane
@@ -427,7 +427,7 @@ Escalation contract: if the work outgrows the chosen lane (lite turns into 7 sto
 
 ## 10. Optional Framework Skill Packs
 
-`/scaffold` question 8 asks whether to install framework-specific skill packs alongside the harness. These are **opt-in** and ship through the open `skills` CLI into the target project's `.agents/skills/` directory — they sit next to the harness skills, not inside `.claude/skills/`. Claude Code picks them up from both locations.
+`/scaffold` asks whether to install framework-specific skill packs alongside the harness. These are **opt-in** and ship through the open `skills` CLI; with `-a claude-code` they land inside `.claude/skills/<pack-prefix>-*` directly alongside the 26 harness skills.
 
 | Pack | Source | Skill count | Trigger phrases |
 |---|---|---:|---|

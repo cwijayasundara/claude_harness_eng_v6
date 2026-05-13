@@ -101,7 +101,7 @@ Questions 5–8 are the **injection points**: they decide which optional capabil
 │    • Official plugins (Q5)                                                │
 │    • Graphify for richer brownfield graphs (Q6)                           │
 │    • Tracker config for Linear/Jira (Q7)                                  │
-│    • Framework skill packs in .agents/skills/ (Q8)                        │
+│    • Framework skill packs into .claude/skills/ (Q8)                      │
 └───────────────────────────────────────────────────────────────────────────┘
                                   │
                                   ▼
@@ -230,7 +230,7 @@ Reviewers see the proof comment + PR in Linear. Merging happens in GitHub. **The
 
 ## Optional framework skill packs
 
-`/scaffold` question 8 asks whether to inject framework-specific skill packs. They land in `.agents/skills/` (next to `.claude/skills/`) and are triggered automatically by framework-specific phrasing.
+`/scaffold` asks whether to inject framework-specific skill packs. With `-a claude-code` they land in `.claude/skills/<pack-prefix>-*` alongside the harness skills and are triggered automatically by framework-specific phrasing.
 
 | Pack | Skills | Trigger examples |
 |---|---:|---|
