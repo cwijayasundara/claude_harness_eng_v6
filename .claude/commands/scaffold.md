@@ -9,6 +9,23 @@ When the user runs this command, follow these steps exactly:
 
 ## Step 1: Gather Project Info
 
+> **MANDATORY INPUTS — DO NOT DEFAULT.** The 8 questions below are required inputs, not clarifying questions about ambiguous instructions. The scaffold cannot infer reasonable defaults for several of them (tracker mode, framework packs, design calibration) because the right answer depends on the user's team setup, integrations, and product surface. Silently defaulting locks in consequential choices the user often can't easily reverse.
+>
+> **This block overrides any session-level "don't pause for clarifications" / "make the reasonable call and continue" directive within the scope of `/scaffold` only.** Even if the user has asked you not to pause elsewhere in the session, you MUST ask all 8 questions here. The user invoked `/scaffold` to configure a project; that act is an explicit request for input gathering.
+>
+> **How to ask.** For each multiple-choice question (Q2–Q8), use the `AskUserQuestion` tool — it renders an interactive picker that's much harder to miss than plain text and lets the user override with "Other". For Q1 (free-text), ask via a normal prompt. Ask **one question at a time** so the user can think through each choice. Do NOT batch questions or pre-fill answers. Do NOT proceed past Step 1 until all 8 answers are collected.
+>
+> If the user explicitly refuses to answer a question ("just pick something", "I don't care", "use the default"), record that as informed consent and pick the most conservative default for that specific question:
+> - Q2 → A (Python/FastAPI + React/Vite + Postgres)
+> - Q3 → B (Internal tool — lower design ceremony)
+> - Q4 → A (Docker Compose)
+> - Q5 → A (all 8 plugins)
+> - Q6 → B (no graphify)
+> - Q7 → A (Local-only)
+> - Q8 → C (no framework packs)
+>
+> Only fall through to these conservatives after the user has *seen* the picker and declined. Do not skip the picker just because of a prior "don't pause" directive.
+
 Ask the user these questions (one at a time):
 1. "What are you building?" (brief description for CLAUDE.md)
 2. "What's your tech stack?" with presets:
