@@ -257,7 +257,7 @@ test -f "$PLUGIN_SOURCE/templates/context.template.md"
 test -f "$PLUGIN_SOURCE/templates/story.template.md"
 SKILL_COUNT=$(find "$PLUGIN_SOURCE/skills" -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')
 TEMPLATE_COUNT=$(find "$PLUGIN_SOURCE/templates" -maxdepth 1 -type f | wc -l | tr -d ' ')
-test "$SKILL_COUNT" = "26"
+test "$SKILL_COUNT" = "27"
 test "$TEMPLATE_COUNT" = "10"
 ```
 
@@ -704,7 +704,7 @@ Tailor the "Next steps" ordering based on the project-type decision:
 
 Installed:
   7 agents      → .claude/agents/
-  26 skills     → .claude/skills/
+  27 skills     → .claude/skills/
   15 hooks      → .claude/hooks/
   10 templates  → .claude/templates/
   6 state files → .claude/state/
@@ -724,7 +724,7 @@ Next steps:
 
 Installed:
   7 agents      → .claude/agents/
-  26 skills     → .claude/skills/
+  27 skills     → .claude/skills/
   15 hooks      → .claude/hooks/
   10 templates  → .claude/templates/
   6 state files → .claude/state/
@@ -738,13 +738,15 @@ Next steps:
 
 ### Framework Skill Pack Addendum
 
-If the user installed any framework skill packs (selected on the confirmation card or wizard), append a section after the `Installed:` block (before `Next steps:`), listing each pack with its skill count and storage path. Example:
+If the user installed any framework skill packs (selected on the confirmation card or wizard), append a section after the `Installed:` block (before `Next steps:`), listing each pack with its skill count and install status. Example:
 
 ```
 Framework skill packs (.claude/skills/):
-  + LangChain / LangGraph / DeepAgents — 9 skills (cwijayasundara/agent_cli_langchain)
-  + Google ADK                          — 7 skills (google/agents-cli)
+  + LangChain / LangGraph / DeepAgents — 9 skills (cwijayasundara/agent_cli_langchain)   [INSTALLED]
+  + Google ADK                          — 7 skills (google/agents-cli)                    [BLOCKED — see banner below]
 ```
+
+Use `INSTALLED` when the prefix directory contains the expected skill count. Use `BLOCKED` when the auto-mode classifier denied the install. Use `FAILED` for any other error.
 
 Also append a "Framework-specific entry points" hint to Next steps, since these packs ship their own scaffolders and workflow skills that complement the harness pipeline. Example additions:
 
@@ -752,3 +754,45 @@ Also append a "Framework-specific entry points" hint to Next steps, since these 
 - If Google ADK pack installed: "For Google ADK work, ask Claude to 'start a new ADK project' or 'deploy my ADK agent' — the `google-agents-cli-*` skills will trigger."
 
 If the user picked None for framework packs, omit both additions.
+
+### Final banner — print LAST when any pack install was blocked or failed
+
+If at least one framework pack ended in `BLOCKED` or `FAILED` state, the very last thing the scaffold prints (after the Files-written section, after Next steps, after everything) MUST be a prominent boxed banner. This banner is the user's primary signal that the scaffold is not "complete-complete" — they need to take one action.
+
+Print exactly this template for each blocked/failed pack (concatenate if there are multiple):
+
+```
+═══════════════════════════════════════════════════════════════════════════════
+  [!] ACTION REQUIRED — Framework pack install was blocked
+═══════════════════════════════════════════════════════════════════════════════
+
+  Pack: <pack-display-name> (<repo>)
+  Cause: <one-line reason — typically "Claude Code auto-mode classifier
+          blocks external installs as a safety gate, independent of
+          settings.json allowlist">
+
+  Finish the install in 2 steps:
+
+  1) Open a normal terminal (NOT Claude Code) and run:
+
+       cd <project-root>
+       npx --yes skills add <repo> -a claude-code -s '*' -y
+
+  2) Come back to Claude Code and run:
+
+       /install-framework-packs
+
+     The skill is idempotent — it verifies the install completed and
+     reports any remaining blocked packs.
+
+═══════════════════════════════════════════════════════════════════════════════
+```
+
+Banner rules:
+
+- The banner MUST be the absolute last text printed in the scaffold report. Do not append further "Files written" or "Configuration" blocks below it.
+- Use real Unicode box characters (`═`). Do not collapse to ASCII dashes.
+- One banner per blocked pack. If two packs are blocked, print two banners back-to-back.
+- If all packs installed successfully, omit the banner entirely and end the report on Next steps.
+
+If no framework packs were configured (the user picked None), neither this banner nor the addendum appears in the report.

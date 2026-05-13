@@ -137,7 +137,7 @@ Neither runtime changes how `/auto` runs inside the workspace. The only differen
 | Component | Count | Location | Purpose |
 |---|---:|---|---|
 | Slash command (true) | 1 | `.claude/commands/scaffold.md` | Bootloader only |
-| Skills (virtual commands) | 26 | `.claude/skills/<name>/SKILL.md` | All other workflows |
+| Skills (virtual commands) | 27 | `.claude/skills/<name>/SKILL.md` | All other workflows |
 | Specialized agents | 7 | `.claude/agents/<name>.md` | Subagents with tool allowlists + model tier |
 | Lifecycle hooks | 15 | `.claude/hooks/*.js` | Pre/post tool, pre-commit, Stop, TeammateIdle |
 | Templates | 10 | `.claude/templates/*` | Sprint contract, story, init.sh, tracker config, etc. |
@@ -146,7 +146,7 @@ Neither runtime changes how `/auto` runs inside the workspace. The only differen
 | Framework skill packs | 2 (opt-in) | `.claude/skills/<pack-prefix>-*` (via `-a claude-code`) | LangChain (9 skills) · Google ADK (7 skills) |
 | Tracker orchestrator | 1 sibling project | `symphony_clone/` | Docker service for Linear-driven dispatch |
 
-### The 26 skills, grouped by lane
+### The 27 skills, grouped by lane
 
 | Lane | Skills |
 |---|---|
@@ -155,6 +155,7 @@ Neither runtime changes how `/auto` runs inside the workspace. The only differen
 | Improvement | `improve`, `refactor`, `fix-issue`, `lint-drift` |
 | Reference (loaded on intent) | `architecture`, `code-gen`, `testing`, `evaluation`, `clarify` |
 | Tracker add-on | `tracker`, `tracker-publish` |
+| Framework packs | `install-framework-packs` |
 
 ### The 7 agents
 
@@ -427,7 +428,7 @@ Escalation contract: if the work outgrows the chosen lane (lite turns into 7 sto
 
 ## 10. Optional Framework Skill Packs
 
-`/scaffold` asks whether to install framework-specific skill packs alongside the harness. These are **opt-in** and ship through the open `skills` CLI; with `-a claude-code` they land inside `.claude/skills/<pack-prefix>-*` directly alongside the 26 harness skills.
+`/scaffold` asks whether to install framework-specific skill packs alongside the harness. These are **opt-in** and ship through the open `skills` CLI; with `-a claude-code` they land inside `.claude/skills/<pack-prefix>-*` directly alongside the 27 harness skills. If the install is blocked (auto-mode classifier), `/scaffold` records the intent in `project-manifest.json#framework_skill_packs` and `/install-framework-packs` can re-run installs idempotently.
 
 | Pack | Source | Skill count | Trigger phrases |
 |---|---|---:|---|
@@ -645,6 +646,7 @@ Agent contract: in brownfield mode, "module X depends on Y" claims must cite `co
 | `/lint-drift` | Entropy scanner for pattern drift | No | — |
 | `/tracker` | Optional Linear/Jira orchestration overview | Yes | — |
 | `/tracker-publish` | Publish approved dependency groups to tracker issues | Yes | — |
+| `/install-framework-packs` | Re-attempt installs for framework packs declared in `project-manifest.json` (idempotent) | No | — |
 
 ---
 

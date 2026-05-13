@@ -41,7 +41,7 @@ Autonomous code generation fails in three predictable ways: agents grade their o
 | Component | Count | Notes |
 |---|---:|---|
 | Slash commands (true) | 1 | Just `/scaffold`. Everything else is a skill. |
-| Skills (virtual commands) | 26 | Greenfield, brownfield, lite, vibe, improvement, tracker |
+| Skills (virtual commands) | 27 | Greenfield, brownfield, lite, vibe, improvement, tracker, framework-packs |
 | Specialized agents | 7 | planner, generator, evaluator, design-critic, ui-designer, test-engineer, security-reviewer |
 | Lifecycle hooks | 15 | Pre/post tool, pre-commit, Stop, TeammateIdle |
 | Templates | 10 | Sprint contract, story, init.sh, tracker config, etc. |
@@ -288,6 +288,7 @@ Each lane has an explicit escalation contract — if work outgrows the lane, sto
 | `/lint-drift` | Entropy scanner for pattern drift |
 | `/tracker` | Tracker orchestration overview |
 | `/tracker-publish` | Publish approved dependency groups to Linear/Jira |
+| `/install-framework-packs` | Re-run framework-pack installs declared in `project-manifest.json` (idempotent) |
 
 ---
 
