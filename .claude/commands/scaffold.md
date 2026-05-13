@@ -51,6 +51,10 @@ If the user picks D, treat this as a hint that the full SDLC pipeline is likely 
    - B) Publish generated story groups to Linear/Jira only
    - C) Publish + sync proof/status
    - D) Publish + external orchestrator dispatch
+8. "Install agent-framework skill packs?" (multi-select; default: None) — opt-in skill packs that teach Claude how to work with specific agent frameworks. Installed project-locally via `npx skills` into the target project's `.agents/skills/`. They sit alongside the harness skills and trigger on framework-specific phrasing.
+   - A) LangChain / LangGraph / DeepAgents — `cwijayasundara/agent_cli_langchain` (9 skills: scaffold, workflow, langchain-code, langgraph-code, deepagents-code, middleware, langsmith-evals, deploy, observability)
+   - B) Google ADK — `google/agents-cli` (7 skills: scaffold, workflow, adk-code, eval, deploy, observability, publish)
+   - C) None — skip framework skill packs (harness skills only)
 
 ## Step 2: Generate project-manifest.json
 
@@ -267,6 +271,39 @@ Then edit `.claude/tracker-config.json` based on the selected mode:
 - Publish + external orchestrator dispatch: set `enabled: true`, `mode: "orchestrate"`.
 
 Do not write tracker API keys into `.claude/tracker-config.json`. Use environment variables such as `LINEAR_API_KEY`, `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, and `GITHUB_TOKEN`.
+
+### Optional Agent-Framework Skill Packs (question 8)
+
+If the user selected one or more skill packs at question 8, install them project-locally via the open agent skills CLI (`npx skills`). These skills land in `.agents/skills/` in the target project — not under `.claude/skills/`. Claude Code picks them up from both locations.
+
+**Important:** Run these commands inside the target project directory (the cwd `/scaffold` is operating in). Do NOT use `-g`/`--global` — the user has explicitly chosen to scope framework skills per-project so the harness scaffold remains generic.
+
+For each selected pack, run the matching command and confirm the install line count matches the expected skill count.
+
+**A) LangChain / LangGraph / DeepAgents — 9 skills:**
+```bash
+npx --yes skills add -y --agent claude-code cwijayasundara/agent_cli_langchain
+```
+Expected: 9 skills under `.agents/skills/langchain-agents-*` (scaffold, workflow, langchain-code, langgraph-code, deepagents-code, middleware, langsmith-evals, deploy, observability).
+
+**B) Google ADK — 7 skills:**
+```bash
+npx --yes skills add -y --agent claude-code google/agents-cli
+```
+Expected: 7 skills under `.agents/skills/google-agents-cli-*` (scaffold, workflow, adk-code, eval, deploy, observability, publish).
+
+If the `npx skills add` command fails (e.g., npm/network not available), stop and surface the error — do NOT silently continue. The user can retry the command manually after fixing connectivity.
+
+Verify installs:
+```bash
+test -d .agents/skills && find .agents/skills -mindepth 1 -maxdepth 1 -type d | wc -l
+```
+
+Record the chosen packs in `project-manifest.json` under a new top-level `framework_skill_packs` array so future `/scaffold enhance`-style operations and the Step 10 report can see what was installed. Example:
+```json
+"framework_skill_packs": ["langchain", "google-adk"]
+```
+Omit the field if the user picked C (None).
 
 ## Step 5: Generate CLAUDE.md
 
@@ -601,3 +638,20 @@ Next steps:
   2. Escalate to /brd → /spec → /design → /auto if scope grows past the /lite eligibility cap
   3. For tiny safe changes later, use /vibe with a micro-contract
 ```
+
+### Framework Skill Pack Addendum (question 8)
+
+If the user installed any framework skill packs at question 8, append a section after the `Installed:` block (before `Next steps:`), listing each pack with its skill count and storage path. Example:
+
+```
+Framework skill packs (.agents/skills/):
+  + LangChain / LangGraph / DeepAgents — 9 skills (cwijayasundara/agent_cli_langchain)
+  + Google ADK                          — 7 skills (google/agents-cli)
+```
+
+Also append a "Framework-specific entry points" hint to Next steps, since these packs ship their own scaffolders and workflow skills that complement the harness pipeline. Example additions:
+
+- If LangChain pack installed: "For LangChain/LangGraph/DeepAgents work, ask Claude to 'scaffold a langgraph agent' or 'build an agent using ADK middleware' — the framework's `*-scaffold` and `*-workflow` skills will trigger."
+- If Google ADK pack installed: "For Google ADK work, ask Claude to 'start a new ADK project' or 'deploy my ADK agent' — the `google-agents-cli-*` skills will trigger."
+
+If question 8 was C (None), omit both additions.

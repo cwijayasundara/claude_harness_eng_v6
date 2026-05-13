@@ -4,7 +4,7 @@ Comprehensive design document for the Claude Harness Engine: a GAN-inspired orch
 
 Copied into target projects by `/scaffold`.
 
-Current scaffold version: `1.1.4`.
+Current scaffold version: `1.1.5`.
 
 Canonical repository: `https://github.com/cwijayasundara/claude_harness_eng_v4.git`.
 
@@ -24,9 +24,7 @@ Based on:
 When an AI agent generates code autonomously, three failure modes dominate:
 
 1. **Self-evaluation bias** — The agent that wrote the code cannot objectively judge it. It rationalizes failures ("the test is probably wrong"), skips edge cases, and declares victory prematurely.
-
 2. **Quality regression** — Without enforcement, coverage drops, functions grow, architecture drifts, and the codebase degrades over multiple iterations. Each fix introduces new problems.
-
 3. **Context exhaustion** — Complex projects exceed a single context window. Without recovery, work restarts from scratch every session, knowledge is lost, and the same mistakes repeat.
 
 ### The Solution: GAN + Ratchet
@@ -41,82 +39,160 @@ Together: the GAN ensures honest verification at each step, and the ratchet ensu
 
 ---
 
-## 2. System Architecture
+## 2. End-to-End System Design
+
+The harness is now an **agent factory**: one scaffold, optional framework skill packs, and two interchangeable execution surfaces (a local Claude Code workspace, or a Linear/Jira-driven tracker queue serviced by `symphony_clone`).
 
 ```
-+---------------------------------------------------------------------+
-|                        HUMAN INTERFACE                                |
-|                                                                      |
-|  program.md           CLAUDE.md            project-manifest.json     |
-|  (Karpathy bridge)    (table of contents)  (stack + eval config)     |
-+--------+------------------+--------------------+--------------------+
-         |                  |                    |
-         v                  v                    v
-+---------------------------------------------------------------------+
-|                      ORCHESTRATION LAYER                             |
-|                                                                      |
-|  /build --> /brd -> /spec -> /design -> /implement -> /evaluate      |
-|                                              |              |        |
-|                                              v              v        |
-|                                         /auto (Karpathy ratchet)     |
-|                                              |                       |
-|                                  +-----------+-----------+           |
-|                                  v           v           v           |
-|                             Generator   Evaluator   Design-Critic    |
-|                                  |           |           |           |
-|                             Agent Teams  Playwright   Vision Score   |
-|                             (parallel     MCP + API    (GAN loop,   |
-|                              stories)    + Docker logs  weighted)    |
-|                                                                      |
-|  Support: /fix-issue  /refactor  /improve  /lint-drift  /deploy      |
-+--------+------------------+--------------------+--------------------+
-         |                  |                    |
-         v                  v                    v
-+---------------------------------------------------------------------+
-|                     AGENT LAYER (7 agents)                           |
-|  planner / generator / evaluator / design-critic /                   |
-|  security-reviewer / ui-designer / test-engineer                     |
-|                                                                      |
-|  Model tiering: Opus for judgment (orchestrator, evaluator, critic)  |
-|                 Sonnet for execution (generator teammates)           |
-+--------+------------------+--------------------+--------------------+
-         |                  |                    |
-         v                  v                    v
-+---------------------------------------------------------------------+
-|                   ENFORCEMENT LAYER (15 hooks)                       |
-|  All hooks include remediation instructions ("Fix: ...")             |
-|                                                                      |
-|  Security: scope-directory | protect-env | detect-secrets            |
-|  Quality:  lint-on-save | typecheck | check-architecture             |
-|            check-function-length | check-file-length                 |
-|  Gates:    enforce-length-pre | pre-commit-gate | sprint-contract-gate|
-|  Teams:    teammate-idle-check                                       |
-|  Review:   track-writes | require-review                            |
-|  Info:     task-completed                                            |
-+--------+------------------+--------------------+--------------------+
-         |                  |                    |
-         v                  v                    v
-+---------------------------------------------------------------------+
-|                       STATE LAYER                                    |
-|  program.md | iteration-log.md | learned-rules.md | failures.md     |
-|  coverage-baseline | features.json | claude-progress.txt             |
-|  sprint-contracts/ | specs/reviews/eval-scores.json                 |
-+---------------------------------------------------------------------+
+┌───────────────────────────────────────────────────────────────────────────┐
+│  0. AUTHORING — Human + Claude Code (interactive)                          │
+│                                                                            │
+│  /scaffold (asks 8 questions) ─► writes:                                   │
+│    project-manifest.json · CLAUDE.md · design.md · init.sh                 │
+│    .claude/  (agents · skills · hooks · templates · state)                 │
+│    specs/   (brd · stories · design · brownfield · reviews)                │
+│                                                                            │
+│  Optional packs injected at scaffold time:                                 │
+│    • Official Claude Code plugins (superpowers, code-review, …)            │
+│    • Framework skill packs in .agents/skills/                              │
+│        – LangChain / LangGraph / DeepAgents (9 skills)                     │
+│        – Google ADK (7 skills)                                             │
+│    • Tracker config (Linear / Jira) — opt-in                               │
+└────────────────────────────────────┬──────────────────────────────────────┘
+                                     │
+                                     ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│  1. PLANNING — Same in both runtimes                                       │
+│                                                                            │
+│  Greenfield large : /brd  →  /spec  →  /design        (human gates)        │
+│  Greenfield small : /lite (compressed BRD + 1 group)                       │
+│  Brownfield       : /brownfield → /code-map → /seam-finder                 │
+│  Small fixes      : /vibe (micro-contract)                                 │
+│                                                                            │
+│  Output contract:                                                          │
+│    specs/stories/dependency-graph.md   (groups + blockers)                 │
+│    specs/design/component-map.md       (file ownership per story)          │
+│    features.json                       (pass/fail registry)                │
+└────────────────────────────────────┬──────────────────────────────────────┘
+                                     │
+              ┌──────────────────────┴──────────────────────┐
+              │                                              │
+              ▼                                              ▼
+┌─────────────────────────────────────┐    ┌─────────────────────────────────────┐
+│  2a. LOCAL RUNTIME                   │    │  2b. AGENT-FACTORY RUNTIME           │
+│  (default — single workstation)      │    │  (opt-in — Linear/Jira + Docker)     │
+│                                      │    │                                      │
+│  Human runs in Claude Code:          │    │  /tracker-publish writes one Linear/ │
+│    /auto --group <id>                │    │  Jira issue per dependency group.    │
+│  or /auto for the next wave.         │    │                                      │
+│                                      │    │  symphony_clone (Docker container):  │
+│  /auto orchestrates the ratchet:     │    │   • polls tracker for Ready + label  │
+│   generator → evaluator → critic     │    │   • clones repo to /workspaces/<key> │
+│   → security → test-engineer.        │    │   • runs `claude --print …` with the │
+│                                      │    │     /auto prompt for that group      │
+│  Human reviews diffs and merges.     │    │   • reads result.json proof          │
+│                                      │    │   • opens PR + comments back         │
+│                                      │    │   • moves issue to Human Review      │
+└──────────────────────┬───────────────┘    └────────────────────┬────────────────┘
+                       │                                          │
+                       └────────────────────┬─────────────────────┘
+                                            ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│  3. EXECUTION — Identical inside the workspace                             │
+│                                                                            │
+│  /auto loop per group:                                                     │
+│   1. Recover state (program.md, learned-rules.md, features.json)          │
+│   2. Negotiate sprint contract (generator proposes → evaluator finalizes) │
+│   3. Spawn agent team (phased DAG, ≤5 parallel teammates)                  │
+│   4. Run 6 ratchet gates (tests → lint → coverage → arch → eval → critic) │
+│   5. Self-heal failed gates (max 3 attempts; different strategy each)      │
+│   6. Update features.json, learned-rules.md, claude-progress.txt           │
+│   7. Commit. Hooks enforce length, secrets, layers, review.                │
+└────────────────────────────────────┬──────────────────────────────────────┘
+                                     │
+                                     ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│  4. DELIVERY                                                               │
+│                                                                            │
+│  Local mode    : commits on main branch (or /commit-push-pr).             │
+│  Factory mode  : agent/<issue-key> branch + GitHub PR + Linear proof.     │
+│                                                                            │
+│  Humans always own merge and "Done." The orchestrator never closes.       │
+└───────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Layer Responsibilities
+### Why two runtimes share one scaffold
 
-| Layer | What It Does | Who Controls It |
-|-------|-------------|----------------|
-| **Human Interface** | Constraints, steering, configuration | Human edits `program.md` mid-run |
-| **Orchestration** | Pipeline sequencing, iteration control, mode selection | `/auto` skill (reads `program.md` every iteration) |
-| **Agent** | Code generation, evaluation, design scoring, security scanning | 7 specialized agents with model tiering |
-| **Enforcement** | Real-time quality gates on every edit and commit | 15 hooks (block, warn, auto-fix, or review-enforce) |
-| **State** | Session chaining, learned rules, feature tracking | Append-only files (never lose progress) |
+The scaffold writes a single **work contract** (`dependency-graph.md`, `component-map.md`, `features.json`, sprint contracts). Both runtimes consume it.
+
+- **Local** is the fast loop: solo engineer, 1-3 hour cycles, full feedback in the same chat.
+- **Agent factory** is the queue loop: tracker visibility, parallel groups across machines, human review surface in Linear/Jira.
+
+Neither runtime changes how `/auto` runs inside the workspace. The only difference is **who picks the next group and where the proof shows up**.
 
 ---
 
-## 3. The GAN Architecture
+## 3. Component Inventory
+
+| Component | Count | Location | Purpose |
+|---|---:|---|---|
+| Slash command (true) | 1 | `.claude/commands/scaffold.md` | Bootloader only |
+| Skills (virtual commands) | 26 | `.claude/skills/<name>/SKILL.md` | All other workflows |
+| Specialized agents | 7 | `.claude/agents/<name>.md` | Subagents with tool allowlists + model tier |
+| Lifecycle hooks | 15 | `.claude/hooks/*.js` | Pre/post tool, pre-commit, Stop, TeammateIdle |
+| Templates | 10 | `.claude/templates/*` | Sprint contract, story, init.sh, tracker config, etc. |
+| State files | 6+ | `.claude/state/`, project root | Append-only continuity + ratchet memory |
+| Official plugins (default-on) | 8 | `enabledPlugins` in `settings.json` | Superpowers, code-review, frontend-design, … |
+| Framework skill packs | 2 (opt-in) | `.agents/skills/<pack>` | LangChain (9 skills) · Google ADK (7 skills) |
+| Tracker orchestrator | 1 sibling project | `symphony_clone/` | Docker service for Linear-driven dispatch |
+
+### The 26 skills, grouped by lane
+
+| Lane | Skills |
+|---|---|
+| Greenfield pipeline | `brd`, `spec`, `design`, `implement`, `evaluate`, `review`, `test`, `deploy`, `build`, `auto` |
+| Lite/brownfield/vibe | `lite`, `brownfield`, `code-map`, `seam-finder`, `vibe` |
+| Improvement | `improve`, `refactor`, `fix-issue`, `lint-drift` |
+| Reference (loaded on intent) | `architecture`, `code-gen`, `testing`, `evaluation`, `clarify` |
+| Tracker add-on | `tracker`, `tracker-publish` |
+
+### The 7 agents
+
+| Agent | Model | Tool grants | Responsibility |
+|---|---|---|---|
+| planner | Opus | Read · Write · Glob · Grep · Bash | BRD, stories, dep graph, architecture, schemas |
+| generator | Sonnet | + Edit · Agent (spawns teammates) | Code + tests, spawns agent team, TDD |
+| evaluator | Opus | + Playwright MCP (navigate, click, fill, snap) | Runs app, 3-layer verification, structured failures |
+| design-critic | Opus | + Playwright MCP (resize, hover, screenshot) | GAN scoring (DQ/O/C/F), plateau pivot |
+| ui-designer | Sonnet | Read · Write · Glob · Grep · Bash | React + Tailwind HTML mockups |
+| test-engineer | Sonnet | Read · Write · Edit · Glob · Grep · Bash | Test plan, Playwright E2E, fixtures |
+| security-reviewer | Sonnet | Read · Write · Grep · Glob · Bash | OWASP scan, BLOCK/WARN/INFO triage |
+
+### The 15 hooks
+
+All hooks include remediation instructions ("Fix: …") so they steer the agent, not just block it.
+
+| Event matcher | Hook | Purpose |
+|---|---|---|
+| `PreToolUse Write|Edit|MultiEdit` | `enforce-length-pre.js` | Block oversized files at intent time |
+| `PostToolUse Edit|Write|MultiEdit` | `scope-directory.js` | Reject writes outside the project |
+| `PostToolUse Edit|Write|MultiEdit` | `protect-env.js` | Refuse changes to `.env` files |
+| `PostToolUse Edit|Write|MultiEdit` | `detect-secrets.js` | Refuse hardcoded secrets |
+| `PostToolUse Edit|Write|MultiEdit` | `lint-on-save.js` | ruff / eslint on every save |
+| `PostToolUse Edit|Write|MultiEdit` | `typecheck.js` | mypy / tsc on every save |
+| `PostToolUse Edit|Write|MultiEdit` | `check-architecture.js` | One-way layer imports |
+| `PostToolUse Edit|Write|MultiEdit` | `check-function-length.js` | Warn >50 / block >100 lines |
+| `PostToolUse Edit|Write|MultiEdit` | `check-file-length.js` | Warn 200 / block 300 lines |
+| `PostToolUse Edit|Write|MultiEdit` | `track-writes.js` | Append edits to `pending-reviews.jsonl` |
+| `PostToolUse Bash` | `pre-commit-gate.js` | Block commit if gates fail |
+| `PostToolUse Bash` | `sprint-contract-gate.js` | Block `/build` until contract approved |
+| `Stop` | `require-review.js` | Force reviewer agent before turn ends |
+| `TaskCompleted` | `task-completed.js` | Architecture scan + `/review` reminder |
+| `TeammateIdle` | `teammate-idle-check.js` | Nudge stuck teammates; no tests = no idle |
+
+---
+
+## 4. The GAN Architecture
 
 ### Why Separation Matters
 
@@ -168,16 +244,13 @@ Before any code is written, the generator and evaluator negotiate a **sprint con
         "id": "api-001",
         "method": "POST",
         "path": "/documents/upload",
-        "headers": { "Content-Type": "multipart/form-data" },
         "expected_status": 201,
-        "expected_body": { "document_id": "string" },
-        "description": "Upload document returns 201 with document_id"
+        "expected_body": { "document_id": "string" }
       }
     ],
     "playwright_checks": [
       {
         "id": "pw-001",
-        "description": "Upload document end-to-end",
         "url": "/upload",
         "steps": [
           { "action": "navigate", "value": "/upload" },
@@ -189,27 +262,21 @@ Before any code is written, the generator and evaluator negotiate a **sprint con
     ],
     "design_checks": {
       "visual_hierarchy": { "required": true, "min_score": 7 },
-      "accessibility": { "required": true, "min_score": 5 },
-      "responsiveness": { "required": true, "min_score": 7 },
-      "interaction_feedback": { "required": true, "min_score": 5 }
+      "accessibility": { "required": true, "min_score": 5 }
     },
     "performance_checks": [
-      { "endpoint": "/documents/upload", "max_response_time_ms": 2000, "method": "POST" }
+      { "endpoint": "/documents/upload", "max_response_time_ms": 2000 }
     ],
     "architecture_checks": {
-      "layering": { "required": true, "description": "No upward imports" },
-      "typing": { "required": true, "description": "All functions annotated" },
-      "folder_structure": { "required": true, "description": "Files match component-map" }
+      "layering": { "required": true },
+      "typing": { "required": true },
+      "folder_structure": { "required": true }
     }
   }
 }
 ```
 
-The negotiation protocol is exactly 2 calls:
-1. **Generator proposes** — based on story acceptance criteria + architecture
-2. **Evaluator finalizes** — can add checks, remove invalid ones. This version is immutable.
-
-No back-and-forth. No ambiguity. Both sides agree on what PASS means before coding starts.
+Negotiation is exactly 2 calls: generator proposes, evaluator finalizes. The result is immutable.
 
 ### Three-Layer Verification
 
@@ -217,194 +284,106 @@ The evaluator never reads source code. It only runs the application and checks o
 
 | Layer | What | How | Catches |
 |-------|------|-----|---------|
-| **1. API** | Endpoints return correct status + schema | `curl` against running app + `jsonschema` validation | Backend logic bugs, schema mismatches, missing error handling |
+| **1. API** | Endpoints return correct status + schema | `curl` against running app + `jsonschema` validation | Backend logic, schema mismatches, error handling |
 | **2. Playwright** | UI works as user expects | Playwright MCP: navigate, click, fill, assert with semantic selectors | Frontend bugs, broken forms, missing feedback, dead buttons |
 | **3. Vision** | UI has distinctive, quality design | Screenshots scored by design-critic on 4 weighted criteria | Generic templates, poor spacing, inconsistent styling |
 
-On any Layer 1 or 2 failure, the evaluator reads Docker logs (or process stderr in local mode) to extract the actual stack trace. The generator receives the exact error, not just "got 500 instead of 201."
+On any Layer 1 or 2 failure, the evaluator reads Docker logs (or process stderr in local mode) to extract the actual stack trace. The generator receives the exact error, not "got 500 instead of 201."
 
 ### The Design-Critic GAN Loop
 
-For frontend groups, after the main ratchet passes (tests, lint, coverage, API, Playwright), the design-critic runs a secondary GAN loop:
+For frontend groups, after the main ratchet passes, the design-critic runs a secondary GAN loop with weighted scoring:
 
-```
-Generator produces UI --> Design-Critic scores (4 criteria, weighted)
-     ^                          |
-     |                     Score >= threshold? --> PASS
-     |                          |
-     |                     No --> Send specific critique
-     |                          |
-     +---- Iterate on UI <------+
-                                |
-                         Plateau detected? --> Force pivot
-                         (score stuck for 3 iterations)
-                                |
-                         Max iterations? --> Log, escalate, continue
-```
+`Score = (DQ × 1.5 + O × 1.5 + C × 0.75 + F × 0.75) / 4.5`
 
-Scoring uses configurable weights from `calibration-profile.json`:
+| Criterion | Default Weight | Measures |
+|-----------|---------------|----------|
+| Design Quality | 1.5× | Coherent visual identity, color palette, layout |
+| Originality | 1.5× | Distinctive vs template defaults |
+| Craft | 0.75× | Typography hierarchy, spacing, alignment |
+| Functionality | 0.75× | User can understand and complete tasks |
 
-| Criterion | Default Weight | What It Measures |
-|-----------|---------------|-----------------|
-| Design Quality | 1.5x | Coherent visual identity, color palette, layout |
-| Originality | 1.5x | Distinctive vs template defaults |
-| Craft | 0.75x | Typography hierarchy, spacing, alignment |
-| Functionality | 0.75x | User can understand and complete tasks |
-
-Formula: `(DQ * 1.5 + O * 1.5 + C * 0.75 + F * 0.75) / 4.5`
-
-Two pass conditions must BOTH be met:
-1. Weighted average >= threshold (default 7)
-2. Every individual criterion >= per-criterion minimum (default 5)
-
-Calibration anchors at score 5, 7, 9 in `evaluation/references/scoring-examples.md`.
+Two pass conditions must BOTH be met: weighted average ≥ 7 AND every individual criterion ≥ 5. Calibration anchors at score 5, 7, 9 in `evaluation/references/scoring-examples.md`. Plateau detection (no improvement across 3 iterations) triggers a forced pivot.
 
 ---
 
-## 4. The Karpathy Ratchet
+## 5. The Karpathy Ratchet
 
 ### Concept: Monotonic Progress
 
-Named after Andrej Karpathy's autoresearch pattern: every quality metric can only move forward, never backward. This transforms autonomous code generation from "hope it works" to "guaranteed cumulative improvement."
-
-The ratchet has 6 sub-gates, run in sequence:
+Every quality metric can only move forward, never backward. The ratchet has 6 sub-gates run in sequence:
 
 ```
-Gate 1: Unit tests pass          [all modes]     -- cheap, catches logic errors
-Gate 2: Lint + types clean       [all modes]     -- cheap, catches style drift
-Gate 3: Coverage >= baseline     [all modes]     -- cheap, catches missing tests
-Gate 4: Architecture alignment   [full/lean]     -- moderate, catches structure drift
-Gate 5: Evaluator verdict        [full/lean]     -- expensive, catches real bugs
-Gate 6: Design critic score      [full only]     -- expensive, catches UI mediocrity
+Gate 1: Unit tests pass          [all modes]     -- pytest / vitest exit 0
+Gate 2: Lint + types clean       [all modes]     -- ruff / mypy / tsc exit 0
+Gate 3: Coverage >= baseline     [all modes]     -- floor 80%, never drops
+Gate 4: Architecture alignment   [full/lean]     -- one-way layer imports
+Gate 5: Evaluator verdict        [full/lean]     -- API + Playwright vs running app
+Gate 6: Design critic score      [full only]     -- vision scoring (4 criteria)
 ```
 
-### How the Ratchet Works
+**Coverage as verification, not just testing.** Steve Krenzel's framing: "100% coverage isn't a goal — it's verification that the agent double-checked every line it wrote." Floor 80%. Baseline ratchets upward. Below-baseline commits are rejected.
 
-**Coverage as verification, not just testing:**
+**Architecture enforcement** is one-way:
 
-Steve Krenzel's insight: "100% coverage isn't a goal — it's verification that the agent double-checked every line it wrote." The harness enforces:
-- **Floor: 80%** — No commit may drop below this. Ever.
-- **Baseline: current coverage** — If the project is at 87%, the next commit must be >= 87%.
-- **Target: 100%** — Every line needs a test, not for bug prevention, but to prove the agent thought about it.
-
-If coverage drops below baseline after a commit, the commit is rejected. Coverage ratchets upward only.
-
-**Architecture enforcement:**
-
-The harness enforces one-way layer dependencies:
 ```
-Types (Layer 1) -> Config (Layer 2) -> Repository (Layer 3) -> Service (Layer 4) -> API (Layer 5) -> UI (Layer 6)
+Types (Layer 1) → Config (Layer 2) → Repository (Layer 3) → Service (Layer 4) → API (Layer 5) → UI (Layer 6)
 ```
 
-A layer may import from layers below, never above. The `check-architecture.js` hook scans every file edit. Violations are blocked immediately.
+`check-architecture.js` scans every file edit. Upward imports are blocked.
 
-**Learned rules:**
-
-When the same error appears 2+ times in `failures.md`, the harness extracts a **learned rule** — a permanent directive injected into every future agent prompt:
-
-```markdown
-## Rule 3: API error responses must include error_code field
-
-- **Source:** Group B, Story S2-S1, Iteration 2
-- **Pattern:** Playwright test fails: cannot parse error message.
-  API returns {"error": "invalid file"} but code expects {"error_code": "..."}
-- **Rule:** Every error response must include: error_code (string enum),
-  message (human-readable), details (object, optional)
-```
-
-Rules are **monotonic** — never deleted, only added. They represent institutional knowledge that compounds across sessions.
+**Learned rules**: when the same error appears 2+ times in `failures.md`, the harness extracts a permanent directive into `learned-rules.md`. Rules are **monotonic** — never deleted, only added. They become institutional knowledge injected into every future agent prompt.
 
 ### Self-Healing Loop
 
-On FAIL, the ratchet doesn't immediately revert. It attempts targeted self-healing:
+On FAIL, the ratchet doesn't immediately revert. It attempts targeted self-healing (max 3 attempts), each with a different fix strategy. `prior_attempts` accumulation prevents the same fix being tried twice. After 3 failures the change is reverted, a learned rule is extracted, the group is marked BLOCKED, and `/auto` continues with the next unblocked group.
 
-```
-Attempt 1:
-  Read structured failure JSON (layer, error_type, stack_trace, files_involved)
-  Classify: lint? type? API? Playwright? coverage? Docker?
-  Apply targeted fix (only the failing code, nothing else)
-  Re-run ONLY the failed gate
-
-Attempt 2:
-  Same process, but with prior_attempts[1] showing what Attempt 1 tried
-  Generator sees: "Attempt 1 added a null check, but the real issue is FormData vs dict"
-
-Attempt 3:
-  Same, with prior_attempts[1,2]
-  If still failing: STOP
-
-3rd failure:
-  git checkout -- .  (revert)
-  Log to failures.md
-  Extract learned rule
-  Mark group BLOCKED
-  Continue to next unblocked group
-```
-
-The `prior_attempts` accumulation is critical — it prevents the generator from trying the same fix three times.
+The 10 failure categories: `lint_format`, `type_error`, `import_error`, `key_error`, `timeout`, `connection_refused`, `validation_error`, `assertion_error`, `api_transient`, `api_permanent`. Each maps to a distinct auto-fix.
 
 ### Session Chaining
 
-Complex projects span multiple context windows. The ratchet maintains continuity through 4 recovery files:
+Recovery cost ≈ 700–1000 tokens per iteration. `/auto` reads:
 
-| File | What It Stores | Read Cost |
-|------|---------------|-----------|
-| `claude-progress.txt` | Append-only session log (groups done, current group, last commit, features passing, coverage, next action) | ~500 tokens |
-| `features.json` | Granular pass/fail per feature with failure_layer and timestamps | Varies |
-| `learned-rules.md` | Monotonic knowledge base (never deleted) | Grows over time |
-| `git log` | Commit history showing what was done in prior sessions | ~200 tokens |
-
-At the start of every iteration, `/auto` reads (in order):
-1. `program.md` — constraints may have changed
-2. `learned-rules.md` — inject into all agent prompts
+1. `.claude/program.md` — constraints may have changed mid-run
+2. `.claude/state/learned-rules.md` — inject verbatim into all agent prompts
 3. `claude-progress.txt` — last session block only
 4. `features.json` — what's passing, what's failing
-5. `dependency-graph.md` — what's the next group
-
-This costs ~700-1000 tokens per recovery — negligible compared to the context window.
+5. `specs/stories/dependency-graph.md` — what's the next unblocked group
 
 ---
 
-## 5. Agent Teams and Phased Execution
+## 6. Agent Teams and Phased Execution
 
-### Why Parallel Execution
+### Why Parallel
 
-Sequential implementation: Story 1 (4 hrs) -> Story 2 (3 hrs) -> Story 3 (2 hrs) = 9 hours.
-Parallel with agent teams: all three in parallel = 4 hours.
+Sequential: 3 stories × 3h = 9h.
+Phased agent team: 3 parallel teammates = 4h.
 
 ### Dependency Handshake
 
-Before spawning teammates, the generator analyzes the component map for cross-dependencies:
+Before spawning teammates, the generator analyzes `component-map.md` for:
 
-1. **Shared files** — files appearing in 2+ stories get a designated integrator
-2. **Interface boundaries** — `Produces:` / `Consumes:` annotations define data flow
-3. **Micro-DAG** — teammates grouped into execution phases
+1. **Shared files** — files appearing in 2+ stories get a designated integrator.
+2. **Interface boundaries** — `Produces:` / `Consumes:` annotations define data flow.
+3. **Micro-DAG** — teammates grouped into execution phases.
 
 ```
-Phase 1: teammate-upload (no upstream deps)
-    produces: UploadResult {document_id, status}
-Phase 2: teammate-process (consumes UploadResult)
-    produces: ProcessedDocument {document_id, fields}
-Phase 3: teammate-upload integrates shared types.py
+Phase 1: teammate-upload   (no upstream deps)
+            produces: UploadResult {document_id, status}
+Phase 2: teammate-process  (consumes UploadResult)
+            produces: ProcessedDocument {document_id, fields}
+Phase 3: integration       (merges shared types.py)
 ```
 
-Within each phase, teammates run in parallel (max 5). Only cross-phase dependencies are sequential.
+Within a phase, teammates run in parallel (max 5). Only cross-phase dependencies are sequential.
 
 ### Teammate Isolation
 
-Each teammate receives:
-- Story acceptance criteria
-- File ownership (strict — no overlapping edits)
-- Learned rules (verbatim)
-- Quality principles from `code-gen/SKILL.md`
-- Interface contracts from upstream teammates (Phase 2+ only)
-- API integration patterns (if story involves external APIs)
-
-No teammate reads the full codebase. They work within their file boundaries and communicate through typed interface contracts.
+Each teammate receives: story acceptance criteria, owned files (no overlap), learned rules verbatim, quality principles from `code-gen/SKILL.md`, upstream interface contracts (Phase 2+ only), API integration patterns (if relevant). No teammate reads the full codebase.
 
 ---
 
-## 6. Verification Modes
+## 7. Verification Modes
 
 The evaluator supports 3 modes for reaching the running application:
 
@@ -414,90 +393,124 @@ The evaluator supports 3 modes for reaching the running application:
 | **local** | Dev servers, serverless emulators | Start processes via configured commands, health-check against URLs, process stderr for errors |
 | **stub** | No runnable backend (serverless, external-only) | Auto-generate mock server from `api-contracts.schema.json`, validate request/response shapes |
 
-Configured in `project-manifest.json` field `verification.mode`. All modes use the same health-check retry loop (5 attempts, exponential backoff) before running any checks.
+Configured in `project-manifest.json` under `verification.mode`. All modes use the same health-check retry loop (5 attempts, exponential backoff).
 
 ---
 
-## 7. Execution Modes
+## 8. Execution Modes
 
 | Mode | Cost | Gates | Agent Teams | Evaluator | Design Critic | When to Use |
 |------|------|-------|-------------|-----------|---------------|-------------|
-| **Full** | $100-300 | All 6 | Yes (phased) | Per group | Per group (configurable iterations) | Production apps, complex requirements |
-| **Lean** | $30-80 | 1-5 | Yes | Per group | Skipped | Backend-heavy, internal tools |
-| **Solo** | $5-15 | 1-3 | No | Skipped | Skipped | Bug fixes, small features, prototyping |
-| **Turbo** | $30-50 | 1-3 per commit, 4-6 at end | No | Once at end | Once at end | Well-specified + capable model |
+| **Full** | $100–300 | All 6 | Yes (phased) | Per group | Per group | Production apps, complex requirements |
+| **Lean** | $30–80 | 1–5 | Yes | Per group | Skipped | Backend-heavy, internal tools |
+| **Solo** | $5–15 | 1–3 | No | Skipped | Skipped | Bug fixes, small features, prototyping |
+| **Turbo** | $30–50 | 1–3 per commit, 4–6 at end | No | Once at end | Once at end | Well-specified spec + capable model |
 
-**Fast lane optimization:** For trivial changes (lint fixes, docs, type annotations), gates 4-6 are skipped. Detection: `git diff --name-only` shows only non-code files, or commit message matches lint/doc patterns.
-
----
-
-## 8. Production Standards for Generated Code
-
-All code generated by the harness follows these standards (enforced via `code-gen/SKILL.md`):
-
-### Structured Logging
-- `logging.getLogger(__name__)` at module level
-- Structured `extra` dicts (not f-string interpolation)
-- INFO for business events, WARNING for recoverable issues, ERROR for failures, DEBUG for troubleshooting
-- Never log secrets, tokens, or PII
-
-### Exception Handling
-- Typed exception classes per domain with context (document_id, stage, cause)
-- No bare `except Exception` — catch specific types
-- No silent fallbacks — failed operations raise, caller decides how to handle
-- API routes map domain exceptions to structured error responses
-
-### External API Integration
-- One wrapper class per external API (only file that imports SDK)
-- Typed inputs/outputs using project-internal models, not SDK types
-- Error taxonomy: `ApiTransientError` (retryable), `ApiPermanentError` (not retryable), `ApiRateLimitError`
-- Retry config in `config.yml`, not hardcoded
-- Record-replay test fixtures for integration testing
-
-### LLM Integration
-- Always use structured output (tool_use / JSON mode) — never parse free-text with regex
-- Define typed response schemas (Pydantic / TypeScript interfaces)
-- Validate before using; retry once on validation failure; raise typed error on second failure
-- Log raw responses at DEBUG before parsing
-
-Full templates in `code-gen/references/api-integration-patterns.md`.
+**Fast-lane optimization:** for trivial changes (lint, docs, type annotations), gates 4–6 are skipped. Detection: `git diff --name-only` shows only non-code files, or the commit message matches lint/doc patterns.
 
 ---
 
-## 9. Optional Tracker Orchestration
+## 9. Lane Selection
 
-Tracker orchestration is an optional add-on. The default harness remains local-only: `/brd`, `/spec`, `/design`, and `/auto` run inside one Claude Code workspace without requiring Linear, Jira, Dockerized orchestration, or a server process.
+The harness has three pre-pipeline lanes alongside the full SDLC pipeline.
 
-When enabled during `/scaffold`, the harness adds:
+| Lane | Use it when | Outputs | Cost |
+|---|---|---|---|
+| `/brownfield` + `/code-map` + `/seam-finder` | Any substantial work in an existing codebase | `specs/brownfield/code-graph.json`, `architecture-map.md`, `risk-map.md`, `change-strategy.md`, `seams-<goal>.md` | Cheap (read-only graph build) |
+| `/lite` | New project, ≤5 stories, single group, single module, no DB/auth/billing | Compressed BRD (≤50 lines), 3–5 stories in Group A, `folder-structure.md`, `component-map.md`, `api-contracts.md` | Small |
+| `/vibe` | Tiny safe edits: ≤3 files, <150 lines, no new workflow, no auth/billing/migrations | Micro-contract + narrow diff + targeted verification | Tiny |
+| `/brd` → `/spec` → `/design` → `/auto` | Everything else | Full BRD, stories, dependency graph, design, then autonomous build | Highest |
 
-```text
-.claude/tracker-config.json
-.claude/state/tracker-runs/
+Escalation contract: if the work outgrows the chosen lane (lite turns into 7 stories, vibe touches a migration), stop and re-enter via the larger lane. Lanes never silently grow.
+
+---
+
+## 10. Optional Framework Skill Packs
+
+`/scaffold` question 8 asks whether to install framework-specific skill packs alongside the harness. These are **opt-in** and ship through the open `skills` CLI into the target project's `.agents/skills/` directory — they sit next to the harness skills, not inside `.claude/skills/`. Claude Code picks them up from both locations.
+
+| Pack | Source | Skill count | Trigger phrases |
+|---|---|---:|---|
+| LangChain / LangGraph / DeepAgents | `cwijayasundara/agent_cli_langchain` | 9 | "scaffold a langgraph agent", "build an agent using ADK middleware", "add LangSmith evals" |
+| Google ADK | `google/agents-cli` | 7 | "start a new ADK project", "deploy my ADK agent", "publish to Gemini Enterprise" |
+
+Each pack carries its own scaffolder, workflow, code, deploy, observability, and (where applicable) eval/publish skills. They do **not** replace the harness — they layer on top, giving the same `/auto` ratchet loop framework-aware code generation.
+
+Install command (executed by `/scaffold` if the user selects the pack):
+
+```bash
+npx --yes skills add -y --agent claude-code <github-org/repo>
 ```
 
-After `/spec` and `/design` are human-approved, `/tracker-publish` mirrors each dependency group into a Linear/Jira-style tracker issue. A group issue carries the harness command, story list, dependencies, feature IDs, and expected proof:
+The chosen packs are recorded in `project-manifest.json` under a `framework_skill_packs` array so future enhance/upgrade flows can see what was installed.
 
-```text
-/auto --group A
+**Design rationale:** the harness defines *how to build software with discipline*; the framework packs define *how to build software with this framework*. Composing them turns the harness into a per-framework agent factory without duplicating SDLC primitives.
+
+---
+
+## 11. Two Runtimes Built on One Scaffold
+
+### Local Runtime (default)
+
+A solo engineer (or small pod) drives Claude Code directly:
+
+```
+$ claude --plugin-dir ~/claude_harness_eng_v4/.claude
+> /scaffold                # one time
+> /brd                     # or /lite, or /brownfield
+> /spec                    # human gate
+> /design                  # human gate
+> /auto                    # autonomous ratchet loop
 ```
 
-Recommended responsibility split:
+Proof lives on disk (`specs/reviews/`, `iteration-log.md`, commits). Reviews and merges happen in the same chat or via the local git tooling.
 
-| Component | Responsibility |
-|---|---|
-| Harness planning | Creates BRD, stories, dependency graph, `features.json`, and design contracts |
-| Tracker system | Holds visible group queue, blocker links, status workflow, proof comments, and human review state |
-| External orchestrator | Polls or receives tracker events, claims eligible unblocked groups, creates isolated workspaces, launches Claude Code, and records run state |
-| Claude Code workspace | Runs `/auto --group <id>`, forms the internal agent team, implements/tests/reviews, commits the branch, and writes the result contract |
-| Delivery repo | Receives the branch/PR; human review and merge decide when tracker work is actually `Done` |
+### Agent-Factory Runtime (Linear or Jira)
 
-The result contract lives at:
+When the team wants a visible queue and parallel execution across machines, the harness exposes a tracker contract:
+
+1. **Publish step (one time)** — Inside Claude Code, run `/tracker-publish`. The skill reads the approved `dependency-graph.md` + `component-map.md` and creates **one tracker issue per dependency group**. Group dependencies become tracker blockers. The mapping is written to `.claude/state/tracker-map.json`.
+2. **Orchestrator step (continuous)** — `symphony_clone` runs as a Docker container. Each tick:
+   - polls Linear for issues in the configured ready state + ready label whose blockers are terminal,
+   - claims the top eligible issue, moves it to `In Progress`,
+   - clones the repo to `/workspaces/<issue-key>`, creates `agent/<issue-key>`,
+   - runs `claude --print --permission-mode bypassPermissions "<generated /auto prompt>"`,
+   - reads `.claude/state/tracker-runs/<group>/result.json`,
+   - pushes the branch, opens a GitHub PR, comments proof back, moves the issue to `Human Review` (or `Blocked`).
+
+The orchestrator's safety boundaries:
+
+- Reads secrets from `.env`, never from committed files.
+- Will not dispatch unless the tracker issue is in the configured ready state, has the configured ready label, and all blockers are terminal.
+- Will not mark work `Done` — `Human Review` is the terminal autonomous state. Merge stays human.
+- Resolves workflow states through configurable aliases (`REVIEW_STATE_CANDIDATES`, `BLOCKED_STATE_CANDIDATES`) so different Linear workspaces map cleanly.
+- Retries failed runs with exponential backoff (`MAX_RETRY_ATTEMPTS`, `RETRY_BASE_DELAY_MS`, `RETRY_MAX_DELAY_MS`) before moving an issue to `Blocked`.
+- Persists per-run state in `STATE_DIR/state.json` and JSONL logs in `LOG_ROOT/orchestrator.jsonl`. An optional dashboard exposes `/`, `/health`, `/state` when `STATUS_PORT` is set.
+
+### Packaging contract
+
+The `symphony_clone/` directory is **versioned alongside the harness but never copied into target projects by `/scaffold`**. The target repo only carries:
+
+```
+.claude/                        # skills · agents · hooks · templates · state
+specs/stories/dependency-graph.md
+specs/design/component-map.md
+features.json
+.claude/tracker-config.json     # only if tracker mode was selected at scaffold time
+.claude/state/tracker-runs/     # written by /auto runs in tracker mode
+```
+
+The orchestrator is infrastructure. The scaffold is the contract.
+
+### Result contract
+
+`/auto --group <id>` (in tracker mode) writes:
 
 ```text
 .claude/state/tracker-runs/<group>/result.json
 ```
 
-Success shape:
+Success:
 
 ```json
 {
@@ -512,7 +525,7 @@ Success shape:
 }
 ```
 
-Blocked shape:
+Blocked:
 
 ```json
 {
@@ -525,52 +538,9 @@ Blocked shape:
 }
 ```
 
-The companion `symphony_clone` orchestrator is checked into this repo as a sibling project, not inside `.claude/`. It is versioned with the scaffold but is not copied into target projects by `/scaffold`. Its hardened operating model is:
-
-- Read secrets from `.env`, never from committed scaffold files.
-- Poll Linear for ready issues with the configured ready label.
-- Resolve Linear states using workspace-specific aliases, e.g. `Human Review` -> `In Review`.
-- Persist run state and retry metadata in `STATE_DIR/state.json`.
-- Write JSONL logs to `LOG_ROOT/orchestrator.jsonl`.
-- Optionally expose `/`, `/health`, and `/state` when `STATUS_PORT` is set.
-- Retry failed runs with exponential backoff before moving the tracker issue to a blocked state.
-
-Safety boundaries:
-
-- Do not dispatch work unless tracker state/label and local dependency rules both allow it.
-- Do not mark work `Done` automatically.
-- Do not skip `/design`, sprint contracts, evaluator gates, security review, or human PR review.
-- Prefer one tracker issue per dependency group; `/auto` handles story-level agent teams inside the workspace.
-
 ---
 
-## 10. Hook Enforcement
-
-All 15 hooks include **remediation instructions** ("Fix: ...") to guide agents toward corrections rather than just blocking.
-
-| Hook | Trigger | Behavior |
-|------|---------|----------|
-| `enforce-length-pre.js` | PreToolUse Write/Edit | Block — proposed source edit would exceed hard file length limit |
-| `scope-directory.js` | Edit/Write | Block — writes outside project |
-| `protect-env.js` | Edit/Write | Block — .env modifications (allows .env.example) |
-| `detect-secrets.js` | Edit/Write | Block — API keys, tokens, PII |
-| `lint-on-save.js` | Edit/Write | Auto-fix — reads manifest for tool (ruff/eslint) |
-| `typecheck.js` | Edit/Write | Warn — reads manifest (mypy/tsc) |
-| `check-architecture.js` | Edit/Write | Block — upward layer imports |
-| `check-function-length.js` | Edit/Write | Warn >50, Block >100 lines |
-| `check-file-length.js` | Edit/Write | Warn 200, Block 300 lines |
-| `pre-commit-gate.js` | Bash (git commit) | Block — full architecture scan |
-| `sprint-contract-gate.js` | Bash (git commit) | Block — evaluator verdict required |
-| `teammate-idle-check.js` | TeammateIdle | Block — no tests = no idle |
-| `track-writes.js` | Edit/Write | Info — records production files that need reviewer agents |
-| `require-review.js` | Stop | Block — production edits require clean-code and security reviewer invocation |
-| `task-completed.js` | TaskCompleted | Info — architecture scan + /review reminder |
-
-Complemented by official `security-guidance` plugin for real-time XSS/eval/unsafe-code pattern detection on edits.
-
----
-
-## 11. State Files
+## 12. State Files
 
 | File | Growth | Purpose |
 |------|--------|---------|
@@ -590,22 +560,16 @@ Complemented by official `security-guidance` plugin for real-time XSS/eval/unsaf
 
 ---
 
-## 12. Superpowers Integration
+## 13. Superpowers Integration
 
-The harness integrates with the [Superpowers](https://github.com/obra/superpowers) plugin (by Jesse Vincent) to augment key pipeline stages with proven developer workflow patterns.
-
-### What Superpowers Adds
-
-Superpowers provides 14 skills focused on developer discipline — brainstorming, planning, TDD, debugging, verification, and code review workflows. These complement the harness's SDLC pipeline by adding structured thinking at critical decision points.
-
-### Integration Points
+The harness integrates with the [Superpowers](https://github.com/obra/superpowers) plugin to augment key pipeline stages with proven developer workflow patterns.
 
 | Pipeline Stage | Superpowers Skill | Purpose |
 |---|---|---|
 | `/brd` (Step 0) | `superpowers:brainstorming` | Explore user intent and hidden assumptions before the Socratic interview |
 | `/design` (Step 0) | `superpowers:brainstorming` | Evaluate architectural trade-offs before committing to a design |
 | `/implement` (Step 0) | `superpowers:writing-plans` | Produce structured implementation plan before spawning agent teams |
-| `/implement` (teammates) | `superpowers:test-driven-development` | Red-green-refactor cycle enforced in every teammate prompt |
+| `/implement` (teammates) | `superpowers:test-driven-development` | Red-green-refactor enforced in every teammate prompt |
 | `/fix-issue` (Step 1.5) | `superpowers:systematic-debugging` | Root cause analysis before writing failing test |
 | `/refactor` (Step 4) | `superpowers:writing-plans` | Structured refactoring plan before execution |
 | `/auto` (self-healing) | `superpowers:systematic-debugging` | Diagnose failure root cause before each fix attempt |
@@ -613,36 +577,19 @@ Superpowers provides 14 skills focused on developer discipline — brainstorming
 | evaluator agent | `superpowers:verification-before-completion` | Run all checks and confirm output before emitting PASS verdict |
 | generator agent | `superpowers:test-driven-development` | TDD workflow invoked before writing implementation code |
 
-### How It Works
-
-Superpowers is enabled as a plugin in `.claude/settings.json`:
-
-```json
-"enabledPlugins": {
-  "superpowers@claude-plugins-official": true
-}
-```
-
-Each integration point invokes the superpowers skill by name (e.g., `superpowers:brainstorming`). The skill's output feeds into the next pipeline step — it augments the workflow, not replaces it. For example, brainstorming output feeds into the BRD interview, not bypasses it.
-
-### Design Rationale
-
-The harness handles **what** to build (SDLC pipeline, sprint contracts, ratchet gates). Superpowers handles **how** to think about building it (structured exploration, disciplined debugging, verification discipline). The two systems are complementary:
-
-- **Without superpowers:** The harness still works. Agents follow skill instructions directly.
-- **With superpowers:** Agents explore alternatives before committing, debug systematically before fixing, and verify evidence before claiming success. This reduces wasted self-healing iterations and improves first-pass quality.
+The harness handles **what** to build (SDLC pipeline, sprint contracts, ratchet gates). Superpowers handles **how to think about building it** (structured exploration, disciplined debugging, verification discipline). Without superpowers the harness still works; with it, agents explore alternatives before committing and verify evidence before claiming success.
 
 ---
 
-## 13. Graph-Grounded Brownfield Discovery
+## 14. Graph-Grounded Brownfield Discovery
 
-Brownfield discovery is the entry point for existing-codebase work. v4 now uses graph-grounded artifacts so planner and generator agents cite evidence instead of inferring architecture from filenames.
+Brownfield discovery is the entry point for existing-codebase work. v4 uses graph-grounded artifacts so planner and generator agents cite evidence instead of inferring architecture from filenames.
 
 ```text
 /brownfield
     |
     v
-/code-map -> graphify skill | hex-graph MCP | vendored Node.js scripts
+/code-map  --> graphify skill | hex-graph MCP | vendored Node.js scripts
     |
     v
 specs/brownfield/code-graph.json
@@ -654,26 +601,10 @@ specs/brownfield/code-graph.json
 architecture-map.md, risk-map.md, change-strategy.md
     |
     v
-/seam-finder "<goal>" -> seams-<goal>.md
+/seam-finder "<goal>"  -->  seams-<goal>.md
 ```
 
 The vendored fallback has zero npm dependencies and covers Python, Node, TypeScript, Java, C#, and Go. It emits file/import/top-level-symbol graphs for all six; Python also gets coarse call edges and `__init__.py` re-export handling. If `graphify` or `hex-graph` is available, `/code-map` prefers the higher-fidelity producer and projects the result into the same schema.
-
-Core graph schema:
-
-```json
-{
-  "nodes": [{"id": "py:src/services/auth.py", "kind": "file",
-             "language": "python", "path": "src/services/auth.py",
-             "symbols": ["AuthService", "verify_token"]}],
-  "edges": [{"source": "py:src/api/routes.py",
-             "target": "py:src/services/auth.py",
-             "kind": "imports",
-             "evidence": "src/api/routes.py:7 from services.auth import AuthService"}],
-  "metrics": {"files": 142, "edges": 318, "cycles": [], "hubs": []},
-  "meta": {"producer": "vendored | graphify | hex-graph"}
-}
-```
 
 `/seam-finder` ranks candidate cut-points for a concrete goal using Fowler-style scoring:
 
@@ -682,48 +613,42 @@ Core graph schema:
 | Observable | 0.4 | Boundary heuristic: routes, controllers, queues, repositories, services, adapters |
 | Funnel | 0.4 | Normalized fan-in + fan-out from `code-graph.json` |
 | Asymmetry | 0.2 | Read/write imbalance; pure readers or writers are easier to split |
-| Goal bump | x1.5 | Candidate path or symbols match the requested goal |
+| Goal bump | ×1.5 | Candidate path or symbols match the requested goal |
 
 Agent contract: in brownfield mode, "module X depends on Y" claims must cite `code-graph.json` edge evidence. Refactor targets, hub warnings, cycle warnings, and first safe next steps must read from `coupling-report.md` and `seams-<goal>.md` rather than being invented.
 
-Lane selection examples:
-
-- High fan-in + low instability -> preserve and extend at existing seam with `/improve`.
-- High fan-in + high instability -> unstable hub; plan `/refactor`.
-- Cycle member -> explicit human approval before structural change.
-- No high-scoring seam -> use `/spec` rather than forcing a parallel implementation.
-
 ---
 
-## 14. Pipeline Commands
+## 15. Pipeline Commands
 
 | Command | Purpose | Human Gate? | Superpowers |
 |---------|---------|-------------|-------------|
-| `/brd` | Socratic interview -> BRD | Yes | brainstorming |
-| `/spec` | BRD -> stories + dependency graph + features.json | Yes | — |
+| `/scaffold` | Bootstrap a project | Yes (8 questions) | — |
+| `/brd` | Socratic interview → BRD | Yes | brainstorming |
+| `/spec` | BRD → stories + dependency graph + features.json | Yes | — |
 | `/design` | Architecture + schemas + mockups | Yes | brainstorming |
 | `/implement` | Code generation with agent teams | No | writing-plans, TDD |
 | `/evaluate` | Run app, verify sprint contract | No | verification |
 | `/review` | Evaluator + security review | No | — |
-| `/test` | Test plan + Playwright E2E generation | No | — |
+| `/test` | Test plan + Playwright E2E | No | — |
 | `/deploy` | Docker Compose + init.sh | No | — |
-| `/build` | Full 8-phase pipeline | Phases 1-3 | verification |
+| `/build` | Full 8-phase pipeline | Phases 1–3 | verification |
 | `/auto` | Autonomous ratcheting loop | No (reads program.md) | debugging, verification |
-| `/fix-issue` | GitHub issue workflow | No | systematic-debugging |
-| `/refactor` | Quality-driven refactoring | No | writing-plans |
-| `/improve` | Feature enhancement | No | — |
-| `/lint-drift` | Entropy scanner for pattern drift | No | — |
+| `/lite` | Compressed greenfield lane (small projects) | One approval | — |
+| `/vibe` | Controlled small-change lane | Micro-contract | — |
 | `/brownfield` | Graph-grounded map of an existing codebase | No | — |
-| `/code-map` | Deterministic dependency graph for brownfield/refactor work | No | — |
+| `/code-map` | Deterministic dependency graph | No | — |
 | `/seam-finder` | Ranked cut-points for a concrete goal | No | — |
+| `/improve` | Feature enhancement | No | — |
+| `/refactor` | Quality-driven refactoring | No | writing-plans |
+| `/fix-issue` | GitHub issue workflow | No | systematic-debugging |
+| `/lint-drift` | Entropy scanner for pattern drift | No | — |
 | `/tracker` | Optional Linear/Jira orchestration overview | Yes | — |
 | `/tracker-publish` | Publish approved dependency groups to tracker issues | Yes | — |
 
-Phases 1-3 (`/brd`, `/spec`, `/design`) require human approval. Phases 4-8 run autonomously via `/auto`.
-
 ---
 
-## 15. Quality Principles
+## 16. Quality Principles
 
 Detailed rules in `.claude/skills/code-gen/SKILL.md`. Summary:
 
@@ -737,3 +662,17 @@ Detailed rules in `.claude/skills/code-gen/SKILL.md`. Summary:
 8. **Self-documenting** — Good names over comments, types as documentation.
 9. **Structured logging** — `extra` dicts, not f-strings. Log at service boundaries.
 10. **No silent fallbacks** — Failed operations raise typed errors. Callers decide.
+
+---
+
+## 17. What Belongs Where — Quick Reference
+
+| If you're a… | You touch | You don't touch |
+|---|---|---|
+| Solo engineer (local mode) | Claude Code chat, `program.md`, BRD interview answers | `symphony_clone/`, Linear |
+| Engineering pod (local mode) | Same + branch/PR review on GitHub | `symphony_clone/`, Linear |
+| Agent-factory operator | `.env` for symphony_clone, Linear workflow states, tracker config | Application code |
+| Reviewer (factory mode) | Linear proof comments, GitHub PR diff, evaluator/security reports | Generated code (read-only) |
+| Framework user (LangChain/ADK) | The framework pack's `*-scaffold` / `*-code` skills, plus all of the above | Internal harness skill bodies |
+
+The scaffold gives every persona a deterministic surface, then composes them through the same `/auto` ratchet.
