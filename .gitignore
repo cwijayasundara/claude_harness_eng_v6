@@ -2,6 +2,7 @@
 node_modules/
 dist/
 build/
+!.claude/skills/build/
 .next/
 .venv/
 venv/
