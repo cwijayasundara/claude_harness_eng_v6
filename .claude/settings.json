@@ -25,6 +25,8 @@
       "Bash(npm run build:*)",
       "Bash(npx playwright:*)",
       "Bash(npx tsc:*)",
+      "Bash(npx --yes skills add:*)",
+      "Bash(npx skills add:*)",
       "Bash(uv sync:*)",
       "Bash(uv run pytest:*)",
       "Bash(docker compose:*)",

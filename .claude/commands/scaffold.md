@@ -7,71 +7,139 @@ description: Initialize a new project with the Claude Harness Engine v4 scaffold
 
 When the user runs this command, follow these steps exactly:
 
-## Step 1: Gather Project Info
+## Step 1: Gather Project Info — Infer + Confirm
 
-> **MANDATORY INPUTS — DO NOT DEFAULT.** The 8 questions below are required inputs, not clarifying questions about ambiguous instructions. The scaffold cannot infer reasonable defaults for several of them (tracker mode, framework packs, design calibration) because the right answer depends on the user's team setup, integrations, and product surface. Silently defaulting locks in consequential choices the user often can't easily reverse.
+> **MANDATORY: Q1 + confirmation card always shown.** Even if the session has a "don't pause for clarifications" / "make the reasonable call and continue" directive, you MUST ask the free-text Q1 below AND show the confirmation card. The user invoked `/scaffold` to configure a project — that is an explicit request for input gathering, not an ambiguous instruction to clarify.
 >
-> **This block overrides any session-level "don't pause for clarifications" / "make the reasonable call and continue" directive within the scope of `/scaffold` only.** Even if the user has asked you not to pause elsewhere in the session, you MUST ask all 8 questions here. The user invoked `/scaffold` to configure a project; that act is an explicit request for input gathering.
->
-> **How to ask.** For each multiple-choice question (Q2–Q8), use the `AskUserQuestion` tool — it renders an interactive picker that's much harder to miss than plain text and lets the user override with "Other". For Q1 (free-text), ask via a normal prompt. Ask **one question at a time** so the user can think through each choice. Do NOT batch questions or pre-fill answers. Do NOT proceed past Step 1 until all 8 answers are collected.
->
-> If the user explicitly refuses to answer a question ("just pick something", "I don't care", "use the default"), record that as informed consent and pick the most conservative default for that specific question:
-> - Q2 → A (Python/FastAPI + React/Vite + Postgres)
-> - Q3 → B (Internal tool — lower design ceremony)
-> - Q4 → A (Docker Compose)
-> - Q5 → A (all 8 plugins)
-> - Q6 → B (no graphify)
-> - Q7 → A (Local-only)
-> - Q8 → C (no framework packs)
->
-> Only fall through to these conservatives after the user has *seen* the picker and declined. Do not skip the picker just because of a prior "don't pause" directive.
+> Silently defaulting locks in choices the user can't easily reverse (tracker mode, framework packs, design calibration).
 
-Ask the user these questions (one at a time):
-1. "What are you building?" (brief description for CLAUDE.md)
-2. "What's your tech stack?" with presets:
+### Step 1.A — Ask the description (Q1, free text)
+
+Ask exactly this question with a normal prompt (no `AskUserQuestion`):
+
+> "What are you building? In 1–3 sentences, include: language/framework, project shape (web app / script / library / brownfield existing code), the primary user surface (CLI / web UI / API / nothing yet), and any team integrations that matter (Linear, Jira, etc.)."
+
+Wait for the answer. It goes verbatim into CLAUDE.md and drives the inference in 1.B.
+
+### Step 1.B — Infer a draft profile from Q1
+
+Apply these rules. Be explicit and conservative — when the description is ambiguous, pick the safer middle option (the user will see and can change everything in 1.C).
+
+**Stack:**
+- "FastAPI" + ("React" or "Vite") → preset A
+- "FastAPI" + ("Next" or "Next.js") → preset B
+- "Express" + "React" → preset C
+- "Python" + script/agent/CLI/library indicators → custom Python (3.12 · uv · ruff · mypy · pytest), no frontend, no DB
+- "Node" / "TypeScript" + script/CLI indicators → custom Node, no frontend, no DB
+- Otherwise → preset A (most common)
+
+**Project type (drives calibration):**
+- script · CLI · library · agent · tool · utility → D Minimal (`/lite` recommended, no `calibration-profile.json`)
+- marketplace · consumer · SaaS · B2C · landing page → A Consumer-facing
+- dashboard · admin · internal tool · back-office · B2B internal → B Internal tool
+- API-only · backend service · microservice · no UI → C API-only (no UI scoring)
+- Otherwise → B Internal tool
+
+**Verification mode:**
+- Project type = D Minimal OR C API-only → C Stub
+- Mentions Docker / Compose / a full-stack preset → A Docker
+- Mentions local dev / no Docker / uvicorn / npm run dev → B Local
+- Otherwise → A Docker
+
+**Plugins:** Always default to A (all 8). The "recommended" answer is rarely wrong for new projects.
+
+**Tracker:** Default to A Local-only unless Q1 explicitly names a tracker:
+- Mentions "Linear" → C Publish + sync
+- Mentions "Jira" → B Publish-only (Jira sync isn't fully implemented yet)
+
+**Framework skill pack — keyword match in Q1:**
+- "LangChain" / "LangGraph" / "DeepAgents" / "LangSmith" → A LangChain pack
+- "ADK" / "Agent Development Kit" / "Gemini Enterprise" / "Vertex AI Agents" → B Google ADK
+- Both sets of terms → both packs
+- Neither → C None
+
+Graphify (the former Q6) is no longer asked here. It only matters for brownfield discovery — surface it inside `/brownfield`, not at scaffold time.
+
+### Step 1.C — Show the confirmation card
+
+Call `AskUserQuestion` ONCE with the inferred profile rendered as the `preview` of option A. Single-select, three options:
+
+- **A) Scaffold with these choices** — accept the inferred profile as-is.
+- **B) Change tracker mode only** — quick edit for the field hardest to infer.
+- **C) Use the full 8-question wizard** — for unusual stacks or full control.
+
+The `preview` for option A must be a markdown block in this exact shape (substitute inferred values):
+
+```
+## Inferred profile
+
+  Description     {first 120 chars of Q1}
+
+  Stack           {inferred stack summary, e.g. "Python 3.12 · uv · ruff · mypy · pytest"}
+  Project type    {A / B / C / D — display name}
+  Verification    {A / B / C — display name}
+  Plugins         All 8 official (recommended)
+  Tracker         {A / B / C / D — display name}
+  Framework pack  {A / B / C — display name(s)}
+
+  (Graphify is no longer asked at scaffold time; surface it via /brownfield.)
+```
+
+For option B's `preview`, show the same block but emphasise the Tracker line ("← will change"). For option C, the preview can just say "Falls through to the 8-question wizard. Inferred values become the defaults."
+
+### Step 1.D — Branch on the user's choice
+
+1. **"Scaffold with these choices"** → record all inferred answers as final. Proceed to Step 2.
+
+2. **"Change tracker mode only"** → call `AskUserQuestion` with a single question listing the 4 tracker options (see wizard Q7 in Step 1.E below). Record the answer, then proceed to Step 2. Do NOT loop back to the confirmation card.
+
+3. **"Use the full 8-question wizard"** → fall through to Step 1.E. Pre-pend the inferred answer to each question's description (e.g. "Inferred: A — change if needed") so the user sees what would have been picked.
+
+If the user refuses to engage with the confirmation card ("just pick something", "use defaults"), treat that as informed consent for the inferred profile and proceed with option 1.
+
+### Step 1.E — Wizard fallback (only if user picked option C)
+
+Ask the following one at a time, using `AskUserQuestion` for each multi-choice question. Pre-pend the inferred answer in each question's description.
+
+1. "What are you building?" — skip; already captured in Step 1.A.
+2. "What's your tech stack?"
    - A) Python (FastAPI) + React (Vite) + PostgreSQL
    - B) Python (FastAPI) + Next.js + PostgreSQL
    - C) Node (Express) + React (Vite) + PostgreSQL
    - D) Custom (I'll specify)
-3. "What type of project is this?" (for design calibration):
+3. "What type of project is this?" (calibration):
    - A) Consumer-facing app (high design bar)
    - B) Internal tool / dashboard (functional focus)
    - C) API-only / backend service (no UI scoring)
-   - D) Minimal — CLI tool, single-script utility, or small library (recommends `/lite` lane)
+   - D) Minimal — CLI / library / single-script (recommends `/lite`)
 
-If the user picks D, treat this as a hint that the full SDLC pipeline is likely disproportionate. The scaffold still installs the full harness (so the user can escalate to `/brd → /spec → /design → /auto` if scope grows), but the report at Step 10 will recommend `/lite` as the default entry point and skip `calibration-profile.json` (no UI scoring).
-4. "How will the evaluator reach the running app?" (verification mode):
-   - A) Docker Compose (default — app runs in containers)
-   - B) Local dev servers (app runs via npm/uvicorn/etc.)
-   - C) Stub / mock server (no runnable backend — serverless or external-only)
-5. "Install complementary official Claude Code plugins?" (recommended: Yes)
+If the user picks D, the full harness is still installed (in case scope grows) but the Step 10 report recommends `/lite` and `calibration-profile.json` is skipped.
+
+4. "How will the evaluator reach the running app?":
+   - A) Docker Compose (default)
+   - B) Local dev servers
+   - C) Stub / mock server
+5. "Install complementary official Claude Code plugins?"
    - `superpowers` — Structured developer workflows used by the harness pipeline
    - `code-review` — Automated PR review with confidence scoring
    - `commit-commands` — `/commit`, `/commit-push-pr` git workflows
    - `security-guidance` — Real-time security pattern checking on edits
    - `pr-review-toolkit` — Specialized PR review agents (comments, tests, errors, types)
-   - `frontend-design` — Aesthetic direction skill (used by `ui-designer` + frontend teammates; does NOT replace `design-critic`)
+   - `frontend-design` — Aesthetic direction skill (does NOT replace `design-critic`)
    - `context7` — Up-to-date library/docs lookup MCP
-   - `code-simplifier` — `/simplify` skill for in-session cleanup during `/refactor`
+   - `code-simplifier` — `/simplify` skill used during `/refactor`
    - A) Yes, install all eight (recommended)
    - B) Let me pick which ones
    - C) No, skip official plugins
-6. "Install graphify for higher-fidelity brownfield code graphs? (optional)" — only meaningful for existing codebases
-   - `graphify` is a community user-scope skill that produces tree-sitter code graphs for more languages and richer call/inheritance edges.
-   - When installed, `/code-map` detects it and prefers it over the vendored zero-dependency scripts.
-   - Without it, v4 still works: vendored scripts produce file, import, symbol, coupling, and Python call-graph artifacts.
-   - It is not a marketplace plugin and must not be added to `enabledPlugins`.
-   - A) Yes, print the install command
-   - B) No, use vendored scripts
-7. "Enable optional external tracker orchestration?" (default: No)
+6. "Enable optional external tracker orchestration?"
    - A) No, keep this project local-only
    - B) Publish generated story groups to Linear/Jira only
    - C) Publish + sync proof/status
    - D) Publish + external orchestrator dispatch
-8. "Install agent-framework skill packs?" (multi-select; default: None) — opt-in skill packs that teach Claude how to work with specific agent frameworks. Installed project-locally via `npx skills` into the target project's `.agents/skills/`. They sit alongside the harness skills and trigger on framework-specific phrasing.
-   - A) LangChain / LangGraph / DeepAgents — `cwijayasundara/agent_cli_langchain` (9 skills: scaffold, workflow, langchain-code, langgraph-code, deepagents-code, middleware, langsmith-evals, deploy, observability)
-   - B) Google ADK — `google/agents-cli` (7 skills: scaffold, workflow, adk-code, eval, deploy, observability, publish)
-   - C) None — skip framework skill packs (harness skills only)
+7. "Install agent-framework skill packs?" (multi-select; default: None) — opt-in packs installed project-locally via `npx skills` into `.agents/skills/`.
+   - A) LangChain / LangGraph / DeepAgents — `cwijayasundara/agent_cli_langchain` (9 skills)
+   - B) Google ADK — `google/agents-cli` (7 skills)
+   - C) None
 
 ## Step 2: Generate project-manifest.json
 
@@ -85,7 +153,7 @@ Based on their answers, write `project-manifest.json` to the project root. Fill 
 - execution: default_mode ("full"), max_self_heal_attempts (3), max_auto_iterations (50), coverage_threshold (80), session_chaining (true), agent_team_size ("auto"), teammate_model ("sonnet")
 - verification: mode, health_check, and mode-specific config (see below)
 
-### Verification Config (based on question 4)
+### Verification Config (based on the verification-mode decision)
 
 **If Docker (A):**
 ```json
@@ -114,7 +182,7 @@ Based on their answers, write `project-manifest.json` to the project root. Fill 
 }
 ```
 
-### Generate calibration-profile.json (based on question 3)
+### Generate calibration-profile.json (based on the project-type decision)
 
 **If Consumer-facing app (A):**
 ```json
@@ -212,7 +280,7 @@ cp $PLUGIN_SOURCE/settings.json .claude/settings.json
 
 **Important:** You MUST actually run these copy commands via Bash. Do NOT skip this step or try to generate the files from memory. The source files contain hooks, agent definitions, and skill instructions that must be copied exactly.
 
-### Add Official Plugins to settings.json (based on question 5)
+### Add Official Plugins to settings.json (based on the plugins decision)
 
 After copying settings.json, add the `enabledPlugins` block based on the user's answer:
 
@@ -251,21 +319,6 @@ These plugins are complementary to the harness and do not conflict:
 - `feature-dev` — competes with our `/brd` -> `/spec` -> `/design` -> `/implement` pipeline
 - `hookify` — dynamically generated hooks could interfere with our purpose-built hooks
 
-### Graphify (question 6) — user-scope skill, not a marketplace plugin
-
-If the user answered A) to question 6, do not modify `enabledPlugins`. Instead, append this exact installation reminder to the Step 10 report:
-
-```text
-Optional graphify install (higher-fidelity brownfield code graphs):
-  npm install -g @safishamsi/graphify   # or: brew install graphify
-  graphify install                      # writes ~/.claude/skills/graphify/SKILL.md
-
-When installed, /code-map detects it automatically and prefers it over
-the vendored Node.js scripts.
-```
-
-If the user answered B) to question 6, do not print the install reminder.
-
 ## Step 4: Create Output Directories
 
 ```bash
@@ -289,38 +342,62 @@ Then edit `.claude/tracker-config.json` based on the selected mode:
 
 Do not write tracker API keys into `.claude/tracker-config.json`. Use environment variables such as `LINEAR_API_KEY`, `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, and `GITHUB_TOKEN`.
 
-### Optional Agent-Framework Skill Packs (question 8)
+### Optional Agent-Framework Skill Packs
 
-If the user selected one or more skill packs at question 8, install them project-locally via the open agent skills CLI (`npx skills`). These skills land in `.agents/skills/` in the target project — not under `.claude/skills/`. Claude Code picks them up from both locations.
+If the user selected one or more skill packs (LangChain or Google ADK) at the confirmation card or wizard, install them project-locally via the open agent skills CLI (`npx skills`). These skills land in `.agents/skills/` — Claude Code picks them up from both `.claude/skills/` and `.agents/skills/`.
 
-**Important:** Run these commands inside the target project directory (the cwd `/scaffold` is operating in). Do NOT use `-g`/`--global` — the user has explicitly chosen to scope framework skills per-project so the harness scaffold remains generic.
+**Important:** Run these commands inside the target project directory. Do NOT use `-g`/`--global` — the user has explicitly chosen to scope framework skills per-project so the harness scaffold remains generic.
 
-For each selected pack, run the matching command and confirm the install line count matches the expected skill count.
+The `Bash(npx --yes skills add:*)` permission is allowlisted in `.claude/settings.json`, so the install should run without prompting. If it still gets denied (older settings.json, auto-mode classifier in a different mode), do NOT silently continue — fall through to the manual-fallback block below.
 
-**A) LangChain / LangGraph / DeepAgents — 9 skills:**
+**A) LangChain / LangGraph / DeepAgents — 9 skills**
+
 ```bash
 npx --yes skills add -y --agent claude-code cwijayasundara/agent_cli_langchain
 ```
-Expected: 9 skills under `.agents/skills/langchain-agents-*` (scaffold, workflow, langchain-code, langgraph-code, deepagents-code, middleware, langsmith-evals, deploy, observability).
 
-**B) Google ADK — 7 skills:**
+Expected: 9 skills under `.agents/skills/langchain-agents-*` (scaffold, workflow, langchain-code, langgraph-code, deepagents-code, middleware, langsmith-evals, deploy, observability). Source: <https://github.com/cwijayasundara/agent_cli_langchain>.
+
+**B) Google ADK — 7 skills**
+
 ```bash
 npx --yes skills add -y --agent claude-code google/agents-cli
 ```
+
 Expected: 7 skills under `.agents/skills/google-agents-cli-*` (scaffold, workflow, adk-code, eval, deploy, observability, publish).
 
-If the `npx skills add` command fails (e.g., npm/network not available), stop and surface the error — do NOT silently continue. The user can retry the command manually after fixing connectivity.
+Verify the install ran successfully:
 
-Verify installs:
 ```bash
 test -d .agents/skills && find .agents/skills -mindepth 1 -maxdepth 1 -type d | wc -l
 ```
 
-Record the chosen packs in `project-manifest.json` under a new top-level `framework_skill_packs` array so future `/scaffold enhance`-style operations and the Step 10 report can see what was installed. Example:
+#### Manual-fallback block (if install was denied or failed)
+
+If the `npx skills add` command was denied, errored, or could not run for any reason, do NOT skip silently. Instead, print this block to the user verbatim and ADD it to the Step 10 report under a "Manual follow-ups" heading:
+
+```text
+[!] Framework skill pack(s) were NOT installed automatically. Run this manually:
+
+  cd <project-root>
+  npx --yes skills add -y --agent claude-code cwijayasundara/agent_cli_langchain   # if LangChain
+  npx --yes skills add -y --agent claude-code google/agents-cli                     # if Google ADK
+
+After running, verify:
+  find .agents/skills -mindepth 1 -maxdepth 1 -type d
+```
+
+Also explain the most likely cause in one line based on the actual error: auto-mode classifier denial → "re-run /scaffold; the latest scaffold allowlists this command in .claude/settings.json"; network error → "check your network / npm proxy and retry"; node not installed → "install Node 20+ and retry".
+
+#### Record selected packs in project-manifest.json
+
+Whether the install succeeded automatically or fell through to the manual block, record the user's *choice* under a top-level `framework_skill_packs` array in `project-manifest.json`. This lets future `/scaffold enhance` operations and the Step 10 report see the intent regardless of install status:
+
 ```json
 "framework_skill_packs": ["langchain", "google-adk"]
 ```
-Omit the field if the user picked C (None).
+
+Omit the field if the user picked None.
 
 ## Step 5: Generate CLAUDE.md
 
@@ -613,9 +690,9 @@ next_action: Run /brd to start
 
 The skill count is now 26 (lite added). Update the totals printed below if more skills are added in the future.
 
-Tailor the "Next steps" ordering based on the answer to question 3:
+Tailor the "Next steps" ordering based on the project-type decision:
 
-- If the user picked **D — Minimal** at question 3, lead with `/lite` and demote `/brd`.
+- If the user picked **D — Minimal** as the project type, lead with `/lite` and demote `/brd`.
 - Otherwise, keep `/brd` as the default first action.
 
 **Default report (questions 3 = A / B / C):**
@@ -638,7 +715,7 @@ Next steps:
   5. For tiny safe changes, use /vibe with a micro-contract
 ```
 
-**Minimal report (question 3 = D):**
+**Minimal report (project type = D):**
 ```
 ✓ Claude Harness Engine v4 scaffolded successfully (minimal project mode).
 
@@ -656,9 +733,9 @@ Next steps:
   3. For tiny safe changes later, use /vibe with a micro-contract
 ```
 
-### Framework Skill Pack Addendum (question 8)
+### Framework Skill Pack Addendum
 
-If the user installed any framework skill packs at question 8, append a section after the `Installed:` block (before `Next steps:`), listing each pack with its skill count and storage path. Example:
+If the user installed any framework skill packs (selected on the confirmation card or wizard), append a section after the `Installed:` block (before `Next steps:`), listing each pack with its skill count and storage path. Example:
 
 ```
 Framework skill packs (.agents/skills/):
@@ -671,4 +748,4 @@ Also append a "Framework-specific entry points" hint to Next steps, since these 
 - If LangChain pack installed: "For LangChain/LangGraph/DeepAgents work, ask Claude to 'scaffold a langgraph agent' or 'build an agent using ADK middleware' — the framework's `*-scaffold` and `*-workflow` skills will trigger."
 - If Google ADK pack installed: "For Google ADK work, ask Claude to 'start a new ADK project' or 'deploy my ADK agent' — the `google-agents-cli-*` skills will trigger."
 
-If question 8 was C (None), omit both additions.
+If the user picked None for framework packs, omit both additions.
