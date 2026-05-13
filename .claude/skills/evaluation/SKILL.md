@@ -1,11 +1,11 @@
 ---
 name: evaluation
-description: Evaluation patterns — sprint contract format, three-layer verification, scoring rubric references.
+description: "[Reference, not a command] Evaluation patterns — sprint contract format, three-layer verification, scoring rubric references. Read by the evaluator agent. To run an evaluation, use /evaluate instead."
 ---
 
-# Evaluation Skill
+# Evaluation Skill — Reference Only
 
-Reference skill for the evaluator agent. Points to authoritative sources for evaluation patterns.
+> **This is a reference skill, not an action skill.** It is read by the evaluator agent for sprint-contract format and scoring patterns. **Do not invoke `/evaluation` directly** — there is no workflow here. To run an evaluation against the sprint contract, run `/evaluate`.
 
 ---
 

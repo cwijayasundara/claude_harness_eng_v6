@@ -1,11 +1,11 @@
 ---
 name: testing
-description: Testing patterns — Playwright E2E, test structure, fixture management, mock boundaries.
+description: "[Reference, not a command] Testing patterns — Playwright E2E, test structure, fixture management, mock boundaries. Read by generator teammates while writing tests. To generate test artefacts, use /test instead."
 ---
 
-# Testing Skill
+# Testing Skill — Reference Only
 
-Reference skill for generator teammates. Read this before writing any test code.
+> **This is a reference skill, not an action skill.** It is read by generator teammates while they write test code, and by `/test` for pattern guidance. **Do not invoke `/testing` directly** — there is no workflow here. To generate test plan, cases, fixtures, and Playwright E2E files, run `/test`.
 
 ---
 
