@@ -202,6 +202,8 @@ On approval, the user runs `/auto --group A`. From here, the standard ratchet lo
 
 `/lite` does **not** modify the autonomous build loop, gates, or self-healing logic. It only compresses phases 1-3.
 
+**Parallel execution:** if your lite project's group A contains **≥ 2 stories**, the generator is required (by Rule 2 in `.claude/agents/generator.md`) to dispatch one teammate per story rather than implementing serially. Lite-mode projects with linear chain DAGs still benefit — the generator builds phases from the component map and runs each phase's teammates in parallel. If you observe a single generator subagent doing all the work in one long pass, that is a Rule 2 violation — surface it.
+
 ---
 
 ## Output Checklist

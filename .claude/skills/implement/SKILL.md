@@ -93,9 +93,13 @@ This ownership map is the single source of truth for file assignments during par
 
 Read `.claude/state/learned-rules.md`. Inject ALL rules verbatim into every teammate spawn prompt. Learned rules include anti-pattern code examples and better approach code — teammates must study these before writing code, not just read the rule text. Rules represent project-specific decisions made during previous sprints (naming conventions, library choices, API patterns). Skipping this step causes regressions.
 
-### Step 5 — Spawn Agent Team (Multiple Stories)
+### Step 5 — Spawn Agent Team (Multiple Stories — MANDATORY)
 
-If the group contains **2 or more stories**, spawn a Claude Code agent team:
+If the group contains **2 or more stories**, you **MUST** spawn a Claude Code agent team. This is not a judgment call — it applies even for tiny groups (e.g., 2-4 small stories) where solo implementation seems faster. The only bypass is `execution.default_mode == "solo"` in `project-manifest.json`.
+
+If you find yourself about to call Write or Edit on a production file before any teammate has been spawned for a multi-story non-solo group, **STOP** and dispatch the team first. Log every teammate spawn to `.claude/state/iteration-log.md` as evidence the team executed.
+
+Team spawn rules:
 
 - Create **1 teammate per story**, up to a maximum of **5 concurrent teammates**.
 - If the group has more than 5 stories, batch them: first 5 stories run, then the remainder after all complete.

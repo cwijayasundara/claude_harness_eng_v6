@@ -159,6 +159,12 @@ Write `change-strategy.md` with:
 
 Include a short "first safe next steps" list.
 
+When recommending `/spec → /design → /auto` for any cluster of work, note in the strategy that `/auto` parallelizes on two axes:
+- **Within a group:** multi-story groups (≥ 2 stories) fan out into parallel teammates — see `.claude/agents/generator.md` Rule 2.
+- **Across groups:** independent dependency groups run concurrently as group-orchestrators (up to 3 by default) — see Section 4B of `.claude/skills/auto/SKILL.md`.
+
+This shapes how you cluster stories AND how you shape the dependency graph: clusters with truly independent stories get within-group parallelism, and independent dependency groups (backend vs frontend vs ingest, for example) get cross-group parallelism. Prefer designs that surface independence at both levels — group by integration boundary internally, and minimize cross-group `Consumes:` edges in the dependency graph.
+
 If the requested work has a concrete goal, recommend running `/seam-finder "<goal>"` after `/brownfield`. Use `seams-<goal>.md` to choose whether the next lane should extend an existing seam, wrap a boundary, introduce an adapter, split a read/write path, or avoid a poor seam.
 
 ---

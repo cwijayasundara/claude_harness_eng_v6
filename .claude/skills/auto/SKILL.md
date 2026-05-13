@@ -20,10 +20,14 @@ Autonomous build loop implementing Karpathy's ratcheting pattern with GAN-style 
 /auto --mode lean
 /auto --mode solo
 /auto --group D
+/auto --parallel-groups 3
+/auto --sequential
 ```
 
 - `--mode` controls which ratchet gates are enforced. Default: `full`. Options: `full`, `lean`, `solo`, `turbo`.
 - `--group` resumes or targets a specific dependency group. If omitted, picks the next unfinished group from the dependency graph.
+- `--parallel-groups N` enables cross-group parallelism: up to N independent dependency groups run concurrently as separate group-orchestrator subagents. Default: `3`. Set `1` (or pass `--sequential`) to force one-group-at-a-time behavior.
+- `--sequential` shorthand for `--parallel-groups 1`. Use when you need deterministic group ordering for debugging.
 
 ### Prerequisites
 
@@ -59,10 +63,10 @@ At the start of EVERY iteration — including the first — read these files in 
 2. **`.claude/state/learned-rules.md`** — Accumulated project rules. Inject verbatim into ALL agent prompts spawned this iteration.
 3. **`claude-progress.txt`** — Read the LAST session block (the block after the final `=== Session` marker). Extract: `current_group`, `groups_completed`, `groups_remaining`, `last_commit`, `next_action`.
 4. **`features.json`** — Current pass/fail state for all features. Determines what work remains.
-5. **`specs/stories/dependency-graph.md`** — Pick the next unfinished group. A group is "unfinished" if any of its stories' features are not passing in `features.json`. Respect dependency ordering: do not start a group whose upstream dependencies have failing features.
-6. **Target group story files** — Verify every story in the selected group is marked `Readiness: ready`. If any story is `needs_breakdown`, stop and request a story decomposition pass before implementation.
+5. **`specs/stories/dependency-graph.md`** — Compute the current wave (Section 4B Wave Selection Algorithm). A group is "unfinished" if any of its stories' features are not passing in `features.json`. Respect dependency ordering: do not start a group whose upstream dependencies have failing features. With `--sequential` (or `--parallel-groups 1`), the wave is the single next unfinished group; with default `--parallel-groups 3`, the wave is up to 3 concurrently-ready groups.
+6. **Target group story files** — Verify every story in every selected group is marked `Readiness: ready`. If any story is `needs_breakdown`, stop and request a story decomposition pass before implementation.
 
-If `claude-progress.txt` indicates a `current_group` that is not yet complete, resume that group. Otherwise, select the next unfinished group in dependency order.
+If `claude-progress.txt` indicates a `current_group` (or `current_wave`) that is not yet complete, resume from there. Otherwise, compute a fresh wave per Section 4B.
 
 ---
 
@@ -94,6 +98,35 @@ Rules:
 ## SECTION 4: Agent Team Execution (Step 4)
 
 Spawn the generator agent to create and manage a Claude Code agent team for the current group.
+
+### Orchestrator Spawn Prompt (Mandatory Template)
+
+When invoking the generator from `/auto`, you (the orchestrator) **MUST** use a prompt that carries the team mandate inline — a terse one-liner like `"Implement group A"` leaves too much latitude and the generator will sometimes implement solo. Use this template verbatim, substituting `{GROUP_ID}` and the story count:
+
+```
+Implement group {GROUP_ID} ({N_STORIES} stories) using the mandatory parallel-team protocol from generator.md Rule 2.
+
+You are dispatching, not implementing. Concretely:
+1. Read specs/stories/ for every story in this group.
+2. Read specs/design/component-map.md and build the micro-DAG (Step 2.5).
+3. Spawn one Agent(subagent_type=generator) per story — in parallel for Phase 1, then Phase 2 after Phase 1 commits.
+4. Do NOT call Write or Edit on production files yourself unless you are the designated integrator for a shared file in Phase 3.
+5. Log every teammate spawn to .claude/state/iteration-log.md with the story ID, owned files, and phase.
+6. After all teammates complete, run the validation gate (pytest, ruff, mypy/tsc, coverage) and hand off to the evaluator.
+
+This applies for any group with N_STORIES >= 2 regardless of how small the stories look. The only bypass is execution.default_mode == "solo" in project-manifest.json.
+```
+
+If the group has only **1 story**, use the legacy single-generator prompt instead — no team needed.
+
+### Verification After Generator Returns
+
+After the generator subagent returns, verify the team actually executed before trusting the result:
+
+1. Read `.claude/state/iteration-log.md` — there must be one teammate-spawn entry per story in the group (minus integrators for Phase 3-only files).
+2. If the log shows zero teammate spawns for a multi-story group, the generator violated Rule 2. Surface this as a ratchet failure, record it in `.claude/state/learned-rules.md` (under "Process rules"), and re-dispatch with an even stricter prompt that names the violation.
+
+This verification is non-optional: the user has explicitly requested parallel agent teams for independent story clusters and silent fallback to solo execution defeats the purpose.
 
 ### Dependency Handshake
 
@@ -144,6 +177,127 @@ In Solo mode, the generator works alone sequentially. No team spawning, no phase
 | Security reviewer | Sonnet | Pattern matching |
 
 Configure via `project-manifest.json` field `execution.model_tier`.
+
+---
+
+## SECTION 4B: Cross-Group Parallelism
+
+Within-group teams (Section 4) parallelize *stories inside one group*. Cross-group parallelism parallelizes *independent groups* of the dependency graph. The two compose: a wave of 3 concurrent groups, each with 5 teammates, is 15 concurrent subagents at peak.
+
+### When It Applies
+
+Cross-group parallelism activates when **all** of the following hold:
+- `--parallel-groups N` is `> 1` (default `3`; pass `--sequential` or `--parallel-groups 1` to opt out).
+- The dependency graph (`specs/stories/dependency-graph.md`) declares **two or more groups whose upstream dependencies are all satisfied** (already-complete groups or zero upstream deps).
+- The project is not in `solo` mode.
+
+If only one group is ready in the current wave, behave exactly as sequential `/auto` — no extra branches, no parent/child split. Don't pay the coordination tax when there's nothing to coordinate.
+
+### Wave Selection Algorithm
+
+1. Read `specs/stories/dependency-graph.md` and `features.json`.
+2. A group `G` is *complete* when every story in `G` has `passes: true` in `features.json`.
+3. A group `G` is *ready* when every upstream group of `G` is complete (or `G` has no upstream deps).
+4. The current **wave** = the set of ready, not-yet-complete groups.
+5. Cap the wave at `--parallel-groups N` (default 3). If more groups are ready than the cap, pick the first N in dependency-graph order; the remainder fall into the next wave.
+
+Log the wave selection to `.claude/state/iteration-log.md` before dispatching:
+
+```
+=== Wave 1 (2026-05-13T12:30:00Z, parallel-groups=3) ===
+Ready: [B, C, D]
+Selected: [B, C, D]
+Deferred: []
+```
+
+### Git Branch Strategy
+
+Each group in a wave runs on its own branch to eliminate parallel-commit conflicts on the trunk.
+
+1. Before dispatch, the parent orchestrator captures the current branch as `WAVE_BASE` (e.g., `main` or `feat/new-thing`).
+2. For each group `G` in the wave, the parent creates `auto/group-{G}` from `WAVE_BASE` and dispatches the group-orchestrator subagent against it.
+3. Each group-orchestrator commits all its work to its own branch.
+4. After all group-orchestrators in the wave complete, the parent merges branches back into `WAVE_BASE` **sequentially in dependency-graph order**. Failed groups are NOT merged; their branches are preserved for inspection.
+
+Merge conflicts at this stage indicate a file-ownership violation (two groups touched the same file). When that happens:
+- Abort the merge.
+- Record the violation in `.claude/state/learned-rules.md` under "Process rules".
+- Surface it as a ratchet failure for the offending group.
+- Resume `/auto` to re-plan with the user.
+
+If `--sequential`, skip branch creation entirely and commit directly to `WAVE_BASE`.
+
+### State Coordination
+
+Concurrent group-orchestrators MUST NOT write to shared state files. The parent owns shared state and merges per-group artifacts between waves.
+
+**Parent-owned (read-write only by parent orchestrator):**
+- `claude-progress.txt`
+- `.claude/state/learned-rules.md`
+- `features.json` (parent rolls up per-group status updates between waves)
+
+**Per-group-owned (read-write only by that group's orchestrator):**
+- `.claude/state/wave-{N}/group-{G}/iteration-log.md` — micro-DAG, teammate spawns, ratchet results
+- `.claude/state/wave-{N}/group-{G}/features-update.json` — proposed updates to `features.json` for stories in `G`
+- `.claude/state/wave-{N}/group-{G}/learned-rule-candidates.md` — candidate rules to roll up
+- `.claude/state/wave-{N}/group-{G}/sprint-contract.json` — copy of the approved contract for this group
+- `sprint-contracts/group-{G}.json` — the canonical contract (each group writes only its own file)
+
+The parent creates `.claude/state/wave-{N}/` before dispatch and rolls per-group artifacts up into parent-owned state between waves. Roll-up steps:
+
+1. Append each `iteration-log.md` section to the canonical `.claude/state/iteration-log.md` (preserving group tags).
+2. Merge each `features-update.json` into `features.json` (key-disjoint by story ID — no conflicts possible if file ownership held).
+3. Triage each `learned-rule-candidates.md` — promote the strong ones to `.claude/state/learned-rules.md`; discard duplicates and weak signals.
+4. Update `claude-progress.txt` with the wave summary (groups completed, stories passing, next wave preview).
+
+### Group-Orchestrator Spawn Protocol
+
+For each group `G` in the current wave, the parent spawns a subagent with this prompt template. Use `Agent(subagent_type=generator)` — the generator agent's instructions cover both implementation AND orchestration when given the group-orchestrator role.
+
+```
+You are the group-orchestrator for dependency group {G} of wave {N}.
+
+Your scope is EXACTLY one group. Do not touch other groups, do not advance the wavefront, do not write to parent-owned state files.
+
+Mandatory steps:
+1. Read sprint-contracts/group-{G}.json. If missing, propose one (Section 3 of /auto), get evaluator approval, then proceed.
+2. Switch to branch auto/group-{G} (parent has already created it from {WAVE_BASE}).
+3. Run the in-group flow: micro-DAG → teammate dispatch (Rule 2 in generator.md) → ratchet gate for this group only.
+4. Write per-group state to .claude/state/wave-{N}/group-{G}/ ONLY. Do not write to claude-progress.txt, learned-rules.md, or features.json directly.
+5. Commit all work to auto/group-{G}. Do NOT merge — the parent handles merging after the wave.
+6. Return a structured summary: { "group": "{G}", "passes": <bool>, "stories_passing": [...], "stories_failing": [...], "rule_candidates_path": "...", "iteration_log_path": "..." }
+
+You may parallelize teammates within this group up to 5 (Rule 2 mandate). You may NOT spawn nested group-orchestrators or touch other groups.
+```
+
+### Wait + Merge Protocol
+
+The parent dispatches all group-orchestrators in the wave in a single message (multiple `Agent` tool calls in one block — Claude Code runs them concurrently). The parent then:
+
+1. Waits for all group-orchestrator subagents to return.
+2. For each returned summary, runs the roll-up steps above (in dependency-graph order, deterministic).
+3. Merges successful groups' branches into `WAVE_BASE` (sequential merges).
+4. If any group failed: leave its branch unmerged, log the failure under `.claude/state/iteration-log.md`, advance to the next wave with the failed group still incomplete. The next wave may unlock different groups via the dependency graph; failed groups can be retried by re-running `/auto --group {G}` later.
+5. Recompute the wave (Wave Selection Algorithm) and dispatch the next one until all groups are complete or no groups can advance.
+
+### Failure Handling
+
+| Failure mode | Parent action |
+|---|---|
+| One group in wave fails ratchet gate | Leave branch unmerged, advance other groups, surface failure summary at end of wave |
+| Group-orchestrator subagent crashes / times out | Treat as failed; do NOT auto-retry inside the same wave (avoid infinite loops); user can `/auto --group {G}` to retry |
+| Merge conflict during roll-up | Abort merge for that group, treat as failure, record as a file-ownership-violation rule candidate |
+| All groups in wave fail | Stop. Print wave summary and ask user how to proceed |
+
+### Concurrency Limits
+
+| Resource | Cap | Rationale |
+|---|---|---|
+| Concurrent group-orchestrators per wave | 3 (default, override with `--parallel-groups N`) | Below most rate limits; leaves headroom for within-group teams |
+| Concurrent teammates per group-orchestrator | 5 (Section 4 mandate) | Existing within-group cap |
+| Peak total subagents | 15 (3 × 5) | Safety ceiling; raise only after observing actual usage |
+
+If `--parallel-groups N > 3`, accept it but emit a warning to the iteration log. The 3-default is conservative; teams with higher API throughput can raise it.
 
 ---
 
@@ -244,7 +398,7 @@ Spawn design-critic on every page listed in the sprint contract's `design_checks
 
 ### On PASS (All Gates Clear)
 
-Execute these steps in order:
+**Sequential mode (`--sequential` or wave-of-one):**
 
 1. **Commit:** `git add -A && git commit -m "feat: implement group {group}"`
 2. **Update features.json:** Set `passes: true` for all features in this group's sprint contract.
@@ -252,6 +406,21 @@ Execute these steps in order:
 4. **Update iteration-log.md:** Append entry with group ID, timestamp, verdict, and summary.
 5. **Update coverage-baseline.txt:** Write the new coverage percentage (ratchet up).
 6. **Next group:** Return to SECTION 2 (context recovery) for the next iteration.
+
+**Parallel mode (wave of ≥ 2 groups):**
+
+The above steps are split across the group-orchestrator subagent and the parent orchestrator:
+
+*Group-orchestrator (per group, runs in subagent):*
+1. **Commit to per-group branch:** `git commit -m "feat: implement group {group}" auto/group-{group}` (already checked out).
+2. **Update per-group state:** Write proposed `features.json` updates to `.claude/state/wave-{N}/group-{group}/features-update.json` and the per-group `iteration-log.md` and `learned-rule-candidates.md`. Do NOT touch parent-owned files.
+3. **Return summary** to the parent (see Section 4B Group-Orchestrator Spawn Protocol for schema).
+
+*Parent (after all group-orchestrators in the wave return):*
+4. **Roll-up state** (Section 4B Wait + Merge Protocol): merge per-group `features-update.json` files into `features.json`, append per-group `iteration-log.md` sections to the canonical log, triage `learned-rule-candidates.md` into `learned-rules.md`.
+5. **Merge branches sequentially** into `WAVE_BASE` in dependency-graph order (passing groups only).
+6. **Update parent state:** append a new session block to `claude-progress.txt` with the wave summary; ratchet `coverage-baseline.txt` to the new repo-wide coverage after all merges.
+7. **Next wave:** Return to SECTION 2 (context recovery) to compute the next wave.
 
 ### On FAIL — Self-Healing Loop (Max 3 Attempts)
 
