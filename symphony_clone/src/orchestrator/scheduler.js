@@ -17,6 +17,7 @@ class Scheduler {
 
   async tick() {
     const candidates = await this.tracker.listCandidates();
+    const reclaimed = await this.reclaimStuck(candidates);
     const eligible = candidates.filter((issue) => isEligible(issue, this.config));
     const retryReady = eligible.filter((issue) => !this.stateStore || this.stateStore.dueForRetry(issue));
     const capacity = Math.max(0, this.config.maxConcurrentRuns - this.running.size);
@@ -29,10 +30,47 @@ class Scheduler {
 
     return {
       candidates: candidates.length,
+      reclaimed,
       eligible: eligible.length,
       retryReady: retryReady.length,
       started: Math.min(retryReady.length, capacity)
     };
+  }
+
+  async reclaimStuck(candidates) {
+    const stuck = candidates.filter((issue) => isStuck(issue, this.running, this.config));
+    let reclaimed = 0;
+
+    for (const issue of stuck) {
+      try {
+        this.logger.warn('run_reclaim_started', { issueKey: issue.key, state: issue.state });
+
+        if (this.stateStore) {
+          this.stateStore.recordFailure(
+            issue,
+            new Error('Run abandoned (orchestrator restart or process crash)'),
+            { ...this.config.retry, now: new Date() }
+          );
+        }
+
+        await safeTrackerCall(
+          this.tracker.addComment(
+            issue.id,
+            'Claude Harness orchestrator: previous run did not complete (orchestrator restart or process crash). Resetting to ready state for retry.'
+          ),
+          this.logger,
+          issue
+        );
+        await this.tracker.moveIssue(issue.id, this.config.tracker.readyState);
+
+        reclaimed++;
+        this.logger.info('run_reclaimed', { issueKey: issue.key });
+      } catch (error) {
+        this.logger.error('run_reclaim_failed', { issueKey: issue.key, error: error.message });
+      }
+    }
+
+    return reclaimed;
   }
 
   async runIssue(issue) {
@@ -121,6 +159,12 @@ function isEligible(issue, config) {
   return stateMatches && labelMatches && blockersDone;
 }
 
+function isStuck(issue, runningSet, config) {
+  const inRunningState = normalize(issue.state) === normalize(config.tracker.runningState);
+  const claimedByThisProcess = runningSet && runningSet.has(issue.id);
+  return inRunningState && !claimedByThisProcess;
+}
+
 async function maybeCreatePr(workspacePath, issue, group, config) {
   if (!config.github.createPr) return null;
 
@@ -156,4 +200,4 @@ async function safeTrackerCall(promise, logger, issue) {
   }
 }
 
-module.exports = { Scheduler, isEligible, maybeCreatePr, safeTrackerCall };
+module.exports = { Scheduler, isEligible, isStuck, maybeCreatePr, safeTrackerCall };

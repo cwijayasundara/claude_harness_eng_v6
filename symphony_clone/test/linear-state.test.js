@@ -29,6 +29,7 @@ test('LinearTracker resolves state with configured fallback names', async () => 
 
   assert.equal(calls[1].variables.stateId, 'state-review');
 });
+
 test('LinearTracker reports available states when no configured state matches', async () => {
   const tracker = new LinearTracker({
     linear: { apiUrl: 'https://linear.test/graphql', apiKey: 'lin_test', projectSlug: 'proj' },
@@ -45,3 +46,4 @@ test('LinearTracker reports available states when no configured state matches', 
     /Linear workflow state not found: Blocked \(tried: Blocked, Canceled; available: Todo\)/
   );
 });
+

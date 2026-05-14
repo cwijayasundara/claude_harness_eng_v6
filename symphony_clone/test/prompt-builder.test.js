@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildHarnessPrompt, groupFromIssue } = require('../src/orchestrator/prompt-builder');
+const { buildHarnessPrompt, groupFromIssue, resolveHarnessCommand } = require('../src/orchestrator/prompt-builder');
 const { shellQuote } = require('../src/orchestrator/claude-runner');
 
 test('groupFromIssue extracts harness group metadata from issue description', () => {
@@ -53,4 +53,33 @@ test('buildHarnessPrompt includes group command and result path', () => {
 
 test('shellQuote protects prompts with spaces and apostrophes', () => {
   assert.equal(shellQuote("don't edit files"), "'don'\\''t edit files'");
+});
+
+test('resolveHarnessCommand defaults to /auto when no env or label override', () => {
+  delete process.env.HARNESS_COMMAND_TEMPLATE;
+  const cmd = resolveHarnessCommand({ key: 'RES-21', labels: [] }, { id: 'A' });
+  assert.equal(cmd, '/auto --group A');
+});
+
+test('resolveHarnessCommand honors HARNESS_COMMAND_TEMPLATE env override', () => {
+  process.env.HARNESS_COMMAND_TEMPLATE = '/lite --group {{group}} --issue {{issue}}';
+  try {
+    const cmd = resolveHarnessCommand({ key: 'RES-21', labels: [] }, { id: 'A' });
+    assert.equal(cmd, '/lite --group A --issue RES-21');
+  } finally {
+    delete process.env.HARNESS_COMMAND_TEMPLATE;
+  }
+});
+
+test('resolveHarnessCommand prefers issue label mode-* over env', () => {
+  process.env.HARNESS_COMMAND_TEMPLATE = '/auto --group {{group}}';
+  try {
+    const cmd = resolveHarnessCommand(
+      { key: 'RES-21', labels: ['harness-e2e', 'mode-lite'] },
+      { id: 'A' }
+    );
+    assert.equal(cmd, '/lite --group A');
+  } finally {
+    delete process.env.HARNESS_COMMAND_TEMPLATE;
+  }
 });

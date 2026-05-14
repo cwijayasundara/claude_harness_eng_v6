@@ -29,9 +29,10 @@ services:
       GITHUB_TOKEN: ${GITHUB_TOKEN}
     volumes:
       - symphony-workspaces:/workspaces
-      - ${HOME}/.claude:/root/.claude:ro
-      - ${HOME}/.ssh:/root/.ssh:ro
+      - symphony-claude-home:/home/node
+      - ${HOME}/.ssh:/home/node/.ssh:ro
     restart: unless-stopped
 
 volumes:
   symphony-workspaces:
+  symphony-claude-home:

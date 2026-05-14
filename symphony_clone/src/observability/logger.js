@@ -35,3 +35,4 @@ function createLogger(config) {
 }
 
 module.exports = { JsonlLogger, createLogger };
+
