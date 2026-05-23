@@ -55,6 +55,87 @@ TARGET_REPO_URL=git@example.com:org/repo.git # inline comment
   assert.equal(parsed.TARGET_REPO_URL, 'git@example.com:org/repo.git');
 });
 
+test('loadConfig sets default maxWallclockMs to 2 hours', () => {
+  const config = loadConfig({
+    TRACKER_PROVIDER: 'linear',
+    LINEAR_API_KEY: 'lin_test',
+    LINEAR_PROJECT_SLUG: 'project',
+    TARGET_REPO_URL: 'git@example.com:org/repo.git'
+  });
+
+  assert.equal(config.run.maxWallclockMs, 7200000);
+});
+
+test('loadConfig reads MAX_WALLCLOCK_PER_RUN_MS override', () => {
+  const config = loadConfig({
+    TRACKER_PROVIDER: 'linear',
+    LINEAR_API_KEY: 'lin_test',
+    LINEAR_PROJECT_SLUG: 'project',
+    TARGET_REPO_URL: 'git@example.com:org/repo.git',
+    MAX_WALLCLOCK_PER_RUN_MS: '1800000'
+  });
+
+  assert.equal(config.run.maxWallclockMs, 1800000);
+});
+
+test('loadConfig honours legacy CLAUDE_TURN_TIMEOUT_MS as alias', () => {
+  const config = loadConfig({
+    TRACKER_PROVIDER: 'linear',
+    LINEAR_API_KEY: 'lin_test',
+    LINEAR_PROJECT_SLUG: 'project',
+    TARGET_REPO_URL: 'git@example.com:org/repo.git',
+    CLAUDE_TURN_TIMEOUT_MS: '900000'
+  });
+
+  assert.equal(config.run.maxWallclockMs, 900000);
+});
+
+test('loadConfig MAX_WALLCLOCK_PER_RUN_MS wins over legacy alias', () => {
+  const config = loadConfig({
+    TRACKER_PROVIDER: 'linear',
+    LINEAR_API_KEY: 'lin_test',
+    LINEAR_PROJECT_SLUG: 'project',
+    TARGET_REPO_URL: 'git@example.com:org/repo.git',
+    MAX_WALLCLOCK_PER_RUN_MS: '1200000',
+    CLAUDE_TURN_TIMEOUT_MS: '900000'
+  });
+
+  assert.equal(config.run.maxWallclockMs, 1200000);
+});
+
+test('loadConfig sets workspace retention default to delete', () => {
+  const config = loadConfig({
+    TRACKER_PROVIDER: 'linear',
+    LINEAR_API_KEY: 'lin_test',
+    LINEAR_PROJECT_SLUG: 'project',
+    TARGET_REPO_URL: 'git@example.com:org/repo.git'
+  });
+
+  assert.equal(config.workspaceRetention, 'delete');
+});
+
+test('loadConfig rejects unknown WORKSPACE_RETENTION value', () => {
+  assert.throws(() => loadConfig({
+    TRACKER_PROVIDER: 'linear',
+    LINEAR_API_KEY: 'lin_test',
+    LINEAR_PROJECT_SLUG: 'project',
+    TARGET_REPO_URL: 'git@example.com:org/repo.git',
+    WORKSPACE_RETENTION: 'maybe'
+  }), /WORKSPACE_RETENTION/);
+});
+
+test('loadConfig accepts WORKSPACE_RETENTION=keep', () => {
+  const config = loadConfig({
+    TRACKER_PROVIDER: 'linear',
+    LINEAR_API_KEY: 'lin_test',
+    LINEAR_PROJECT_SLUG: 'project',
+    TARGET_REPO_URL: 'git@example.com:org/repo.git',
+    WORKSPACE_RETENTION: 'keep'
+  });
+
+  assert.equal(config.workspaceRetention, 'keep');
+});
+
 test('loadEnvFile fills missing values without overriding explicit env', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'symphony-env-'));
   const envPath = path.join(dir, '.env');

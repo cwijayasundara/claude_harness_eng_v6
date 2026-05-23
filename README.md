@@ -41,9 +41,9 @@ Autonomous code generation fails in three predictable ways: agents grade their o
 | Component | Count | Notes |
 |---|---:|---|
 | Slash commands (true) | 1 | Just `/scaffold`. Everything else is a skill. |
-| Skills (virtual commands) | 27 | Greenfield, brownfield, lite, vibe, improvement, tracker, framework-packs |
+| Skills (virtual commands) | 28 | Greenfield, brownfield, lite, vibe, improvement, tracker, framework-packs, lane-classify |
 | Specialized agents | 7 | planner, generator, evaluator, design-critic, ui-designer, test-engineer, security-reviewer |
-| Lifecycle hooks | 15 | Pre/post tool, pre-commit, Stop, TeammateIdle |
+| Lifecycle hooks | 17 | Pre/post tool, pre-commit, Stop, TeammateIdle, run-receipt, brownfield-staleness |
 | Templates | 10 | Sprint contract, story, init.sh, tracker config, etc. |
 | Official Claude Code plugins (default-on) | 8 | superpowers, code-review, commit-commands, security-guidance, pr-review-toolkit, frontend-design, context7, code-simplifier |
 | Framework skill packs (opt-in) | 2 | LangChain/LangGraph/DeepAgents (9 skills); Google ADK (7 skills) |
@@ -331,6 +331,131 @@ The 15 hooks enforce these in real time. The 6 ratchet gates enforce them at com
 
 ---
 
+## Productivity metrics
+
+The harness measures productivity across three flows — greenfield, brownfield, and review/security effort displaced — using a two-layer architecture that reuses Claude Code's native telemetry wherever possible.
+
+### Layer 1: Native OTEL (reuse — no custom code)
+
+Claude Code ships 8 OpenTelemetry metrics and 24 event types. `/scaffold` enables them automatically:
+
+```bash
+export CLAUDE_CODE_ENABLE_TELEMETRY=1
+export OTEL_METRICS_EXPORTER=otlp        # or prometheus, console
+export OTEL_LOGS_EXPORTER=otlp
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+export OTEL_LOG_TOOL_DETAILS=1           # populates agent.name + skill.name
+```
+
+| Native metric | What it covers |
+|---|---|
+| `claude_code.token.usage` | Tokens by type (in/out/cache), model, agent, skill |
+| `claude_code.cost.usage` | USD cost with same breakdowns |
+| `claude_code.session.count` | Sessions (fresh/resume/continue) |
+| `claude_code.lines_of_code.count` | LOC added/removed |
+| `claude_code.commit.count` | Git commits |
+| `claude_code.pull_request.count` | PRs created |
+| `claude_code.code_edit_tool.decision` | Tool accept/reject rates |
+| `claude_code.active_time.total` | User vs CLI active time (seconds) |
+
+For dashboards, import the community Grafana dashboard at [grafana.com/grafana/dashboards/24993](https://grafana.com/grafana/dashboards/24993-claude-code-metrics/). For enterprise analytics, use the free [Claude Code Analytics API](https://platform.claude.com/docs/en/build-with-claude/claude-code-analytics-api) (daily per-user aggregated data).
+
+### Layer 2: Harness-custom (concepts with no native equivalent)
+
+These are measured by `record-run.js` (hook) and commit trailers — lightweight instrumentation for harness-specific concepts.
+
+| Signal | Where it lives | What it captures |
+|---|---|---|
+| **Run-receipt JSONL** | `.claude/runs/YYYY-MM-DD.jsonl` | Per-subagent and per-turn records: lane, mode, iteration, group, story, agent, contract pass/fail |
+| **Commit trailers** | Every agent commit message | `Harness-Lane:`, `Harness-Mode:`, `Harness-Iteration:`, `Harness-Group:` — the join key for external dashboards |
+| **Lane state** | `.claude/state/current-lane` | Written by `/lane-classify` or `/auto`, read by the `prepare-commit-msg` git hook |
+| **Brownfield staleness** | Hook stdout (soft warning) | `brownfield-staleness.js` warns when `specs/brownfield/` is >14 days or >50 commits stale |
+| **Contract budgets** | `sprint-contract.json` | `max_iterations` + `max_files_changed` (harness concepts; token/cost budgets monitored via native OTEL) |
+
+### Layer 3: External (join via trailer)
+
+PR merge state, rework rate, reviewer wall-clock, and defect-escape rate live in Jira/ADO/GitHub/CI. These dashboards filter or group by the `Harness-Lane:` commit trailer to segment work by lane.
+
+### Enabling metrics
+
+**New projects:** `/scaffold` enables both layers automatically — native OTEL env vars are documented in the scaffold interview output, and harness hooks are installed via `cp -r`.
+
+**Existing projects:** Add the OTEL env vars to your `.env` or shell profile, and verify the harness hooks are present:
+```bash
+ls .claude/hooks/record-run.js .claude/hooks/brownfield-staleness.js .claude/git-hooks/prepare-commit-msg
+```
+
+### Testing metrics
+
+**Native OTEL (console smoke test):**
+```bash
+export CLAUDE_CODE_ENABLE_TELEMETRY=1
+export OTEL_METRICS_EXPORTER=console
+export OTEL_METRIC_EXPORT_INTERVAL=5000
+# Start a Claude Code session and do any task — metrics appear on stderr within 5s
+```
+
+**Harness-custom (run-receipt):**
+```bash
+mkdir -p .claude/state .claude/runs
+echo "improve" > .claude/state/current-lane
+echo "full" > .claude/state/current-mode
+echo "1" > .claude/state/current-iteration
+
+cat <<'EOF' | node .claude/hooks/record-run.js
+{"hook_event_name":"PostToolUse","tool_name":"Task","session_id":"test","tool_input":{"subagent_type":"evaluator"},"tool_response":{"is_error":false}}
+EOF
+cat .claude/runs/$(date +%Y-%m-%d).jsonl
+# Should show: kind=subagent, lane=improve, mode=full, iteration=1, agent=evaluator, exit=ok
+```
+
+**Commit trailers:**
+```bash
+echo "vibe" > .claude/state/current-lane
+TMPFILE=$(mktemp); echo "test commit" > "$TMPFILE"
+.claude/git-hooks/prepare-commit-msg "$TMPFILE" message
+cat "$TMPFILE"
+# Should append: Harness-Lane: vibe
+rm "$TMPFILE"
+```
+
+**Brownfield staleness:**
+```bash
+mkdir -p specs/brownfield
+touch -t "$(date -v-20d +%Y%m%d0000)" specs/brownfield/risk-map.md
+cat <<'EOF' | node .claude/hooks/brownfield-staleness.js
+{"hook_event_name":"UserPromptSubmit","prompt":"/improve the auth flow"}
+EOF
+# Should warn: specs/brownfield/ last updated 20.x days ago
+```
+
+### Key files
+
+| File | Purpose |
+|---|---|
+| `.claude/hooks/record-run.js` | Emits harness-specific JSONL on PostToolUse(Task) + Stop + SubagentStop |
+| `.claude/hooks/brownfield-staleness.js` | Soft-warns when brownfield maps are stale |
+| `.claude/git-hooks/prepare-commit-msg` | Auto-injects `Harness-Lane:` and related trailers from `.claude/state/current-*` |
+| `.claude/skills/lane-classify/SKILL.md` | Classifies requests into lanes, writes `.claude/state/current-lane` |
+| `.claude/templates/sprint-contract.json` | Includes `productivity_budget` (max_iterations, max_files_changed) |
+| `matrices.pptx` | 6-slide stakeholder deck with the full metric map |
+| `build_matrices_deck.py` | Generator for `matrices.pptx` — edit content and `python3 build_matrices_deck.py` to regen |
+
+### What NOT to build custom
+
+Do not duplicate what native OTEL already provides:
+- Token counts → `claude_code.token.usage`
+- Cost tracking → `claude_code.cost.usage`
+- Session counts → `claude_code.session.count`
+- LOC metrics → `claude_code.lines_of_code.count`
+- Commit/PR counts → `claude_code.commit.count` / `claude_code.pull_request.count`
+- Tool accept/reject → `claude_code.code_edit_tool.decision`
+- Per-tool latency → `claude_code.tool_result` event
+
+Build custom only for concepts the harness introduces: lanes, modes, iterations, groups, stories, contract pass/fail, brownfield staleness, seam fit, lane correctness.
+
+---
+
 ## Documentation
 
 - `design.md` — full architecture reference (this scaffold's design doc).
@@ -338,6 +463,7 @@ The 15 hooks enforce these in real time. The 6 ratchet gates enforce them at com
 - `.claude/skills/<name>/SKILL.md` — every skill is self-documenting.
 - `.claude/agents/<name>.md` — every agent's frontmatter declares its tools and model tier.
 - `Claude_Harness_Engine_Design.pptx` — slide deck for stakeholder briefings.
+- `matrices.pptx` — productivity metrics deck (native OTEL + harness-custom + external).
 
 ---
 

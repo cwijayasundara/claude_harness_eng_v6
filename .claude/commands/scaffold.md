@@ -334,13 +334,17 @@ cp .claude/templates/tracker-config.template.json .claude/tracker-config.json
 mkdir -p .claude/state/tracker-runs
 ```
 
-Then edit `.claude/tracker-config.json` based on the selected mode:
+Then write `.claude/tracker-config.json` with the chosen mode flipped on. Do not leave the file shipped from the template (`enabled: false`) — that silently disables `/tracker-publish` and confuses users.
 
-- Publish only: set `enabled: true`, `mode: "publish-only"`.
-- Publish + sync: set `enabled: true`, `mode: "sync"`.
-- Publish + external orchestrator dispatch: set `enabled: true`, `mode: "orchestrate"`.
+Use the Edit or Write tool to make these changes explicitly:
 
-Do not write tracker API keys into `.claude/tracker-config.json`. Use environment variables such as `LINEAR_API_KEY`, `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, and `GITHUB_TOKEN`.
+- Mode B (Publish only): set `enabled: true`, `mode: "publish-only"`.
+- Mode C (Publish + sync): set `enabled: true`, `mode: "sync"`.
+- Mode D (Publish + external orchestrator dispatch): set `enabled: true`, `mode: "orchestrate"`.
+
+If the user named a specific provider in Q1 ("Linear", "Jira"), also overwrite `provider` to match. Leave `project_slug` as the template placeholder — the user must fill it in themselves (their tracker workspace slug is not knowable from the scaffold interview).
+
+Do not write tracker API keys into `.claude/tracker-config.json`. Use environment variables such as `LINEAR_API_KEY`, `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, and `GITHUB_TOKEN`. Surface the remaining prerequisites in the Step 10 report (see "Tracker Setup Addendum" below).
 
 ### Optional Agent-Framework Skill Packs
 
@@ -580,6 +584,8 @@ Planner   Generator  Evaluator  Test Eng  Security Rev
 |10 | pre-commit-gate       | `hooks/pre-commit-gate.js`         | Pre-commit                     |
 |11 | task-completed        | `hooks/task-completed.js`          | Post-task                      |
 |12 | teammate-idle-check   | `hooks/teammate-idle-check.js`     | Periodic                       |
+|13 | record-run            | `hooks/record-run.js`              | PostToolUse(Task) · Stop · SubagentStop |
+|14 | brownfield-staleness  | `hooks/brownfield-staleness.js`    | UserPromptSubmit · PreToolUse(Task)     |
 
 ## State Files
 
@@ -645,6 +651,34 @@ Placeholder mappings by preset:
 git init
 ```
 
+Install the harness commit-trailer git hook and enable Claude Code native telemetry:
+
+```bash
+cp $PLUGIN_SOURCE/git-hooks/prepare-commit-msg .git/hooks/prepare-commit-msg
+chmod +x .git/hooks/prepare-commit-msg
+mkdir -p .claude/runs
+```
+
+**Native OTEL telemetry** — Claude Code ships 8 metrics (tokens, cost, sessions, commits, PRs, LOC, tool acceptance, active time) and 24 event types. Enable them so standard productivity data flows to Grafana/Prometheus/Datadog without custom code. Write the following to the project `.env` (or instruct the user to export them):
+
+```bash
+# --- Claude Code native telemetry (no custom code needed) ---
+CLAUDE_CODE_ENABLE_TELEMETRY=1
+OTEL_METRICS_EXPORTER=otlp
+OTEL_LOGS_EXPORTER=otlp
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+# Populate agent.name + skill.name on every metric (needed for cost-by-agent dashboards)
+OTEL_LOG_TOOL_DETAILS=1
+```
+
+If the user does not have an OTEL collector, suggest `OTEL_METRICS_EXPORTER=prometheus` (scrape at `http://localhost:9464/metrics`) or `OTEL_METRICS_EXPORTER=console` for local debugging. The Grafana community dashboard is at `grafana.com/grafana/dashboards/24993`.
+
+**What native OTEL covers (do NOT build custom):** tokens · cost · sessions · commits · PRs · LOC · tool accept/reject · active time · per-API-call latency · cost attribution by model/agent/skill.
+
+**What the harness adds on top (custom, via record-run.js + commit trailers):**
+- `Harness-Lane:` / `Harness-Mode:` / `Harness-Iteration:` / `Harness-Group:` commit trailers — segmentation key for lane-level dashboards in Jira/ADO/GitHub. Auto-injected by the `prepare-commit-msg` hook from `.claude/state/current-*` markers.
+- `.claude/runs/*.jsonl` run-receipts — harness-specific fields only: lane, mode, iteration, group, story, contract pass/fail. Lightweight journal, not a telemetry system.
+
 Write `.gitignore`:
 ```
 .env
@@ -663,6 +697,7 @@ build/
 .ruff_cache/
 playwright-report/
 test-results/
+.claude/runs/
 ```
 
 ## Step 9: Initialize State Files
@@ -691,7 +726,7 @@ next_action: Run /brd to start
 
 ## Step 10: Report
 
-The skill count is now 26 (lite added). Update the totals printed below if more skills are added in the future.
+The skill count is 27 (lite plus the existing 26). The Step 3 validation also asserts this — keep both in sync if you add or remove skills.
 
 Tailor the "Next steps" ordering based on the project-type decision:
 
@@ -735,6 +770,29 @@ Next steps:
   2. Escalate to /brd → /spec → /design → /auto if scope grows past the /lite eligibility cap
   3. For tiny safe changes later, use /vibe with a micro-contract
 ```
+
+### Tracker Setup Addendum
+
+If the user selected tracker mode B (publish-only), C (publish + sync), or D (publish + external orchestrator dispatch), insert this block immediately after `Installed:` and before `Next steps:`. It MUST list every prerequisite the user still has to fulfil before `/tracker-publish` will do anything.
+
+```
+Tracker orchestration ({mode display name}):
+  .claude/tracker-config.json     enabled=true, mode={mode}, provider={provider}
+  
+  Before /tracker-publish runs, you still need to:
+  1. Set {provider}_API_KEY in your shell or .env (never commit it).
+  2. Replace project_slug "replace-with-{provider}-project-slug" in tracker-config.json.
+  3. Confirm the configured states ({readyState}, {runningState}, ...) exist in your tracker workflow.
+  4. (If mode D) prepare an isolated workspace runner — see .claude/skills/tracker/SKILL.md and the symphony_clone README.
+```
+
+Substitute placeholders from the user's wizard answers and from the values written into `.claude/tracker-config.json` during Step 4. Use the actual provider name (Linear or Jira) in the prerequisite list. Do NOT print this block when the user selected mode A (Local-only).
+
+Also append one line to Next steps when tracker mode ≠ A:
+
+- After `Run /brd …` (or `Run /lite …` in minimal mode), insert: "Then /tracker-publish to mirror approved groups to {provider}; the orchestrator will not pick anything up until enabled=true and the project_slug is real."
+
+If the user picked mode A, omit both the addendum and the extra Next steps line.
 
 ### Framework Skill Pack Addendum
 

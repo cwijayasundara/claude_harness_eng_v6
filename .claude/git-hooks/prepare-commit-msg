@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Claude Harness — auto-inject segmentation trailers into every commit.
+#
+# Reads .claude/state/current-{lane,mode,iteration,group} (if present) and
+# appends Harness-Lane:, Harness-Mode:, Harness-Iteration:, Harness-Group:
+# trailers. Idempotent: skips trailers that already exist in the message.
+#
+# Installed by /scaffold into .git/hooks/prepare-commit-msg.
+
+set -e
+
+COMMIT_MSG_FILE="$1"
+COMMIT_SOURCE="${2:-}"
+
+# Skip for non-text commit sources (merge, squash, rebase commit msg edits, etc.)
+case "$COMMIT_SOURCE" in
+  merge|squash|commit) exit 0 ;;
+esac
+
+repo_root="$(git rev-parse --show-toplevel 2>/dev/null || echo "")"
+[ -z "$repo_root" ] && exit 0
+
+state_dir="$repo_root/.claude/state"
+[ -d "$state_dir" ] || exit 0
+
+read_marker() {
+  local file="$state_dir/$1"
+  [ -f "$file" ] || return 0
+  tr -d '[:space:]' < "$file" | head -c 64
+}
+
+append_trailer() {
+  local key="$1" value="$2"
+  [ -z "$value" ] && return 0
+  if grep -qiE "^${key}:" "$COMMIT_MSG_FILE" 2>/dev/null; then
+    return 0
+  fi
+  git interpret-trailers --in-place --trailer "${key}: ${value}" "$COMMIT_MSG_FILE"
+}
+
+append_trailer "Harness-Lane"      "$(read_marker current-lane)"
+append_trailer "Harness-Mode"      "$(read_marker current-mode)"
+append_trailer "Harness-Iteration" "$(read_marker current-iteration)"
+append_trailer "Harness-Group"     "$(read_marker current-group)"
+
+exit 0

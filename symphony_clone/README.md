@@ -110,6 +110,8 @@ POLL_INTERVAL_MS=60000
 MAX_RETRY_ATTEMPTS=3
 RETRY_BASE_DELAY_MS=60000
 RETRY_MAX_DELAY_MS=900000
+MAX_WALLCLOCK_PER_RUN_MS=7200000
+WORKSPACE_RETENTION=delete
 STATE_DIR=/workspaces/.symphony
 LOG_ROOT=/workspaces/.symphony/logs
 STATUS_PORT=0
@@ -135,22 +137,24 @@ Environment variables exported in the shell override `.env` values. Do not commi
 Examples:
 
 ```text
-HARNESS_COMMAND_TEMPLATE=/auto --group {{group}}                    # default
-HARNESS_COMMAND_TEMPLATE=/lite --group {{group}}                    # lighter ratchet for simple groups
-HARNESS_COMMAND_TEMPLATE=/deep --group {{group}} --issue {{issue}}  # bespoke command
+HARNESS_COMMAND_TEMPLATE=/auto --group {{group}}                    # default — full ratcheting loop
+HARNESS_COMMAND_TEMPLATE=/vibe --group {{group}}                    # tiny-effort lane (no sprint contract)
+HARNESS_COMMAND_TEMPLATE=/improve --group {{group}} --issue {{issue}}  # narrow improvement on existing code
 ```
+
+**Important:** `/lite` is a scaffold-time skill that writes `specs/brd/`, `specs/stories/`, and design artifacts from a one-paragraph description. It is **not** an implementation runtime, so `HARNESS_COMMAND_TEMPLATE=/lite` would try to re-scaffold the workspace and fail. Use `/auto` (full ratcheting) or `/vibe` (no-ratchet lane for trivial changes) for implementation.
 
 #### Per-issue mode override via Linear label
 
-To override the global template on a single issue, add a Linear label of the form `mode-<command>` to that issue. The orchestrator strips the `mode-` prefix and uses the rest as the slash command name:
+To override the global template on a single issue, add a Linear label of the form `mode-<command>` to that issue. The orchestrator strips the `mode-` prefix and uses the rest as the slash command name. Only commands that operate on an existing workspace (require `--group` to mean "implement that group") are valid here:
 
 | Label on issue | Command Claude runs |
 |----------------|---------------------|
-| `mode-lite`    | `/lite --group <id>` |
-| `mode-deep`    | `/deep --group <id>` |
-| `mode-vibe`    | `/vibe --group <id>` |
+| `mode-auto`    | `/auto --group <id>`    (explicit default) |
+| `mode-vibe`    | `/vibe --group <id>`    (skip ratchet) |
+| `mode-improve` | `/improve --group <id>` (enhancement on existing code) |
 
-This lets you flag an individual issue as "small" or "high-effort" without changing global config.
+This lets you flag an individual issue without changing global config. Do **not** use `mode-lite`, `mode-brd`, `mode-spec`, `mode-design`, or `mode-brownfield` — those are scaffold/discovery skills that expect a fresh workspace or a description argument, not a group ID.
 
 ## Parallel Runs
 
@@ -285,7 +289,7 @@ Optional labels:
 
 | Label | Effect |
 |-------|--------|
-| `mode-lite`, `mode-deep`, `mode-vibe`, ... | Override `HARNESS_COMMAND_TEMPLATE` for this issue only. |
+| `mode-auto`, `mode-vibe`, `mode-improve` | Override `HARNESS_COMMAND_TEMPLATE` for this issue only. See the "Per-issue mode override" section above for the full list of valid commands. |
 
 Recommended workflow:
 
@@ -429,11 +433,49 @@ npm run check   # node --check on every JS file
 
 - Someone may have moved the issue manually in the Linear UI. Don't move issues during a run — the orchestrator's `finishRun` will overwrite the state when the run completes.
 
+## Retry Preserves Local Commits
+
+When a run fails after Claude has made commits but before the push succeeds (the classic failure mode: `git push` errors because `GITHUB_TOKEN` is missing or the helper isn't installed), the retry would historically reset the agent branch to `origin/main` and erase Claude's work.
+
+`workspace-manager.js:prepare()` now does the following on each invocation:
+
+1. Always `git fetch origin <base-branch>` to pull the latest base.
+2. If the workspace already exists and the local agent branch has commits ahead of the base, **preserve them**:
+   - Create a recovery tag `recovery/<branchName>/attempt-<n>-<timestamp>` pointing at the branch HEAD.
+   - `git checkout <branchName>` (no `-B`, no reset).
+   - Return `{ resumed: true, commitsAhead, backupRef }`.
+3. Only when the branch is missing locally or has zero commits ahead of the base does the destructive `git checkout -B branchName origin/<base>` run.
+
+The scheduler logs `workspace_resumed` with the recovery tag whenever a retry resumes mid-flight work. Recovery tags accumulate one per attempt; they are not pruned automatically. Clean them up manually with `git tag -d recovery/...` once you're confident the run won't need them.
+
+This means: if a credential, push, or PR-creation step fails after Claude has committed, the retry continues from the existing commits rather than starting Claude over.
+
+## Workspace Retention
+
+`WORKSPACE_RETENTION` controls what happens to `/workspaces/<issue-key>` after a run reaches a terminal state (`human_review` or final `blocked`):
+
+| Value | Behaviour |
+|-------|-----------|
+| `delete` (default) | The orchestrator removes `/workspaces/<issue-key>` once the issue is moved to its terminal tracker state. The branch is already on the remote, so nothing useful is lost. |
+| `keep` | The directory is left in place for forensics. Disk usage grows over time; you are responsible for housekeeping. |
+
+The deletion is sandboxed: the orchestrator refuses to delete any path that is not strictly inside `WORKSPACE_ROOT`.
+
+`MAX_WALLCLOCK_PER_RUN_MS` caps the wall-clock time of a single `claude` subprocess. The default is 2 hours (`7200000`). When the cap is hit, the process is `SIGTERM`'d and the failure follows the normal retry / blocked path. The legacy `CLAUDE_TURN_TIMEOUT_MS` env var still works as an alias if `MAX_WALLCLOCK_PER_RUN_MS` is unset.
+
+## Known follow-ups (from code review)
+
+These were flagged during review and intentionally deferred — none are exploitable, but each is worth a future pass:
+
+- **`branchExists` / `countCommitsAhead` swallow real git errors.** A torn-down git index or a permission error would currently look identical to "branch absent" and silently fall through to the destructive reset path. Hardening: distinguish "ref not found" (expected) from other failure modes (propagate). See `src/orchestrator/workspace-manager.js:69-86`.
+- **`post-checkout` hook trust boundary.** When `prepare()` resumes a workspace, `git checkout <branchName>` will execute `.git/hooks/post-checkout` if Claude wrote one in the previous run. Because `runCommand` inherits the full `process.env`, that hook would see `LINEAR_API_KEY`, `GITHUB_TOKEN`, and any LLM keys. Mitigation: `git config core.hooksPath /dev/null` immediately after clone, or run git with a minimal env allow-list. Tracked separately from the resume-preservation work.
+- **Recovery tags are local-only and accumulate.** Each retry creates a new `recovery/<branch>/attempt-<n>-<ts>-<uuid>` tag inside the workspace. They are not pushed (intentional — they encode attempt metadata you don't want in the remote). If the workspace lives a long time, tags accumulate. Clean up with `git tag -d recovery/...` or set `WORKSPACE_RETENTION=delete` (default) so the whole workspace goes when the issue reaches a terminal state.
+- **`safeWorkspaceKey` enforces 80-char truncation.** Two distinct Linear keys longer than 80 characters could collide on the same workspace dir. Practically a non-issue (Linear keys are short), but flagged for completeness.
+
 ## Current Limitations
 
 - Linear is implemented; Jira is a stub.
 - No webhook receiver yet; polling only.
 - No dynamic workflow reload — `.env` changes require container recreate.
-- No terminal-state workspace cleanup yet (`/workspaces/<key>` directories accumulate).
 - File-based `state.json` is fine for `MAX_CONCURRENT_RUNS <= ~5`; SQLite would be needed at larger scales.
 - Claude Code runs as a subprocess, not through Codex app-server.

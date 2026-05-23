@@ -12,7 +12,8 @@ const config = {
     terminalStates: ['Done', 'Canceled']
   },
   retry: { maxAttempts: 3, baseDelayMs: 1000, maxDelayMs: 5000 },
-  maxConcurrentRuns: 1
+  maxConcurrentRuns: 1,
+  workspaceRetention: 'delete'
 };
 
 test('isEligible accepts ready labeled issue with terminal blockers', () => {
@@ -147,6 +148,106 @@ test('tick launches up to maxConcurrentRuns eligible issues in parallel', async 
 
   assert.equal(result.started, 3);
   assert.equal(scheduler.running.size, 3);
+});
+
+test('runIssue calls workspaceManager.cleanup after human_review terminal state', async () => {
+  const { Scheduler } = require('../src/orchestrator/scheduler');
+  const path = require('node:path');
+  const fs = require('node:fs');
+  const os = require('node:os');
+
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'symphony-sched-'));
+  const workspacePath = path.join(tempRoot, 'ENG-101');
+  fs.mkdirSync(path.join(workspacePath, '.claude/state/tracker-runs/A'), { recursive: true });
+  fs.writeFileSync(
+    path.join(workspacePath, '.claude/state/tracker-runs/A/result.json'),
+    JSON.stringify({ group: 'A', status: 'human_review', summary: 'ok', branch: 'agent/ENG-101' })
+  );
+
+  const cleanupCalls = [];
+  const tracker = {
+    listCandidates: async () => [],
+    moveIssue: async () => {},
+    addComment: async () => {}
+  };
+  const stateStore = {
+    nextAttempt: () => 1,
+    startRun: () => {},
+    updateRun: () => {},
+    finishRun: () => {},
+    recordFailure: () => ({ status: 'retry_wait', attempt: 1 }),
+    dueForRetry: () => true
+  };
+  const claudeRunner = { run: async () => ({ stdout: '', stderr: '' }) };
+  const workspaceManager = {
+    prepare: async () => ({ workspacePath, branchName: 'agent/ENG-101', workspaceKey: 'ENG-101' }),
+    pushBranch: async () => {},
+    cleanup: async (p) => { cleanupCalls.push(p); }
+  };
+  const logger = { info: () => {}, warn: () => {}, error: () => {} };
+  const scheduler = new Scheduler({
+    config: { ...config, github: { createPr: false, baseBranch: 'main', branchPrefix: 'agent' } },
+    tracker,
+    stateStore,
+    claudeRunner,
+    workspaceManager,
+    logger
+  });
+
+  const issue = { id: 'i1', key: 'ENG-101', state: 'Ready for Agent', labels: ['agent-ready'], blockedBy: [], description: 'Group: A\nStories: S1' };
+  await scheduler.runIssue(issue);
+
+  assert.deepEqual(cleanupCalls, [workspacePath]);
+});
+
+test('runIssue calls cleanup after blocked terminal status', async () => {
+  const { Scheduler } = require('../src/orchestrator/scheduler');
+  const path = require('node:path');
+  const fs = require('node:fs');
+  const os = require('node:os');
+
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'symphony-sched-'));
+  const workspacePath = path.join(tempRoot, 'ENG-102');
+  fs.mkdirSync(path.join(workspacePath, '.claude/state/tracker-runs/A'), { recursive: true });
+  fs.writeFileSync(
+    path.join(workspacePath, '.claude/state/tracker-runs/A/result.json'),
+    JSON.stringify({ group: 'A', status: 'blocked', summary: 'no', blocker: 'missing env' })
+  );
+
+  const cleanupCalls = [];
+  const tracker = {
+    listCandidates: async () => [],
+    moveIssue: async () => {},
+    addComment: async () => {}
+  };
+  const stateStore = {
+    nextAttempt: () => 1,
+    startRun: () => {},
+    updateRun: () => {},
+    finishRun: () => {},
+    recordFailure: () => ({ status: 'retry_wait' }),
+    dueForRetry: () => true
+  };
+  const claudeRunner = { run: async () => ({ stdout: '', stderr: '' }) };
+  const workspaceManager = {
+    prepare: async () => ({ workspacePath, branchName: 'agent/ENG-102', workspaceKey: 'ENG-102' }),
+    pushBranch: async () => {},
+    cleanup: async (p) => { cleanupCalls.push(p); }
+  };
+  const logger = { info: () => {}, warn: () => {}, error: () => {} };
+  const scheduler = new Scheduler({
+    config: { ...config, github: { createPr: false, baseBranch: 'main', branchPrefix: 'agent' } },
+    tracker,
+    stateStore,
+    claudeRunner,
+    workspaceManager,
+    logger
+  });
+
+  const issue = { id: 'i2', key: 'ENG-102', state: 'Ready for Agent', labels: ['agent-ready'], blockedBy: [], description: 'Group: A\nStories: S1' };
+  await scheduler.runIssue(issue);
+
+  assert.deepEqual(cleanupCalls, [workspacePath]);
 });
 
 test('tick reports reclaimed count and starts no runs when only stuck candidates exist', async () => {

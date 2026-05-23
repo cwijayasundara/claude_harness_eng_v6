@@ -85,12 +85,22 @@ class Scheduler {
       await this.tracker.moveIssue(issue.id, this.config.tracker.runningState);
       await this.tracker.addComment(issue.id, `Claude Harness orchestrator claimed group ${group.id}.`);
 
-      const workspace = await this.workspaceManager.prepare(issue, group);
+      const workspace = await this.workspaceManager.prepare(issue, group, { attempt });
+      if (workspace.resumed) {
+        this.logger.info('workspace_resumed', {
+          issueKey: issue.key,
+          branchName: workspace.branchName,
+          commitsAhead: workspace.commitsAhead,
+          backupRef: workspace.backupRef
+        });
+      }
       if (this.stateStore) {
-        this.stateStore.updateRun(issue, {
+        const updatePayload = {
           workspacePath: workspace.workspacePath,
           branchName: workspace.branchName
-        });
+        };
+        if (workspace.resumed) updatePayload.recoveryTag = workspace.backupRef;
+        this.stateStore.updateRun(issue, updatePayload);
       }
       const prompt = buildHarnessPrompt(issue, group);
       await this.claudeRunner.run(workspace.workspacePath, prompt);
@@ -112,16 +122,27 @@ class Scheduler {
           });
         }
         this.logger.info('run_completed', { issueKey: issue.key, groupId: group.id, prUrl });
+        await this.maybeCleanupWorkspace(issue, workspace.workspacePath);
       } else {
         await this.tracker.addComment(issue.id, buildProofComment(issue, group, runResult, prUrl));
         await this.tracker.moveIssue(issue.id, this.config.tracker.blockedState, this.config.tracker.blockedStateCandidates);
         if (this.stateStore) this.stateStore.finishRun(issue, { status: 'blocked' });
         this.logger.warn('run_blocked', { issueKey: issue.key, groupId: group.id });
+        await this.maybeCleanupWorkspace(issue, workspace.workspacePath);
       }
     } catch (error) {
       await this.handleRunError(issue, error);
     } finally {
       this.running.delete(issue.id);
+    }
+  }
+
+  async maybeCleanupWorkspace(issue, workspacePath) {
+    if (!this.workspaceManager || typeof this.workspaceManager.cleanup !== 'function') return;
+    try {
+      await this.workspaceManager.cleanup(workspacePath);
+    } catch (error) {
+      this.logger.error('workspace_cleanup_failed', { issueKey: issue.key, workspacePath, error: error.message });
     }
   }
 
@@ -146,6 +167,11 @@ class Scheduler {
       this.logger,
       issue
     );
+
+    const workspacePath = run && run.workspacePath;
+    if (workspacePath) {
+      await this.maybeCleanupWorkspace(issue, workspacePath);
+    }
   }
 }
 

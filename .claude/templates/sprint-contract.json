@@ -54,6 +54,11 @@
       "folder_structure": { "required": true, "description": "Files match component-map.md" },
       "env_vars": { "required": false, "description": "No hardcoded secrets" },
       "migrations": { "required": false, "description": "DB migrations applied" }
+    },
+    "productivity_budget": {
+      "max_iterations": 5,
+      "max_files_changed": 25,
+      "_note": "Harness-specific caps (no native OTEL equivalent). Token and cost budgets are monitored via native claude_code.cost.usage and claude_code.token.usage metrics — set alerts in your Grafana/Prometheus dashboard instead of duplicating here."
     }
   }
 }

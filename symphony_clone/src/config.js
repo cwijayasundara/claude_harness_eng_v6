@@ -4,6 +4,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const DEFAULT_TERMINAL_STATES = ['Done', 'Closed', 'Canceled', 'Cancelled', 'Duplicate'];
+const DEFAULT_MAX_WALLCLOCK_MS = 7200000;
+const VALID_WORKSPACE_RETENTION = ['delete', 'keep'];
 
 function intFromEnv(name, fallback) {
   const raw = process.env[name];
@@ -74,17 +76,26 @@ function loadConfig(env = process.env, options = {}) {
   const provider = env.TRACKER_PROVIDER || 'linear';
   const workspaceRoot = env.WORKSPACE_ROOT || '/workspaces';
   const repoUrl = env.TARGET_REPO_URL || '';
+  const workspaceRetention = (env.WORKSPACE_RETENTION || 'delete').trim().toLowerCase();
+  if (!VALID_WORKSPACE_RETENTION.includes(workspaceRetention)) {
+    throw new Error(`WORKSPACE_RETENTION must be one of: ${VALID_WORKSPACE_RETENTION.join(', ')}`);
+  }
+  const maxWallclockMs = resolveMaxWallclockMs(env);
 
   const config = {
     provider,
     repoUrl,
     workspaceRoot,
+    workspaceRetention,
     stateDir: env.STATE_DIR || path.join(workspaceRoot, '.symphony'),
     logRoot: env.LOG_ROOT || path.join(workspaceRoot, '.symphony', 'logs'),
     pollIntervalMs: intFromEnvWithEnv(env, 'POLL_INTERVAL_MS', 60000),
     maxConcurrentRuns: intFromEnvWithEnv(env, 'MAX_CONCURRENT_RUNS', 1),
     claudeCommand: env.CLAUDE_COMMAND || 'claude --print --permission-mode bypassPermissions',
     statusPort: intFromEnvWithEnv(env, 'STATUS_PORT', 0, { allowZero: true }),
+    run: {
+      maxWallclockMs
+    },
     retry: {
       maxAttempts: intFromEnvWithEnv(env, 'MAX_RETRY_ATTEMPTS', 3),
       baseDelayMs: intFromEnvWithEnv(env, 'RETRY_BASE_DELAY_MS', 60000),
@@ -120,6 +131,20 @@ function loadConfig(env = process.env, options = {}) {
 
   validateConfig(config);
   return config;
+}
+
+function resolveMaxWallclockMs(env) {
+  const candidates = ['MAX_WALLCLOCK_PER_RUN_MS', 'CLAUDE_TURN_TIMEOUT_MS'];
+  for (const name of candidates) {
+    const raw = env[name];
+    if (raw === undefined || raw === '') continue;
+    const value = Number.parseInt(raw, 10);
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new Error(`${name} must be a positive integer`);
+    }
+    return value;
+  }
+  return DEFAULT_MAX_WALLCLOCK_MS;
 }
 
 function intFromEnvWithEnv(env, name, fallback, options = {}) {

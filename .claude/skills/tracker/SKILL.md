@@ -38,7 +38,7 @@ The orchestrator is external:
 
 Publish one tracker issue per dependency group, not one process per story. The harness already knows how to create agent teams inside `/auto`, including story-level ownership, micro-DAGs, shared interfaces, and evaluator gates.
 
-Use story-level tracker issues only when the group contains exactly one ready story or when a human explicitly wants each story tracked separately.
+`/tracker-publish --granularity story` is supported when a human explicitly wants per-story PRs (small diffs, faster human review, different harness command per story). Trade-off: you lose intra-group parallelism and pay per-issue orchestrator overhead. Default to group; use story when reviewers ask for it. See `.claude/skills/tracker-publish/SKILL.md` for the exact rules.
 
 ## State Model
 

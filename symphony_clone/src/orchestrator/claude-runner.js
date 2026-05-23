@@ -11,7 +11,9 @@ class ClaudeRunner {
     return runShellCommand(this.config.claudeCommand, {
       cwd: workspacePath,
       input: prompt,
-      timeoutMs: Number(process.env.CLAUDE_TURN_TIMEOUT_MS || 3600000)
+      timeoutMs: this.config.run && this.config.run.maxWallclockMs
+        ? this.config.run.maxWallclockMs
+        : Number(process.env.CLAUDE_TURN_TIMEOUT_MS || 3600000)
     });
   }
 }
