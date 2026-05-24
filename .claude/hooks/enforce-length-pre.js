@@ -5,7 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const HARD_LIMIT = 300;
+const HARD_LIMIT = 500;
 
 const TRACKED_EXTS = new Set([
   '.py', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs',

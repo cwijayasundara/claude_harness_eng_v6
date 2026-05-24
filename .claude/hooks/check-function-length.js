@@ -5,8 +5,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const WARN_LINES = 50;
-const HARD_LIMIT = 80;
+const WARN_LINES = 25;
+const HARD_LIMIT = 30;
 
 // Get leading whitespace length (spaces; tabs count as 1)
 function indentLen(line) {

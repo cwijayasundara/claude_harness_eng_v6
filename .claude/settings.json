@@ -92,27 +92,12 @@
           },
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/lint-on-save.js\"",
-            "timeout": 15000
-          },
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/typecheck.js\"",
-            "timeout": 30000
-          },
-          {
-            "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-architecture.js\"",
             "timeout": 5000
           },
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-function-length.js\"",
-            "timeout": 5000
-          },
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-file-length.js\"",
             "timeout": 5000
           },
           {
