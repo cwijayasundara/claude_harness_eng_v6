@@ -477,6 +477,92 @@
       "transformations": [
         { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "instance": true, "job": true }, "indexByName": { "user": 0, "group": 1, "story": 2, "agent": 3, "lane": 4, "mode": 5, "exit": 6, "iteration": 7, "kind": 8, "host": 9, "Value": 10 } } }
       ]
+    },
+    {
+      "type": "row",
+      "title": "Phase Quality",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 99 },
+      "collapsed": false
+    },
+    {
+      "title": "Phase Quality Scores",
+      "description": "Weighted average quality score per planning phase. Threshold: 7.0",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 100 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "harness_phase_eval_score{job=\"claude_harness_memory\",criterion=\"weighted_avg\",user=~\"$user\",group=~\"$group\"}",
+        "legendFormat": "{{phase}}",
+        "instant": true
+      }],
+      "options": { "orientation": "horizontal", "displayMode": "gradient", "reduceOptions": { "calcs": ["lastNotNull"] }, "showUnfilled": true },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "steps": [{"color":"red","value":null},{"color":"green","value":7}] },
+          "min": 0,
+          "max": 10
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Ratchet Iterations per Phase",
+      "description": "Total ratchet iterations per phase. Lower = better first drafts.",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 100 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "sum by (phase) (max_over_time(harness_phase_eval_iterations_total{job=\"claude_harness_memory\",user=~\"$user\",group=~\"$group\"}[$__range]))",
+        "legendFormat": "{{phase}}"
+      }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto", "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "unit": "short", "decimals": 0 }, "overrides": [] }
+    },
+    {
+      "title": "Traceability Coverage",
+      "description": "Cross-phase traceability scores. BRD=10 (root). Spec→BRD, Design→Spec.",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 108 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "harness_phase_eval_score{job=\"claude_harness_memory\",criterion=\"traceability\",user=~\"$user\",group=~\"$group\"}",
+        "legendFormat": "{{phase}}",
+        "instant": true
+      }],
+      "options": { "orientation": "horizontal", "displayMode": "gradient", "reduceOptions": { "calcs": ["lastNotNull"] }, "showUnfilled": true },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "steps": [{"color":"red","value":null},{"color":"yellow","value":7},{"color":"green","value":9}] },
+          "min": 0,
+          "max": 10
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Phase Eval Pass Rate",
+      "description": "Overall pass/fail ratio across all phase evaluations.",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 108 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "sum by (verdict) (max_over_time(harness_phase_eval_iterations_total{job=\"claude_harness_memory\",user=~\"$user\",group=~\"$group\"}[$__range]))",
+        "legendFormat": "{{verdict}}"
+      }],
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "values": ["value", "percent"] },
+        "pieType": "donut",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "PASS" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "FAIL" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] }
+        ]
+      }
     }
   ],
   "schemaVersion": 39,
