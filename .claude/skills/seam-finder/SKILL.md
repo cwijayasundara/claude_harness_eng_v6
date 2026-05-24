@@ -113,6 +113,29 @@ If none of the top 3 candidates fit the goal:
 - Re-run with a refined goal phrase.
 - Or, if the goal genuinely has no good seam, recommend `/spec` to plan a new module rather than forcing a fit.
 
+### Step 4.5 — Phase Evaluation Gate
+
+Spawn the `phase-evaluator` agent to validate seam candidates.
+
+**Agent invocation:**
+
+Spawn Agent with subagent_type="phase-evaluator" and prompt:
+- Phase: seam
+- Artifact: specs/brownfield/seams-{goal-slug}.md
+- Upstream: specs/brownfield/code-graph.json
+- Rubric: Read .claude/templates/phase-eval-rubrics.json, key "seam"
+- Iteration: 1 (increment on retry)
+- Previous score: null (or previous iteration's weighted_average)
+- Verify top 3 candidates reference files/functions that exist in the codebase (grep verification).
+- Write result to specs/reviews/phase-seam-eval.json
+
+**Ratchet loop (max 2 iterations):**
+
+1. If verdict is **PASS** — proceed to Step 5 (Hand Off) with eval summary.
+2. If verdict is **FAIL** — re-score or re-rank candidates based on findings. Re-run evaluator.
+3. **Ratchet rule:** weighted_average must be >= previous iteration. Revert on regression.
+4. After 2 iterations — present best version with findings.
+
 ### Step 5 — Hand Off
 
 Reference the chosen seam in the next step:
