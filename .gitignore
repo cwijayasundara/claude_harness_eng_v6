@@ -1,3 +1,5 @@
+.claude/state/current-*
+.claude/state/telemetry-ledger.jsonl
 .claude/state/process-*.log
 node_modules/
 dist/
