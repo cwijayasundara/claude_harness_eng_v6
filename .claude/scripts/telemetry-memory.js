@@ -7,6 +7,9 @@ const path = require('path');
 const http = require('http');
 const https = require('https');
 
+const { readSkillCatalog, collectSkillInventory, inferRecordSkills, addSkillUsage } = require('./telemetry-skill-helpers');
+const { processPhaseEval } = require('./telemetry-phase-eval');
+
 const MEMORY_JOB = 'claude_harness_memory';
 const LEDGER_FILE = 'telemetry-ledger.jsonl';
 
@@ -37,45 +40,6 @@ function metricKey(name, labels) {
 
 function ledgerPath(stateDir) {
   return path.join(stateDir, LEDGER_FILE);
-}
-
-function parseSkillFrontmatter(raw) {
-  const match = raw.match(/^---\n([\s\S]*?)\n---/);
-  const result = {};
-  if (!match) return result;
-  for (const line of match[1].split('\n')) {
-    const pair = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
-    if (!pair) continue;
-    result[pair[1]] = pair[2].replace(/^["']|["']$/g, '').trim();
-  }
-  return result;
-}
-
-function truncateLabel(value, limit = 180) {
-  const text = String(value || '').replace(/\s+/g, ' ').trim();
-  return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
-}
-
-function readSkillCatalog(projectDir) {
-  const skillsDir = path.join(projectDir, '.claude', 'skills');
-  try {
-    return fs.readdirSync(skillsDir, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => {
-        const skillPath = path.join(skillsDir, entry.name, 'SKILL.md');
-        const raw = fs.readFileSync(skillPath, 'utf8');
-        const frontmatter = parseSkillFrontmatter(raw);
-        return {
-          name: frontmatter.name || entry.name,
-          directory: entry.name,
-          path: `.claude/skills/${entry.name}/SKILL.md`,
-          description: truncateLabel(frontmatter.description || ''),
-        };
-      })
-      .sort((a, b) => a.name.localeCompare(b.name));
-  } catch (_) {
-    return [];
-  }
 }
 
 function readJsonl(filePath) {
@@ -154,47 +118,45 @@ function setGauge(gauges, name, labels, value) {
   gauges.set(metricKey(name, labels), { name, labels, value });
 }
 
-function collectSkillInventory(record, skillInfo) {
-  for (const skill of [...(record.skill_inventory || []), ...(record.skills || [])]) {
-    if (!skill || !skill.name) continue;
-    const labels = labelPairs([
-      ['skill', skill.name],
-      ['directory', skill.directory || skill.name],
-      ['path', skill.path],
-      ['description', skill.description],
-    ]);
-    setGauge(skillInfo, 'harness_skill_info', labels, 1);
-  }
-}
+const metricHelpers = { labelPairs, setGauge, addCounter };
 
-function inferRecordSkills(record, skillInventory) {
-  if (Array.isArray(record.skills) && record.skills.length > 0) return record.skills;
-  const byName = new Map();
-  for (const skill of skillInventory) {
-    byName.set(skill.name, skill);
-    byName.set(skill.directory, skill);
-  }
-  const inferred = [];
-  for (const value of [record.command, record.lane]) {
-    const skill = byName.get(value);
-    if (skill && !inferred.some((item) => item.name === skill.name)) {
-      inferred.push({ ...skill, source: value === record.command ? 'command' : 'lane' });
+function processRecordKind(record, labels, counters, gauges) {
+  if (record.kind === 'subagent') {
+    addCounter(counters, 'harness_agent_runs_total', labelPairs([
+      ['kind', 'subagent'],
+      ['exit', record.exit || 'ok'],
+    ]).concat(labels));
+  } else if (record.kind === 'turn') {
+    addCounter(counters, 'harness_conversation_turns_total', labelPairs([['kind', 'turn']]).concat(labels));
+    if (typeof record.pending_reviews === 'number') {
+      setGauge(gauges, 'harness_pending_reviews', labels, record.pending_reviews);
     }
-  }
-  return inferred;
-}
-
-function addSkillUsage(record, counters, skillInventory) {
-  for (const skill of inferRecordSkills(record, skillInventory)) {
-    if (!skill || !skill.name) continue;
-    addCounter(counters, 'harness_skill_usage_total', labelPairs([
-      ['skill', skill.name],
-      ['directory', skill.directory || skill.name],
-      ['source', skill.source || 'hook'],
-      ['kind', record.kind],
+  } else if (record.kind === 'subagent_stop') {
+    addCounter(counters, 'harness_conversation_turns_total', labelPairs([['kind', 'subagent_stop']]).concat(labels));
+    if (record.agent && record.agent !== 'unknown') {
+      addCounter(counters, 'harness_agent_runs_total', labelPairs([
+        ['kind', 'subagent_stop'],
+        ['exit', record.exit || 'ok'],
+      ]).concat(labels));
+    }
+  } else if (record.kind === 'prompt') {
+    addCounter(counters, 'harness_conversation_turns_total', labelPairs([['kind', 'prompt']]).concat(labels));
+    addCounter(counters, 'harness_command_invocations_total', labelPairs([
+      ['kind', 'prompt'],
       ['command', record.command],
+      ['user', record.user],
+      ['lane', record.lane],
+      ['mode', record.mode],
+      ['group', record.group_id],
+      ['story', record.story_id],
+      ['iteration', record.iteration],
+      ['host', record.host],
+    ]));
+  } else if (record.kind === 'tool') {
+    addCounter(counters, 'harness_tool_events_total', labelPairs([
+      ['kind', 'tool'],
       ['tool', record.tool],
-      ['agent', record.agent],
+      ['exit', record.exit || 'ok'],
       ['user', record.user],
       ['lane', record.lane],
       ['mode', record.mode],
@@ -211,57 +173,12 @@ function buildSnapshot(records, skillInventory = []) {
   const gauges = new Map();
   const skillInfo = new Map();
 
-  collectSkillInventory({ skill_inventory: skillInventory }, skillInfo);
+  collectSkillInventory({ skill_inventory: skillInventory }, skillInfo, metricHelpers);
 
   for (const record of records) {
-    collectSkillInventory(record, skillInfo);
-    addSkillUsage(record, counters, skillInventory);
-    const labels = baseLabels(record);
-    if (record.kind === 'subagent') {
-      addCounter(counters, 'harness_agent_runs_total', labelPairs([
-        ['kind', 'subagent'],
-        ['exit', record.exit || 'ok'],
-      ]).concat(labels));
-    } else if (record.kind === 'turn') {
-      addCounter(counters, 'harness_conversation_turns_total', labelPairs([['kind', 'turn']]).concat(labels));
-      if (typeof record.pending_reviews === 'number') {
-        setGauge(gauges, 'harness_pending_reviews', labels, record.pending_reviews);
-      }
-    } else if (record.kind === 'subagent_stop') {
-      addCounter(counters, 'harness_conversation_turns_total', labelPairs([['kind', 'subagent_stop']]).concat(labels));
-      if (record.agent && record.agent !== 'unknown') {
-        addCounter(counters, 'harness_agent_runs_total', labelPairs([
-          ['kind', 'subagent_stop'],
-          ['exit', record.exit || 'ok'],
-        ]).concat(labels));
-      }
-    } else if (record.kind === 'prompt') {
-      addCounter(counters, 'harness_conversation_turns_total', labelPairs([['kind', 'prompt']]).concat(labels));
-      addCounter(counters, 'harness_command_invocations_total', labelPairs([
-        ['kind', 'prompt'],
-        ['command', record.command],
-        ['user', record.user],
-        ['lane', record.lane],
-        ['mode', record.mode],
-        ['group', record.group_id],
-        ['story', record.story_id],
-        ['iteration', record.iteration],
-        ['host', record.host],
-      ]));
-    } else if (record.kind === 'tool') {
-      addCounter(counters, 'harness_tool_events_total', labelPairs([
-        ['kind', 'tool'],
-        ['tool', record.tool],
-        ['exit', record.exit || 'ok'],
-        ['user', record.user],
-        ['lane', record.lane],
-        ['mode', record.mode],
-        ['group', record.group_id],
-        ['story', record.story_id],
-        ['iteration', record.iteration],
-        ['host', record.host],
-      ]));
-    }
+    collectSkillInventory(record, skillInfo, metricHelpers);
+    addSkillUsage(record, counters, skillInventory, metricHelpers);
+    processRecordKind(record, baseLabels(record), counters, gauges);
 
     if (record.iteration) {
       setGauge(gauges, 'harness_iteration_current', labelPairs([
@@ -280,6 +197,8 @@ function buildSnapshot(records, skillInventory = []) {
         ['lane', record.lane],
       ]), 1);
     }
+
+    processPhaseEval(record, counters, gauges, metricHelpers);
   }
 
   return [...counters.values(), ...gauges.values(), ...skillInfo.values()]

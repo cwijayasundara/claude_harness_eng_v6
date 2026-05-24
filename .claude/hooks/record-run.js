@@ -199,6 +199,38 @@ function shouldSkipCommandTelemetry(command) {
         exit: tr.is_error ? 'error' : 'ok',
       };
       await persistAndPush(receiptPath, stateDir, projectDir, subagentRecord);
+
+      const reviewsDir = path.join(projectDir, 'specs', 'reviews');
+      try {
+        if (fs.existsSync(reviewsDir)) {
+          const evalFiles = fs.readdirSync(reviewsDir)
+            .filter(f => f.startsWith('phase-') && f.endsWith('-eval.json'));
+          for (const evalFile of evalFiles) {
+            const evalPath = path.join(reviewsDir, evalFile);
+            const evalData = JSON.parse(fs.readFileSync(evalPath, 'utf8'));
+            const lastHistory = (evalData.score_history || []).slice(-1)[0];
+            if (!lastHistory) continue;
+            const evalRecord = {
+              kind: 'phase_eval',
+              ts: Date.now(),
+              user,
+              session_id: input.session_id || null,
+              phase: evalData.phase,
+              iteration: String(evalData.iteration),
+              scores: evalData.scores,
+              weighted_average: evalData.weighted_average,
+              verdict: evalData.verdict || 'unknown',
+              lane: stableLabelValue(lane, 'unknown'),
+              mode: stableLabelValue(mode, 'unknown'),
+              group_id: stableLabelValue(groupId, 'none'),
+              story_id: stableLabelValue(storyId, 'none'),
+              host: os.hostname(),
+            };
+            await persistAndPush(receiptPath, stateDir, projectDir, evalRecord);
+          }
+        }
+      } catch (_) {}
+
       process.exit(0);
     }
 
