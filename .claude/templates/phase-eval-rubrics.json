@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "threshold": 7.0,
+  "per_criterion_minimum": 5,
+  "phases": {
+    "brd": {
+      "max_iterations": 3,
+      "upstream": null,
+      "criteria": {
+        "completeness": "All 13 BRD sections present with substantive content (not placeholder text)",
+        "traceability": "N/A for BRD (score as 10 — no upstream artifact to trace)",
+        "specificity": ">= 3 quantified success metrics with numeric targets; no subjective language (avoid 'fast', 'easy', 'intuitive' without measurable definition)",
+        "consistency": "Scope, MVP definition, and architecture section are mutually aligned with no contradictions",
+        "actionability": "MVP feature set maps directly to stated scope; >= 2 alternatives documented with trade-off rationale"
+      }
+    },
+    "spec": {
+      "max_iterations": 3,
+      "upstream": "specs/brd/brd.md",
+      "criteria": {
+        "completeness": "Every BRD goal has >= 1 story; no goal left uncovered",
+        "traceability": "Every story references a BRD goal ID; zero orphan stories without upstream linkage",
+        "specificity": "Acceptance criteria use observable outcomes (HTTP status codes, numeric values, measurable thresholds); reject vague language ('should work', 'handles errors')",
+        "consistency": "Story dependency graph is acyclic; layer assignments (frontend/backend/infra) are valid and non-contradictory",
+        "actionability": "All stories are implementation-ready with 3-6 acceptance criteria, groups assigned, and every AC maps to a features.json entry"
+      }
+    },
+    "design": {
+      "max_iterations": 3,
+      "upstream": "specs/stories/",
+      "criteria": {
+        "completeness": "Component-map covers every story; UI stories have mockups, API stories have endpoint definitions",
+        "traceability": "Every story ID appears in component-map; API endpoints trace back to specific acceptance criteria",
+        "specificity": "OpenAPI specs and JSON Schemas are syntactically valid; entity definitions are cross-referenced across components",
+        "consistency": "Mockup form fields match API request/response schemas; no port conflicts between services; each source file owned by exactly one component",
+        "actionability": "Folder structure is viable and buildable; shared files are annotated with owning component and consumers"
+      }
+    },
+    "brownfield": {
+      "max_iterations": 2,
+      "upstream": null,
+      "criteria": {
+        "completeness": "All source directories and modules appear in the architecture map; no discovered code left unmapped",
+        "traceability": "Every architectural claim cites a specific graph edge, file path, or test name as evidence",
+        "specificity": "Risk map entries cite specific file paths and quantified metrics (coupling score, test coverage %, cyclomatic complexity)",
+        "consistency": "Coupling numbers and dependency counts match values in code-graph.json; no contradictions between sections",
+        "actionability": "Concrete lane recommendation (vibe/fix-issue/improve/refactor/build) provided per area with justification"
+      }
+    },
+    "seam": {
+      "max_iterations": 2,
+      "upstream": "specs/brownfield/code-graph.json",
+      "criteria": {
+        "completeness": ">= 3 diverse seam candidates identified across different parts of the codebase",
+        "traceability": "Every candidate cites real file paths, interface names, and function signatures from the codebase",
+        "specificity": "All 3 scoring axes evaluated per candidate: observability (0-10), funnel impact (0-10), read/write asymmetry (0-10)",
+        "consistency": "Candidates are independent — cutting one seam does not require or preclude cutting another",
+        "actionability": "Clear top recommendation with estimated effort, risk level, and expected benefit"
+      }
+    },
+    "deploy": {
+      "max_iterations": 2,
+      "upstream": "specs/design/system-design.md",
+      "criteria": {
+        "completeness": "Every service in system-design has a Dockerfile and a docker-compose entry",
+        "traceability": "Docker Compose service names match component names from system-design document",
+        "specificity": "YAML is syntactically valid; base images use pinned tags (no :latest); health checks defined for every service",
+        "consistency": "No port conflicts between services; environment variable names are consistent across compose and application config",
+        "actionability": "init.sh bootstraps all services end-to-end; .env.example contains every required variable with placeholder values"
+      }
+    }
+  }
+}
