@@ -1,472 +1,639 @@
-# Claude Harness Engine v4
+# Claude Harness Engine v4 — Getting Started
 
-A Claude Code scaffold + runtime for **autonomous, long-running application development**. One scaffold, optional framework injection, two execution surfaces (a local Claude Code workspace or a Linear/Jira-driven agent factory).
+A Claude Code plugin for autonomous, long-running application development. GAN-inspired generator-evaluator architecture with Karpathy ratcheting — quality only moves forward.
 
-Current version: `1.1.5`.
-
----
-
-## TL;DR
-
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│  1. Install the harness as a Claude Code plugin                          │
-│  2. Run /scaffold inside any project — answer 8 questions                │
-│  3. Optionally inject framework skill packs (LangChain · Google ADK)     │
-│  4. Plan with /brd → /spec → /design  (or /lite for small projects,      │
-│     /brownfield for existing code)                                       │
-│  5. Run /auto in one of two modes:                                       │
-│        a. Local      — humans drive Claude Code directly                 │
-│        b. Factory    — Linear/Jira queues groups, symphony_clone         │
-│                        spins up isolated Claude Code workspaces          │
-└──────────────────────────────────────────────────────────────────────────┘
-```
-
-The same scaffold produces the same artifacts in both modes — only **who picks the next group** and **where the proof lands** changes.
+Current version: `1.1.5`
 
 ---
 
-## Why this exists
-
-Autonomous code generation fails in three predictable ways: agents grade their own work, quality silently regresses across iterations, and complex projects exhaust the context window. v4 addresses each one structurally:
-
-- **GAN separation** — generator writes code, evaluator runs the app. Neither can do the other's job. No self-grading.
-- **Karpathy ratchet** — every metric (tests, lint, coverage, architecture, eval verdict, design score) only moves forward.
-- **Session chaining** — append-only state (`program.md`, `learned-rules.md`, `claude-progress.txt`, `features.json`) carries continuity across context windows for ~700–1000 tokens per recovery.
-
----
-
-## What's in the box
-
-| Component | Count | Notes |
-|---|---:|---|
-| Slash commands (true) | 1 | Just `/scaffold`. Everything else is a skill. |
-| Skills (virtual commands) | 28 | Greenfield, brownfield, lite, vibe, improvement, tracker, framework-packs, lane-classify |
-| Specialized agents | 7 | planner, generator, evaluator, design-critic, ui-designer, test-engineer, security-reviewer |
-| Lifecycle hooks | 17 | Pre/post tool, pre-commit, Stop, TeammateIdle, run-receipt, brownfield-staleness |
-| Templates | 10 | Sprint contract, story, init.sh, tracker config, etc. |
-| Official Claude Code plugins (default-on) | 8 | superpowers, code-review, commit-commands, security-guidance, pr-review-toolkit, frontend-design, context7, code-simplifier |
-| Framework skill packs (opt-in) | 2 | LangChain/LangGraph/DeepAgents (9 skills); Google ADK (7 skills) |
-| Tracker orchestrator (opt-in) | 1 | `symphony_clone/` — Docker service that drives Linear/Jira |
-
----
-
-## Installation
+## Step 1: Clone the harness
 
 ```bash
 git clone https://github.com/cwijayasundara/claude_harness_eng_v4.git ~/claude_harness_eng_v4
 ```
 
-Load it as a Claude Code plugin from any project directory:
+## Step 2: Load as a Claude Code plugin
+
+From your target project directory:
 
 ```bash
+cd ~/my-project
 claude --plugin-dir ~/claude_harness_eng_v4/.claude
 ```
 
-Then inside Claude Code, run the bootloader:
+## Step 3: Scaffold your project
+
+Inside Claude Code:
 
 ```
 /scaffold
 ```
 
-`/scaffold` asks 8 questions, generates `project-manifest.json` + `calibration-profile.json`, copies the whole `.claude/` tree, writes `CLAUDE.md`, `design.md`, `init.sh`, `features.json`, and `claude-progress.txt`, and initializes git. After it finishes, every other workflow is reachable as a skill (virtual slash command).
+This asks a few questions about your stack and project type, then generates:
+- `.claude/` directory (7 agents, 28 skills, 15 hooks, 10 templates)
+- `project-manifest.json` + `calibration-profile.json`
+- `CLAUDE.md`, `design.md`, `init.sh`, `features.json`
+- `telemetry_docker_compose.yml` + `telemetry/` config
+- Git initialized with harness commit hooks
 
----
+## Step 4: Start the telemetry stack (one per team)
 
-## The 8 scaffold questions
-
-1. **What are you building?** — used for `CLAUDE.md`.
-2. **Tech stack** — Python/FastAPI + React/Vite, Python/FastAPI + Next.js, Node/Express + React/Vite, or custom.
-3. **Project type** — consumer-facing (high design bar), internal tool (functional focus), API-only (no UI scoring), or **minimal** (CLI/library/single-script — recommends `/lite`).
-4. **Verification mode** — Docker Compose, local dev servers, or stub/mock server.
-5. **Official Claude Code plugins** — install all 8, pick a subset, or skip.
-6. **Graphify** — install the higher-fidelity tree-sitter code graph tool? (Falls back to zero-dependency vendored scripts.)
-7. **Tracker orchestration** — no / publish-only / publish + sync / publish + external dispatch.
-8. **Framework skill packs** — none, LangChain/LangGraph/DeepAgents, Google ADK, or both.
-
-Questions 5–8 are the **injection points**: they decide which optional capability sets travel into the project.
-
----
-
-## End-to-end design
-
-```
-┌───────────────────────────────────────────────────────────────────────────┐
-│  0. AUTHORING                                                             │
-│  /scaffold writes the work contract:                                      │
-│    .claude/{agents,skills,hooks,templates,state}                          │
-│    specs/{brd,stories,design,brownfield,reviews}                          │
-│    features.json · claude-progress.txt · CLAUDE.md · design.md            │
-│  Optional injections at scaffold time:                                    │
-│    • Official plugins (Q5)                                                │
-│    • Graphify for richer brownfield graphs (Q6)                           │
-│    • Tracker config for Linear/Jira (Q7)                                  │
-│    • Framework skill packs into .claude/skills/ (Q8)                      │
-└───────────────────────────────────────────────────────────────────────────┘
-                                  │
-                                  ▼
-┌───────────────────────────────────────────────────────────────────────────┐
-│  1. PLANNING (lane-selected)                                              │
-│    Greenfield large : /brd  →  /spec  →  /design        (3 human gates)   │
-│    Greenfield small : /lite (one approval, ≤5 stories, single group)      │
-│    Brownfield       : /brownfield → /code-map → /seam-finder              │
-│    Tiny safe edits  : /vibe (micro-contract)                              │
-│                                                                            │
-│  Output:                                                                  │
-│    dependency-graph.md · component-map.md · features.json                 │
-└───────────────────────────────────────────────────────────────────────────┘
-                                  │
-              ┌───────────────────┴───────────────────┐
-              ▼                                       ▼
-┌─────────────────────────────────┐  ┌─────────────────────────────────────┐
-│  2a. LOCAL RUNTIME              │  │  2b. AGENT-FACTORY RUNTIME           │
-│                                 │  │                                      │
-│  Engineer runs /auto in         │  │  /tracker-publish writes one Linear/ │
-│  Claude Code. Each iteration:   │  │  Jira issue per dependency group.    │
-│                                 │  │                                      │
-│  generator → evaluator →        │  │  symphony_clone (Docker) polls,      │
-│  design-critic → security →     │  │  claims a ready group, clones the    │
-│  test-engineer                  │  │  repo, runs `claude --print …`       │
-│                                 │  │  inside, opens a PR, comments back,  │
-│  Diffs reviewed in chat / git.  │  │  moves the issue to Human Review.    │
-└─────────────────────────────────┘  └─────────────────────────────────────┘
-              │                                       │
-              └───────────────────┬───────────────────┘
-                                  ▼
-┌───────────────────────────────────────────────────────────────────────────┐
-│  3. EXECUTION (identical in both runtimes)                                │
-│  /auto loops the Karpathy ratchet per group:                              │
-│    1. Recover state (program.md · learned-rules.md · features.json)       │
-│    2. Negotiate sprint contract (generator → evaluator, exactly 2 calls)  │
-│    3. Spawn agent team (phased DAG, ≤5 parallel teammates)                │
-│    4. Run 6 ratchet gates                                                 │
-│    5. Self-heal failed gates (max 3 attempts, different strategy each)    │
-│    6. Update state, commit, emit proof                                    │
-└───────────────────────────────────────────────────────────────────────────┘
-                                  │
-                                  ▼
-┌───────────────────────────────────────────────────────────────────────────┐
-│  4. DELIVERY                                                              │
-│  Local mode    : commits on main / feature branch                         │
-│  Factory mode  : agent/<issue-key> branch + GitHub PR + Linear proof      │
-│                                                                            │
-│  Humans always own merge and Done.                                        │
-└───────────────────────────────────────────────────────────────────────────┘
-```
-
-The 6 ratchet gates: unit tests → lint+types → coverage ≥ baseline → architecture alignment → evaluator verdict (API + Playwright) → design-critic score. Modes Full/Lean/Solo/Turbo decide how many gates fire and how often.
-
----
-
-## Local runtime — the default
+The telemetry stack runs as a shared service. Start it once — every team member points their Claude Code instance to it.
 
 ```bash
-cd ~/my-new-app
-claude --plugin-dir ~/claude_harness_eng_v4/.claude
+docker compose -f telemetry_docker_compose.yml up -d
 ```
 
+This launches four services:
+
+| Service | Port | Purpose |
+|---|---|---|
+| OTEL Collector | 4317 (gRPC), 4318 (HTTP) | Receives native Claude Code OTLP metrics |
+| Prometheus | 9090 | Stores and queries all metrics |
+| Pushgateway | 9091 | Receives harness-custom metrics from each developer |
+| **Grafana** | **3001** | **Dashboards — open `http://localhost:3001`** |
+
 ```
-/scaffold                    # one time
-/brd                         # OR /lite for small projects, /brownfield for existing code
-/spec                        # human gate
-/design                      # human gate
-/auto                        # autonomous ratchet loop
+Developer A ──OTLP──▶                              ┌──▶ Prometheus (:9090)
+Developer B ──OTLP──▶  OTEL Collector  ──scrape──▶  │
+Developer C ──OTLP──▶                              │
+                                                    │
+Developer A ──push──▶                              │
+Developer B ──push──▶  Pushgateway     ──scrape──▶  ┘
+Developer C ──push──▶                                    │
+                                                         ▼
+                                                   Grafana (:3001)
 ```
 
-Proof lands on disk: `iteration-log.md`, `features.json`, `specs/reviews/`, plus the commits themselves. The engineer reviews diffs and merges as usual.
+**Grafana login:** `http://localhost:3001` — user: `admin`, password: `harness`. A pre-built "Claude Harness — Team Productivity" dashboard is loaded automatically.
 
-This is the **right default** for solo engineers, small pods, and prototypes.
+Anonymous read access is enabled — team members can view dashboards without logging in.
+
+## Step 5: Verify telemetry env vars are in `settings.json`
+
+**This is the critical step.** Claude Code reads env vars from `.claude/settings.json`, not from `.env` files. `/scaffold` adds them automatically, but verify they're present:
+
+Open `.claude/settings.json` and confirm the `env` block contains:
+
+```json
+"env": {
+  "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+  "OTEL_METRICS_EXPORTER": "otlp",
+  "OTEL_LOGS_EXPORTER": "otlp",
+  "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+  "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
+  "OTEL_LOG_TOOL_DETAILS": "1",
+  "HARNESS_PUSHGATEWAY_URL": "http://localhost:9091",
+  "HARNESS_USER": "Your Name Here"
+}
+```
+
+**Why `settings.json` and not `.env`?** Claude Code only loads environment variables from `settings.json`. A `.env` file is also created for shell scripts and documentation, but **`settings.json` is what actually activates telemetry in Claude Code sessions.**
+
+**Every team member must have their own `HARNESS_USER`** in their `settings.json`. If `HARNESS_USER` is not set, the hook falls back to `git config user.name`, then OS username.
+
+After changing `.claude/settings.json`, restart the active Claude Code session before expecting new hook telemetry. Claude Code may keep the previous hook configuration for an already-running session, so newly added `UserPromptSubmit` / `PostToolUse` telemetry hooks may not fire until the session is restarted.
+
+**What flows where:**
+
+| Metric source | Activated by | Pushed to |
+|---|---|---|
+| Native OTEL (tokens, cost, LOC, commits, PRs) | `CLAUDE_CODE_ENABLE_TELEMETRY=1` in `settings.json` | OTEL Collector → Prometheus |
+| Harness-custom (lanes, agents, turns, reviews) | `record-run.js` hook (always active) | Pushgateway → Prometheus |
+| JSONL run receipts | `record-run.js` hook (always active) | `.claude/runs/YYYY-MM-DD.jsonl` (local) |
+| Commit trailers | `prepare-commit-msg` git hook (always active) | Git commit messages |
+
+For a remote shared telemetry server, change the URLs in `settings.json`:
+```json
+"OTEL_EXPORTER_OTLP_ENDPOINT": "http://telemetry-server.internal:4317",
+"OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+"HARNESS_PUSHGATEWAY_URL": "http://telemetry-server.internal:9091"
+```
+
+## Step 6: Choose your lane and build
+
+Pick the lane that matches your situation:
+
+| Situation | Command | What happens |
+|---|---|---|
+| **New project, large scope** | `/brd` then `/spec` then `/design` then `/auto` | Full SDLC pipeline with human gates |
+| **New project, small scope** (CLI, library, single-script) | `/lite` | Compressed lane: mini-BRD, 3-5 stories, single group |
+| **Existing codebase, broad changes** | `/brownfield` then `/code-map` then `/seam-finder` | Map the codebase before touching it |
+| **Tiny safe edit** (< 3 files, < 150 lines) | `/vibe` | Micro-contract, narrow diff, targeted verify |
+| **Fix a GitHub issue** | `/fix-issue` | Branch, reproduce, fix, test, PR |
+| **Improve existing feature** | `/improve` | Story-driven enhancement with verification |
+| **Refactor for quality** | `/refactor` | Quality-driven refactoring with ratchet gate |
+
+### Optional: richer AST graphs with Understand-Anything
+
+For brownfield refactors, the scaffold can consume an [Understand-Anything](https://github.com/Lum1104/Understand-Anything/tree/main) knowledge graph when that Claude Code plugin is installed in the target repo. This is useful when you need AST-backed call, symbol, inheritance, and dependency evidence before changing an existing system.
+
+1. Install the plugin in Claude Code:
+   ```text
+   /plugin marketplace add Lum1104/Understand-Anything
+   /plugin install understand-anything
+   ```
+2. Run the plugin’s analysis workflow in the target repo:
+   ```text
+   /understand
+   ```
+   This writes:
+   ```text
+   .understand-anything/knowledge-graph.json
+   ```
+3. Run `/code-map` or import the graph directly:
+   ```bash
+   node .claude/skills/code-map/scripts/import_understand_graph.js \
+     --in .understand-anything/knowledge-graph.json \
+     --out specs/brownfield/code-graph.json
+   node .claude/skills/code-map/scripts/build_graph.js \
+     --render-mermaid specs/brownfield/code-graph.json \
+     --out specs/brownfield/dependency-graph.md
+   node .claude/skills/code-map/scripts/build_graph.js \
+     --coupling-report specs/brownfield/code-graph.json \
+     --out specs/brownfield/coupling-report.md
+   ```
+4. Run `/brownfield`, then `/seam-finder "<change goal>"` before `/improve` or `/refactor`.
+5. For visual exploration, run `/understand-dashboard` from the plugin. For keeping graphs fresh, use `/understand --auto-update` or re-run `/understand` before large releases.
+
+Understand-Anything is optional. If its graph is absent, `/code-map` falls back to the vendored deterministic extractor, then `/brownfield` still writes the same `specs/brownfield/` artifacts.
+
+## Step 7: Let `/auto` run the ratchet loop
+
+Once planning is done, `/auto` loops autonomously per dependency group:
+
+1. Recovers state from prior sessions
+2. Negotiates a sprint contract (generator + evaluator)
+3. Spawns an agent team (up to 5 parallel teammates)
+4. Runs 6 ratchet gates: tests → lint/types → coverage → architecture → evaluator → design-critic
+5. Self-heals failed gates (max 3 attempts, different strategy each time)
+6. Commits, updates state, moves to next group
+
+Execution modes: **Full** (all gates), **Lean** (skip design-critic), **Solo** (single agent), **Turbo** (parallel groups).
+
+## Step 8: Review and merge
+
+- Proof lands in `specs/reviews/`, `iteration-log.md`, `features.json`, plus the commits
+- Review diffs in git as usual — the harness never merges on its own
 
 ---
 
-## Agent-factory runtime — Linear or Jira
+## Optional: Tracker-driven agent factory (Linear/Jira)
 
-Use this when you want a visible queue, parallel execution across machines, and a tracker-based human-review surface.
+For teams that want a visible queue, parallel execution, and tracker-based review:
 
-### Step 1. Publish (one time, inside Claude Code)
+1. During `/scaffold`, choose tracker mode B/C/D
+2. After planning, run `/tracker-publish` — creates one Linear/Jira issue per dependency group
+3. Start the orchestrator:
+   ```bash
+   cd ~/claude_harness_eng_v4/symphony_clone
+   cp .env.example .env && $EDITOR .env
+   docker compose up --build
+   ```
+4. The orchestrator polls the tracker, claims ready groups, runs Claude Code in isolated workspaces, opens PRs, and posts proof back to the tracker
+5. Humans review PRs and mark issues Done — the orchestrator never does
 
-```
-/tracker-publish
-```
+---
 
-The skill reads the approved `specs/stories/dependency-graph.md` + `specs/design/component-map.md` and creates **one Linear/Jira issue per dependency group**. Group dependencies become tracker blocker links. The mapping is written to `.claude/state/tracker-map.json`.
+## Optional: Framework skill packs
 
-Each group issue carries: harness command (`/auto --group <id>`), story list, acceptance criteria, feature IDs, and expected proof.
+During `/scaffold`, opt into framework-specific skill packs:
 
-### Step 2. Spin up `symphony_clone`
+| Pack | Skills | Use when |
+|---|---|---|
+| LangChain / LangGraph / DeepAgents | 9 | Building LangChain agents, LangGraph workflows, or DeepAgents apps |
+| Google ADK | 7 | Building Google Agent Development Kit agents |
+
+These inject framework-aware code generation on top of the harness discipline. Same `/auto` ratchet still runs.
+
+`/scaffold` records selected packs in `project-manifest.json` but does not run `npx skills add` from inside Claude Code. The auto-mode classifier blocks external installs, so run the selected pack command in a normal terminal:
 
 ```bash
-cd ~/claude_harness_eng_v4/symphony_clone
-cp .env.example .env
-$EDITOR .env                 # LINEAR_API_KEY, TARGET_REPO_URL, workflow states, …
-docker compose up --build
+npx --yes skills add cwijayasundara/agent_cli_langchain -a claude-code -s '*' -y   # LangChain
+npx --yes skills add google/agents-cli -a claude-code -s '*' -y                     # Google ADK
 ```
 
-The orchestrator (Docker container, polling Linear via GraphQL) does this every tick:
-
-1. Lists candidate issues for the configured project + ready state.
-2. Filters to issues with the `agent-ready` label and all blockers terminal.
-3. Claims one (`MAX_CONCURRENT_RUNS=1` by default), moves it to `In Progress`.
-4. Clones the target repo to `/workspaces/<issue-key>`, creates `agent/<issue-key>`.
-5. Runs `claude --print --permission-mode bypassPermissions "<generated prompt>"`. The prompt tells Claude Code to follow `.claude/skills/auto/SKILL.md` and run the group.
-6. Reads `.claude/state/tracker-runs/<group>/result.json`.
-7. Pushes the branch, opens a GitHub PR via `gh`, comments proof back to Linear, moves the issue to `Human Review` (or `Blocked` on failure).
-
-### Step 3. Human review
-
-Reviewers see the proof comment + PR in Linear. Merging happens in GitHub. **The orchestrator never marks anything `Done`.** That decision stays human.
-
-### What's deliberately bounded
-
-- **Polling only** today — no webhook receiver (`POLL_INTERVAL_MS` default 60s).
-- **One tracker issue per dependency group**, not per story. The harness already creates story-level agent teams inside `/auto`.
-- **Linear is implemented first.** Jira is a stub.
-- **Retry with exponential backoff** before moving an issue to `Blocked` (`MAX_RETRY_ATTEMPTS`, `RETRY_BASE_DELAY_MS`, `RETRY_MAX_DELAY_MS`).
-- **State alias mapping** — different Linear workspaces use different state names. `REVIEW_STATE_CANDIDATES` and `BLOCKED_STATE_CANDIDATES` let the orchestrator match whatever your workflow calls them.
-
-`symphony_clone/` is **versioned alongside the harness but never copied into target projects by `/scaffold`**. It's infrastructure, not application code.
+Then verify: `/install-framework-packs`
 
 ---
 
-## Optional framework skill packs
-
-`/scaffold` asks whether to inject framework-specific skill packs. With `-a claude-code` they land in `.claude/skills/<pack-prefix>-*` alongside the harness skills and are triggered automatically by framework-specific phrasing.
-
-| Pack | Skills | Trigger examples |
-|---|---:|---|
-| `cwijayasundara/agent_cli_langchain` | 9 | "scaffold a langgraph agent", "add LangSmith evals", "deploy a deepagents app" |
-| `google/agents-cli` | 7 | "start a new ADK project", "deploy my ADK agent", "publish to Gemini Enterprise" |
-
-These don't replace the harness — the same `/auto` ratchet still runs. They give framework-aware code generation on top of harness-grade discipline.
-
-Install command (executed by `/scaffold`):
-
-```bash
-npx --yes skills add -y --agent claude-code <github-org/repo>
-```
-
-The selected packs are recorded in `project-manifest.json#framework_skill_packs` for future enhance/upgrade flows.
-
----
-
-## Lane selection
-
-| Lane | Use when | Cost | Outputs |
-|---|---|---|---|
-| `/brownfield` + `/code-map` + `/seam-finder` | Any substantial work in an existing codebase | Cheap | `code-graph.json`, architecture/risk/change maps, ranked seams |
-| `/lite` | New project, ≤5 stories, single group, no DB/auth/billing | Small | BRD-lite, 3–5 ready stories in Group A, minimal design |
-| `/vibe` | Tiny safe edits (≤3 files, <150 lines, no new workflow) | Tiny | Micro-contract + narrow diff + targeted verify |
-| `/brd → /spec → /design → /auto` | Everything else | Highest | Full SDLC pipeline |
-
-Each lane has an explicit escalation contract — if work outgrows the lane, stop and re-enter via the larger one. Lanes never silently grow.
-
----
-
-## Commands
+## Command reference
 
 | Command | Purpose |
-|---------|---------|
+|---|---|
 | `/scaffold` | Bootstrap a project (only true slash command) |
-| `/brd` | Socratic interview → BRD |
+| `/brd` | Socratic interview → Business Requirements Document |
 | `/spec` | BRD → stories + dependency graph + features.json |
-| `/design` | Architecture + schemas + mockups |
+| `/design` | Architecture + schemas + UI mockups |
 | `/build` | Full 8-phase pipeline |
-| `/auto` | Autonomous ratcheting loop (Full/Lean/Solo/Turbo) |
-| `/lite` | Compressed greenfield lane for small projects |
+| `/auto` | Autonomous ratcheting loop |
+| `/lite` | Compressed lane for small new projects |
 | `/vibe` | Controlled small-change lane |
 | `/brownfield` | Map an existing codebase before changing it |
 | `/code-map` | Build deterministic dependency graph |
 | `/seam-finder` | Rank safe cut-points for a goal |
-| `/implement` | Code gen with agent teams |
-| `/evaluate` | Run app, verify contract |
+| `/implement` | Code generation with agent teams |
+| `/evaluate` | Run app, verify sprint contract |
 | `/review` | Evaluator + security review |
 | `/test` | Test plan + Playwright E2E |
 | `/deploy` | Docker Compose + init.sh |
-| `/fix-issue` | GitHub issue workflow |
-| `/refactor` | Quality-driven refactoring |
-| `/improve` | Feature enhancement |
+| `/fix-issue` | GitHub issue → branch → fix → test → PR |
+| `/refactor` | Quality-driven refactoring with ratchet gate |
+| `/improve` | Feature enhancement with verification |
 | `/lint-drift` | Entropy scanner for pattern drift |
-| `/tracker` | Tracker orchestration overview |
-| `/tracker-publish` | Publish approved dependency groups to Linear/Jira |
-| `/install-framework-packs` | Re-run framework-pack installs declared in `project-manifest.json` (idempotent) |
+| `/tracker-publish` | Publish dependency groups to Linear/Jira |
+| `/install-framework-packs` | Verify configured framework packs and print manual install commands for missing packs |
 
 ---
 
-## Key files in any scaffolded project
+## Agent team
+
+| Agent | Role | Model |
+|---|---|---|
+| Planner | Sprint planning, story breakdown | Opus |
+| Generator | Feature implementation, spawns teammates | Sonnet |
+| Evaluator | Runs app, API + Playwright verification | Opus |
+| Design Critic | GAN scoring loop (max 10 iterations) | Opus |
+| UI Designer | React + Tailwind mockups | Sonnet |
+| Test Engineer | Test plans + Playwright E2E | Sonnet |
+| Security Reviewer | OWASP vulnerability audit | Sonnet |
+
+---
+
+## Coding principles enforced by hooks
+
+1. **TDD mandatory** — failing tests first, then implement
+2. **100% meaningful coverage**, 80% hard floor
+3. **Functions < 50 lines, files < 300 lines**
+4. **Static typing everywhere** — no `any`
+5. **Strict layered architecture** — one-way dependencies (Types → Config → Repository → Service → API → UI)
+6. **No silent fallbacks** — typed errors, callers decide
+7. **Surgical changes** — only what the request requires
+8. **Brownfield discipline** — dependency claims must cite `code-graph.json` evidence
+
+15 hooks enforce these in real time. 6 ratchet gates enforce at commit time.
+
+---
+
+## Key files in your scaffolded project
 
 | File | Purpose |
-|------|---------|
-| `.claude/program.md` | Karpathy human-agent bridge. Edit mid-run to steer `/auto`. |
-| `.claude/architecture.md` | Layered architecture rules (Types → … → UI) |
+|---|---|
+| `telemetry_docker_compose.yml` | Telemetry stack: OTEL Collector + Prometheus + Pushgateway |
+| `telemetry/` | OTEL Collector + Prometheus configuration |
+| `.claude/program.md` | Human-agent bridge — edit mid-run to steer `/auto` |
+| `.claude/architecture.md` | Layered architecture rules |
 | `.claude/settings.json` | Hook config, permissions, enabled plugins |
-| `.claude/state/learned-rules.md` | Monotonic rule store (never deleted) |
-| `.claude/state/failures.md` | Raw failure data for pattern extraction |
-| `.claude/state/pending-reviews.jsonl` | Files needing reviewer agents this turn |
-| `.claude/state/tracker-map.json` | Local group/story → Linear/Jira mapping (tracker mode) |
-| `.claude/state/tracker-runs/<group>/result.json` | Proof contract consumed by symphony_clone |
+| `.claude/state/learned-rules.md` | Accumulated rules from past failures (never deleted) |
 | `project-manifest.json` | Stack, evaluation config, execution mode, framework packs |
-| `calibration-profile.json` | Design scoring weights/thresholds (skipped for API-only & minimal projects) |
+| `calibration-profile.json` | Design scoring weights/thresholds |
 | `features.json` | Granular pass/fail registry |
 | `claude-progress.txt` | Session chaining recovery context |
-| `specs/stories/dependency-graph.md` | Group ordering and dependencies — the source of truth for `/auto` |
-| `specs/design/component-map.md` | File ownership per story (used by agent teams) |
-| `specs/reviews/` | Evaluator + security review reports per group |
-| `design.md` | Architecture reference (this repo's `design.md`, copied into the project) |
-| `CLAUDE.md` | Slim table of contents for agents |
+| `specs/stories/dependency-graph.md` | Group ordering — source of truth for `/auto` |
+| `specs/design/component-map.md` | File ownership per story |
+| `design.md` | Full architecture reference |
 
 ---
 
-## Coding principles enforced
+## Telemetry reference
 
-1. **TDD mandatory** — failing tests first.
-2. **100% meaningful coverage**, 80% hard floor.
-3. **Functions < 50 lines, files < 300 lines.**
-4. **Static typing everywhere** (no `any`).
-5. **Strict layered architecture** — one-way dependencies (Types → … → UI).
-6. **No silent fallbacks** — typed errors; callers decide.
-7. **Surgical changes** — only what the request requires.
-8. **Brownfield discipline** — claims about dependencies must cite `code-graph.json` evidence.
+### Metrics available in Prometheus
 
-The 15 hooks enforce these in real time. The 6 ratchet gates enforce them at commit time. Together they form a defense in depth that an autonomous loop can't drift out of.
+Two sources of metrics land in Prometheus. Both are queryable from `http://localhost:9090/query`.
+
+**Source 1 — Native Claude Code metrics** (via OTEL Collector):
+
+| Prometheus metric name | What it covers |
+|---|---|
+| `claude_code_token_usage_tokens_total` | Tokens by type (input/output/cacheRead/cacheCreation), model, agent, skill |
+| `claude_code_cost_usage_USD_total` | USD cost with same breakdowns |
+| `claude_code_session_count_total` | Sessions (fresh/resume/continue) |
+| `claude_code_lines_of_code_count_total` | LOC added/removed |
+| `claude_code_commit_count_total` | Git commits |
+| `claude_code_pull_request_count_total` | PRs created |
+| `claude_code_code_edit_tool_decision_total` | Tool accept/reject rates |
+| `claude_code_active_time_seconds_total` | User vs CLI active time (seconds) |
+
+These appear after you run a Claude Code session with the `.env` loaded.
+
+**Source 2 — Harness-custom metrics** (via Pushgateway):
+
+| Prometheus metric name | Type | Labels | What it captures |
+|---|---|---|---|
+| `harness_agent_runs_total` | counter | **user**, kind, exit, lane, mode, agent, group, story, iteration, host | Every agent execution with outcome — the core velocity metric |
+| `harness_conversation_turns_total` | counter | **user**, kind, lane, mode, group, story, iteration, host | Every conversation turn |
+| `harness_pending_reviews` | gauge | **user**, lane, mode, group, story, iteration, host | Pending review count at turn end |
+| `harness_iteration_current` | gauge | **user**, group, lane, mode | Current ratchet iteration per group — fewer is more efficient |
+| `harness_story_active` | gauge | **user**, group, story, lane | Stories currently being worked on |
+| `harness_skill_info` | gauge | skill, directory, path, description | Installed skill inventory pushed by replay and hook telemetry |
+| `harness_skill_usage_total` | counter | **user**, skill, source, kind, command, tool, agent, lane, mode, group, story, iteration, host | Skill usage inferred from slash commands, hook payload skill fields, and skill path mentions |
+
+These appear immediately when the harness runs — every subagent call and every turn pushes a metric.
+
+Override Pushgateway URL: `export HARNESS_PUSHGATEWAY_URL=http://your-host:9091`
+
+**Source 3 — Commit trailers** (not in Prometheus — for Jira/GitHub/CI):
+
+Every commit gets: `Harness-Lane:`, `Harness-Mode:`, `Harness-Iteration:`, `Harness-Group:` — use these to filter in external dashboards.
 
 ---
 
-## Productivity metrics
+### How to use the Prometheus UI
 
-The harness measures productivity across three flows — greenfield, brownfield, and review/security effort displaced — using a two-layer architecture that reuses Claude Code's native telemetry wherever possible.
+#### Step 1: Verify targets are healthy
 
-### Layer 1: Native OTEL (reuse — no custom code)
+1. Open `http://localhost:9090/targets` in your browser
+2. You should see two targets, both showing **UP**:
+   - `otel-collector` (port 8889) — native Claude Code metrics
+   - `harness-pushgateway` (port 9091) — harness-custom metrics
+3. If either shows **DOWN**, check that `docker compose -f telemetry_docker_compose.yml up -d` is running
 
-Claude Code ships 8 OpenTelemetry metrics and 24 event types. `/scaffold` enables them automatically:
+#### Step 2: Run your first query
 
-```bash
-export CLAUDE_CODE_ENABLE_TELEMETRY=1
-export OTEL_METRICS_EXPORTER=otlp        # or prometheus, console
-export OTEL_LOGS_EXPORTER=otlp
-export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
-export OTEL_LOG_TOOL_DETAILS=1           # populates agent.name + skill.name
+1. Open `http://localhost:9090/query`
+2. Click the expression input box at the top
+3. Type: `harness_agent_runs_total`
+4. Click the blue **Execute** button
+5. Results appear in the **Table** tab below
+
+#### Step 3: Read the result labels
+
+Each result row is a unique time series identified by its labels. Example:
+
+```
+harness_agent_runs_total{
+  user="Chaminda Wijayasundara",  ← who pushed this metric (from HARNESS_USER / git config)
+  agent="generator",              ← which agent ran
+  exit="ok",                      ← succeeded or failed ("ok" / "error")
+  instance="abc-123",             ← Claude Code session ID
+  job="claude_harness",           ← always "claude_harness"
+  kind="subagent",                ← event type (subagent / subagent_stop)
+  lane="improve",                 ← which lane (/improve, /vibe, /auto, etc.)
+  mode="full"                     ← execution mode (full / lean / solo / turbo)
+}  →  value: 1
 ```
 
-| Native metric | What it covers |
-|---|---|
-| `claude_code.token.usage` | Tokens by type (in/out/cache), model, agent, skill |
-| `claude_code.cost.usage` | USD cost with same breakdowns |
-| `claude_code.session.count` | Sessions (fresh/resume/continue) |
-| `claude_code.lines_of_code.count` | LOC added/removed |
-| `claude_code.commit.count` | Git commits |
-| `claude_code.pull_request.count` | PRs created |
-| `claude_code.code_edit_tool.decision` | Tool accept/reject rates |
-| `claude_code.active_time.total` | User vs CLI active time (seconds) |
+Every label combination creates a separate time series. The `user` label lets you filter by team member — essential for shared telemetry servers.
 
-For dashboards, import the community Grafana dashboard at [grafana.com/grafana/dashboards/24993](https://grafana.com/grafana/dashboards/24993-claude-code-metrics/). For enterprise analytics, use the free [Claude Code Analytics API](https://platform.claude.com/docs/en/build-with-claude/claude-code-analytics-api) (daily per-user aggregated data).
+#### Step 4: Switch to Graph view
 
-### Layer 2: Harness-custom (concepts with no native equivalent)
+1. After executing a query, click the **Graph** tab (next to Table)
+2. Adjust the time range with the `- +` buttons or drag the time picker
+3. Each label combination shows as a separate line
 
-These are measured by `record-run.js` (hook) and commit trailers — lightweight instrumentation for harness-specific concepts.
+#### Step 5: Try these queries
 
-| Signal | Where it lives | What it captures |
+Type each one in the expression box and click Execute:
+
+```
+harness_agent_runs_total                          ← all agent runs (raw)
+harness_conversation_turns_total                                  ← all turns
+harness_pending_reviews                              ← current pending review count
+sum by (agent) (harness_agent_runs_total)          ← runs grouped by agent
+sum by (exit) (harness_agent_runs_total)           ← success vs failure count
+sum by (lane) (harness_agent_runs_total)           ← work distribution by lane
+harness_agent_runs_total{exit="error"}             ← only failures
+harness_agent_runs_total{agent="generator"}        ← only generator runs
+```
+
+#### Step 6: Verify from the terminal
+
+```bash
+# Check targets are UP
+curl -s http://localhost:9090/api/v1/targets | python3 -c "
+import json,sys
+for t in json.load(sys.stdin)['data']['activeTargets']:
+    print(f\"  {t['labels']['job']:25s} {t['health']}\")"
+
+# Query harness metrics via API
+curl -s http://localhost:9090/api/v1/query \
+  --data-urlencode 'query=harness_agent_runs_total' | python3 -m json.tool
+
+# Check what's in the Pushgateway directly
+curl -s http://localhost:9091/metrics | grep "^harness_"
+```
+
+---
+
+### Measuring productivity with harness metrics
+
+The metrics in Prometheus answer concrete questions about how effectively the harness is working. Here's how to read them.
+
+#### Understanding the metric labels
+
+A single metric like this:
+
+```
+harness_agent_runs_total{user="Alice", agent="generator", exit="ok", lane="improve", mode="full", group="group-01"} 1
+```
+
+Tells you: **Alice's** Claude Code instance ran the **generator** agent once, it **succeeded** (`exit="ok"`), was working in the **/improve** lane, using **full** execution mode, on dependency **group-01**.
+
+A metric like this:
+
+```
+harness_agent_runs_total{user="Bob", agent="design-critic", exit="ok", lane="auto", mode="full", group="group-01"} 1
+```
+
+Tells you: **Bob's** instance ran the **design-critic** (GAN scoring loop) on the same group and it passed — meaning the UI quality gate succeeded.
+
+#### Key productivity questions and the queries that answer them
+
+**1. "How much work is the harness doing autonomously?"**
+
+```promql
+sum(harness_agent_runs_total)                      -- total agent executions (all users)
+sum by (user) (harness_agent_runs_total)            -- agent executions per team member
+sum(harness_conversation_turns_total)                              -- total conversation turns
+sum by (agent) (harness_agent_runs_total)           -- breakdown by agent type
+sum by (user, agent) (harness_agent_runs_total)     -- which user is using which agents
+```
+
+Track these daily. Rising numbers with stable error rates = the harness is scaling your output.
+
+**2. "What's the success rate? Is the harness struggling?"**
+
+```promql
+-- Overall success rate (target: > 90%)
+sum(harness_agent_runs_total{exit="ok"}) / sum(harness_agent_runs_total)
+
+-- Success rate per agent
+sum by (agent) (harness_agent_runs_total{exit="ok"})
+/
+sum by (agent) (harness_agent_runs_total)
+
+-- Which agents fail the most?
+sum by (agent) (harness_agent_runs_total{exit="error"})
+```
+
+If `evaluator` or `security-reviewer` fail often, it means generated code isn't meeting quality gates — the ratchet is doing its job, but the generator may need steering via `.claude/program.md`.
+
+**3. "Which lanes are getting used? Is work landing in the right place?"**
+
+```promql
+sum by (lane) (harness_agent_runs_total)
+sum by (lane) (harness_conversation_turns_total)
+```
+
+Expected healthy distribution:
+- `auto` / `improve` — bulk of the work
+- `vibe` — small quick edits only
+- `brownfield` — should appear before large changes to existing code
+- If everything is in `vibe`, work is bypassing quality gates
+
+**4. "Is the harness getting faster over time?"**
+
+Compare across time windows:
+
+```promql
+-- Agent runs this week vs last week
+sum(harness_agent_runs_total) -- current snapshot
+-- Compare by looking at the Graph tab over 2-week range
+
+-- Turns per group (fewer turns per group = more efficient)
+sum by (group) (harness_conversation_turns_total)
+```
+
+The Karpathy ratchet accumulates `learned-rules.md` over time, so later groups should need fewer self-heal iterations than early groups.
+
+**5. "How much design iteration is happening?"**
+
+```promql
+-- Design-critic runs (each run = one GAN scoring iteration)
+sum(harness_agent_runs_total{agent="design-critic"})
+
+-- Design-critic vs generator ratio (high = lots of rework)
+sum(harness_agent_runs_total{agent="design-critic"})
+/
+sum(harness_agent_runs_total{agent="generator"})
+```
+
+Ratio > 2 means the design-critic is rejecting and re-requesting a lot — consider lowering the design score threshold in `calibration-profile.json`, or the UI requirements are too ambitious for the stack.
+
+**6. "Which dependency groups are the hardest?"**
+
+```promql
+-- Errors per group
+sum by (group) (harness_agent_runs_total{exit="error"})
+
+-- Total effort per group (agent runs)
+sum by (group) (harness_agent_runs_total)
+
+-- Agent mix per group
+sum by (group, agent) (harness_agent_runs_total)
+```
+
+Groups with high error counts or outsized agent-run counts are complexity hotspots. Consider breaking them into smaller groups or adding more specific learned rules.
+
+**7. "Are reviews piling up?"**
+
+```promql
+harness_pending_reviews
+```
+
+Rising pending reviews means the harness is producing faster than humans can review. Either add reviewers or switch to Lean/Solo mode to slow output.
+
+**8. "How is each team member using the harness?"**
+
+```promql
+-- Runs per team member
+sum by (user) (harness_agent_runs_total)
+
+-- Success rate per team member
+sum by (user) (harness_agent_runs_total{exit="ok"})
+/
+sum by (user) (harness_agent_runs_total)
+
+-- Which lanes each person uses
+sum by (user, lane) (harness_agent_runs_total)
+
+-- Turns per team member (proxy for active usage)
+sum by (user) (harness_conversation_turns_total)
+
+-- Filter to a single user
+harness_agent_runs_total{user="Alice"}
+```
+
+Use the Grafana dashboard dropdown to filter by user — the pre-built dashboard includes a `user` variable selector at the top.
+
+#### Weekly productivity scorecard
+
+Run these queries weekly and track the trend:
+
+| Metric | Query | Healthy target |
 |---|---|---|
-| **Run-receipt JSONL** | `.claude/runs/YYYY-MM-DD.jsonl` | Per-subagent and per-turn records: lane, mode, iteration, group, story, agent, contract pass/fail |
-| **Commit trailers** | Every agent commit message | `Harness-Lane:`, `Harness-Mode:`, `Harness-Iteration:`, `Harness-Group:` — the join key for external dashboards |
-| **Lane state** | `.claude/state/current-lane` | Written by `/lane-classify` or `/auto`, read by the `prepare-commit-msg` git hook |
-| **Brownfield staleness** | Hook stdout (soft warning) | `brownfield-staleness.js` warns when `specs/brownfield/` is >14 days or >50 commits stale |
-| **Contract budgets** | `sprint-contract.json` | `max_iterations` + `max_files_changed` (harness concepts; token/cost budgets monitored via native OTEL) |
+| Total agent runs | `sum(harness_agent_runs_total)` | Rising week-over-week |
+| Overall success rate | `sum(harness_agent_runs_total{exit="ok"}) / sum(harness_agent_runs_total)` | > 90% |
+| Generator success rate | `sum(harness_agent_runs_total{agent="generator",exit="ok"}) / sum(harness_agent_runs_total{agent="generator"})` | > 85% |
+| Evaluator pass rate | `sum(harness_agent_runs_total{agent="evaluator",exit="ok"}) / sum(harness_agent_runs_total{agent="evaluator"})` | > 80% |
+| Design-critic / generator ratio | `sum(harness_agent_runs_total{agent="design-critic"}) / sum(harness_agent_runs_total{agent="generator"})` | < 2.0 |
+| Pending reviews | `harness_pending_reviews` | < 5 |
+| Lane distribution | `sum by (lane) (harness_agent_runs_total)` | Bulk in auto/improve, minimal in vibe |
 
-### Layer 3: External (join via trailer)
+#### Cost tracking (native OTEL — available once Claude Code sessions run with .env)
 
-PR merge state, rework rate, reviewer wall-clock, and defect-escape rate live in Jira/ADO/GitHub/CI. These dashboards filter or group by the `Harness-Lane:` commit trailer to segment work by lane.
+```promql
+sum(max_over_time(claude_code_cost_usage_USD_total[24h]))                  -- total USD / day
+sum by (model) (max_over_time(claude_code_cost_usage_USD_total[24h]))      -- cost by model
+sum by (type) (max_over_time(claude_code_token_usage_tokens_total[24h]))   -- tokens by type
+sum(increase(claude_code_lines_of_code_count_total[24h]))                  -- LOC / day
+increase(claude_code_commit_count_total[24h])                              -- commits / day
+increase(claude_code_pull_request_count_total[24h])                        -- PRs / day
 
-### Enabling metrics
-
-**New projects:** `/scaffold` enables both layers automatically — native OTEL env vars are documented in the scaffold interview output, and harness hooks are installed via `cp -r`.
-
-**Existing projects:** Add the OTEL env vars to your `.env` or shell profile, and verify the harness hooks are present:
-```bash
-ls .claude/hooks/record-run.js .claude/hooks/brownfield-staleness.js .claude/git-hooks/prepare-commit-msg
+-- Cache hit ratio (higher = cheaper)
+sum(max_over_time(claude_code_token_usage_tokens_total{type="cacheRead"}[24h]))
+/
+sum(max_over_time(claude_code_token_usage_tokens_total{type=~"cacheRead|input"}[24h]))
 ```
 
-### Testing metrics
+#### Prometheus API calls for scripting and CI
 
-**Native OTEL (console smoke test):**
 ```bash
-export CLAUDE_CODE_ENABLE_TELEMETRY=1
-export OTEL_METRICS_EXPORTER=console
-export OTEL_METRIC_EXPORT_INTERVAL=5000
-# Start a Claude Code session and do any task — metrics appear on stderr within 5s
+# All harness metrics as JSON
+curl -s http://localhost:9090/api/v1/query \
+  --data-urlencode 'query=harness_agent_runs_total' | python3 -m json.tool
+
+# Success rate as a single number
+curl -s http://localhost:9090/api/v1/query \
+  --data-urlencode 'query=sum(harness_agent_runs_total{exit="ok"}) / sum(harness_agent_runs_total)' \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['data']['result'][0]['value'][1])"
+
+# Runs by agent as a table
+curl -s http://localhost:9090/api/v1/query \
+  --data-urlencode 'query=sum by (agent) (harness_agent_runs_total)' \
+  | python3 -c "
+import json,sys
+for r in json.load(sys.stdin)['data']['result']:
+    print(f\"  {r['metric'].get('agent','(none)'):20s} {r['value'][1]}\")"
 ```
 
-**Harness-custom (run-receipt):**
-```bash
-mkdir -p .claude/state .claude/runs
-echo "improve" > .claude/state/current-lane
-echo "full" > .claude/state/current-mode
-echo "1" > .claude/state/current-iteration
+> **Note:** Metric names in Prometheus replace dots with underscores and append `_total` for counters. If a query returns empty, run `{__name__=~"harness_.*"}` to discover the exact metric names in your instance.
 
-cat <<'EOF' | node .claude/hooks/record-run.js
-{"hook_event_name":"PostToolUse","tool_name":"Task","session_id":"test","tool_input":{"subagent_type":"evaluator"},"tool_response":{"is_error":false}}
-EOF
-cat .claude/runs/$(date +%Y-%m-%d).jsonl
-# Should show: kind=subagent, lane=improve, mode=full, iteration=1, agent=evaluator, exit=ok
-```
+---
 
-**Commit trailers:**
-```bash
-echo "vibe" > .claude/state/current-lane
-TMPFILE=$(mktemp); echo "test commit" > "$TMPFILE"
-.claude/git-hooks/prepare-commit-msg "$TMPFILE" message
-cat "$TMPFILE"
-# Should append: Harness-Lane: vibe
-rm "$TMPFILE"
-```
+## Troubleshooting
 
-**Brownfield staleness:**
-```bash
-mkdir -p specs/brownfield
-touch -t "$(date -v-20d +%Y%m%d0000)" specs/brownfield/risk-map.md
-cat <<'EOF' | node .claude/hooks/brownfield-staleness.js
-{"hook_event_name":"UserPromptSubmit","prompt":"/improve the auth flow"}
-EOF
-# Should warn: specs/brownfield/ last updated 20.x days ago
-```
-
-### Key files
-
-| File | Purpose |
+| Problem | Fix |
 |---|---|
-| `.claude/hooks/record-run.js` | Emits harness-specific JSONL on PostToolUse(Task) + Stop + SubagentStop |
-| `.claude/hooks/brownfield-staleness.js` | Soft-warns when brownfield maps are stale |
-| `.claude/git-hooks/prepare-commit-msg` | Auto-injects `Harness-Lane:` and related trailers from `.claude/state/current-*` |
-| `.claude/skills/lane-classify/SKILL.md` | Classifies requests into lanes, writes `.claude/state/current-lane` |
-| `.claude/templates/sprint-contract.json` | Includes `productivity_budget` (max_iterations, max_files_changed) |
-| `matrices.pptx` | 6-slide stakeholder deck with the full metric map |
-| `build_matrices_deck.py` | Generator for `matrices.pptx` — edit content and `python3 build_matrices_deck.py` to regen |
-
-### What NOT to build custom
-
-Do not duplicate what native OTEL already provides:
-- Token counts → `claude_code.token.usage`
-- Cost tracking → `claude_code.cost.usage`
-- Session counts → `claude_code.session.count`
-- LOC metrics → `claude_code.lines_of_code.count`
-- Commit/PR counts → `claude_code.commit.count` / `claude_code.pull_request.count`
-- Tool accept/reject → `claude_code.code_edit_tool.decision`
-- Per-tool latency → `claude_code.tool_result` event
-
-Build custom only for concepts the harness introduces: lanes, modes, iterations, groups, stories, contract pass/fail, brownfield staleness, seam fit, lane correctness.
+| `docker compose -f telemetry_docker_compose.yml up` fails | Ensure Docker is running. Check image pulls with `docker pull prom/prometheus:v3.2.1` |
+| No metrics in Prometheus | Verify OTEL env vars are set. Check `http://localhost:9090/targets` — both jobs should show UP |
+| Pushgateway metrics missing | `record-run.js` pushes fire-and-forget. Verify Pushgateway is reachable: `curl http://localhost:9091/metrics` |
+| Stories/files are being written but dashboard metrics are not moving | Restart the active Claude Code session after updating `.claude/settings.json`; hook configuration may not reload mid-session |
+| Grafana shows no data | Open `http://localhost:3001`, go to a dashboard panel, click Edit, verify the datasource is "Prometheus" and the query returns data |
+| Metrics have no `user` label | Set `HARNESS_USER` in `.env` or verify `git config user.name` returns your name |
+| Framework pack is `PENDING MANUAL INSTALL` | Run manually in a regular terminal (not Claude Code): `npx --yes skills add <repo> -a claude-code -s '*' -y`, then verify with `/install-framework-packs --list` |
+| Scaffold says "plugin source stale" | Update the harness: `cd ~/claude_harness_eng_v4 && git pull` |
+| `/auto` runs but quality regresses | Check `.claude/program.md` — edit to steer. Check `learned-rules.md` for accumulated rules |
 
 ---
 
-## Documentation
+## Further reading
 
-- `design.md` — full architecture reference (this scaffold's design doc).
-- `symphony_clone/README.md` — operator guide for the tracker orchestrator.
-- `.claude/skills/<name>/SKILL.md` — every skill is self-documenting.
-- `.claude/agents/<name>.md` — every agent's frontmatter declares its tools and model tier.
-- `Claude_Harness_Engine_Design.pptx` — slide deck for stakeholder briefings.
-- `matrices.pptx` — productivity metrics deck (native OTEL + harness-custom + external).
-
----
-
-## License & contributing
-
-This is research code shared under the same license as Claude Code's plugin ecosystem. Contributions that respect the GAN separation, the ratchet, and the human-gate boundaries are very welcome.
+| Document | Where |
+|---|---|
+| Architecture reference | `design.md` in your project |
+| Orchestrator operator guide | `symphony_clone/README.md` in the harness repo |
+| Any skill's full instructions | `.claude/skills/<name>/SKILL.md` |
+| Any agent's definition | `.claude/agents/<name>.md` |
+| Stakeholder slide deck | `Claude_Harness_Engine_Design.pptx` in the harness repo |
+| Metrics slide deck | `matrices.pptx` in the harness repo |

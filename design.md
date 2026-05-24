@@ -137,7 +137,7 @@ Neither runtime changes how `/auto` runs inside the workspace. The only differen
 | Component | Count | Location | Purpose |
 |---|---:|---|---|
 | Slash command (true) | 1 | `.claude/commands/scaffold.md` | Bootloader only |
-| Skills (virtual commands) | 27 | `.claude/skills/<name>/SKILL.md` | All other workflows |
+| Skills (virtual commands) | 28 | `.claude/skills/<name>/SKILL.md` | All other workflows |
 | Specialized agents | 7 | `.claude/agents/<name>.md` | Subagents with tool allowlists + model tier |
 | Lifecycle hooks | 15 | `.claude/hooks/*.js` | Pre/post tool, pre-commit, Stop, TeammateIdle |
 | Templates | 10 | `.claude/templates/*` | Sprint contract, story, init.sh, tracker config, etc. |
@@ -146,7 +146,7 @@ Neither runtime changes how `/auto` runs inside the workspace. The only differen
 | Framework skill packs | 2 (opt-in) | `.claude/skills/<pack-prefix>-*` (via `-a claude-code`) | LangChain (9 skills) · Google ADK (7 skills) |
 | Tracker orchestrator | 1 sibling project | `symphony_clone/` | Docker service for Linear-driven dispatch |
 
-### The 27 skills, grouped by lane
+### The 28 skills, grouped by lane
 
 | Lane | Skills |
 |---|---|

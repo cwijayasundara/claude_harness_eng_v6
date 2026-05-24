@@ -1,15 +1,15 @@
 ---
 name: install-framework-packs
-description: Install or re-install agent-framework skill packs declared in project-manifest.json#framework_skill_packs. Use when /scaffold reported a pack install was blocked by the Claude Code auto-mode classifier, after manually adding a pack to the manifest, or to verify all configured packs are present. Idempotent — packs already in .claude/skills/ are skipped unless --force.
-argument-hint: "[--list] [--force]"
+description: Verify agent-framework skill packs declared in project-manifest.json#framework_skill_packs and print normal-terminal install commands for missing packs. Use after /scaffold reports PENDING MANUAL INSTALL, after manually adding a pack to the manifest, or to verify all configured packs are present.
+argument-hint: "[--list]"
 context: fork
 ---
 
 # Install Framework Skill Packs
 
-`/scaffold` records the user's chosen framework packs in `project-manifest.json` under `framework_skill_packs`, then attempts to install them. The Claude Code auto-mode classifier blocks external GitHub installs as a safety gate (independent of `settings.json` allowlist), so the install often fails and the scaffold reports a manual follow-up.
+`/scaffold` records the user's chosen framework packs in `project-manifest.json` under `framework_skill_packs`, then prints normal-terminal install commands. The Claude Code auto-mode classifier blocks external GitHub installs as a safety gate (independent of `settings.json` allowlist), so this skill does not attempt to run `npx skills add` from inside Claude Code.
 
-This skill is the one-command path to finish those installs. It is idempotent and safe to run repeatedly.
+This skill is the one-command path to verify those installs. It is idempotent and safe to run repeatedly.
 
 ---
 
@@ -28,8 +28,7 @@ If `framework_skill_packs` contains a key not in this registry, report it as unk
 
 ### Step 1 — Parse arguments
 
-- `--list` — report current state only; do not run any installs.
-- `--force` — re-run install even when the prefix directory is already present.
+- `--list` — report current state. This is the default behavior.
 
 ### Step 2 — Read project-manifest.json
 
@@ -54,23 +53,11 @@ State for each pack:
 
 If `--list` was passed, print the table and stop here.
 
-### Step 4 — Install missing packs
+### Step 4 — Report missing packs
 
-For each pack in `MISSING` or `PARTIAL` state (or all packs if `--force`), run:
+Do not run `npx skills add` from this skill. For each pack in `MISSING` or `PARTIAL` state, mark it as `PENDING MANUAL INSTALL` and include it in the manual-install block in Step 6.
 
-```bash
-npx --yes skills add <repo> -a claude-code -s '*' -y
-```
-
-Capture the full stdout+stderr. Three outcomes:
-
-| Outcome | Detection | Action |
-|---|---|---|
-| Success | exit 0 AND prefix directory now contains expected skill count | Mark as `INSTALLED ✓`; continue |
-| Classifier denial | output contains `Denied by auto mode classifier` | Mark as `BLOCKED`; print manual-fallback block (Step 6); continue to next pack |
-| Other failure | non-zero exit without classifier-denial message | Mark as `FAILED`; print error excerpt + remediation hint; continue to next pack |
-
-Do NOT stop on the first failure — process all packs so the user sees the complete state.
+If all selected packs are already `INSTALLED`, print the summary and stop without a manual-install block.
 
 ### Step 5 — Print summary
 
@@ -79,16 +66,16 @@ Print a compact table:
 ```
 Pack         Repo                                          Status        Skills
 langchain    cwijayasundara/agent_cli_langchain            INSTALLED ✓   9 / 9
-google-adk   google/agents-cli                             BLOCKED       0 / 7  (manual install required)
+google-adk   google/agents-cli                             PENDING       0 / 7  (manual install required)
 ```
 
-### Step 6 — Manual-fallback block (when any pack is BLOCKED or FAILED)
+### Step 6 — Manual-install block (when any pack is missing)
 
-For each pack that did not install, print this verbatim — substituting `<repo>`, `<prefix>`, and project-root path:
+For each missing or partial pack, print this verbatim — substituting `<repo>`, `<prefix>`, and project-root path:
 
 ```
 ═══════════════════════════════════════════════════════════════════════════════
-  [!] Pack install blocked: <repo>
+  [!] Pack pending manual install: <repo>
 ═══════════════════════════════════════════════════════════════════════════════
 
   Open a normal terminal (NOT Claude Code) and run:
@@ -101,12 +88,12 @@ For each pack that did not install, print this verbatim — substituting `<repo>
     ls .claude/skills/ | grep '^<prefix>'
 
   Then come back to Claude Code and run `/install-framework-packs` again
-  to confirm the install — this skill is idempotent.
+  to confirm the install.
 
 ═══════════════════════════════════════════════════════════════════════════════
 ```
 
-If multiple packs are blocked, print one box per pack. The boxes must be the LAST output before the skill exits — they should not be buried under other text.
+If multiple packs are missing, print one box per pack. The boxes must be the LAST output before the skill exits — they should not be buried under other text.
 
 ### Step 7 — Update project state (optional)
 
@@ -117,7 +104,7 @@ Write a small status file at `.claude/state/framework-packs-install.json` record
   "last_run": "2026-05-13T16:30:00Z",
   "packs": {
     "langchain": { "status": "INSTALLED", "skills": 9, "repo": "cwijayasundara/agent_cli_langchain" },
-    "google-adk": { "status": "BLOCKED", "skills": 0, "repo": "google/agents-cli" }
+    "google-adk": { "status": "PENDING MANUAL INSTALL", "skills": 0, "repo": "google/agents-cli" }
   }
 }
 ```

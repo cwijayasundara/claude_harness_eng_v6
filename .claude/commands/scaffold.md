@@ -136,7 +136,7 @@ If the user picks D, the full harness is still installed (in case scope grows) b
    - B) Publish generated story groups to Linear/Jira only
    - C) Publish + sync proof/status
    - D) Publish + external orchestrator dispatch
-7. "Install agent-framework skill packs?" (multi-select; default: None) — opt-in packs installed project-locally via `npx skills` into `.claude/skills/` (when `-a claude-code` is passed, they land alongside the harness skills).
+7. "Configure agent-framework skill packs?" (multi-select; default: None) — opt-in packs recorded in `project-manifest.json`, then installed manually from a normal terminal because Claude Code auto-mode blocks external `npx skills add` installs.
    - A) LangChain / LangGraph / DeepAgents — `cwijayasundara/agent_cli_langchain` (9 skills)
    - B) Google ADK — `google/agents-cli` (7 skills)
    - C) None
@@ -245,20 +245,37 @@ echo "Found plugin at: $PLUGIN_SOURCE"
 
 If `$PLUGIN_SOURCE` is empty, ask the user: "Where is the claude_harness_eng_v4 repo cloned? I need the path to copy scaffold files." Then set `PLUGIN_SOURCE=/path/they/give/.claude`.
 
+Resolve the harness root (one level above `.claude/`) before validation:
+
+```bash
+HARNESS_ROOT=$(dirname "$PLUGIN_SOURCE")
+```
+
 Before copying, validate the source:
 
 ```bash
 test -f "$PLUGIN_SOURCE/.claude-plugin/plugin.json"
 test -d "$PLUGIN_SOURCE/skills/brownfield"
 test -d "$PLUGIN_SOURCE/skills/code-map"
+test -f "$PLUGIN_SOURCE/skills/code-map/scripts/import_understand_graph.js"
+test -f "$PLUGIN_SOURCE/scripts/telemetry-memory.js"
+test -f "$PLUGIN_SOURCE/scripts/replay-telemetry.js"
 test -d "$PLUGIN_SOURCE/skills/seam-finder"
 test -d "$PLUGIN_SOURCE/skills/vibe"
 test -f "$PLUGIN_SOURCE/templates/context.template.md"
 test -f "$PLUGIN_SOURCE/templates/story.template.md"
 SKILL_COUNT=$(find "$PLUGIN_SOURCE/skills" -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')
 TEMPLATE_COUNT=$(find "$PLUGIN_SOURCE/templates" -maxdepth 1 -type f | wc -l | tr -d ' ')
-test "$SKILL_COUNT" = "27"
+test "$SKILL_COUNT" = "28"
 test "$TEMPLATE_COUNT" = "10"
+test -f "$PLUGIN_SOURCE/git-hooks/prepare-commit-msg"
+test -f "$HARNESS_ROOT/README.md"
+test -f "$HARNESS_ROOT/telemetry_docker_compose.yml"
+test -f "$HARNESS_ROOT/telemetry/otel-collector-config.yml"
+test -f "$HARNESS_ROOT/telemetry/prometheus.yml"
+test -f "$HARNESS_ROOT/telemetry/grafana/dashboards/harness-overview.json"
+test -f "$HARNESS_ROOT/telemetry/grafana/provisioning/dashboards/dashboards.yml"
+test -f "$HARNESS_ROOT/telemetry/grafana/provisioning/datasources/prometheus.yml"
 ```
 
 If any validation command fails, stop and report: "The resolved plugin source is stale or incomplete; refresh the local marketplace and update the plugin before scaffolding."
@@ -271,12 +288,26 @@ cp -r $PLUGIN_SOURCE/.claude-plugin/ .claude/.claude-plugin/
 cp -r $PLUGIN_SOURCE/agents/ .claude/agents/
 cp -r $PLUGIN_SOURCE/skills/ .claude/skills/
 cp -r $PLUGIN_SOURCE/hooks/ .claude/hooks/
+cp -r $PLUGIN_SOURCE/scripts/ .claude/scripts/
 cp -r $PLUGIN_SOURCE/state/ .claude/state/
 cp -r $PLUGIN_SOURCE/templates/ .claude/templates/
 cp $PLUGIN_SOURCE/architecture.md .claude/architecture.md
 cp $PLUGIN_SOURCE/program.md .claude/program.md
 cp $PLUGIN_SOURCE/settings.json .claude/settings.json
 ```
+
+Copy the telemetry stack (OTEL Collector + Prometheus + Pushgateway):
+
+```bash
+cp "$HARNESS_ROOT/telemetry_docker_compose.yml" ./telemetry_docker_compose.yml
+mkdir -p telemetry
+cp "$HARNESS_ROOT/telemetry/otel-collector-config.yml" ./telemetry/
+cp "$HARNESS_ROOT/telemetry/prometheus.yml" ./telemetry/
+rm -rf ./telemetry/grafana && cp -r "$HARNESS_ROOT/telemetry/grafana" ./telemetry/
+cp "$HARNESS_ROOT/README.md" ./SCAFFOLD_README.md
+```
+
+**Important:** Do NOT run `mkdir -p` on any of the file paths inside `telemetry/` — that would create directories where files should be. The `cp` commands above handle the file creation directly.
 
 **Important:** You MUST actually run these copy commands via Bash. Do NOT skip this step or try to generate the files from memory. The source files contain hooks, agent definitions, and skill instructions that must be copied exactly.
 
@@ -348,13 +379,17 @@ Do not write tracker API keys into `.claude/tracker-config.json`. Use environmen
 
 ### Optional Agent-Framework Skill Packs
 
-If the user selected one or more skill packs (LangChain or Google ADK) at the confirmation card or wizard, install them via the open agent skills CLI (`npx skills`). With `-a claude-code`, the CLI installs the skills directly into `.claude/skills/<pack-prefix>-*/` alongside the harness skills — they're picked up automatically.
+If the user selected one or more skill packs (LangChain or Google ADK) at the confirmation card or wizard, record the selection in `project-manifest.json` and print the manual install commands in the Step 10 report.
 
-**Important:** Run these commands inside the target project directory. Do NOT use `-g`/`--global` — the user has explicitly chosen to scope framework skills per-project so the harness scaffold remains generic.
+Do not run `npx skills add` from `/scaffold`. Claude Code auto-mode commonly blocks external `npx` installs even when command permissions are allowlisted, so attempting it during scaffold creates a noisy denial and a misleading partial-success report. The reliable path is:
+
+1. Scaffold writes the harness files and records selected packs.
+2. The user runs the listed `npx --yes skills add ...` command in a normal terminal.
+3. The user returns to Claude Code and runs `/install-framework-packs --list` to verify.
+
+**Important:** The manual commands must be run inside the target project directory. Do NOT use `-g`/`--global` — the user has explicitly chosen to scope framework skills per-project so the harness scaffold remains generic.
 
 **CLI syntax (critical):** the **package source goes FIRST** as a positional argument. Putting flags before the package will fail with `ERROR  Missing required argument: source`. Use `-y` only AFTER the package source.
-
-The `Bash(npx --yes skills add:*)` and `Bash(npx skills add:*)` permissions are allowlisted in `.claude/settings.json`. The auto-mode classifier may still block external package installs as a separate safety gate (independent of allowlist) — if that happens, fall through to the manual-fallback block below.
 
 **A) LangChain / LangGraph / DeepAgents — 9 skills**
 
@@ -372,19 +407,19 @@ npx --yes skills add google/agents-cli -a claude-code -s '*' -y
 
 Expected: 7 skills under `.claude/skills/google-agents-cli-*` (scaffold, workflow, adk-code, eval, deploy, observability, publish).
 
-Verify the install ran successfully:
+Verify manual installs with:
 
 ```bash
 ls .claude/skills/ | grep -E '^(langchain-agents|google-agents-cli)-' | wc -l
 ```
 
-#### Manual-fallback block (if install was denied or failed)
+#### Manual install block
 
-If the `npx skills add` command was denied (auto-mode classifier), errored, or could not run for any reason, do NOT skip silently. Print this block verbatim and ADD it to the Step 10 report under a "Manual follow-ups" heading:
+If one or more framework packs were selected, print this block verbatim and ADD it to the Step 10 report under a "Manual follow-ups" heading:
 
 ```text
-[!] Framework skill pack(s) were NOT installed automatically. Run this manually
-    in a regular terminal (the auto-mode classifier blocks external installs):
+[!] Framework skill pack(s) require a manual terminal install.
+    Claude Code auto-mode blocks external npx installs during /scaffold.
 
   cd <project-root>
   npx --yes skills add cwijayasundara/agent_cli_langchain -a claude-code -s '*' -y   # if LangChain
@@ -392,13 +427,12 @@ If the `npx skills add` command was denied (auto-mode classifier), errored, or c
 
 After running, verify (the packs land in .claude/skills/ alongside the harness skills):
   ls .claude/skills/ | grep -E '^(langchain-agents|google-agents-cli)-'
+  /install-framework-packs --list
 ```
-
-Also explain the most likely cause in one line based on the actual error: auto-mode classifier denial → "the classifier blocks external package installs regardless of settings.json allowlist; run the command in your own terminal"; network error → "check your network / npm proxy and retry"; node not installed → "install Node 20+ and retry".
 
 #### Record selected packs in project-manifest.json
 
-Whether the install succeeded automatically or fell through to the manual block, record the user's *choice* under a top-level `framework_skill_packs` array in `project-manifest.json`. This lets future `/scaffold enhance` operations and the Step 10 report see the intent regardless of install status:
+Record the user's *choice* under a top-level `framework_skill_packs` array in `project-manifest.json`. This lets future `/scaffold enhance` operations and the Step 10 report see the intent regardless of install status:
 
 ```json
 "framework_skill_packs": ["langchain", "google-adk"]
@@ -584,7 +618,7 @@ Planner   Generator  Evaluator  Test Eng  Security Rev
 |10 | pre-commit-gate       | `hooks/pre-commit-gate.js`         | Pre-commit                     |
 |11 | task-completed        | `hooks/task-completed.js`          | Post-task                      |
 |12 | teammate-idle-check   | `hooks/teammate-idle-check.js`     | Periodic                       |
-|13 | record-run            | `hooks/record-run.js`              | PostToolUse(Task) · Stop · SubagentStop |
+|13 | record-run            | `hooks/record-run.js`              | UserPromptSubmit · PostToolUse(Write/Edit/MultiEdit/Bash/Task) · Stop · SubagentStop |
 |14 | brownfield-staleness  | `hooks/brownfield-staleness.js`    | UserPromptSubmit · PreToolUse(Task)     |
 
 ## State Files
@@ -659,19 +693,55 @@ chmod +x .git/hooks/prepare-commit-msg
 mkdir -p .claude/runs
 ```
 
-**Native OTEL telemetry** — Claude Code ships 8 metrics (tokens, cost, sessions, commits, PRs, LOC, tool acceptance, active time) and 24 event types. Enable them so standard productivity data flows to Grafana/Prometheus/Datadog without custom code. Write the following to the project `.env` (or instruct the user to export them):
+**Native OTEL telemetry** — Claude Code ships 8 metrics (tokens, cost, sessions, commits, PRs, LOC, tool acceptance, active time) and 24 event types. These env vars must be set **both** in `.claude/settings.json` (so Claude Code loads them automatically) and in `.env` (for shell scripts and docker compose).
+
+**Step A — Add telemetry env vars to `.claude/settings.json`'s `env` block.** This is the critical step — Claude Code only reads env vars from `settings.json`, not from `.env` files. Use the Edit tool to merge these into the existing `env` object (do NOT overwrite keys already present like `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`):
+
+```json
+"env": {
+  "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+  "OTEL_METRICS_EXPORTER": "otlp",
+  "OTEL_LOGS_EXPORTER": "otlp",
+  "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+  "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
+  "OTEL_LOG_TOOL_DETAILS": "1",
+  "HARNESS_PUSHGATEWAY_URL": "http://localhost:9091",
+  "HARNESS_USER": "<resolved from git config user.name>"
+}
+```
+
+Resolve `HARNESS_USER` by running `git config user.name` via Bash and inserting the result.
+
+**Step B — Also create a `.env` file** for shell scripts and documentation:
 
 ```bash
-# --- Claude Code native telemetry (no custom code needed) ---
+GIT_USER=$(git config user.name 2>/dev/null || echo "unknown")
+cat > .env << ENVEOF
+# --- Claude Code native telemetry ---
 CLAUDE_CODE_ENABLE_TELEMETRY=1
 OTEL_METRICS_EXPORTER=otlp
 OTEL_LOGS_EXPORTER=otlp
+OTEL_EXPORTER_OTLP_PROTOCOL=grpc
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
-# Populate agent.name + skill.name on every metric (needed for cost-by-agent dashboards)
 OTEL_LOG_TOOL_DETAILS=1
+
+# --- Harness-custom telemetry ---
+HARNESS_PUSHGATEWAY_URL=http://localhost:9091
+HARNESS_USER=${GIT_USER}
+ENVEOF
 ```
 
-If the user does not have an OTEL collector, suggest `OTEL_METRICS_EXPORTER=prometheus` (scrape at `http://localhost:9464/metrics`) or `OTEL_METRICS_EXPORTER=console` for local debugging. The Grafana community dashboard is at `grafana.com/grafana/dashboards/24993`.
+You MUST complete both steps. Each team member's `settings.json` and `.env` must have their own `HARNESS_USER` so metrics are attributed correctly in the shared Prometheus/Grafana stack.
+
+The telemetry stack is included at `telemetry_docker_compose.yml`. Start it with:
+
+```bash
+docker compose -f telemetry_docker_compose.yml up -d
+```
+
+This launches an OTEL Collector (receives native OTLP on :4317), Prometheus (scrapes at :9090), Pushgateway (receives custom harness metrics on :9091), and Grafana (dashboards at :3001). All team members point to the same telemetry server — the `user` label on every metric identifies who pushed it.
+
+If the user does not want Docker, suggest `OTEL_METRICS_EXPORTER=prometheus` (scrape at `http://localhost:9464/metrics`) or `OTEL_METRICS_EXPORTER=console` for local debugging. The Grafana community dashboard is at `grafana.com/grafana/dashboards/24993`.
 
 **What native OTEL covers (do NOT build custom):** tokens · cost · sessions · commits · PRs · LOC · tool accept/reject · active time · per-API-call latency · cost attribution by model/agent/skill.
 
@@ -726,7 +796,7 @@ next_action: Run /brd to start
 
 ## Step 10: Report
 
-The skill count is 27 (lite plus the existing 26). The Step 3 validation also asserts this — keep both in sync if you add or remove skills.
+The skill count is 28. The Step 3 validation also asserts this — keep both in sync if you add or remove skills.
 
 Tailor the "Next steps" ordering based on the project-type decision:
 
@@ -739,11 +809,16 @@ Tailor the "Next steps" ordering based on the project-type decision:
 
 Installed:
   7 agents      → .claude/agents/
-  27 skills     → .claude/skills/
+  28 skills     → .claude/skills/
   15 hooks      → .claude/hooks/
   10 templates  → .claude/templates/
   6 state files → .claude/state/
   1 manifest    → .claude/.claude-plugin/plugin.json
+
+Telemetry stack:
+  telemetry_docker_compose.yml    → OTEL Collector (:4317) + Prometheus (:9090) + Pushgateway (:9091)
+  telemetry/                      → Collector + Prometheus config
+  Start: docker compose -f telemetry_docker_compose.yml up -d
 
 Next steps:
   1. Run /brd to create your Business Requirements Document
@@ -759,11 +834,16 @@ Next steps:
 
 Installed:
   7 agents      → .claude/agents/
-  27 skills     → .claude/skills/
+  28 skills     → .claude/skills/
   15 hooks      → .claude/hooks/
   10 templates  → .claude/templates/
   6 state files → .claude/state/
   1 manifest    → .claude/.claude-plugin/plugin.json
+
+Telemetry stack:
+  telemetry_docker_compose.yml    → OTEL Collector (:4317) + Prometheus (:9090) + Pushgateway (:9091)
+  telemetry/                      → Collector + Prometheus config
+  Start: docker compose -f telemetry_docker_compose.yml up -d
 
 Next steps:
   1. Run /lite "<one-paragraph project description>"  ← recommended for this project type
@@ -800,34 +880,34 @@ If the user installed any framework skill packs (selected on the confirmation ca
 
 ```
 Framework skill packs (.claude/skills/):
-  + LangChain / LangGraph / DeepAgents — 9 skills (cwijayasundara/agent_cli_langchain)   [INSTALLED]
-  + Google ADK                          — 7 skills (google/agents-cli)                    [BLOCKED — see banner below]
+  + LangChain / LangGraph / DeepAgents — 9 skills (cwijayasundara/agent_cli_langchain)   [PENDING MANUAL INSTALL]
+  + Google ADK                          — 7 skills (google/agents-cli)                    [INSTALLED]
 ```
 
-Use `INSTALLED` when the prefix directory contains the expected skill count. Use `BLOCKED` when the auto-mode classifier denied the install. Use `FAILED` for any other error.
+Use `INSTALLED` when the prefix directory contains the expected skill count. Use `PENDING MANUAL INSTALL` when the user selected the pack but the expected prefix directories are not present yet.
 
 Also append a "Framework-specific entry points" hint to Next steps, since these packs ship their own scaffolders and workflow skills that complement the harness pipeline. Example additions:
 
-- If LangChain pack installed: "For LangChain/LangGraph/DeepAgents work, ask Claude to 'scaffold a langgraph agent' or 'build an agent using ADK middleware' — the framework's `*-scaffold` and `*-workflow` skills will trigger."
-- If Google ADK pack installed: "For Google ADK work, ask Claude to 'start a new ADK project' or 'deploy my ADK agent' — the `google-agents-cli-*` skills will trigger."
+- If LangChain pack selected and installed: "For LangChain/LangGraph/DeepAgents work, ask Claude to 'scaffold a langgraph agent' or 'build an agent using ADK middleware' — the framework's `*-scaffold` and `*-workflow` skills will trigger."
+- If LangChain pack selected but pending: "After the manual LangChain pack install, ask Claude to 'scaffold a langgraph agent' or 'build an agent using ADK middleware'."
+- If Google ADK pack selected and installed: "For Google ADK work, ask Claude to 'start a new ADK project' or 'deploy my ADK agent' — the `google-agents-cli-*` skills will trigger."
+- If Google ADK pack selected but pending: "After the manual Google ADK pack install, ask Claude to 'start a new ADK project' or 'deploy my ADK agent'."
 
 If the user picked None for framework packs, omit both additions.
 
-### Final banner — print LAST when any pack install was blocked or failed
+### Final banner — print LAST when any selected pack is pending
 
-If at least one framework pack ended in `BLOCKED` or `FAILED` state, the very last thing the scaffold prints (after the Files-written section, after Next steps, after everything) MUST be a prominent boxed banner. This banner is the user's primary signal that the scaffold is not "complete-complete" — they need to take one action.
+If at least one selected framework pack is `PENDING MANUAL INSTALL`, the very last thing the scaffold prints (after the Files-written section, after Next steps, after everything) MUST be a prominent boxed banner. This banner is the user's primary signal that the scaffold is complete but the optional framework pack still needs a terminal install.
 
-Print exactly this template for each blocked/failed pack (concatenate if there are multiple):
+Print exactly this template for each pending pack (concatenate if there are multiple):
 
 ```
 ═══════════════════════════════════════════════════════════════════════════════
-  [!] ACTION REQUIRED — Framework pack install was blocked
+  [!] ACTION REQUIRED — Framework pack pending manual install
 ═══════════════════════════════════════════════════════════════════════════════
 
   Pack: <pack-display-name> (<repo>)
-  Cause: <one-line reason — typically "Claude Code auto-mode classifier
-          blocks external installs as a safety gate, independent of
-          settings.json allowlist">
+  Cause: Claude Code auto-mode blocks external npx installs during /scaffold.
 
   Finish the install in 2 steps:
 
@@ -838,10 +918,9 @@ Print exactly this template for each blocked/failed pack (concatenate if there a
 
   2) Come back to Claude Code and run:
 
-       /install-framework-packs
+       /install-framework-packs --list
 
-     The skill is idempotent — it verifies the install completed and
-     reports any remaining blocked packs.
+     This verifies the install completed and reports any remaining missing packs.
 
 ═══════════════════════════════════════════════════════════════════════════════
 ```
@@ -850,7 +929,7 @@ Banner rules:
 
 - The banner MUST be the absolute last text printed in the scaffold report. Do not append further "Files written" or "Configuration" blocks below it.
 - Use real Unicode box characters (`═`). Do not collapse to ASCII dashes.
-- One banner per blocked pack. If two packs are blocked, print two banners back-to-back.
-- If all packs installed successfully, omit the banner entirely and end the report on Next steps.
+- One banner per pending pack. If two packs are pending, print two banners back-to-back.
+- If all selected packs are already installed, omit the banner entirely and end the report on Next steps.
 
 If no framework packs were configured (the user picked None), neither this banner nor the addendum appears in the report.

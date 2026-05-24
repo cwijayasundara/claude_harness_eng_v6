@@ -18,6 +18,13 @@ fi
 # Docker services
 {{DOCKER_COMPOSE_CMD}}
 
+# Telemetry stack (OTEL Collector + Prometheus + Pushgateway + Grafana)
+if [ -f "telemetry_docker_compose.yml" ]; then
+  echo "Starting telemetry stack..."
+  docker compose -f telemetry_docker_compose.yml up -d
+  echo "Grafana dashboard: http://localhost:3001/d/claude-harness-overview/"
+fi
+
 # Health checks
 echo "Waiting for services..."
 {{HEALTH_CHECKS}}

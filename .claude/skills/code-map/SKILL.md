@@ -1,6 +1,6 @@
 ---
 name: code-map
-description: Build a deterministic dependency graph of an existing codebase (Python, Node, TypeScript, C#, Java, Go). Outputs JSON + Mermaid + metrics for downstream brownfield, refactor, and seam-finder skills.
+description: Build a deterministic dependency graph of an existing codebase (Python, Node, TypeScript, C#, Java, Go). Can import Understand-Anything knowledge graphs for AST/call/dependency fidelity. Outputs JSON + Mermaid + metrics for downstream brownfield, refactor, and seam-finder skills.
 argument-hint: "[path]"
 context: fork
 ---
@@ -27,16 +27,17 @@ Defaults to the repository root.
 
 The skill picks the strongest available producer in this order. Stop at the first that succeeds.
 
-1. **`graphify` skill** — if installed, invoke `/graphify <path>`. Read its `GRAPH_REPORT.md` plus `.graphify/graph.json` (or equivalent) and project into our schema. Best fidelity for 25 languages.
-2. **`hex-graph` MCP** — if the MCP server is available, query its SQLite KG via the `symbol_search`, `references`, and `architecture_overview` tools. Project results into our schema.
-3. **Vendored script** — `scripts/build_graph.js` runs deterministic regex extraction with zero npm dependencies (Node stdlib only):
+1. **Understand-Anything knowledge graph** — if `.understand-anything/knowledge-graph.json` exists, import it with `scripts/import_understand_graph.js`. This is the preferred path for AST-derived file, symbol, call, inheritance, read/write, and dependency edges when the Understand-Anything Claude Code plugin has already analyzed the repo.
+2. **`graphify` skill** — if installed, invoke `/graphify <path>`. Read its `GRAPH_REPORT.md` plus `.graphify/graph.json` (or equivalent) and project into our schema. Best fidelity for 25 languages.
+3. **`hex-graph` MCP** — if the MCP server is available, query its SQLite KG via the `symbol_search`, `references`, and `architecture_overview` tools. Project results into our schema.
+4. **Vendored script** — `scripts/build_graph.js` runs deterministic regex extraction with zero npm dependencies (Node stdlib only):
    - **Python** — imports (`import`, `from … import`), classes, functions, **re-exported names** (from `__init__.py` and `__all__`), and a coarse **call graph** (`sym:` edges for non-builtin call sites)
    - **Node / TypeScript** — `import`, `require()`, exports, classes, top-level functions and `const`/`let`/`var`
    - **Java** — `package`, `import`, top-level types
    - **C#** — `using`, `namespace`, top-level types
    - **Go** — `package`, `import`, top-level `func` and `type`
 
-   Trade-off vs a tree-sitter implementation: non-Python call graphs and inheritance edges are not produced. For full fidelity in those languages install `graphify` or `hex-graph` (see above).
+   Trade-off vs a tree-sitter implementation: non-Python call graphs and inheritance edges are not produced. For full fidelity in those languages, run Understand-Anything first or install `graphify` / `hex-graph` (see above).
 
 Report which producer ran in `code-graph.meta.json`.
 
@@ -83,7 +84,7 @@ All artifacts go under `specs/brownfield/`. Create the directory if missing.
     "hubs": [{"id": "py:backend/src/services/auth.py", "fan_in": 18, "fan_out": 4}]
   },
   "meta": {
-    "producer": "vendored | graphify | hex-graph",
+    "producer": "vendored | understand-anything | graphify | hex-graph",
     "languages": {"python": 88, "typescript": 54},
     "warnings": [],
     "generated_at": "2026-05-02T12:00:00Z"
@@ -91,7 +92,7 @@ All artifacts go under `specs/brownfield/`. Create the directory if missing.
 }
 ```
 
-**Edge kinds**: `imports`, `calls`, `inherits`, `instantiates`. Vendored fallback emits at least `imports`; tree-sitter or graphify fill in the rest.
+**Edge kinds**: `imports`, `calls`, `inherits`, `instantiates`, `reads_from`, `writes_to`. Vendored fallback emits at least `imports`; Understand-Anything, tree-sitter, graphify, or hex-graph fill in richer edges when available.
 
 **Node kinds**: `file`, `module`, `class`, `function`, `external`. The vendored script emits `file` + `external` by default; symbol-level nodes appear when AST extraction succeeds.
 
@@ -103,7 +104,9 @@ All artifacts go under `specs/brownfield/`. Create the directory if missing.
 
 ```bash
 # Pseudocode — Claude evaluates these in order.
-if command -v graphify &>/dev/null || ls .claude/plugins/*/skills/graphify 2>/dev/null; then
+if test -f .understand-anything/knowledge-graph.json; then
+  PRODUCER=understand-anything
+elif command -v graphify &>/dev/null || ls .claude/plugins/*/skills/graphify 2>/dev/null; then
   PRODUCER=graphify
 elif test -f .claude/mcp/hex-graph.sqlite || mcp_has_tool hex-graph symbol_search; then
   PRODUCER=hex-graph
@@ -112,7 +115,17 @@ else
 fi
 ```
 
-If no MCP/skill is available, run the vendored script:
+If Understand-Anything output exists, import it:
+
+```bash
+node .claude/skills/code-map/scripts/import_understand_graph.js \
+  --in .understand-anything/knowledge-graph.json \
+  --out specs/brownfield/code-graph.json
+```
+
+The adapter preserves the graph's file/symbol relationships and writes both `code-graph.json` and `code-graph.meta.json`. If the Understand-Anything plugin is installed but no knowledge graph exists yet, run the plugin's analysis workflow first, then re-run `/code-map`.
+
+If no external producer is available, run the vendored script:
 
 ```bash
 node .claude/skills/code-map/scripts/build_graph.js \
@@ -161,16 +174,16 @@ If `nodes` is empty or all warnings, stop and report. Do not invent a graph from
 
 ## Language Coverage Matrix
 
-| Language | Vendored fidelity | With tree-sitter | With graphify | With hex-graph |
-|---|---|---|---|---|
-| Python | imports + classes + functions (regex) | full | full | full |
-| Node / JavaScript | imports + classes + funcs + top-level vars (regex) | full | full | full |
-| TypeScript | imports + classes + funcs + types + top-level vars (regex) | full | full | full |
-| Java | imports + package + types (regex) | full | full | full |
-| C# | usings + namespace + types (regex) | full | full | full |
-| Go | imports + package + funcs + types (regex) | full | full | full |
+| Language | Vendored fidelity | With Understand-Anything | With tree-sitter | With graphify | With hex-graph |
+|---|---|---|---|---|---|
+| Python | imports + classes + functions (regex) | full when present in source graph | full | full | full |
+| Node / JavaScript | imports + classes + funcs + top-level vars (regex) | full when present in source graph | full | full | full |
+| TypeScript | imports + classes + funcs + types + top-level vars (regex) | full when present in source graph | full | full | full |
+| Java | imports + package + types (regex) | full when present in source graph | full | full | full |
+| C# | usings + namespace + types (regex) | full when present in source graph | full | full | full |
+| Go | imports + package + funcs + types (regex) | full when present in source graph | full | full | full |
 
-"Full" means file + symbol + call + inheritance edges. The vendored regex extractor produces file + import + top-level-symbol fidelity for every supported language. Call-graph and inheritance edges require an external producer. Install `graphify` or `hex-graph` to get them; the skill detects them automatically and projects their output into our schema.
+"Full" means file + symbol + call + inheritance edges. The vendored regex extractor produces file + import + top-level-symbol fidelity for every supported language. Call-graph and inheritance edges require an external producer. Understand-Anything is imported from `.understand-anything/knowledge-graph.json`; the adapter does not invent missing edges, so fidelity is bounded by what that plugin emitted. Install `graphify` or `hex-graph` if that path fits the target repo better.
 
 ---
 
@@ -193,6 +206,7 @@ Downstream skills should treat `code-graph.json` as the source of truth for stru
 
 - **Do not call this skill on greenfield projects.** It is for existing codebases. On an empty repo it produces a useless empty graph.
 - **Do not edit the JSON by hand.** Re-run the skill to refresh.
+- **Understand-Anything imports are source-of-truth preserving.** If its graph omits calls or symbol references, fix or re-run that producer instead of filling gaps manually.
 - **Stale graphs lie.** Re-run after large refactors. The skill is fast (under 30s for most repos under 5k files).
 - **Vendor directories.** Skip `node_modules`, `.venv`, `venv`, `dist`, `build`, `target`, `vendor`, `.git`. The script does this by default but custom layouts may need `--exclude`.
 - **Generated code.** Treat generated files (`*.pb.go`, `*.generated.ts`, `migrations/`) as nodes, but flag them in the coupling report so refactors do not target them.

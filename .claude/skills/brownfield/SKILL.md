@@ -65,11 +65,24 @@ Use `rg`, `find`, package manifests, config files, and existing docs. Prefer pri
 
 ## Step 1.5 — Build the Dependency Graph
 
-Run `/code-map` or invoke the vendored script directly to produce deterministic graph artifacts the rest of this skill cites as evidence:
+Run `/code-map` or invoke the graph scripts directly to produce deterministic graph artifacts the rest of this skill cites as evidence. If the Understand-Anything Claude Code plugin already produced `.understand-anything/knowledge-graph.json`, import that richer AST graph first:
+
+```bash
+node .claude/skills/code-map/scripts/import_understand_graph.js \
+  --in .understand-anything/knowledge-graph.json \
+  --out specs/brownfield/code-graph.json
+```
+
+Otherwise build the vendored fallback graph:
 
 ```bash
 node .claude/skills/code-map/scripts/build_graph.js \
   --root . --out specs/brownfield/code-graph.json
+```
+
+Then render the graph and coupling report:
+
+```bash
 node .claude/skills/code-map/scripts/build_graph.js \
   --render-mermaid specs/brownfield/code-graph.json \
   --out specs/brownfield/dependency-graph.md
@@ -80,11 +93,12 @@ node .claude/skills/code-map/scripts/build_graph.js \
 
 Producer resolution order:
 
-1. `graphify` skill, if installed by the user.
-2. `hex-graph` MCP, if available.
-3. Vendored zero-dependency Node.js scripts in `.claude/skills/code-map/scripts/`.
+1. Understand-Anything `.understand-anything/knowledge-graph.json`, if present.
+2. `graphify` skill, if installed by the user.
+3. `hex-graph` MCP, if available.
+4. Vendored zero-dependency Node.js scripts in `.claude/skills/code-map/scripts/`.
 
-If `graphify` or `hex-graph` is available, prefer it and project the result into the same `code-graph.json` schema. If the graph is empty or has only warnings, stop and report. Do not invent architecture from filenames.
+If Understand-Anything, `graphify`, or `hex-graph` is available, prefer it and project the result into the same `code-graph.json` schema. If the graph is empty or has only warnings, stop and report. Do not invent architecture from filenames.
 
 ---
 

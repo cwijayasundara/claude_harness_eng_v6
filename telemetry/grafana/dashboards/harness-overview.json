@@ -1,0 +1,524 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "type": "row",
+      "title": "Velocity Overview",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "collapsed": false
+    },
+    {
+      "title": "Team Activity — Turns by User",
+      "description": "Total cumulative conversation turns per team member. Moves for slash commands even before agent runs exist.",
+      "type": "barchart",
+      "gridPos": { "h": 9, "w": 16, "x": 0, "y": 1 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "sum by (user) (max_over_time(harness_conversation_turns_total{job=\"claude_harness_memory\",user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range]))",
+        "legendFormat": "{{user}}",
+        "instant": true
+      }],
+      "options": {
+        "orientation": "vertical",
+        "showValue": "always",
+        "barWidth": 0.6,
+        "groupWidth": 0.8,
+        "stacking": "none",
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Quality — Success vs Failure",
+      "description": "Overall success rate. Uses agent runs when present; otherwise falls back to tool completion results.",
+      "type": "piechart",
+      "gridPos": { "h": 9, "w": 8, "x": 16, "y": 1 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "sum by (exit) (max_over_time(harness_agent_runs_total{job=\"claude_harness_memory\",kind=~\"subagent|subagent_stop\", user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range])) or sum by (exit) (max_over_time(harness_tool_events_total{job=\"claude_harness_memory\",user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range]))",
+        "legendFormat": "{{exit}}"
+      }],
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "values": ["value", "percent"] },
+        "pieType": "donut",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "ok" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "error" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] }
+        ]
+      }
+    },
+    {
+      "type": "row",
+      "title": "Workload Distribution",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 10 },
+      "collapsed": false
+    },
+    {
+      "title": "Agent / Tool Workload — Runs by Type",
+      "description": "Runs per agent type when subagent telemetry exists; otherwise falls back to tool activity.",
+      "type": "barchart",
+      "gridPos": { "h": 9, "w": 16, "x": 0, "y": 11 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "sum by (agent) (max_over_time(harness_agent_runs_total{job=\"claude_harness_memory\",kind=~\"subagent|subagent_stop\", user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range])) or sum by (agent) (label_replace(max_over_time(harness_tool_events_total{job=\"claude_harness_memory\",user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range]), \"agent\", \"tool:$1\", \"tool\", \"(.+)\"))",
+        "legendFormat": "{{agent}}",
+        "instant": true
+      }],
+      "options": {
+        "orientation": "vertical",
+        "showValue": "always",
+        "barWidth": 0.6,
+        "groupWidth": 0.8,
+        "stacking": "none",
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Lane Usage",
+      "description": "Work distribution by lane. Uses cumulative conversation turns so BRD/spec/design activity appears immediately.",
+      "type": "piechart",
+      "gridPos": { "h": 9, "w": 8, "x": 16, "y": 11 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "sum by (lane) (max_over_time(harness_conversation_turns_total{job=\"claude_harness_memory\",user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range]))",
+        "legendFormat": "{{lane}}"
+      }],
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "values": ["value", "percent"] },
+        "pieType": "donut",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } }, "overrides": [] }
+    },
+    {
+      "type": "row",
+      "title": "Sprint Progress",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 20 },
+      "collapsed": false
+    },
+    {
+      "title": "Current Iteration per Group",
+      "description": "Ratchet iterations per dependency group. Fewer = more efficient.",
+      "type": "stat",
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 21 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "max by (group, user) (harness_iteration_current{job=\"claude_harness_memory\",user=~\"$user\", group=~\"$group\"})",
+        "legendFormat": "{{group}} ({{user}})"
+      }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto", "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{"color":"green","value":null},{"color":"yellow","value":5},{"color":"red","value":10}] } }, "overrides": [] }
+    },
+    {
+      "title": "Active Stories",
+      "description": "Stories currently being worked on, by user and group.",
+      "type": "table",
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 21 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "harness_story_active{job=\"claude_harness_memory\",user=~\"$user\", group=~\"$group\"}",
+        "format": "table",
+        "instant": true
+      }],
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "instance": true, "job": true, "Value": true } } }
+      ]
+    },
+    {
+      "title": "Pending Reviews",
+      "description": "Reviews waiting for humans. Rising = harness outpacing reviewers.",
+      "type": "stat",
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 21 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "sum by (user) (harness_pending_reviews{job=\"claude_harness_memory\",user=~\"$user\"})",
+        "legendFormat": "{{user}}"
+      }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto", "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{"color":"green","value":null},{"color":"yellow","value":3},{"color":"red","value":5}] } }, "overrides": [] }
+    },
+    {
+      "type": "row",
+      "title": "Effort Analysis",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 28 },
+      "collapsed": false
+    },
+    {
+      "title": "Effort per Group — Total Activity",
+      "description": "Cumulative conversation turns per dependency group. Moves before agent-run telemetry exists.",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 29 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "sum by (group) (max_over_time(harness_conversation_turns_total{job=\"claude_harness_memory\",user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range]))",
+        "legendFormat": "{{group}}",
+        "instant": true
+      }],
+      "options": { "orientation": "horizontal", "displayMode": "gradient", "reduceOptions": { "calcs": ["lastNotNull"] }, "showUnfilled": true },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "unit": "short" }, "overrides": [] }
+    },
+    {
+      "title": "Effort per Story — Total Activity",
+      "description": "Cumulative conversation turns per story. Disproportionate effort = needs decomposition.",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 29 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "sum by (story) (max_over_time(harness_conversation_turns_total{job=\"claude_harness_memory\",user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range]))",
+        "legendFormat": "{{story}}",
+        "instant": true
+      }],
+      "options": { "orientation": "horizontal", "displayMode": "gradient", "reduceOptions": { "calcs": ["lastNotNull"] }, "showUnfilled": true },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "unit": "short" }, "overrides": [] }
+    },
+    {
+      "type": "row",
+      "title": "Quality Details",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 37 },
+      "collapsed": false
+    },
+    {
+      "title": "Success Rate per Agent / Tool",
+      "description": "Per-agent success rate when subagent runs exist; otherwise falls back to tool completion success.",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 38 },
+      "datasource": { "type": "prometheus" },
+      "targets": [
+        {
+          "expr": "((100 * sum by (agent) (max_over_time(harness_agent_runs_total{job=\"claude_harness_memory\",agent!=\"unknown\", kind=~\"subagent|subagent_stop\", exit=\"ok\", user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range])) / clamp_min(sum by (agent) (max_over_time(harness_agent_runs_total{job=\"claude_harness_memory\",agent!=\"unknown\", kind=~\"subagent|subagent_stop\", user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range])), 1)) or on(agent) (0 * sum by (agent) (max_over_time(harness_agent_runs_total{job=\"claude_harness_memory\",agent!=\"unknown\", kind=~\"subagent|subagent_stop\", user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range])))) or (100 * sum by (agent) (label_replace(max_over_time(harness_tool_events_total{job=\"claude_harness_memory\",exit=\"ok\",user=~\"$user\",lane=~\"$lane\",group=~\"$group\"}[$__range]), \"agent\", \"tool:$1\", \"tool\", \"(.+)\")) / clamp_min(sum by (agent) (label_replace(max_over_time(harness_tool_events_total{job=\"claude_harness_memory\",user=~\"$user\",lane=~\"$lane\",group=~\"$group\"}[$__range]), \"agent\", \"tool:$1\", \"tool\", \"(.+)\")), 1))",
+          "legendFormat": "{{agent}}",
+          "instant": true
+        }
+      ],
+      "options": { "orientation": "horizontal", "displayMode": "gradient", "reduceOptions": { "calcs": ["lastNotNull"] }, "showUnfilled": true },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "thresholds" }, "unit": "percent", "min": 0, "max": 100, "thresholds": { "steps": [{"color":"red","value":null},{"color":"yellow","value":80},{"color":"green","value":90}] } },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Execution Mode Distribution",
+      "description": "Full = all gates. Lean = skip design-critic. Solo = single agent. Turbo = parallel groups.",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 38 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "sum by (mode) (max_over_time(harness_conversation_turns_total{job=\"claude_harness_memory\",user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range]))",
+        "legendFormat": "{{mode}}"
+      }],
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "values": ["value", "percent"] },
+        "pieType": "donut",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } }, "overrides": [] }
+    },
+    {
+      "type": "row",
+      "title": "Engagement",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 46 },
+      "collapsed": false
+    },
+    {
+      "title": "Conversation Turns — by User & Lane",
+      "description": "Total conversation turns per user per lane. Proxy for engagement with each workflow.",
+      "type": "bargauge",
+      "gridPos": { "h": 9, "w": 8, "x": 0, "y": 47 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "sum by (user, lane) (max_over_time(harness_conversation_turns_total{job=\"claude_harness_memory\",user=~\"$user\", lane=~\"$lane\"}[$__range]))",
+        "legendFormat": "{{user}} — {{lane}}",
+        "instant": true
+      }],
+      "options": { "orientation": "horizontal", "displayMode": "gradient", "reduceOptions": { "calcs": ["lastNotNull"] }, "showUnfilled": true },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Command Invocations — by Command",
+      "description": "Slash-command prompts by command. BRD/spec/design work appears here even when no subagents run.",
+      "type": "bargauge",
+      "gridPos": { "h": 9, "w": 8, "x": 8, "y": 47 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "sum by (command) (max_over_time(harness_command_invocations_total{job=\"claude_harness_memory\",user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range]))",
+        "legendFormat": "/{{command}}",
+        "instant": true
+      }],
+      "options": { "orientation": "horizontal", "displayMode": "gradient", "reduceOptions": { "calcs": ["lastNotNull"] }, "showUnfilled": true },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Tool Activity — by Tool",
+      "description": "Tool completions by tool. BRD writing activity appears here through Write/Edit/MultiEdit events.",
+      "type": "bargauge",
+      "gridPos": { "h": 9, "w": 8, "x": 16, "y": 47 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "sum by (tool) (max_over_time(harness_tool_events_total{job=\"claude_harness_memory\",user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range]))",
+        "legendFormat": "{{tool}}",
+        "instant": true
+      }],
+      "options": { "orientation": "horizontal", "displayMode": "gradient", "reduceOptions": { "calcs": ["lastNotNull"] }, "showUnfilled": true },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "row",
+      "title": "Claude Code Native OTEL Metrics",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 56 },
+      "collapsed": false
+    },
+    {
+      "title": "Sessions",
+      "description": "Total CLI sessions. Auto-enabled by scaffold via CLAUDE_CODE_ENABLE_TELEMETRY=1.",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 57 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{ "expr": "sum(max_over_time(claude_code_session_count_total[$__range]) or max_over_time(claude_code_session_count[$__range]))", "legendFormat": "sessions" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{"color":"blue","value":null}] }, "unit": "short", "noValue": "Waiting for OTEL data" }, "overrides": [] }
+    },
+    {
+      "title": "Cost (USD)",
+      "description": "Total session cost across all users and models.",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 57 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{ "expr": "sum(max_over_time(claude_code_cost_usage_USD_total[$__range]) or max_over_time(claude_code_cost_usage_total[$__range]) or max_over_time(claude_code_cost_usage[$__range]))", "legendFormat": "cost" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{"color":"green","value":null},{"color":"yellow","value":50},{"color":"red","value":200}] }, "unit": "currencyUSD", "noValue": "Waiting for OTEL data" }, "overrides": [] }
+    },
+    {
+      "title": "Tokens Used",
+      "description": "Total tokens consumed across all sessions.",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 57 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{ "expr": "sum(max_over_time(claude_code_token_usage_tokens_total[$__range]) or max_over_time(claude_code_token_usage_total[$__range]) or max_over_time(claude_code_token_usage[$__range]))", "legendFormat": "tokens" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{"color":"purple","value":null}] }, "unit": "short", "noValue": "Waiting for OTEL data" }, "overrides": [] }
+    },
+    {
+      "title": "Active Time",
+      "description": "Total active time across all sessions.",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 57 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{ "expr": "sum(max_over_time(claude_code_active_time_seconds_total[$__range]) or max_over_time(claude_code_active_time_total[$__range]))", "legendFormat": "time" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{"color":"orange","value":null}] }, "unit": "s", "noValue": "Waiting for OTEL data" }, "overrides": [] }
+    },
+    {
+      "title": "Developer Output",
+      "description": "Commits, PRs, and lines of code modified.",
+      "type": "bargauge",
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 63 },
+      "datasource": { "type": "prometheus" },
+      "targets": [
+        { "expr": "(sum(max_over_time(claude_code_commit_count_total[$__range]) or max_over_time(claude_code_commit_count[$__range]))) or vector(0)", "legendFormat": "commits", "instant": true },
+        { "expr": "(sum(max_over_time(claude_code_pull_request_count_total[$__range]) or max_over_time(claude_code_pull_request_count[$__range]))) or vector(0)", "legendFormat": "pull requests", "instant": true },
+        { "expr": "(sum(max_over_time(claude_code_lines_of_code_count_total[$__range]) or max_over_time(claude_code_lines_of_code_count[$__range]))) or vector(0)", "legendFormat": "lines changed", "instant": true }
+      ],
+      "options": { "orientation": "horizontal", "displayMode": "gradient", "reduceOptions": { "calcs": ["lastNotNull"] }, "showUnfilled": true },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" }, "unit": "short", "decimals": 0, "noValue": "Waiting for OTEL data" },
+        "overrides": []
+      }
+    },
+    {
+      "type": "row",
+      "title": "Native Usage Details",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 70 },
+      "collapsed": false
+    },
+    {
+      "title": "Native Tokens — by Type",
+      "description": "Claude Code native token usage by token type over the selected range.",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 71 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "sum by (type) (max_over_time(claude_code_token_usage_tokens_total[$__range]) or max_over_time(claude_code_token_usage_total[$__range]) or max_over_time(claude_code_token_usage[$__range]))",
+        "legendFormat": "{{type}}",
+        "instant": true
+      }],
+      "options": { "orientation": "horizontal", "displayMode": "gradient", "reduceOptions": { "calcs": ["lastNotNull"] }, "showUnfilled": true },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "unit": "short", "decimals": 0, "noValue": "Waiting for OTEL data" }, "overrides": [] }
+    },
+    {
+      "title": "Native Cost — by Model",
+      "description": "Claude Code native cost attribution by model over the selected range.",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 71 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "sum by (model) (max_over_time(claude_code_cost_usage_USD_total[$__range]) or max_over_time(claude_code_cost_usage_total[$__range]) or max_over_time(claude_code_cost_usage[$__range]))",
+        "legendFormat": "{{model}}",
+        "instant": true
+      }],
+      "options": { "orientation": "horizontal", "displayMode": "gradient", "reduceOptions": { "calcs": ["lastNotNull"] }, "showUnfilled": true },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "unit": "currencyUSD", "decimals": 4, "noValue": "Waiting for OTEL data" }, "overrides": [] }
+    },
+    {
+      "title": "Native Edit Decisions",
+      "description": "Claude Code native edit accept/reject telemetry when emitted by the CLI.",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 71 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "(sum by (decision) (max_over_time(claude_code_code_edit_tool_decision_total[$__range]) or max_over_time(claude_code_code_edit_tool_decision[$__range]))) or vector(0)",
+        "legendFormat": "{{decision}}",
+        "instant": true
+      }],
+      "options": { "orientation": "horizontal", "displayMode": "gradient", "reduceOptions": { "calcs": ["lastNotNull"] }, "showUnfilled": true },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "unit": "short", "decimals": 0, "noValue": "Waiting for OTEL data" }, "overrides": [] }
+    },
+    {
+      "type": "row",
+      "title": "Harness Skill Telemetry",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 79 },
+      "collapsed": false
+    },
+    {
+      "title": "Skill Usage — by Skill",
+      "description": "Custom harness skill usage inferred from commands, lanes, skill hook fields, and skill path mentions. Shows installed skills at zero until used.",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 80 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "sum by (skill) (max_over_time(harness_skill_usage_total{job=\"claude_harness_memory\",user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range])) or (0 * sum by (skill) (harness_skill_info{job=\"claude_harness_memory\"}))",
+        "legendFormat": "{{skill}}",
+        "instant": true
+      }],
+      "options": { "orientation": "horizontal", "displayMode": "gradient", "reduceOptions": { "calcs": ["lastNotNull"] }, "showUnfilled": true },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "unit": "short", "decimals": 0 }, "overrides": [] }
+    },
+    {
+      "title": "Installed Skills — Memory Inventory",
+      "description": "Every installed skill saved in memory and pushed to Prometheus with path and description labels.",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 80 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "harness_skill_info{job=\"claude_harness_memory\"}",
+        "format": "table",
+        "instant": true
+      }],
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "instance": true, "job": true, "Value": true }, "indexByName": { "skill": 0, "directory": 1, "path": 2, "description": 3 } } }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Detail Log",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 88 },
+      "collapsed": false
+    },
+    {
+      "title": "Detailed — All Agent Runs",
+      "description": "Full breakdown of every agent execution. Use to trace what happened on a specific story or group.",
+      "type": "table",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 89 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{
+        "expr": "harness_agent_runs_total{job=\"claude_harness_memory\",user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}",
+        "format": "table",
+        "instant": true
+      }],
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "instance": true, "job": true }, "indexByName": { "user": 0, "group": 1, "story": 2, "agent": 3, "lane": 4, "mode": 5, "exit": 6, "iteration": 7, "kind": 8, "host": 9, "Value": 10 } } }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["claude-harness", "productivity", "velocity"],
+  "templating": {
+    "list": [
+      {
+        "name": "user",
+        "label": "Team Member",
+        "type": "query",
+        "query": "label_values({job=\"claude_harness_memory\",__name__=~\"harness_.*\"}, user)",
+        "datasource": { "type": "prometheus" },
+        "multi": true,
+        "includeAll": true,
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "refresh": 2
+      },
+      {
+        "name": "lane",
+        "label": "Lane",
+        "type": "query",
+        "query": "label_values({job=\"claude_harness_memory\",__name__=~\"harness_.*\"}, lane)",
+        "datasource": { "type": "prometheus" },
+        "multi": true,
+        "includeAll": true,
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "refresh": 2
+      },
+      {
+        "name": "group",
+        "label": "Group",
+        "type": "query",
+        "query": "label_values({job=\"claude_harness_memory\",__name__=~\"harness_.*\"}, group)",
+        "datasource": { "type": "prometheus" },
+        "multi": true,
+        "includeAll": true,
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "refresh": 2
+      }
+    ]
+  },
+  "time": { "from": "now-7d", "to": "now" },
+  "title": "Claude Harness — Team Productivity",
+  "uid": "claude-harness-overview"
+}
