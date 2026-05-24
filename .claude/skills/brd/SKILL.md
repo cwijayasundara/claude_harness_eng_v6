@@ -147,6 +147,28 @@ After all five dimensions are confirmed, produce a structured BRD with these sec
 
 Create the `specs/brd/` directory if it does not exist.
 
+### Step 4.5 — Phase Evaluation Gate
+
+Spawn the `phase-evaluator` agent to validate the BRD before human review.
+
+**Agent invocation:**
+
+Spawn Agent with subagent_type="phase-evaluator" and prompt:
+- Phase: brd
+- Artifact: the BRD file path (specs/brd/brd.md or specs/brd/feature-{name}.md)
+- Upstream: none
+- Rubric: Read .claude/templates/phase-eval-rubrics.json, key "brd"
+- Iteration: 1 (increment on retry)
+- Previous score: null (or previous iteration's weighted_average)
+- Write result to specs/reviews/phase-brd-eval.json
+
+**Ratchet loop (max 3 iterations):**
+
+1. If verdict is **PASS** — proceed to Step 5. Attach the eval summary (weighted average, any warnings).
+2. If verdict is **FAIL** — revise the BRD to address ALL error-severity findings. Re-run the evaluator with incremented iteration and previous score.
+3. **Ratchet rule:** weighted_average must be >= previous iteration's score. If it decreases, revert to the previous version and try a different revision approach.
+4. After 3 iterations without PASS — present the best-scoring version to the human with all findings attached. Note: "Phase evaluator did not reach threshold after 3 iterations. Findings below require human judgment."
+
 ### Step 5 — Present for Human Approval
 
 Display the BRD and ask: "Does this BRD accurately capture the requirements? Approve to proceed to `/spec`, or provide corrections."
@@ -164,7 +186,9 @@ Display the BRD and ask: "Does this BRD accurately capture the requirements? App
 
 ## Gate
 
-**Human approval is required before proceeding to `/spec`.**
+**Phase evaluation gate runs before human approval.** The phase-evaluator agent scores the BRD against 5 criteria (completeness, traceability, specificity, consistency, actionability). Threshold: average >= 7.0, all criteria >= 5.
+
+**Human approval is still required before proceeding to `/spec`.** The evaluator validates quality; the human validates intent.
 
 Do not auto-advance. Wait for explicit approval or correction.
 
