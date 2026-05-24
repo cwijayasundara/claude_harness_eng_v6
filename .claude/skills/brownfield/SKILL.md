@@ -219,6 +219,46 @@ Do not proceed to code changes from `/brownfield` unless the user explicitly ask
 
 ---
 
+## Phase Evaluation Gate
+
+After all discovery artifacts are written, spawn the `phase-evaluator` agent to validate the brownfield analysis.
+
+**Agent invocation:**
+
+Spawn Agent with subagent_type="phase-evaluator" and prompt:
+- Phase: brownfield
+- Artifacts: specs/brownfield/codebase-map.md, specs/brownfield/architecture-map.md, specs/brownfield/test-map.md, specs/brownfield/risk-map.md, specs/brownfield/coupling-report.md, specs/brownfield/code-graph.json (if exists)
+- Upstream: null (verify against actual codebase instead)
+- Rubric: Read .claude/templates/phase-eval-rubrics.json, key "brownfield"
+- Iteration: 1 (increment on retry)
+- Previous score: null (or previous iteration's weighted_average)
+- Verification: Spot-check 3-5 modules claimed in architecture-map.md actually exist as directories/files. Verify test commands in test-map.md reference real test files.
+- Write result to specs/reviews/phase-brownfield-eval.json
+
+**Ratchet loop (max 2 iterations):**
+
+1. If verdict is **PASS** — proceed to Human Gate with eval summary.
+2. If verdict is **FAIL** — re-scan the areas with findings. Update the maps. Re-run evaluator.
+3. **Ratchet rule:** weighted_average must be >= previous iteration. Revert on regression.
+4. After 2 iterations — present best version with findings to human.
+
+---
+
+## Human Gate
+
+**Human approval is required before proceeding to implementation.**
+
+Present the discovery maps with the evaluator's quality summary:
+- Weighted average score (e.g., "Discovery quality: 8.2/10")
+- Any remaining warnings from the evaluator
+- Recommended change strategy
+
+Ask: "Does this brownfield analysis look accurate? Approve to proceed, or flag areas that need re-scanning."
+
+Do not proceed to code changes from `/brownfield` unless the user explicitly approves the discovery AND requests changes.
+
+---
+
 ## Gotchas
 
 - **Do not invent architecture.** If evidence is missing, say unknown.
