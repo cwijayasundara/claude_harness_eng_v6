@@ -18,7 +18,7 @@ No arguments. Reads from `specs/stories/` and produces architecture documents, m
 
 ## Overview
 
-This is the third gate in the SDLC pipeline. Two agents run concurrently in a single message: a `planner` agent produces system architecture and machine-readable schemas, while a `ui-designer` agent produces self-contained HTML mockups. After both complete, a post-completion validation step verifies that UI data shapes align with API contracts.
+This is the third gate in the SDLC pipeline. Two agents run concurrently in a single message: a `planner` agent produces system architecture and machine-readable schemas, while a `ui-designer` agent produces self-contained HTML mockups. After both complete, a `phase-evaluator` agent validates cross-phase traceability, schema correctness, and field-shape consistency between mockups and API contracts.
 
 ---
 
@@ -95,19 +95,29 @@ In a single message, invoke both agents using the Agent tool. Do not wait for th
 
 ---
 
-## Step 2 — Post-Completion Validation
+### Step 2 — Phase Evaluation Gate
 
-After both agents complete, perform a validation pass:
+After both agents (planner + ui-designer) complete, spawn the `phase-evaluator` agent. This replaces and extends the previous field-shape validation.
 
-1. Read `specs/design/api-contracts.md`
-2. Read all HTML files in `specs/design/mockups/`
-3. For each mockup, extract field names used in forms and displayed data
-4. Compare against the corresponding API endpoint schemas in `api-contracts.md`
-5. Flag any divergence: field present in mockup but missing from API contract, or vice versa
+**Agent invocation:**
 
-Report the validation results:
-- List any mismatches found (mockup file, field name, expected vs. actual)
-- If all shapes align, confirm: "All UI data shapes validated against API contracts."
+Spawn Agent with subagent_type="phase-evaluator" and prompt:
+- Phase: design
+- Artifacts: specs/design/system-design.md, specs/design/api-contracts.md, specs/design/api-contracts.schema.json, specs/design/data-models.md, specs/design/data-models.schema.json, specs/design/folder-structure.md, specs/design/component-map.md, specs/design/deployment.md, all specs/design/mockups/*.html files
+- Upstream: specs/stories/ (all story files for cross-phase traceability)
+- Rubric: Read .claude/templates/phase-eval-rubrics.json, key "design"
+- Iteration: 1 (increment on retry)
+- Previous score: null (or previous iteration's weighted_average)
+- Cross-phase traceability: Verify every story ID appears in component-map.md. Verify every API-layer story has endpoints in api-contracts.schema.json. Verify every UI-layer story has a mockup in specs/design/mockups/.
+- Include field-shape check: Compare mockup field names against API contract field names. Flag mismatches.
+- Write result to specs/reviews/phase-design-eval.json
+
+**Ratchet loop (max 3 iterations):**
+
+1. If verdict is **PASS** — proceed to human approval with eval summary + traceability report.
+2. If verdict is **FAIL** — revise design artifacts. May re-invoke planner or ui-designer for specific fixes. Re-run evaluator.
+3. **Ratchet rule:** weighted_average must be >= previous iteration. Revert on regression.
+4. After 3 iterations — present best version with findings.
 
 ---
 
@@ -141,6 +151,13 @@ These are new in this pipeline. forge_v2 produced only markdown documents. The `
 
 ## Gate
 
+**Phase evaluation gate runs before human approval.** The phase-evaluator agent validates:
+- Cross-phase traceability (every story has component-map entry, API endpoints, mockups)
+- Schema validity (OpenAPI + JSON Schema syntax)
+- Field-shape consistency (mockup fields match API contracts)
+- Component-map coverage and file ownership
+- Folder structure viability
+
 **Human approval is required before proceeding to `/auto`.**
 
 After presenting all artifacts and validation results, ask: "Does this architecture and these mockups look correct? Approve to proceed to `/auto`, or provide corrections."
@@ -151,7 +168,7 @@ After presenting all artifacts and validation results, ask: "Does this architect
 
 ## Gotchas
 
-- **API shape divergence.** The planner and ui-designer run concurrently and may independently invent field names. The post-completion validation step exists specifically to catch this. Never skip it.
+- **API shape divergence.** The planner and ui-designer run concurrently and may independently invent field names. The phase-evaluator gate exists specifically to catch this. Never skip it.
 - **Missing deployment.md.** Builder agents need to know the target environment. This file is required, not optional.
 - **Mock data must match API contracts.** If a mockup shows a `user_name` field but the API contract defines `username`, the downstream evaluator will flag a mismatch.
 - **No folder structure means builder agents guess.** The `folder-structure.md` and `component-map.md` are the routing instructions for the build phase. Missing or vague entries cause agents to create files in wrong locations.
