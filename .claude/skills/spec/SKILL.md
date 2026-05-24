@@ -163,6 +163,34 @@ Do not write `specs/features.json`. `features.json` is root-level because `/auto
 
 Every acceptance criterion must map to at least one feature. No criteria may be omitted.
 
+### Step 6.5 — Phase Evaluation Gate
+
+Spawn the `phase-evaluator` agent to validate the spec against the BRD.
+
+**Agent invocation:**
+
+Spawn Agent with subagent_type="phase-evaluator" and prompt:
+- Phase: spec
+- Artifacts: specs/stories/epics.md, specs/stories/dependency-graph.md, all specs/stories/E*-S*.md files, features.json
+- Upstream: specs/brd/brd.md (for cross-phase traceability)
+- Rubric: Read .claude/templates/phase-eval-rubrics.json, key "spec"
+- Iteration: 1 (increment on retry)
+- Previous score: null (or previous iteration's weighted_average)
+- Cross-phase traceability: Parse BRD goals (Sections 2 and 4). Verify every story traces to a BRD goal. Flag orphan stories and uncovered goals.
+- Write result to specs/reviews/phase-spec-eval.json
+
+**Ratchet loop (max 3 iterations):**
+
+1. If verdict is **PASS** — proceed to Step 7. Attach eval summary + traceability report.
+2. If verdict is **FAIL** — revise stories to address ALL error-severity findings. Re-run evaluator with incremented iteration.
+3. **Ratchet rule:** weighted_average must be >= previous iteration. Revert on regression.
+4. After 3 iterations — present best version with findings to human.
+
+**Traceability report shown to human:**
+- "X/Y BRD goals covered by stories"
+- List of orphan stories (not tracing to any BRD goal)
+- List of uncovered goals (BRD goals with no stories)
+
 ### Step 7 — Present for Human Review
 
 Display:
@@ -187,11 +215,15 @@ Display:
 
 ## Gate
 
-**Human review is required before proceeding to `/design`.**
+**Phase evaluation gate runs before human review.** The phase-evaluator agent validates:
+- Cross-phase traceability (every story traces to a BRD goal)
+- Acceptance criteria quality (no vague language)
+- Dependency graph consistency (acyclic, valid groups)
+- Feature coverage (every AC maps to features.json)
 
-Do not auto-advance. Every story must have testable criteria, a layer assignment, and a group before approval is requested.
+**Human review is still required before proceeding to `/design`.** The evaluator validates structure and traceability; the human validates product intent.
 
-Pre-approval checklist:
+Pre-approval checklist (verified by evaluator, confirmed by human):
 - [ ] Every story has 3-6 specific, testable acceptance criteria
 - [ ] Every story has a layer assignment
 - [ ] Every story has a group assignment
@@ -199,6 +231,9 @@ Pre-approval checklist:
 - [ ] No circular dependencies in the graph
 - [ ] Every acceptance criterion maps to at least one feature in `features.json`
 - [ ] All `passes` fields are `false`
+- [ ] Every story traces to a BRD goal (evaluator-enforced)
+
+Do not auto-advance. Wait for explicit approval or correction.
 
 ---
 
