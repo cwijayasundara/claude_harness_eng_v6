@@ -1,0 +1,6 @@
+{
+  "brd": "Check: (1) Has >= 3 success metrics with specific numbers or measurable outcomes, not vague phrases. (2) Has explicit In-Scope and Out-of-Scope lists with >= 3 items each. (3) MVP is defined as a subset of full scope. (4) At least 1 alternative approach documented. Return JSON: {\"pass\": true/false, \"failures\": [\"reason1\", ...]}",
+  "spec": "Check: (1) Every story has 3-6 acceptance criteria. (2) No criteria use vague language like 'works properly', 'loads fast', 'user-friendly', 'looks good'. (3) Stories have group assignments (A, B, etc). (4) Each story has a layer assignment. Return JSON: {\"pass\": true/false, \"failures\": [\"reason1\", ...]}",
+  "design": "Check: (1) A data model defines a todo entity with fields: id, text, completed, createdAt. (2) A folder structure is present showing where source files go. (3) Component map exists mapping stories to files. Return JSON: {\"pass\": true/false, \"failures\": [\"reason1\", ...]}",
+  "brownfield": "Check: (1) Architecture map lists modules/files that exist in a Node.js CLI project. (2) References to specific files (like index.js, todo.js, or similar). (3) Test map mentions a test command. Return JSON: {\"pass\": true/false, \"failures\": [\"reason1\", ...]}"
+}
