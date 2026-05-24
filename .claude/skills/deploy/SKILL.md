@@ -114,6 +114,29 @@ bash init.sh
 
 Report the output. If any service fails its health check, print the service logs and stop.
 
+### Step 6.5 — Phase Evaluation Gate
+
+Spawn the `phase-evaluator` agent to validate deploy artifacts before verification.
+
+**Agent invocation:**
+
+Spawn Agent with subagent_type="phase-evaluator" and prompt:
+- Phase: deploy
+- Artifacts: docker-compose.yml, all Dockerfile* files, .env.example, init.sh
+- Upstream: specs/design/system-design.md (if exists)
+- Rubric: Read .claude/templates/phase-eval-rubrics.json, key "deploy"
+- Iteration: 1 (increment on retry)
+- Previous score: null (or previous iteration's weighted_average)
+- Check: Every service in system-design.md has a compose entry. No port conflicts. Health checks defined. YAML syntax valid.
+- Write result to specs/reviews/phase-deploy-eval.json
+
+**Ratchet loop (max 2 iterations):**
+
+1. If verdict is **PASS** — proceed to Verification section.
+2. If verdict is **FAIL** — fix config issues based on findings. Re-run evaluator.
+3. **Ratchet rule:** weighted_average must be >= previous iteration. Revert on regression.
+4. After 2 iterations — proceed to Verification with findings attached as warnings.
+
 ---
 
 ## Verification
