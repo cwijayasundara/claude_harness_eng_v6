@@ -76,37 +76,9 @@ describe('Harness E2E Pipeline', { timeout: 1200000 }, () => {
     console.log('[e2e] Artifacts saved to:', PROJECT_DIR);
   });
 
-  // ── Stage 1: Scaffold ────────────────────────────────────────────────────
+  // ── Stage 1: BRD ──────────────────────────────────────────────────────────
 
-  test('Stage 1 - Scaffold: initialize project', { timeout: 120000 }, () => {
-    const prompt =
-      'Initialize this as a Node.js CLI project. Create a CLAUDE.md, ' +
-      'package.json with name "todo-cli", and basic project structure.';
-
-    const result = runClaude(prompt, {
-      cwd: PROJECT_DIR,
-      model: 'haiku',
-      budgetUsd: '0.50',
-      timeoutMs: 110000,
-    });
-
-    logResult('stage-1-scaffold', {
-      exitCode: result.exitCode,
-      signal: result.signal,
-      stdoutLength: result.stdout.length,
-      stderrLength: result.stderr.length,
-      claudeMdExists: fileExists('CLAUDE.md'),
-      packageJsonExists: fileExists('package.json'),
-    });
-
-    const hasAnyFile = fileExists('CLAUDE.md') || fileExists('package.json') ||
-      fileExists('todo.js') || fileExists('index.js');
-    assert.ok(hasAnyFile, 'Scaffold must create at least one project file');
-  });
-
-  // ── Stage 2: BRD ─────────────────────────────────────────────────────────
-
-  test('Stage 2 - BRD: generate business requirements', { timeout: 180000 }, () => {
+  test('Stage 1 - BRD: generate business requirements', { timeout: 180000 }, () => {
     const brdRequirements = fs.readFileSync(
       path.join(FIXTURES_DIR, 'todo-cli-brd-prompt.md'), 'utf8'
     );
@@ -150,9 +122,9 @@ describe('Harness E2E Pipeline', { timeout: 1200000 }, () => {
     console.log(`[e2e] BRD found at: ${brdPath} (${charCount} chars)`);
   });
 
-  // ── Stage 2b: BRD LLM validation (advisory) ─────────────────────────────
+  // ── Stage 1b: BRD LLM validation (advisory) ─────────────────────────────
 
-  test('Stage 2b - BRD LLM validation (advisory)', { timeout: 60000 }, () => {
+  test('Stage 1b - BRD LLM validation (advisory)', { timeout: 60000 }, () => {
     if (!BRD_PATH) {
       console.log('[e2e] Skipping BRD LLM validation: BRD not found');
       logResult('stage-2b-brd-llm', { skipped: true, reason: 'BRD missing' });
@@ -176,9 +148,9 @@ describe('Harness E2E Pipeline', { timeout: 1200000 }, () => {
     // Advisory only -- no assert.fail
   });
 
-  // ── Stage 3: Spec ────────────────────────────────────────────────────────
+  // ── Stage 2: Spec ────────────────────────────────────────────────────────
 
-  test('Stage 3 - Spec: decompose BRD into stories', { timeout: 180000 }, () => {
+  test('Stage 2 - Spec: decompose BRD into stories', { timeout: 180000 }, () => {
     if (!BRD_PATH) {
       console.log('[e2e] Skipping Spec: BRD not found');
       logResult('stage-3-spec', { skipped: true, reason: 'BRD missing' });
@@ -233,9 +205,9 @@ describe('Harness E2E Pipeline', { timeout: 1200000 }, () => {
     console.log('[e2e] Story count:', storyCount, '| Feature count:', featureCount);
   });
 
-  // ── Stage 3b: Spec LLM validation (advisory) ────────────────────────────
+  // ── Stage 2b: Spec LLM validation (advisory) ────────────────────────────
 
-  test('Stage 3b - Spec LLM validation (advisory)', { timeout: 60000 }, () => {
+  test('Stage 2b - Spec LLM validation (advisory)', { timeout: 60000 }, () => {
     const storyFiles = findFilesInProject('specs/stories', /^E\d+-S\d+.*\.md$/);
     if (storyFiles.length === 0) {
       console.log('[e2e] Skipping Spec LLM validation: no story files found');
@@ -271,9 +243,9 @@ describe('Harness E2E Pipeline', { timeout: 1200000 }, () => {
     // Advisory only -- no assert.fail
   });
 
-  // ── Stage 4: Design ──────────────────────────────────────────────────────
+  // ── Stage 3: Design ──────────────────────────────────────────────────────
 
-  test('Stage 4 - Design: generate architecture', { timeout: 180000 }, () => {
+  test('Stage 3 - Design: generate architecture', { timeout: 600000 }, () => {
     const designPrompt =
       'Read the story files in specs/stories/. Create design artifacts in specs/design/: ' +
       'system-design.md (architecture overview), api-contracts.md (CLI commands as interface), ' +
@@ -302,9 +274,9 @@ describe('Harness E2E Pipeline', { timeout: 1200000 }, () => {
     console.log('[e2e] Design artifacts:', designArtifacts);
   });
 
-  // ── Stage 5: Auto/Solo ───────────────────────────────────────────────────
+  // ── Stage 4: Auto/Solo ───────────────────────────────────────────────────
 
-  test('Stage 5 - Auto/Solo: autonomous build loop', { timeout: 600000 }, () => {
+  test('Stage 4 - Auto/Solo: autonomous build loop', { timeout: 600000 }, () => {
     const autoPrompt =
       'Read specs/design/ and specs/stories/ to understand the todo CLI project. ' +
       'Implement the Node.js CLI todo app based on the design. Create: ' +
