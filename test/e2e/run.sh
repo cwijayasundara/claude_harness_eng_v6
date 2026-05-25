@@ -41,8 +41,15 @@ echo ""
 echo "Running E2E tests..."
 echo ""
 
-# Run with 20-minute timeout
+# Phase 1: Greenfield pipeline (scaffold → brd → spec → design → auto)
+echo "── Phase 1: Greenfield Pipeline ──"
 node --test "$SCRIPT_DIR/harness-pipeline.test.js" --timeout 1200000
+
+echo ""
+
+# Phase 2: Brownfield + code-graph + code change + telemetry + Grafana
+echo "── Phase 2: Brownfield + Telemetry ──"
+node --test "$SCRIPT_DIR/harness-brownfield.test.js" --timeout 1200000
 
 echo ""
 echo "Results saved to: $SCRIPT_DIR/results/"
