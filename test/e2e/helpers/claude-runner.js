@@ -13,12 +13,14 @@ function runClaude(prompt, options = {}) {
     timeoutMs = 300000,
   } = options;
 
+  const pluginDir = path.join(HARNESS_ROOT, '.claude');
   const args = [
     '-p',
     '--model', model,
     '--no-session-persistence',
     '--max-budget-usd', budgetUsd,
-    '--bare',
+    '--plugin-dir', pluginDir,
+    '--allowed-tools', 'Bash Read Write Edit Glob Grep Agent',
   ];
 
   const result = spawnSync('claude', args, {
