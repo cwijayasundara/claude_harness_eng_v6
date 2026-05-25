@@ -338,5 +338,60 @@ describe('Harness E2E Pipeline', { timeout: 1200000 }, () => {
     );
   });
 
+  // ── Stage 5: Telemetry / Prometheus ──────────────────────────────────────
+
+  test('Stage 5 - Telemetry: Prometheus metrics', { timeout: 30000 }, async () => {
+    const up = await isPrometheusUp();
+    if (!up) {
+      console.log('[e2e] Prometheus not running. Skipping.');
+      console.log('[e2e]   Start: docker compose -f telemetry_docker_compose.yml up -d');
+      return;
+    }
+
+    const metrics = [
+      'harness_conversation_turns_total',
+      'harness_agent_runs_total',
+      'harness_phase_eval_score',
+      'harness_phase_eval_iterations_total',
+      'claude_code_session_count_total',
+    ];
+
+    for (const m of metrics) {
+      const check = await assertMetricExists(m);
+      console.log(`[e2e] ${m}: ${check.exists ? `FOUND (${check.resultCount})` : 'NOT FOUND'}`);
+    }
+  });
+
+  // ── Stage 6: Grafana dashboard ──────────────────────────────────────────
+
+  test('Stage 6 - Grafana: dashboard verification', { timeout: 30000 }, async () => {
+    const up = await isGrafanaUp();
+    if (!up) {
+      console.log('[e2e] Grafana not running. Skipping.');
+      return;
+    }
+
+    const dashboards = await listDashboards();
+    if (Array.isArray(dashboards.data)) {
+      console.log('[e2e] Dashboards:', dashboards.data.map((d) => d.title).join(', '));
+    }
+
+    const dash = await getDashboard('claude-harness-overview');
+    if (dash.status === 200 && dash.data && dash.data.dashboard) {
+      const panels = dash.data.dashboard.panels || [];
+      const sections = panels.filter((p) => p.type === 'row').map((p) => p.title);
+      console.log('[e2e] Dashboard sections:', sections.join(', '));
+
+      const hasPhaseQuality = sections.some((s) => /phase.?quality/i.test(s));
+      const hasNativeOtel = sections.some((s) => /native.?otel/i.test(s) || /claude.?code/i.test(s));
+      const hasVelocity = sections.some((s) => /velocity/i.test(s));
+      console.log(`[e2e] Phase Quality: ${hasPhaseQuality ? 'FOUND' : 'NOT FOUND'}`);
+      console.log(`[e2e] Native OTEL: ${hasNativeOtel ? 'FOUND' : 'NOT FOUND'}`);
+      console.log(`[e2e] Velocity: ${hasVelocity ? 'FOUND' : 'NOT FOUND'}`);
+    } else {
+      console.log('[e2e] Dashboard not found (status', dash.status + ')');
+    }
+  });
+
 });
 
