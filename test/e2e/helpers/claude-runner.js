@@ -3,7 +3,8 @@
 const { spawnSync } = require('child_process');
 const path = require('path');
 
-const HARNESS_ROOT = path.join(__dirname, '..', '..', '..');
+const HARNESS_ROOT = path.join(__dirname, '..', '..');
+const E2E_SETTINGS = path.join(__dirname, '..', 'fixtures', 'e2e-settings.json');
 
 function runClaude(prompt, options = {}) {
   const {
@@ -18,8 +19,7 @@ function runClaude(prompt, options = {}) {
     '--model', model,
     '--no-session-persistence',
     '--max-budget-usd', budgetUsd,
-    '--bare',
-    '--allowed-tools', 'Bash Read Write Edit Glob Grep',
+    '--settings', E2E_SETTINGS,
   ];
 
   const result = spawnSync('claude', args, {

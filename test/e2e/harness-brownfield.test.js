@@ -62,15 +62,17 @@ describe('Harness E2E — Brownfield + Telemetry', { timeout: 1200000 }, () => {
 
   test('Stage 6 - Brownfield: discover existing codebase', { timeout: 180000 }, () => {
     const prompt =
-      'Analyze the existing codebase in this directory. Create brownfield discovery artifacts in specs/brownfield/: ' +
-      'architecture-map.md (list all modules, entry points, key files), ' +
-      'test-map.md (test commands, test file locations), ' +
-      'risk-map.md (fragile areas, missing tests, coupling concerns). ' +
-      'Create specs/brownfield/ directory first. Base findings on actual files you can see.';
+      'Run: mkdir -p specs/brownfield\n' +
+      'Then read all .js files in src/ and the root to understand the codebase.\n' +
+      'Write these 3 files:\n' +
+      '1. specs/brownfield/architecture-map.md — list all modules, entry points, key files\n' +
+      '2. specs/brownfield/test-map.md — test commands, test file locations\n' +
+      '3. specs/brownfield/risk-map.md — fragile areas, missing tests, coupling concerns\n' +
+      'Base findings on the actual files in this directory.';
     const result = runClaude(prompt, {
       cwd: PROJECT_DIR,
-      model: 'haiku',
-      budgetUsd: '1.00',
+      model: 'sonnet',
+      budgetUsd: '2.00',
       timeoutMs: 170000,
     });
 
@@ -88,17 +90,16 @@ describe('Harness E2E — Brownfield + Telemetry', { timeout: 1200000 }, () => {
 
   test('Stage 6b - Code Graph: dependency analysis', { timeout: 180000 }, () => {
     const prompt =
-      'Analyze the JavaScript source files in this project and create a dependency graph. ' +
-      'Write specs/brownfield/code-graph.json with this structure: ' +
-      '{"nodes": [{"id": "relative/file/path.js", "type": "module"}], ' +
-      '"edges": [{"from": "source.js", "to": "target.js", "type": "import"}]}. ' +
-      'Scan all .js files (not in node_modules). For each file, parse its imports and add edges. ' +
-      'Also write specs/brownfield/dependency-graph.md with a Mermaid diagram of the imports. ' +
-      'Create specs/brownfield/ directory if it does not exist.';
+      'Run: mkdir -p specs/brownfield\n' +
+      'Then read every .js file in this project (skip node_modules).\n' +
+      'For each file, find all require() calls to map dependencies.\n' +
+      'Write specs/brownfield/code-graph.json with exactly this structure:\n' +
+      '{"nodes": [{"id": "relative/path.js", "type": "module"}], "edges": [{"from": "source.js", "to": "target.js", "type": "import"}]}\n' +
+      'Also write specs/brownfield/dependency-graph.md with a Mermaid flowchart of the imports.';
     const result = runClaude(prompt, {
       cwd: PROJECT_DIR,
-      model: 'haiku',
-      budgetUsd: '0.50',
+      model: 'sonnet',
+      budgetUsd: '1.00',
       timeoutMs: 170000,
     });
 
