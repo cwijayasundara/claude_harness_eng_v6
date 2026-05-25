@@ -41,14 +41,20 @@ echo ""
 echo "Running E2E tests..."
 echo ""
 
-# Phase 1: Greenfield pipeline (scaffold → brd → spec → design → auto)
-echo "── Phase 1: Greenfield Pipeline ──"
+# Layer 1: Framework validation (hooks, rubrics, agents, settings, dashboard)
+echo "── Layer 1: Framework Validation (~2 min) ──"
+node --test "$SCRIPT_DIR/harness-framework.test.js" --timeout 300000
+
+echo ""
+
+# Layer 2: Greenfield pipeline (brd → spec → design → auto)
+echo "── Layer 2: Greenfield Pipeline (~15 min) ──"
 node --test "$SCRIPT_DIR/harness-pipeline.test.js" --timeout 1200000
 
 echo ""
 
-# Phase 2: Brownfield + code-graph + code change + telemetry + Grafana
-echo "── Phase 2: Brownfield + Telemetry ──"
+# Layer 3: Brownfield + code-graph + code change + telemetry + Grafana
+echo "── Layer 3: Brownfield + Telemetry (~10 min) ──"
 node --test "$SCRIPT_DIR/harness-brownfield.test.js" --timeout 1200000
 
 echo ""
