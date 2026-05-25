@@ -41,9 +41,9 @@ echo ""
 echo "Running E2E tests..."
 echo ""
 
-# Run with 20-minute timeout, keep artifacts on failure
-E2E_KEEP_ARTIFACTS="${E2E_KEEP_ARTIFACTS:-0}" \
-  node --test "$SCRIPT_DIR/harness-pipeline.test.js" --timeout 1200000
+# Run with 20-minute timeout
+node --test "$SCRIPT_DIR/harness-pipeline.test.js" --timeout 1200000
 
 echo ""
 echo "Results saved to: $SCRIPT_DIR/results/"
+echo "Generated app: $SCRIPT_DIR/output/"

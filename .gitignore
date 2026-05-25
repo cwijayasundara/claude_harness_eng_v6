@@ -22,3 +22,4 @@ symphony_clone/logs/
 !.claude/state/pending-reviews.jsonl
 test/e2e/results/*
 !test/e2e/results/.gitkeep
+test/e2e/output/
