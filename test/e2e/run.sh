@@ -47,9 +47,9 @@ node --test "$SCRIPT_DIR/harness-framework.test.js" --timeout 300000
 
 echo ""
 
-# Layer 2: Greenfield pipeline (fixtures → auto build → telemetry)
-echo "── Layer 2: Greenfield Pipeline (~5 min) ──"
-node --test "$SCRIPT_DIR/harness-pipeline.test.js" --timeout 600000
+# Layer 2: Greenfield pipeline (brd → spec → design → auto build → telemetry)
+echo "── Layer 2: Greenfield Pipeline (~8 min) ──"
+node --test "$SCRIPT_DIR/harness-pipeline.test.js" --timeout 900000
 
 echo ""
 
