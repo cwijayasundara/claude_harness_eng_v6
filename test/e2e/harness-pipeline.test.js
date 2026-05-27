@@ -166,6 +166,7 @@ describe('Harness E2E Pipeline', { timeout: 900000 }, () => {
       model: 'sonnet',
       budgetUsd: '0.75',
       timeoutMs: 110000,
+      continueSession: true,
     });
 
     const storyFiles = findFilesInProject('specs/stories', /^E\d+-S\d+.*\.md$/);
@@ -242,6 +243,7 @@ describe('Harness E2E Pipeline', { timeout: 900000 }, () => {
       model: 'sonnet',
       budgetUsd: '0.50',
       timeoutMs: 110000,
+      continueSession: true,
     });
 
     let designArtifacts = [];
@@ -332,6 +334,7 @@ describe('Harness E2E Pipeline', { timeout: 900000 }, () => {
       model: 'sonnet',
       budgetUsd: '1.00',
       timeoutMs: 170000,
+      continueSession: true,
     });
 
     // Find all .js/.ts source files, excluding node_modules and .claude
