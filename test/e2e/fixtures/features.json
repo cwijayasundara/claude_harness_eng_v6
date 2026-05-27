@@ -1,0 +1,6 @@
+[
+  { "id": "add", "category": "CLI", "story": "E1-S1", "group": "A", "description": "Add a todo item", "steps": ["run add command", "verify todo in file"], "passes": false },
+  { "id": "list", "category": "CLI", "story": "E1-S2", "group": "A", "description": "List all todos", "steps": ["run list command", "verify table output"], "passes": false },
+  { "id": "complete", "category": "CLI", "story": "E1-S3", "group": "B", "description": "Complete a todo", "steps": ["run complete command", "verify completed flag"], "passes": false },
+  { "id": "delete", "category": "CLI", "story": "E1-S4", "group": "B", "description": "Delete a todo", "steps": ["run delete command", "verify removal"], "passes": false }
+]

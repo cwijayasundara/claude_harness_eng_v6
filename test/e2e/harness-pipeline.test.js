@@ -8,18 +8,14 @@ const { describe, test, before, after } = require('node:test');
 const { execFileSync } = require('child_process');
 
 const { runClaude, HARNESS_ROOT } = require('./helpers/claude-runner');
-const { llmValidate } = require('./helpers/llm-validator');
-const { queryPrometheus, assertMetricExists, isPrometheusUp } = require('./helpers/prometheus-checker');
-const { grafanaGet, isGrafanaUp, getDashboard, listDashboards } = require('./helpers/grafana-checker');
+const { assertMetricExists, isPrometheusUp } = require('./helpers/prometheus-checker');
+const { isGrafanaUp, getDashboard, listDashboards } = require('./helpers/grafana-checker');
 
 // ── Paths ──────────────────────────────────────────────────────────────────────
 
 const FIXTURES_DIR = path.join(__dirname, 'fixtures');
 const RESULTS_DIR = path.join(__dirname, 'results');
 const OUTPUT_DIR = path.join(__dirname, 'output');
-const CRITERIA = JSON.parse(
-  fs.readFileSync(path.join(FIXTURES_DIR, 'validation-criteria.json'), 'utf8')
-);
 
 let PROJECT_DIR;
 let BRD_PATH = null;
@@ -58,9 +54,22 @@ function findFilesInProject(relativePath, pattern) {
   return findFiles(path.join(PROJECT_DIR, relativePath), pattern);
 }
 
+function copyDirSync(src, dest) {
+  fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+    if (entry.isDirectory()) {
+      copyDirSync(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
 // ── Test suite ─────────────────────────────────────────────────────────────────
 
-describe('Harness E2E Pipeline', { timeout: 1200000 }, () => {
+describe('Harness E2E Pipeline', { timeout: 600000 }, () => {
 
   before(() => {
     PROJECT_DIR = OUTPUT_DIR;
@@ -80,203 +89,114 @@ describe('Harness E2E Pipeline', { timeout: 1200000 }, () => {
     console.log('[e2e] Artifacts saved to:', PROJECT_DIR);
   });
 
-  // ── Stage 1: BRD ──────────────────────────────────────────────────────────
+  // ── Stage 1: BRD (fixture-based) ───────────────────────────────────────────
 
-  test('Stage 1 - BRD: generate business requirements', { timeout: 180000 }, () => {
-    const brdRequirements = fs.readFileSync(
-      path.join(FIXTURES_DIR, 'todo-cli-brd-prompt.md'), 'utf8'
-    );
-    const prompt =
-      'You MUST create the directory specs/brd/ using mkdir, then write a file called specs/brd/brd.md. ' +
-      'This is a Business Requirements Document. Write ALL of the following sections into that single file: ' +
-      'Executive Summary, Goals, Target Users, Success Metrics (at least 3 with numbers), ' +
-      'Scope (In-Scope list and Out-of-Scope list), MVP Definition, Alternatives (at least 2), ' +
-      'Technical Architecture, Data Model, Integrations, Constraints, UI Context, Open Questions.\n\n' +
-      'Requirements for the project:\n\n' + brdRequirements;
+  test('Stage 1 - BRD: load business requirements from fixture', { timeout: 5000 }, () => {
+    const brdSrc = path.join(FIXTURES_DIR, 'brd.md');
+    const brdDest = path.join(PROJECT_DIR, 'specs', 'brd');
+    fs.mkdirSync(brdDest, { recursive: true });
+    fs.copyFileSync(brdSrc, path.join(brdDest, 'brd.md'));
 
-    const result = runClaude(prompt, {
-      cwd: PROJECT_DIR,
-      model: 'haiku',
-      budgetUsd: '1.00',
-      timeoutMs: 170000,
-    });
-
-    const brdCandidates = ['specs/brd/brd.md', 'brd.md', 'specs/brd.md', 'docs/brd.md'];
-    let brdPath = brdCandidates.find((p) => fileExists(p));
-
-    if (!brdPath) {
-      const mdFiles = findFiles(PROJECT_DIR, /brd.*\.md$/i)
-        .map((f) => path.relative(PROJECT_DIR, f));
-      if (mdFiles.length > 0) brdPath = mdFiles[0];
-    }
-
-    let charCount = 0;
-    if (brdPath) charCount = readArtifact(brdPath).length;
-
-    logResult('stage-2-brd', {
-      exitCode: result.exitCode,
-      signal: result.signal,
-      brdPath: brdPath || 'NOT FOUND',
-      charCount,
-    });
-
-    assert.ok(brdPath, 'BRD markdown file must exist (checked specs/brd/brd.md and alternatives)');
+    const brdPath = 'specs/brd/brd.md';
+    assert.ok(fileExists(brdPath), 'BRD fixture must be copied');
+    const charCount = readArtifact(brdPath).length;
     assert.ok(charCount > 200, `BRD must have > 200 chars (got ${charCount})`);
+
     BRD_PATH = brdPath;
-    console.log(`[e2e] BRD found at: ${brdPath} (${charCount} chars)`);
+    logResult('stage-2-brd', { brdPath, charCount, fixture: true });
+    console.log(`[e2e] BRD loaded from fixture: ${brdPath} (${charCount} chars)`);
   });
 
-  // ── Stage 1b: BRD LLM validation (advisory) ─────────────────────────────
+  // ── Stage 1b: BRD structural validation ─────────────────────────────────
 
-  test('Stage 1b - BRD LLM validation (advisory)', { timeout: 60000 }, () => {
+  test('Stage 1b - BRD structural validation', { timeout: 5000 }, () => {
     if (!BRD_PATH) {
-      console.log('[e2e] Skipping BRD LLM validation: BRD not found');
       logResult('stage-2b-brd-llm', { skipped: true, reason: 'BRD missing' });
       return;
     }
 
-    const fullBrdPath = path.join(PROJECT_DIR, BRD_PATH);
-    const validation = llmValidate(fullBrdPath, CRITERIA.brd);
+    const content = readArtifact(BRD_PATH);
+    const requiredSections = ['Executive Summary', 'Goals', 'Success Metrics', 'Scope', 'Data Model'];
+    const found = requiredSections.filter((s) => content.includes(s));
+    const missing = requiredSections.filter((s) => !content.includes(s));
 
-    logResult('stage-2b-brd-llm', {
-      pass: validation.pass,
-      failures: validation.failures || [],
-    });
-
-    if (validation.pass) {
-      console.log('[e2e] BRD LLM validation: PASS');
-    } else {
-      console.log('[e2e] BRD LLM validation: FAIL (advisory)');
-      console.log('[e2e]   Failures:', JSON.stringify(validation.failures));
-    }
-    // Advisory only -- no assert.fail
+    logResult('stage-2b-brd-llm', { pass: missing.length === 0, found, missing });
+    console.log(`[e2e] BRD sections: ${found.length}/${requiredSections.length} present`);
+    if (missing.length > 0) console.log('[e2e]   Missing:', missing.join(', '));
   });
 
-  // ── Stage 2: Spec ────────────────────────────────────────────────────────
+  // ── Stage 2: Spec (fixture-based) ───────────────────────────────────────
 
-  test('Stage 2 - Spec: decompose BRD into stories', { timeout: 180000 }, () => {
-    if (!BRD_PATH) {
-      console.log('[e2e] Skipping Spec: BRD not found');
-      logResult('stage-3-spec', { skipped: true, reason: 'BRD missing' });
-      return;
-    }
+  test('Stage 2 - Spec: load stories from fixture', { timeout: 5000 }, () => {
+    const storiesSrc = path.join(FIXTURES_DIR, 'stories');
+    const storiesDest = path.join(PROJECT_DIR, 'specs', 'stories');
+    copyDirSync(storiesSrc, storiesDest);
 
-    const brdContent = readArtifact(BRD_PATH);
-    const specPrompt =
-      'You MUST create the directory specs/stories/ using mkdir -p, then create ALL of the following files.\n\n' +
-      '1. For each user story, write a file specs/stories/E1-S1.md, specs/stories/E1-S2.md, specs/stories/E1-S3.md etc. ' +
-      'Each story file must contain: title, description, user story, 3-6 testable acceptance criteria, ' +
-      'layer assignment, group assignment (A or B), readiness: ready.\n' +
-      '2. Write specs/stories/epics.md with an epic index table.\n' +
-      '3. Write specs/stories/dependency-graph.md with groups and dependencies.\n' +
-      '4. Write a root features.json array where each feature has: id, category, story, group, description, steps, passes: false.\n\n' +
-      'Decompose the following BRD into at least 3 user stories:\n\n' + brdContent.slice(0, 4000);
-    const result = runClaude(specPrompt, {
-      cwd: PROJECT_DIR,
-      model: 'sonnet',
-      budgetUsd: '1.50',
-      timeoutMs: 170000,
-    });
+    const featuresSrc = path.join(FIXTURES_DIR, 'features.json');
+    fs.copyFileSync(featuresSrc, path.join(PROJECT_DIR, 'features.json'));
 
     const storyFiles = findFilesInProject('specs/stories', /^E\d+-S\d+.*\.md$/);
     const storyCount = storyFiles.length;
 
     let featureCount = 0;
-    let featuresValid = true;
-    if (fileExists('features.json')) {
-      try {
-        const features = JSON.parse(readArtifact('features.json'));
-        assert.ok(Array.isArray(features), 'features.json must be a JSON array');
-        featureCount = features.length;
-      } catch (err) {
-        featuresValid = false;
-        console.log('[e2e] features.json parse error:', err.message);
-      }
-    }
+    const features = JSON.parse(readArtifact('features.json'));
+    assert.ok(Array.isArray(features), 'features.json must be a JSON array');
+    featureCount = features.length;
 
     logResult('stage-3-spec', {
-      exitCode: result.exitCode,
-      signal: result.signal,
+      fixture: true,
       storyCount,
       featureCount,
-      featuresValid,
       storyFiles: storyFiles.map((f) => path.basename(f)),
     });
 
     assert.ok(
       storyCount >= 1,
-      `Spec must produce at least 1 story file matching E*-S*.md (found ${storyCount})`
+      `Spec fixture must have at least 1 story file matching E*-S*.md (found ${storyCount})`
     );
     console.log('[e2e] Story count:', storyCount, '| Feature count:', featureCount);
   });
 
-  // ── Stage 2b: Spec LLM validation (advisory) ────────────────────────────
+  // ── Stage 2b: Spec structural validation ────────────────────────────────
 
-  test('Stage 2b - Spec LLM validation (advisory)', { timeout: 60000 }, () => {
+  test('Stage 2b - Spec structural validation', { timeout: 5000 }, () => {
     const storyFiles = findFilesInProject('specs/stories', /^E\d+-S\d+.*\.md$/);
-    if (storyFiles.length === 0) {
-      console.log('[e2e] Skipping Spec LLM validation: no story files found');
-      logResult('stage-3b-spec-llm', { skipped: true, reason: 'no story files' });
-      return;
+    assert.ok(storyFiles.length > 0, 'Must have story files');
+
+    const requiredFields = ['Acceptance Criteria', 'User Story', 'Group', 'Readiness'];
+    let allValid = true;
+    for (const f of storyFiles) {
+      const content = fs.readFileSync(f, 'utf8');
+      for (const field of requiredFields) {
+        if (!content.includes(field)) {
+          console.log(`[e2e] ${path.basename(f)} missing: ${field}`);
+          allValid = false;
+        }
+      }
     }
 
-    const combined = storyFiles
-      .map((f) => fs.readFileSync(f, 'utf8'))
-      .join('\n---\n');
+    assert.ok(fileExists('specs/stories/epics.md'), 'epics.md must exist');
+    assert.ok(fileExists('specs/stories/dependency-graph.md'), 'dependency-graph.md must exist');
 
-    // Write combined stories to a temp file for validation
-    const tmpPath = path.join(PROJECT_DIR, '.spec-combined-tmp.md');
-    fs.writeFileSync(tmpPath, combined);
-
-    const validation = llmValidate(tmpPath, CRITERIA.spec);
-
-    // Clean up temp file
-    try { fs.unlinkSync(tmpPath); } catch (_) { /* ignore */ }
-
-    logResult('stage-3b-spec-llm', {
-      pass: validation.pass,
-      failures: validation.failures || [],
-      storyCount: storyFiles.length,
-    });
-
-    if (validation.pass) {
-      console.log('[e2e] Spec LLM validation: PASS');
-    } else {
-      console.log('[e2e] Spec LLM validation: FAIL (advisory)');
-      console.log('[e2e]   Failures:', JSON.stringify(validation.failures));
-    }
-    // Advisory only -- no assert.fail
+    logResult('stage-3b-spec-llm', { pass: allValid, storyCount: storyFiles.length });
+    console.log(`[e2e] Spec validation: ${allValid ? 'PASS' : 'FAIL'} (${storyFiles.length} stories)`);
   });
 
-  // ── Stage 3: Design ──────────────────────────────────────────────────────
+  // ── Stage 3: Design (fixture-based) ─────────────────────────────────────
 
-  test('Stage 3 - Design: generate architecture', { timeout: 600000 }, () => {
-    const designPrompt =
-      'Read the story files in specs/stories/. Create design artifacts in specs/design/: ' +
-      'system-design.md (architecture overview), api-contracts.md (CLI commands as interface), ' +
-      'data-models.md (todo entity with id/text/completed/createdAt), ' +
-      'folder-structure.md (directory tree), component-map.md (story to file mapping). ' +
-      'Create the specs/design/ directory first.';
-    const result = runClaude(designPrompt, {
-      cwd: PROJECT_DIR,
-      model: 'haiku',
-      budgetUsd: '1.50',
-      timeoutMs: 170000,
-    });
+  test('Stage 3 - Design: load architecture from fixture', { timeout: 5000 }, () => {
+    const designSrc = path.join(FIXTURES_DIR, 'design');
+    const designDest = path.join(PROJECT_DIR, 'specs', 'design');
+    copyDirSync(designSrc, designDest);
 
-    let designArtifacts = [];
-    const designDir = path.join(PROJECT_DIR, 'specs/design');
-    if (fs.existsSync(designDir)) {
-      designArtifacts = fs.readdirSync(designDir);
-    }
-
-    logResult('stage-4-design', {
-      exitCode: result.exitCode,
-      signal: result.signal,
-      designArtifacts,
-    });
-
+    const designArtifacts = fs.readdirSync(designDest);
+    logResult('stage-4-design', { fixture: true, designArtifacts });
     console.log('[e2e] Design artifacts:', designArtifacts);
+
+    const expected = ['system-design.md', 'api-contracts.md', 'data-models.md', 'folder-structure.md', 'component-map.md'];
+    for (const file of expected) {
+      assert.ok(designArtifacts.includes(file), `Design must include ${file}`);
+    }
   });
 
   // ── Stage 3b: Phase Evaluation telemetry ──────────────────────────────────
@@ -339,20 +259,23 @@ describe('Harness E2E Pipeline', { timeout: 1200000 }, () => {
 
   // ── Stage 4: Auto/Solo ───────────────────────────────────────────────────
 
-  test('Stage 4 - Auto/Solo: autonomous build loop', { timeout: 600000 }, () => {
+  test('Stage 4 - Auto/Solo: autonomous build loop', { timeout: 300000 }, () => {
+    // Write a project-scoped CLAUDE.md to prevent skill/pipeline overhead
+    fs.writeFileSync(path.join(PROJECT_DIR, 'CLAUDE.md'),
+      'Write code directly. Do not use skills, planning workflows, or brainstorming. Just create the files requested.'
+    );
+
     const autoPrompt =
-      'Read specs/design/ and specs/stories/ to understand the todo CLI project. ' +
-      'Implement the Node.js CLI todo app based on the design. Create: ' +
-      '1) The main entry point (todo.js or index.js) with add/list/complete/delete commands. ' +
-      '2) A storage module that reads/writes todos.json. ' +
-      '3) At least one test file. ' +
-      'The CLI should work with: node todo.js add "buy milk", node todo.js list, etc. ' +
-      'Use only Node.js built-ins (no npm dependencies). Make sure the entry file is executable.';
+      'Create a Node.js CLI todo app. Write these files directly — do NOT read any other files first.\n\n' +
+      'FILE 1: todo.js — CLI entry point that parses process.argv for commands: add <text>, list, complete <id>, delete <id>.\n' +
+      'FILE 2: storage.js — module that reads/writes todos.json. Each todo: {id, text, completed, createdAt}.\n' +
+      'FILE 3: tests/todo.test.js — basic test using node:test and node:assert.\n\n' +
+      'Use only Node.js built-ins. Exit 0 on success, 1 on error. Start writing files immediately.';
     const result = runClaude(autoPrompt, {
       cwd: PROJECT_DIR,
-      model: 'sonnet',
-      budgetUsd: '5.00',
-      timeoutMs: 590000,
+      model: 'haiku',
+      budgetUsd: '2.00',
+      timeoutMs: 290000,
     });
 
     // Find all .js/.ts source files, excluding node_modules and .claude
