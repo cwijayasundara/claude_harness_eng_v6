@@ -23,3 +23,4 @@ symphony_clone/logs/
 test/e2e/results/*
 !test/e2e/results/.gitkeep
 test/e2e/output/
+.playwright-mcp/
