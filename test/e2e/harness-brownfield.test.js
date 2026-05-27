@@ -4,6 +4,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { describe, test, before } = require('node:test');
+const { execFileSync } = require('child_process');
 
 const { runClaude } = require('./helpers/claude-runner');
 const { isPrometheusUp, assertMetricExists } = require('./helpers/prometheus-checker');
@@ -51,6 +52,10 @@ describe('Harness E2E — Brownfield + Telemetry', { timeout: 1200000 }, () => {
     if (!fs.existsSync(PROJECT_DIR)) {
       console.log('[e2e] No output/ dir — run harness-pipeline.test.js first');
       process.exit(1);
+    }
+    // Ensure git boundary exists so Claude CLI stays inside output/
+    if (!fs.existsSync(path.join(PROJECT_DIR, '.git'))) {
+      execFileSync('git', ['init'], { cwd: PROJECT_DIR, stdio: 'ignore' });
     }
     const jsFiles = findFiles(PROJECT_DIR, /\.js$/)
       .filter((f) => !f.includes('node_modules') && !f.includes('.claude') && !f.includes('specs'));

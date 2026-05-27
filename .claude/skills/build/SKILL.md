@@ -49,11 +49,20 @@ Do NOT proceed without a clear "yes" or "approved" from the user.
 
 If the user already has product stories, `/spec` may normalize those existing stories instead of deriving them from the BRD. The output contract is still the same: `epics.md`, ready story files, `dependency-graph.md`, and root `features.json`. Stories marked `needs_breakdown` must be resolved before Phase 3.
 
-### Phase 3 — Architecture Design [HUMAN APPROVAL]
+### Phase 3 — Architecture Design + Test Planning [HUMAN APPROVAL]
 
-Run `/design` using the approved stories. Outputs are written to `specs/design/` including `api-contracts.md`, `component-map.md`, and schema files.
+Run `/design` and `/test --plan-only` **in parallel** using two concurrent Agent calls. Both consume `/spec` output independently:
 
-**Stop and wait for explicit human approval before proceeding.** Present the architecture summary: tech stack, component count, API surface area. Ask: "Approve design to proceed to autonomous build?"
+- **`/design`** — produces architecture artifacts in `specs/design/` (system-design, api-contracts, component-map, data-models, schemas).
+- **`/test --plan-only`** — produces test plan, test cases mapped to acceptance criteria, and test data fixtures in `specs/test_artefacts/` (test-plan.md, test-cases.md, test-data/).
+
+Wait for BOTH to complete before presenting results.
+
+**Stop and wait for explicit human approval before proceeding.** Present:
+1. Architecture summary: tech stack, component count, API surface area.
+2. Test plan summary: test case count, story coverage, fixture count.
+
+Ask: "Approve design and test plan to proceed to autonomous build?"
 
 Do NOT proceed without a clear "yes" or "approved" from the user.
 
@@ -87,9 +96,17 @@ Run `/auto --mode {mode}` to enter the autonomous build loop. The `/auto` skill 
 
 For a multi-group project with multi-story groups, peak parallelism is 3 groups × 5 teammates = 15 concurrent subagents. Cross-group parallelism uses per-group git branches (`auto/group-B`, `auto/group-C`) merged sequentially after each wave to avoid trunk commit conflicts.
 
-### Phase 9 — Generate README.md
+### Phase 9 — E2E Test Generation
 
-After `/auto` completes (all groups done or stopping criteria met), generate a `README.md` for the built application. This is the developer-facing guide for running, understanding, and contributing to the generated project.
+After `/auto` completes (all groups done or stopping criteria met), run `/test --e2e-only` to generate Playwright E2E tests against the built source code. This uses the test plan and cases from Phase 3 as input.
+
+The test-engineer agent generates one Playwright spec per story (`e2e/{story-id}.spec.ts`), copies the Playwright config template, installs Playwright, and runs the full E2E suite. All tests must pass.
+
+If E2E tests fail, fix them before proceeding. The tests are the specification — if a test fails because the implementation is wrong, fix the implementation, not the test.
+
+### Phase 10 — Generate README.md
+
+After E2E tests pass, generate a `README.md` for the built application. This is the developer-facing guide for running, understanding, and contributing to the generated project.
 
 Read the following to build the README:
 - `specs/brd/brd.md` — what the app does (project description)

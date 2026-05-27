@@ -25,6 +25,10 @@ if [ -f "telemetry_docker_compose.yml" ]; then
   echo "Grafana dashboard: http://localhost:3001/d/claude-harness-overview/"
 fi
 
+# LSP server check
+echo "Checking recommended LSP servers..."
+{{LSP_HEALTH_CHECKS}}
+
 # Health checks
 echo "Waiting for services..."
 {{HEALTH_CHECKS}}

@@ -148,17 +148,27 @@ describe('Harness Framework Validation', { timeout: 600000 }, () => {
     const runsDir = path.join(PROJECT_DIR, '.claude', 'runs');
     fs.mkdirSync(runsDir, { recursive: true });
 
-    const result = runHook('record-run.js', {
-      hook_event_name: 'Stop',
-      session_id: 'test-session-001',
-      is_error: false,
-    });
-
     const date = new Date().toISOString().slice(0, 10);
     const jsonlPath = path.join(runsDir, date + '.jsonl');
+    if (fs.existsSync(jsonlPath)) fs.unlinkSync(jsonlPath);
+
+    const localHook = path.join(PROJECT_DIR, '.claude', 'hooks', 'record-run.js');
+    const hookPath = fs.existsSync(localHook) ? localHook : path.join(HARNESS_ROOT, '.claude', 'hooks', 'record-run.js');
+    const result = spawnSync('node', [hookPath], {
+      input: JSON.stringify({
+        hook_event_name: 'Stop',
+        session_id: 'test-session-001',
+        is_error: false,
+      }),
+      cwd: PROJECT_DIR,
+      encoding: 'utf8',
+      timeout: 10000,
+      env: { ...process.env, CLAUDE_PROJECT_DIR: PROJECT_DIR },
+    });
+
     const hasJsonl = fs.existsSync(jsonlPath);
 
-    logResult('fw-4-record-run', { exitCode: result.exitCode, hasJsonl });
+    logResult('fw-4-record-run', { exitCode: result.status, hasJsonl });
 
     if (hasJsonl) {
       const lines = fs.readFileSync(jsonlPath, 'utf8').trim().split('\n');

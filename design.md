@@ -64,7 +64,7 @@ The harness is now an **agent factory**: one scaffold, optional framework skill 
 ┌───────────────────────────────────────────────────────────────────────────┐
 │  1. PLANNING — Same in both runtimes                                       │
 │                                                                            │
-│  Greenfield large : /brd  →  /spec  →  /design        (human gates)        │
+│  Greenfield large : /brd → /spec → /design + /test --plan-only (parallel)  │
 │  Greenfield small : /lite (compressed BRD + 1 group)                       │
 │  Brownfield       : /brownfield → /code-map → /seam-finder                 │
 │  Small fixes      : /vibe (micro-contract)                                 │
@@ -72,6 +72,7 @@ The harness is now an **agent factory**: one scaffold, optional framework skill 
 │  Output contract:                                                          │
 │    specs/stories/dependency-graph.md   (groups + blockers)                 │
 │    specs/design/component-map.md       (file ownership per story)          │
+│    specs/test_artefacts/               (test plan, cases, fixtures)        │
 │    features.json                       (pass/fail registry)                │
 └────────────────────────────────────┬──────────────────────────────────────┘
                                      │
@@ -145,6 +146,22 @@ Neither runtime changes how `/auto` runs inside the workspace. The only differen
 | Official plugins (default-on) | 8 | `enabledPlugins` in `settings.json` | Superpowers, code-review, frontend-design, … |
 | Framework skill packs | 2 (opt-in) | `.claude/skills/<pack-prefix>-*` (via `-a claude-code`) | LangChain (9 skills) · Google ADK (7 skills) |
 | Tracker orchestrator | 1 sibling project | `symphony_clone/` | Docker service for Linear-driven dispatch |
+| LSP servers | auto-detected | `project-manifest.json` `lsp.servers` | Symbol navigation for agents (go-to-definition, find-references) |
+
+### LSP Integration
+
+`/scaffold` auto-detects the project's languages from the stack and writes recommended LSP servers into `project-manifest.json`. The `init.sh` bootstrap script checks whether each server binary is on `$PATH` and prints install commands for missing ones.
+
+| Language | LSP Server | Install |
+|----------|-----------|---------|
+| Python | pyright | `npm i -g pyright` |
+| TypeScript / JS | typescript-language-server | `npm i -g typescript-language-server typescript` |
+| Go | gopls | `go install golang.org/x/tools/gopls@latest` |
+| Java | jdtls | `brew install jdtls` |
+| C# | omnisharp-roslyn | `dotnet tool install -g omnisharp` |
+| Rust | rust-analyzer | `rustup component add rust-analyzer` |
+
+The `codebase-explorer` agent has `LSP` in its tool grants and uses it for symbol-level navigation when available. All other agents benefit implicitly — Claude Code routes go-to-definition and find-references through whichever LSP server is running.
 
 ### The 28 skills, grouped by lane
 
@@ -420,7 +437,7 @@ The harness has three pre-pipeline lanes alongside the full SDLC pipeline.
 | `/brownfield` + `/code-map` + `/seam-finder` | Any substantial work in an existing codebase | `specs/brownfield/code-graph.json`, `architecture-map.md`, `risk-map.md`, `change-strategy.md`, `seams-<goal>.md` | Cheap (read-only graph build) |
 | `/lite` | New project, ≤5 stories, single group, single module, no DB/auth/billing | Compressed BRD (≤50 lines), 3–5 stories in Group A, `folder-structure.md`, `component-map.md`, `api-contracts.md` | Small |
 | `/vibe` | Tiny safe edits: ≤3 files, <150 lines, no new workflow, no auth/billing/migrations | Micro-contract + narrow diff + targeted verification | Tiny |
-| `/brd` → `/spec` → `/design` → `/auto` | Everything else | Full BRD, stories, dependency graph, design, then autonomous build | Highest |
+| `/brd` → `/spec` → `/design` + `/test --plan-only` → `/auto` → `/test --e2e-only` | Everything else | Full BRD, stories, dependency graph, design + test plan (parallel), autonomous build, then E2E tests | Highest |
 
 Escalation contract: if the work outgrows the chosen lane (lite turns into 7 stories, vibe touches a migration), stop and re-enter via the larger lane. Lanes never silently grow.
 
@@ -627,13 +644,13 @@ Agent contract: in brownfield mode, "module X depends on Y" claims must cite `co
 | `/scaffold` | Bootstrap a project | Yes (8 questions) | — |
 | `/brd` | Socratic interview → BRD | Yes | brainstorming |
 | `/spec` | BRD → stories + dependency graph + features.json | Yes | — |
-| `/design` | Architecture + schemas + mockups | Yes | brainstorming |
+| `/design` | Architecture + schemas + mockups (runs parallel with `/test`) | Yes | brainstorming |
+| `/test` | Test plan + cases + fixtures (`--plan-only`) or Playwright E2E (`--e2e-only`) | No | — |
 | `/implement` | Code generation with agent teams | No | writing-plans, TDD |
 | `/evaluate` | Run app, verify sprint contract | No | verification |
 | `/review` | Evaluator + security review | No | — |
-| `/test` | Test plan + Playwright E2E | No | — |
 | `/deploy` | Docker Compose + init.sh | No | — |
-| `/build` | Full 8-phase pipeline | Phases 1–3 | verification |
+| `/build` | Full 10-phase pipeline | Phases 1–3 | verification |
 | `/auto` | Autonomous ratcheting loop | No (reads program.md) | debugging, verification |
 | `/lite` | Compressed greenfield lane (small projects) | One approval | — |
 | `/vibe` | Controlled small-change lane | Micro-contract | — |

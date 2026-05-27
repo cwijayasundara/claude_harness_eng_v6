@@ -151,7 +151,39 @@ Based on their answers, write `project-manifest.json` to the project root. Fill 
 - stack.deployment: method ("docker-compose"), services list
 - evaluation: api_base_url, ui_base_url, health_check, design_score_threshold (7), design_max_iterations (10), test_corpus_dir
 - execution: default_mode ("full"), max_self_heal_attempts (3), max_auto_iterations (50), coverage_threshold (80), session_chaining (true), agent_team_size ("auto"), teammate_model ("sonnet")
+- lsp: detected language servers and install commands (see below)
 - verification: mode, health_check, and mode-specific config (see below)
+
+### LSP Config (auto-detected from stack)
+
+Infer the recommended LSP servers from the stack chosen in Step 1. Write an `lsp` block into `project-manifest.json`:
+
+```json
+"lsp": {
+  "servers": [
+    { "language": "python", "server": "pyright", "binary": "pyright", "install": "npm i -g pyright" },
+    { "language": "typescript", "server": "typescript-language-server", "binary": "typescript-language-server", "install": "npm i -g typescript-language-server typescript" }
+  ]
+}
+```
+
+Use this mapping table to populate the `servers` array — include only the languages present in the stack:
+
+| Language | LSP Server | Binary on `$PATH` | Install Command |
+|----------|------------|-------------------|-----------------|
+| Python | pyright | `pyright` | `npm i -g pyright` |
+| TypeScript / JavaScript | typescript-language-server | `typescript-language-server` | `npm i -g typescript-language-server typescript` |
+| Go | gopls | `gopls` | `go install golang.org/x/tools/gopls@latest` |
+| Java | jdtls | `jdtls` | `brew install jdtls` (macOS) or download from eclipse.org |
+| C# | omnisharp-roslyn | `OmniSharp` | `dotnet tool install -g omnisharp` |
+| Rust | rust-analyzer | `rust-analyzer` | `rustup component add rust-analyzer` |
+
+For preset stacks:
+- **A/B** (Python + TypeScript): include pyright + typescript-language-server
+- **C** (Node + TypeScript): include typescript-language-server only
+- **Custom Python**: include pyright only
+- **Custom Node/TypeScript**: include typescript-language-server only
+- **Custom (other)**: match from the table above or leave `servers: []` with a comment
 
 ### Verification Config (based on the verification-mode decision)
 
@@ -267,7 +299,7 @@ test -f "$PLUGIN_SOURCE/templates/story.template.md"
 SKILL_COUNT=$(find "$PLUGIN_SOURCE/skills" -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')
 TEMPLATE_COUNT=$(find "$PLUGIN_SOURCE/templates" -maxdepth 1 -type f | wc -l | tr -d ' ')
 test "$SKILL_COUNT" = "28"
-test "$TEMPLATE_COUNT" = "10"
+test "$TEMPLATE_COUNT" = "12"
 test -f "$PLUGIN_SOURCE/git-hooks/prepare-commit-msg"
 test -f "$HARNESS_ROOT/README.md"
 test -f "$HARNESS_ROOT/telemetry_docker_compose.yml"
@@ -349,6 +381,16 @@ These plugins are complementary to the harness and do not conflict:
 **Do NOT install** these official plugins (they conflict with harness functionality):
 - `feature-dev` — competes with our `/brd` -> `/spec` -> `/design` -> `/implement` pipeline
 - `hookify` — dynamically generated hooks could interfere with our purpose-built hooks
+
+### Generate .mcp.json (MCP Server Configuration)
+
+Copy the MCP config template to the project root as a starting point for connecting to internal tools, databases, and documentation:
+
+```bash
+cp $PLUGIN_SOURCE/templates/mcp-config.template.json .mcp.json
+```
+
+All servers are disabled by default. The user enables servers they need and configures connection details. Add `.mcp.json` to version control so all team members get the same MCP server configuration.
 
 ## Step 4: Create Output Directories
 
@@ -442,9 +484,13 @@ Omit the field if the user picked None.
 
 ## Step 5: Generate CLAUDE.md
 
-Write CLAUDE.md tailored to chosen stack. This is a slim table of contents (~60 lines) that
+Write CLAUDE.md tailored to chosen stack. This is a slim table of contents (~70 lines) that
 directs agents to the right reference files via progressive disclosure. Do not inline full rules
 here — agents discover details by reading the referenced skill files.
+
+When filling in the LSP Integration section of the template, replace the placeholders:
+- `{lsp_install_commands}` — one bullet per server from the `lsp.servers` array in the manifest. Format: `- \`{install_command}\` — {language} ({server_name})`
+- `{lsp_verify_command}` — a one-liner that checks all binaries, e.g. `pyright --version && typescript-language-server --version`
 
 ### CLAUDE.md Template
 
@@ -490,8 +536,9 @@ One-way dependencies only. See `.claude/architecture.md` for full rules.
 |---------|---------|
 | `/brd` | Socratic interview → BRD |
 | `/spec` | BRD → stories + features.json |
-| `/design` | Architecture + schemas + mockups |
-| `/build` | Full 8-phase pipeline |
+| `/design` | Architecture + schemas + mockups (parallel with `/test`) |
+| `/test` | Test plan + cases + fixtures (`--plan-only`) or Playwright E2E (`--e2e-only`) |
+| `/build` | Full 10-phase pipeline |
 | `/lite` | Compressed greenfield lane for small projects (CLI / library / single-script) |
 | `/vibe` | Controlled small-change lane |
 | `/brownfield` | Map an existing codebase before changing it |
@@ -501,8 +548,24 @@ One-way dependencies only. See `.claude/architecture.md` for full rules.
 | `/implement` | Code gen with agent teams |
 | `/evaluate` | Run app, verify contract |
 | `/review` | Evaluator + security review |
-| `/test` | Test plan + Playwright E2E |
 | `/deploy` | Docker Compose + init.sh |
+
+## LSP Integration
+
+LSP servers give agents go-to-definition, find-references, and type diagnostics — dramatically better than grep for symbol navigation. Install the servers listed in `project-manifest.json` under `lsp.servers`:
+
+{lsp_install_commands}
+
+Verify: `{lsp_verify_command}`
+
+## Large Codebase Navigation
+
+- Claude Code respects `.gitignore` for file navigation — keep it comprehensive
+- For monorepos, add subdirectory CLAUDE.md files with scoped test/lint commands
+- Install recommended LSP servers (see "LSP Integration" above) for symbol-level navigation
+- Use the `codebase-explorer` agent for read-only discovery before making broad changes
+- State files are auto-archived when they grow large — see `.claude/scripts/archive-state.js`
+- Run `node .claude/scripts/archive-state.js` periodically in long-running projects
 
 ## Code Style
 
@@ -520,6 +583,50 @@ One-way dependencies only. See `.claude/architecture.md` for full rules.
 Branch: `<type>/<description>` (e.g., `feat/user-auth`)
 Commits: conventional format (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`)
 ```
+
+### Step 5.B: Generate Subdirectory CLAUDE.md Files (monorepo/multi-module projects)
+
+If the project has separate `backend/` and `frontend/` directories (presets A, B, C), generate scoped CLAUDE.md files for each subdirectory. These load additively as Claude navigates the tree.
+
+**backend/CLAUDE.md** (Python projects):
+```markdown
+# Backend
+
+## Test & Lint Commands (run from this directory)
+
+- `uv run pytest -x -q` — run tests
+- `uv run ruff check --fix .` — lint
+- `uv run mypy src/` — type check
+
+## Conventions
+
+- FastAPI route handlers in `src/api/`
+- Business logic in `src/services/` — never import from `api/`
+- Database access in `src/repository/` — never import from `services/`
+- All functions must have type annotations
+```
+
+**frontend/CLAUDE.md** (TypeScript projects):
+```markdown
+# Frontend
+
+## Test & Lint Commands (run from this directory)
+
+- `npm test` — run tests
+- `npm run lint` — lint
+- `npm run typecheck` — type check
+
+## Conventions
+
+- Components in `src/components/` — one component per file
+- API client calls in `src/api/` — never call fetch directly from components
+- Shared types in `src/types/`
+- No `any` types — use `unknown` and narrow
+```
+
+For single-root projects (custom Python/Node, project type D), skip this step — the root CLAUDE.md is sufficient.
+
+**Codebase map:** Also generate a `CODEBASE_MAP.md` at the project root using the template from `.claude/templates/codebase-map.template.md`. Tailor the directories table and test commands to match the actual project stack inferred in Step 1.B.
 
 ## Step 6: Generate design.md
 
@@ -669,6 +776,7 @@ Read init-sh.template, replace placeholders based on manifest:
 - {{BACKEND_INSTALL}}: e.g. `cd backend && uv sync && cd ..`
 - {{FRONTEND_INSTALL}}: e.g. `cd frontend && npm ci && cd ..`
 - {{DOCKER_COMPOSE_CMD}}: `docker compose up -d --build`
+- {{LSP_HEALTH_CHECKS}}: one check per server from `lsp.servers` in the manifest
 - {{HEALTH_CHECKS}}: curl commands for each service URL from manifest
 
 Write to `init.sh` and `chmod +x init.sh`.
@@ -678,6 +786,17 @@ Placeholder mappings by preset:
 - C (npm): `{{BACKEND_INSTALL}}` → `cd backend && npm ci && cd ..`
 - All presets: `{{FRONTEND_INSTALL}}` → `cd frontend && npm ci && cd ..`
 - Health checks: use `api_base_url` and `ui_base_url` from manifest evaluation section
+
+LSP health check template — generate one block per entry in `lsp.servers`:
+```bash
+if command -v {binary} &>/dev/null; then
+  echo "  ✓ {server} ($({binary} --version 2>/dev/null || echo 'version unknown'))"
+else
+  echo "  ✗ {server} not found — install with: {install}"
+fi
+```
+
+If `lsp.servers` is empty, replace `{{LSP_HEALTH_CHECKS}}` with `echo "  (no LSP servers configured — add to project-manifest.json lsp.servers if needed)"`.
 
 ## Step 8: Initialize Git
 
@@ -751,23 +870,53 @@ If the user does not want Docker, suggest `OTEL_METRICS_EXPORTER=prometheus` (sc
 
 Write `.gitignore`:
 ```
+# Environment
 .env
 .env.local
 .env.production
+
+# Dependencies
 node_modules/
-__pycache__/
-*.pyc
-.coverage
-htmlcov/
+.venv/
+venv/
+
+# Build artifacts
 dist/
 build/
-.venv/
+.next/
+out/
 *.egg-info/
+
+# Python caches
+__pycache__/
+*.pyc
 .mypy_cache/
 .ruff_cache/
+.pytest_cache/
+
+# Test output
+.coverage
+htmlcov/
 playwright-report/
 test-results/
+coverage/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Generated / large files Claude should skip
+*.min.js
+*.min.css
+*.map
+*.lock
+package-lock.json
+
+# Harness state (not source)
 .claude/runs/
+.claude/state/archive/
 ```
 
 ## Step 9: Initialize State Files
@@ -808,10 +957,10 @@ Tailor the "Next steps" ordering based on the project-type decision:
 ✓ Claude Harness Engine v4 scaffolded successfully.
 
 Installed:
-  7 agents      → .claude/agents/
+  8 agents      → .claude/agents/
   28 skills     → .claude/skills/
-  15 hooks      → .claude/hooks/
-  10 templates  → .claude/templates/
+  18 hooks      → .claude/hooks/
+  12 templates  → .claude/templates/
   6 state files → .claude/state/
   1 manifest    → .claude/.claude-plugin/plugin.json
 
@@ -819,6 +968,16 @@ Telemetry stack:
   telemetry_docker_compose.yml    → OTEL Collector (:4317) + Prometheus (:9090) + Pushgateway (:9091)
   telemetry/                      → Collector + Prometheus config
   Start: docker compose -f telemetry_docker_compose.yml up -d
+
+LSP servers (auto-detected from stack):
+  {for each lsp.servers entry, run `command -v {binary}` and print one of:}
+  ✓ {server} ({language})             — found at $(which {binary})
+  ✗ {server} ({language})             — not found, install: {install}
+
+Large codebase tips:
+  - Add subdirectory CLAUDE.md files for monorepo modules (see Step 5.B pattern)
+  - Run `node .claude/scripts/archive-state.js` if state files grow large
+  - Use the codebase-explorer agent for read-only discovery before broad changes
 
 Next steps:
   1. Run /brd to create your Business Requirements Document
@@ -833,10 +992,10 @@ Next steps:
 ✓ Claude Harness Engine v4 scaffolded successfully (minimal project mode).
 
 Installed:
-  7 agents      → .claude/agents/
+  8 agents      → .claude/agents/
   28 skills     → .claude/skills/
-  15 hooks      → .claude/hooks/
-  10 templates  → .claude/templates/
+  18 hooks      → .claude/hooks/
+  12 templates  → .claude/templates/
   6 state files → .claude/state/
   1 manifest    → .claude/.claude-plugin/plugin.json
 
@@ -844,6 +1003,13 @@ Telemetry stack:
   telemetry_docker_compose.yml    → OTEL Collector (:4317) + Prometheus (:9090) + Pushgateway (:9091)
   telemetry/                      → Collector + Prometheus config
   Start: docker compose -f telemetry_docker_compose.yml up -d
+
+LSP servers (auto-detected from stack):
+  {for each lsp.servers entry, run `command -v {binary}` and print ✓ or ✗ — same format as default report}
+
+Large codebase tips:
+  - Run `node .claude/scripts/archive-state.js` if state files grow large
+  - Use the codebase-explorer agent for read-only discovery before broad changes
 
 Next steps:
   1. Run /lite "<one-paragraph project description>"  ← recommended for this project type

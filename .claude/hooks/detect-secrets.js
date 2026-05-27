@@ -39,9 +39,9 @@ try {
     process.exit(0);
   }
 
-  // Skip .env.example
+  // Skip .env.example and settings.json (config files, not source)
   const basename = path.basename(filePath);
-  if (basename === '.env.example') {
+  if (basename === '.env.example' || basename === 'settings.json' || basename === 'settings.local.json') {
     process.exit(0);
   }
 

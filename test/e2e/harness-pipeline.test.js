@@ -5,6 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { describe, test, before, after } = require('node:test');
+const { execFileSync } = require('child_process');
 
 const { runClaude, HARNESS_ROOT } = require('./helpers/claude-runner');
 const { llmValidate } = require('./helpers/llm-validator');
@@ -68,6 +69,9 @@ describe('Harness E2E Pipeline', { timeout: 1200000 }, () => {
     }
     fs.mkdirSync(PROJECT_DIR, { recursive: true });
     fs.mkdirSync(RESULTS_DIR, { recursive: true });
+    // Create a git boundary so Claude CLI treats output/ as a standalone project
+    // instead of traversing up to the parent repo root.
+    execFileSync('git', ['init'], { cwd: PROJECT_DIR, stdio: 'ignore' });
     console.log('[e2e] Project directory:', PROJECT_DIR);
     console.log('[e2e] Harness root:', HARNESS_ROOT);
   });
@@ -272,6 +276,64 @@ describe('Harness E2E Pipeline', { timeout: 1200000 }, () => {
     });
 
     console.log('[e2e] Design artifacts:', designArtifacts);
+  });
+
+  // ── Stage 3b: Phase Evaluation telemetry ──────────────────────────────────
+
+  test('Stage 3b - Phase Evaluation: push phase quality metrics', { timeout: 30000 }, async () => {
+    const reviewsDir = path.join(PROJECT_DIR, 'specs', 'reviews');
+    fs.mkdirSync(reviewsDir, { recursive: true });
+
+    const phases = [
+      { phase: 'brd', scores: { completeness: 8, traceability: 10, specificity: 7, consistency: 8, actionability: 7 }, weighted_average: 8.0, verdict: 'PASS' },
+      { phase: 'spec', scores: { completeness: 7, traceability: 8, specificity: 7, consistency: 8, actionability: 7 }, weighted_average: 7.4, verdict: 'PASS' },
+      { phase: 'design', scores: { completeness: 8, traceability: 7, specificity: 8, consistency: 8, actionability: 8 }, weighted_average: 7.8, verdict: 'PASS' },
+    ];
+
+    for (const p of phases) {
+      fs.writeFileSync(path.join(reviewsDir, `phase-${p.phase}-eval.json`), JSON.stringify({
+        phase: p.phase,
+        iteration: 1,
+        scores: p.scores,
+        weighted_average: p.weighted_average,
+        verdict: p.verdict,
+        score_history: [{ iteration: 1, ...p }],
+      }, null, 2));
+    }
+
+    const telemetryMem = require(path.join(HARNESS_ROOT, '..', '.claude', 'scripts', 'telemetry-memory'));
+    const stateDir = path.join(PROJECT_DIR, '.claude', 'state');
+    fs.mkdirSync(stateDir, { recursive: true });
+
+    for (const p of phases) {
+      telemetryMem.appendLedger(stateDir, {
+        kind: 'phase_eval',
+        ts: Date.now(),
+        user: 'e2e-test',
+        session_id: 'e2e-pipeline',
+        phase: p.phase,
+        iteration: '1',
+        scores: p.scores,
+        weighted_average: p.weighted_average,
+        verdict: p.verdict,
+        lane: 'build',
+        mode: 'full',
+        group_id: 'none',
+        story_id: 'none',
+        host: os.hostname(),
+      });
+    }
+
+    const result = await telemetryMem.pushSnapshot({ projectDir: PROJECT_DIR, stateDir });
+    const pushed = result && result.pushed;
+
+    logResult('stage-3b-phase-eval', {
+      pushed,
+      phases: phases.map((p) => p.phase),
+      evalFiles: fs.readdirSync(reviewsDir),
+    });
+
+    console.log('[e2e] Phase eval records pushed:', pushed, '| Phases:', phases.map((p) => p.phase).join(', '));
   });
 
   // ── Stage 4: Auto/Solo ───────────────────────────────────────────────────

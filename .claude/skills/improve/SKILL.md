@@ -80,6 +80,8 @@ Changing a test to pass rather than fixing the underlying code is not acceptable
 
 Run the full test suite. All tests must pass.
 
+**Update test artifacts:** If `specs/test_artefacts/` exists, update `test-cases.md` and `test-data/` to reflect the changed acceptance criteria. Keep the test plan in sync with the actual state of the stories. If Playwright E2E tests exist in `e2e/`, update the affected spec files to match new behavior.
+
 ### Step 6 — Spawn code-reviewer
 
 Spawn the `code-reviewer` agent on the full diff.

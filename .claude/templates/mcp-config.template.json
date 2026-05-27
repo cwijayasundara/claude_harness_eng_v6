@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "internal-docs": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-docs-server", "--docs-dir", "./docs"],
+      "disabled": true,
+      "_comment": "Enable and point to your internal documentation directory"
+    },
+    "database": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-postgres-server"],
+      "env": {
+        "DATABASE_URL": "${DATABASE_URL}"
+      },
+      "disabled": true,
+      "_comment": "Enable for direct database access during development"
+    }
+  }
+}
