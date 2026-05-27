@@ -163,17 +163,18 @@ describe('Harness E2E Pipeline', { timeout: 1200000 }, () => {
 
     const brdContent = readArtifact(BRD_PATH);
     const specPrompt =
-      'Read the BRD at ' + BRD_PATH + '. Decompose it into user stories. For each story create a file ' +
-      'specs/stories/E1-S{N}.md with: title, description, user story, 3-6 testable acceptance criteria, ' +
-      'layer assignment, group assignment (A or B), readiness: ready. ' +
-      'Create specs/stories/epics.md with an epic index table. ' +
-      'Create specs/stories/dependency-graph.md with groups and dependencies. ' +
-      'Create a root features.json array where each feature has: id, category, story, group, description, steps, passes: false. ' +
-      'Create specs/stories/ directory first.\n\nBRD content:\n' + brdContent.slice(0, 4000);
+      'You MUST create the directory specs/stories/ using mkdir -p, then create ALL of the following files.\n\n' +
+      '1. For each user story, write a file specs/stories/E1-S1.md, specs/stories/E1-S2.md, specs/stories/E1-S3.md etc. ' +
+      'Each story file must contain: title, description, user story, 3-6 testable acceptance criteria, ' +
+      'layer assignment, group assignment (A or B), readiness: ready.\n' +
+      '2. Write specs/stories/epics.md with an epic index table.\n' +
+      '3. Write specs/stories/dependency-graph.md with groups and dependencies.\n' +
+      '4. Write a root features.json array where each feature has: id, category, story, group, description, steps, passes: false.\n\n' +
+      'Decompose the following BRD into at least 3 user stories:\n\n' + brdContent.slice(0, 4000);
     const result = runClaude(specPrompt, {
       cwd: PROJECT_DIR,
-      model: 'haiku',
-      budgetUsd: '1.00',
+      model: 'sonnet',
+      budgetUsd: '1.50',
       timeoutMs: 170000,
     });
 
