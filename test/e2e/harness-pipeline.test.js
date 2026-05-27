@@ -334,7 +334,6 @@ describe('Harness E2E Pipeline', { timeout: 900000 }, () => {
       model: 'sonnet',
       budgetUsd: '1.00',
       timeoutMs: 170000,
-      continueSession: true,
     });
 
     // Find all .js/.ts source files, excluding node_modules and .claude

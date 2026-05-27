@@ -7,7 +7,7 @@ const GRAFANA_URL = process.env.GRAFANA_URL || 'http://localhost:3001';
 function grafanaGet(apiPath) {
   return new Promise((resolve, reject) => {
     const url = GRAFANA_URL + apiPath;
-    http.get(url, (res) => {
+    http.get(url, { agent: false }, (res) => {
       let body = '';
       res.on('data', (chunk) => { body += chunk; });
       res.on('end', () => {

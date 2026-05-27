@@ -7,7 +7,7 @@ const PROMETHEUS_URL = process.env.PROMETHEUS_URL || 'http://localhost:9090';
 function queryPrometheus(query) {
   return new Promise((resolve, reject) => {
     const url = PROMETHEUS_URL + '/api/v1/query?query=' + encodeURIComponent(query);
-    http.get(url, (res) => {
+    http.get(url, { agent: false }, (res) => {
       let body = '';
       res.on('data', (chunk) => { body += chunk; });
       res.on('end', () => {
