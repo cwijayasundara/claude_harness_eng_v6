@@ -36,6 +36,18 @@ You are the Test Engineer for the Claude Harness Engine. Your role is to produce
 
 All tests must verify observable behavior through public interfaces. Do not couple tests to private helpers, internal call order, or mock interactions between business modules. If behavior cannot be tested without reaching into internals, report an interface design problem.
 
+### Stack Test Authoring (load the reference for the project's stack)
+
+Stay stack-neutral. The strategy below and the Playwright E2E section are cross-stack. For **unit/integration** authoring idioms, detect the stack from `project-manifest.json` and read the matching reference before writing tests:
+
+| Stack signal | Read this reference |
+|---|---|
+| backend `stack.backend.language` is python | `.claude/skills/testing/references/tests-python.md` (pytest) |
+| frontend `stack.frontend` is React + TypeScript | `.claude/skills/testing/references/tests-react-typescript.md` (vitest + RTL) |
+| any other stack | no reference yet — apply the generic strategy; add `testing/references/tests-<stack>.md` following the same pattern |
+
+The TypeScript/Playwright examples elsewhere in this file are illustrative; translate them to the project's stack via its reference. Playwright E2E itself is cross-stack and applies regardless of backend.
+
 ### Layer 1: Unit Tests
 - Test individual functions, utilities, and pure components in isolation
 - Use mocks only for external dependencies (database, HTTP calls, clocks, file I/O, queues)
