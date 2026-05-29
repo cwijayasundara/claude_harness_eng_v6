@@ -297,6 +297,8 @@ test -d "$PLUGIN_SOURCE/skills/vibe"
 test -d "$PLUGIN_SOURCE/workflows"
 test -f "$PLUGIN_SOURCE/workflows/harness-review.js"
 test -f "$PLUGIN_SOURCE/workflows/harness-implement-group.js"
+test -f "$PLUGIN_SOURCE/workflows/harness-brownfield-map.js"
+test -f "$PLUGIN_SOURCE/workflows/harness-eval.js"
 test -f "$PLUGIN_SOURCE/templates/context.template.md"
 test -f "$PLUGIN_SOURCE/templates/story.template.md"
 SKILL_COUNT=$(find "$PLUGIN_SOURCE/skills" -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')
@@ -304,7 +306,7 @@ TEMPLATE_COUNT=$(find "$PLUGIN_SOURCE/templates" -maxdepth 1 -type f | wc -l | t
 WORKFLOW_COUNT=$(find "$PLUGIN_SOURCE/workflows" -maxdepth 1 -name '*.js' | wc -l | tr -d ' ')
 test "$SKILL_COUNT" = "28"
 test "$TEMPLATE_COUNT" = "12"
-test "$WORKFLOW_COUNT" = "2"
+test "$WORKFLOW_COUNT" = "4"
 test -f "$PLUGIN_SOURCE/git-hooks/prepare-commit-msg"
 test -f "$HARNESS_ROOT/README.md"
 test -f "$HARNESS_ROOT/telemetry_docker_compose.yml"
@@ -565,6 +567,8 @@ One-way dependencies only. See `.claude/architecture.md` for full rules.
 |---------|---------|---------|
 | `/harness-review` | `/review` | Multi-dimension review of the diff (correctness · security · architecture · quality), adversarially verified |
 | `/harness-implement-group <group-id>` | `/implement` | Parallel TDD build of a sprint group's stories in isolated worktrees, each acceptance-reviewed |
+| `/harness-brownfield-map [scope]` | `/brownfield` | Multi-lens codebase survey (structure · entry points · deps · tests · risk) synthesized into `specs/brownfield/` maps |
+| `/harness-eval <contract-id>` | `/evaluate` | Three-layer verification (API · UI · schema) run in parallel against the running app → one PASS/FAIL verdict |
 
 Enablement is plan/runtime-gated, not a project setting: requires Pro+ (toggle in `/config` on Pro; default-on for Max/Team/Enterprise), and is triggered by the word `workflow` in a prompt, a saved `/<name>` command, or `/effort ultracode` (auto-orchestration). Workflows use substantially more tokens than a normal turn. Do **not** add `disableWorkflows` to `.claude/settings.json` — that turns the feature off. See `.claude/workflows/README.md` to add your own.
 
@@ -979,7 +983,7 @@ Installed:
   28 skills     → .claude/skills/
   18 hooks      → .claude/hooks/
   12 templates  → .claude/templates/
-  2 workflows   → .claude/workflows/  (/harness-review, /harness-implement-group)
+  4 workflows   → .claude/workflows/  (/harness-review, /harness-implement-group, /harness-brownfield-map, /harness-eval)
   6 state files → .claude/state/
   1 manifest    → .claude/.claude-plugin/plugin.json
 
@@ -1015,7 +1019,7 @@ Installed:
   28 skills     → .claude/skills/
   18 hooks      → .claude/hooks/
   12 templates  → .claude/templates/
-  2 workflows   → .claude/workflows/  (/harness-review, /harness-implement-group)
+  4 workflows   → .claude/workflows/  (/harness-review, /harness-implement-group, /harness-brownfield-map, /harness-eval)
   6 state files → .claude/state/
   1 manifest    → .claude/.claude-plugin/plugin.json
 
