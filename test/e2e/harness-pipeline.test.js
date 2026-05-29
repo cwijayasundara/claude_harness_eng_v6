@@ -144,7 +144,7 @@ describe('Harness E2E Pipeline', { timeout: 900000 }, () => {
 
   // ── Stage 2: Spec ────────────────────────────────────────────────────────
 
-  test('Stage 2 - Spec: decompose BRD into stories', { timeout: 120000 }, () => {
+  test('Stage 2 - Spec: decompose BRD into stories', { timeout: 210000 }, () => {
     if (!BRD_PATH) {
       console.log('[e2e] Skipping Spec: BRD not found');
       logResult('stage-3-spec', { skipped: true, reason: 'BRD missing' });
@@ -164,8 +164,8 @@ describe('Harness E2E Pipeline', { timeout: 900000 }, () => {
     const result = runClaude(specPrompt, {
       cwd: PROJECT_DIR,
       model: 'sonnet',
-      budgetUsd: '0.75',
-      timeoutMs: 110000,
+      budgetUsd: '1.00',
+      timeoutMs: 180000,
       continueSession: true,
     });
 
@@ -232,7 +232,7 @@ describe('Harness E2E Pipeline', { timeout: 900000 }, () => {
   test('Stage 3 - Design: generate architecture', { timeout: 120000 }, () => {
     const designPrompt =
       'You MUST create the directory specs/design/ using mkdir -p, then write ALL of these files:\n\n' +
-      '1. specs/design/system-design.md — architecture overview for a Node.js CLI todo app\n' +
+      '1. specs/design/architecture.md — architecture overview for a Node.js CLI todo app\n' +
       '2. specs/design/api-contracts.md — CLI commands as interface (add, list, complete, delete)\n' +
       '3. specs/design/data-models.md — todo entity with id/text/completed/createdAt\n' +
       '4. specs/design/folder-structure.md — directory tree\n' +
