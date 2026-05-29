@@ -12,6 +12,16 @@
 # Fields: rule_name (id), reminder (warning text, <=1KB), and EITHER regex
 # (Python regex) OR substrings (literal list). Optional: paths / exclude_paths
 # (globs; prefix project-relative globs with **/).
+#
+# HARNESS EXTENSION — `block: true`: the harness security-pattern-gate hook
+# HARD-BLOCKS (exit 2) any edit matching a rule flagged `block: true`, turning
+# that pattern from advisory (plugin warning) into deterministic enforcement.
+# The plugin ignores the extra field. Use sparingly and only for high-confidence,
+# near-zero-false-positive patterns — blocking broad patterns like `eval(` or
+# `.innerHTML` would block legitimate code (that's why the plugin only warns).
+# Disable all blocking with HARNESS_PATTERN_BLOCK=off. Note: the block hook is
+# Node and parses JSON natively; for guaranteed parsing of blocking rules, prefer
+# security-patterns.json (same schema) over YAML.
 
 patterns:
   # --- Safe defaults (low false-positive; overlap with detect-secrets) ---
@@ -25,9 +35,10 @@ patterns:
     reminder: "Math.random() is not cryptographically secure. Use crypto.randomBytes / secrets.token_bytes for tokens."
 
   # --- Project-specific examples — uncomment and adapt, or delete ---
-  # - rule_name: tenant_unfiltered_query
+  # - rule_name: tenant_unfiltered_query     # add `block: true` to HARD-BLOCK this edit
   #   regex: "\\.objects\\.all\\(\\)"
   #   paths: ["**/src/tenants/**"]
+  #   block: true
   #   reminder: "Multi-tenant code must filter by org_id, not .all()."
   #
   # - rule_name: raw_html_render

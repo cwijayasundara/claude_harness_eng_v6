@@ -382,7 +382,7 @@ These plugins are complementary to the harness and do not conflict:
 - `superpowers` — structured workflows used by the harness pipeline for brainstorming, planning, TDD, debugging, and verification
 - `code-review` — PR review (our harness does sprint evaluation, not PR review)
 - `commit-commands` — git workflows (our harness manages commits in `/auto`, but manual commits need this)
-- `security-guidance` — real-time, in-session security review (per-edit pattern match + background diff/commit reviews). **Advisory only — it never blocks** (per its docs); findings are fed to Claude as suggestions. It complements but does not replace enforcement: the deterministic `detect-secrets` hook blocks secrets, and the **`security-reviewer` agent is the enforced gate** (its `security-verdict.json` fails `/evaluate` and the `/auto` loop on any critical/high finding). Sharpen the plugin with a project threat model in `.claude/claude-security-guidance.md` and custom deterministic patterns in `.claude/security-patterns.yaml`.
+- `security-guidance` — real-time, in-session security review (per-edit pattern match + background diff/commit reviews). **Advisory only — it never blocks** (per its docs); findings are fed to Claude as suggestions. It complements but does not replace enforcement: the deterministic `detect-secrets` hook blocks secrets, and the **`security-reviewer` agent is the enforced gate** (its `security-verdict.json` fails `/evaluate` and the `/auto` loop on any critical/high finding). Sharpen the plugin with a project threat model in `.claude/claude-security-guidance.md` and custom deterministic patterns in `.claude/security-patterns.yaml`. The plugin itself **cannot block** (advisory by design), but the harness `security-pattern-gate` hook reads that same patterns file and **hard-blocks** any rule you flag `block: true` — so the plugin warns on every pattern and the hook enforces the subset you choose.
 - `pr-review-toolkit` — specialized PR agents for after the harness finishes building
 - `frontend-design` — aesthetic-direction skill. Invoked by `ui-designer` during `/design` and by frontend teammates during `/implement` to avoid raw-Tailwind-default UI. The `design-critic` GAN loop still owns scoring and iteration control — `frontend-design` does not replace it.
 - `context7` — up-to-date library/docs lookup MCP. Useful when teammates need current API references for third-party libraries.
@@ -752,6 +752,7 @@ Hooks key off the **tool name only** — there is no per-command or per-agent ga
 |---|---|---|---|
 | `PreToolUse Write\|Edit\|MultiEdit` | `enforce-length-pre.js` | yes | Block oversized files at intent time (500-line cap) |
 | `PreToolUse Write\|Edit\|MultiEdit` | `test-first-gate.js` | yes | Block writing `src/` code with no test file (TDD; `HARNESS_TDD_GATE=off` to bypass) |
+| `PreToolUse Write\|Edit\|MultiEdit` | `security-pattern-gate.js` | yes | Hard-block edits matching `security-patterns.{json,yaml}` rules flagged `block: true` (`HARNESS_PATTERN_BLOCK=off` to bypass) |
 | `PostToolUse Edit\|Write\|MultiEdit` | `scope-directory.js` | yes | Reject writes outside the project |
 | `PostToolUse Edit\|Write\|MultiEdit` | `protect-env.js` | yes | Refuse changes to `.env` files |
 | `PostToolUse Edit\|Write\|MultiEdit` | `detect-secrets.js` | yes | Refuse hardcoded secrets |
@@ -1024,7 +1025,7 @@ Tailor the "Next steps" ordering based on the project-type decision:
 Installed:
   8 agents      → .claude/agents/
   28 skills     → .claude/skills/
-  21 hooks      → .claude/hooks/
+  22 hooks      → .claude/hooks/
   16 templates  → .claude/templates/
   4 workflows   → .claude/workflows/  (/harness-review, /harness-implement-group, /harness-brownfield-map, /harness-eval)
   6 state files → .claude/state/
@@ -1060,7 +1061,7 @@ Next steps:
 Installed:
   8 agents      → .claude/agents/
   28 skills     → .claude/skills/
-  21 hooks      → .claude/hooks/
+  22 hooks      → .claude/hooks/
   16 templates  → .claude/templates/
   4 workflows   → .claude/workflows/  (/harness-review, /harness-implement-group, /harness-brownfield-map, /harness-eval)
   6 state files → .claude/state/
