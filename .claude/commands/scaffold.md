@@ -761,6 +761,22 @@ Hooks key off the **tool name only** — there is no per-command or per-agent ga
 
 > **Note:** The deterministic hooks above are the *only* always-on enforcement. The generator, evaluator, design-critic, and reviewer **agents** run solely when a slash command (`/build`, `/implement`, `/evaluate`, `/review`, `/vibe`, …) invokes them or when the model chooses to — a raw ad-hoc edit is guarded by hooks alone. Do not add `disableWorkflows` and do not assume agent-level validation fires without a command.
 
+## TDD Enforcement (two complementary layers)
+
+1. **`test-first-gate.js` — deterministic, on by default.** A PreToolUse hook that blocks writing any source file with no accompanying test, checking test *existence* across common conventions (co-located `test_`/`_test`/`.test`/`.spec`, an adjacent `__tests__/` or `tests/`, and the `src/`→`tests/` mirror). Package markers, config, and `.d.ts` files are exempt. It cannot prove a test was failing first (red-green ordering). Bypass for legacy/brownfield: `HARNESS_TDD_GATE=off`.
+
+2. **`tdd-guard` — LLM-judged red-green ordering, opt-in.** The third-party [tdd-guard](https://github.com/nizos/tdd-guard) plugin reads live test results and uses an LLM to judge whether an edit violates TDD discipline (implementation before a failing test, over-implementing). It complements layer 1: *existence* vs. *discipline*. It is opt-in because it needs an interactive plugin install plus per-project test reporters, which a scaffold cannot provision. Enable it from a normal terminal / prompt (not auto-mode):
+
+   ```
+   /plugin marketplace add nizos/tdd-guard
+   /plugin install tdd-guard@tdd-guard
+   /tdd-guard:setup        # registers its own PreToolUse hook + configures reporters
+   ```
+
+   Add the matching reporter — pytest: `uv add --dev tdd-guard-pytest`; vitest: `npm i -D tdd-guard-vitest` (add `new VitestReporter(path.resolve(__dirname))` to `vitest.config.ts`); jest: `npm i -D tdd-guard-jest`. It stores state in `.claude/tdd-guard/data/` (git-ignored) and uses the Claude Code session model by default (`VALIDATION_CLIENT=sdk`; set `VALIDATION_CLIENT=api` + `TDD_GUARD_ANTHROPIC_API_KEY` for CI). Toggle mid-session with `tdd-guard on` / `tdd-guard off`.
+
+   > Do **not** also add a `tdd-guard` command to `settings.json` — `/tdd-guard:setup` registers its own PreToolUse hook, and a hand-added duplicate would double-invoke it (an uninstalled binary would error on every edit). The harness's `test-first-gate` and tdd-guard coexist as separate PreToolUse hooks.
+
 ## State Files
 
 | File                  | Purpose                                              |
@@ -950,6 +966,8 @@ package-lock.json
 # Harness state (not source)
 .claude/runs/
 .claude/state/archive/
+.claude/state/lane-router-last.txt
+.claude/tdd-guard/
 ```
 
 ## Step 9: Initialize State Files

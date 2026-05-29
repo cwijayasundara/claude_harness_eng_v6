@@ -1,6 +1,8 @@
 .claude/state/current-*
 .claude/state/telemetry-ledger.jsonl
 .claude/state/process-*.log
+.claude/state/lane-router-last.txt
+.claude/tdd-guard/
 node_modules/
 dist/
 build/
