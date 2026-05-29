@@ -13,6 +13,8 @@ bundled `/deep-research`.
 |---|---|---|
 | `/harness-review` | `harness-review.js` | Reviews the current diff across correctness / security / architecture / quality, adversarially verifies each finding, synthesizes a report. Dynamic-workflow form of `/review`. |
 | `/harness-implement-group <group-id>` | `harness-implement-group.js` | Builds a sprint group's stories in parallel — one TDD implementer per story in an isolated worktree, then an independent acceptance-criteria reviewer. Dynamic-workflow form of the `/implement` agent-team lane. |
+| `/harness-brownfield-map [scope]` | `harness-brownfield-map.js` | Surveys an existing codebase through five parallel lenses (structure, entry points, dependencies, tests, risk), then synthesizes the `specs/brownfield/` maps. Dynamic-workflow form of `/brownfield`. |
+| `/harness-eval <contract-id>` | `harness-eval.js` | Runs the three harness verification layers (API, UI/Playwright, schema) in parallel against the running app and aggregates one PASS/FAIL verdict. Dynamic-workflow form of `/evaluate`. |
 
 ## Enablement (not a project setting)
 
