@@ -36,8 +36,8 @@ Use the Agent tool to spawn both agents **at the same time** in a single call. D
 
 **Agent 2 — security-reviewer**
 - Scans changed files for security issues (injection, auth bypass, secrets in code, insecure dependencies, unsafe deserialization, missing input validation).
-- Output: writes `specs/reviews/security-review.md`.
-- Reports findings at three severity levels.
+- Output: writes `specs/reviews/security-review.md` (prose) **and** `specs/reviews/security-verdict.json` (machine-readable).
+- Reports findings at three severity levels. BLOCK = critical/high (the same verdict `/evaluate` and `/auto` gate on); WARN = medium; INFO = low.
 
 Both agents run against the same set of changed files and the same group context.
 

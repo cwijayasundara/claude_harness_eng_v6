@@ -156,6 +156,23 @@
               }
             }
           }
+        },
+        "security_checks": {
+          "type": "object",
+          "description": "Security gate. The validator FAILs if the security-reviewer reports any finding at or above a blocking severity. Enforced by /evaluate and the /auto loop via specs/reviews/security-verdict.json.",
+          "properties": {
+            "required": {
+              "type": "boolean",
+              "default": true,
+              "description": "When true (default), the overall evaluation verdict requires security-verdict.json#pass === true."
+            },
+            "block_severities": {
+              "type": "array",
+              "description": "Severities that fail the gate. Default: critical and high.",
+              "items": { "type": "string", "enum": ["critical", "high", "medium", "low"] },
+              "default": ["critical", "high"]
+            }
+          }
         }
       }
     }

@@ -45,11 +45,15 @@ You are the Security Reviewer for the Claude Harness Engine. Your role is to sys
 
 ## Severity Levels
 
-| Level | Meaning | Action Required |
-|---|---|---|
-| BLOCK | Exploitable vulnerability that must be fixed before merge | Do not proceed; return to generator |
-| WARN | Weakness that should be fixed but does not block the sprint | Generator should fix in next sprint |
-| INFO | Best-practice deviation, low risk | Log for future improvement |
+Assign each finding a `severity` of `critical`, `high`, `medium`, or `low`, then map it to a gate level:
+
+| severity | level | Meaning | Action Required |
+|---|---|---|---|
+| critical / high | BLOCK | Exploitable vulnerability that must be fixed before merge | Do not proceed; return to generator |
+| medium | WARN | Weakness that should be fixed but does not block the sprint | Generator should fix in next sprint |
+| low | INFO | Best-practice deviation, low risk | Log for future improvement |
+
+The validator gate fails on any BLOCK (critical/high) finding. This is the threshold the evaluator and `/auto` enforce — see "Structured Verdict" below.
 
 ## Scan Process
 
@@ -99,6 +103,37 @@ separate argument to the query function.
 ```
 
 Every finding must include: a unique ID, file path with line number, severity, description of the vulnerability, and a specific fix recommendation. Do not reproduce exploitable code verbatim in the report — describe the pattern and reference the file location.
+
+## Structured Verdict (machine-readable — required)
+
+In addition to the prose report, you MUST write `specs/reviews/security-verdict.json` so the evaluator and `/auto` can gate on it programmatically:
+
+```json
+{
+  "gate": "security",
+  "pass": true,
+  "block_severities": ["critical", "high"],
+  "summary": { "block": 0, "warn": 0, "info": 0 },
+  "findings": [
+    {
+      "id": "VULN-001",
+      "severity": "high",
+      "level": "BLOCK",
+      "category": "injection",
+      "file": "src/api/users.ts",
+      "line": 47,
+      "description": "User-controlled `name` concatenated into SQL.",
+      "fix": "Use a parameterized query."
+    }
+  ]
+}
+```
+
+Rules:
+- `pass` is `true` only when there are **zero** findings whose `severity` is in `block_severities` (default `critical`/`high`). Any BLOCK finding ⇒ `pass: false`.
+- `level` is derived from `severity` per the table above (critical/high→BLOCK, medium→WARN, low→INFO).
+- `summary` counts findings by level.
+- Write `{ "gate": "security", "pass": true, "block_severities": ["critical","high"], "summary": {"block":0,"warn":0,"info":0}, "findings": [] }` when the scan is clean.
 
 ## Gotchas
 

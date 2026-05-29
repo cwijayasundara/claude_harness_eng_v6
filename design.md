@@ -310,8 +310,11 @@ The evaluator never reads source code. It only runs the application and checks o
 | **1. API** | Endpoints return correct status + schema | `curl` against running app + `jsonschema` validation | Backend logic, schema mismatches, error handling |
 | **2. Playwright** | UI works as user expects | Playwright MCP: navigate, click, fill, assert with semantic selectors | Frontend bugs, broken forms, missing feedback, dead buttons |
 | **3. Vision** | UI has distinctive, quality design | Screenshots scored by design-critic on 4 weighted criteria | Generic templates, poor spacing, inconsistent styling |
+| **4. Security** | No exploitable vulnerabilities | `security-reviewer` agent → `security-verdict.json`; gate fails on any critical/high finding | Injection, auth bypass, IDOR, SSRF, hardcoded secrets, unsafe deserialization |
 
 On any Layer 1 or 2 failure, the evaluator reads Docker logs (or process stderr in local mode) to extract the actual stack trace. The generator receives the exact error, not "got 500 instead of 201."
+
+The Layer 4 security gate is enforced by `/evaluate` and the `/auto` loop: a functional pass with an open critical/high finding is still a FAIL, and the finding routes into the same self-healing loop. The advisory `security-guidance` plugin (in-session warnings) layers *in front of* this gate but does not satisfy it — only the `security-reviewer` agent's verdict does.
 
 ### The Design-Critic GAN Loop
 
@@ -334,7 +337,7 @@ Two pass conditions must BOTH be met: weighted average ≥ 7 AND every individua
 
 ### Concept: Monotonic Progress
 
-Every quality metric can only move forward, never backward. The ratchet has 6 sub-gates run in sequence:
+Every quality metric can only move forward, never backward. The ratchet has 7 sub-gates run in sequence:
 
 ```
 Gate 1: Unit tests pass          [all modes]     -- pytest / vitest exit 0
@@ -343,6 +346,7 @@ Gate 3: Coverage >= baseline     [all modes]     -- floor 80%, never drops
 Gate 4: Architecture alignment   [full/lean]     -- one-way layer imports
 Gate 5: Evaluator verdict        [full/lean]     -- API + Playwright vs running app
 Gate 6: Design critic score      [full only]     -- vision scoring (4 criteria)
+Gate 7: Security gate            [full/lean]     -- security-reviewer, fail on critical/high
 ```
 
 **Coverage as verification, not just testing.** Steve Krenzel's framing: "100% coverage isn't a goal — it's verification that the agent double-checked every line it wrote." Floor 80%. Baseline ratchets upward. Below-baseline commits are rejected.
