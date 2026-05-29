@@ -392,6 +392,10 @@ The evaluator writes its report to `specs/reviews/evaluator-report.md`.
 
 Spawn design-critic on every page listed in the sprint contract's `design_checks`. The critic screenshots each page, scores visual fidelity, and returns PASS/FAIL per check. See SECTION 9 for the full GAN loop if scores are below threshold.
 
+### Gate 7 — Security (Full + Lean)
+
+Spawn the `security-reviewer` agent against the group's changed files. It writes `specs/reviews/security-verdict.json`. The gate **FAILs** if `security-verdict.json#pass === false` — i.e. any finding whose `severity` is in the contract's `contract.security_checks.block_severities` (default `["critical", "high"]`). Medium/low findings are WARN/INFO and do not fail the gate. A missing verdict file is a FAIL (`failure_layer: "security"`) — a skipped scan is never a pass. This gate does not need the Docker stack and can run concurrently with Gate 5.
+
 ---
 
 ## SECTION 6: PASS/FAIL Handling (Steps 6-7)
@@ -428,7 +432,7 @@ Do not immediately revert. Attempt targeted self-healing first.
 
 **Attempt 1-3:**
 
-1. **Diagnose:** Invoke `superpowers:systematic-debugging` to analyze the failure before attempting a fix. This prevents jumping to conclusions and ensures the root cause is identified. Read the evaluator report (`specs/reviews/evaluator-report.md`) for specific failure details. Identify the exact check that failed and the error output.
+1. **Diagnose:** Invoke `superpowers:systematic-debugging` to analyze the failure before attempting a fix. This prevents jumping to conclusions and ensures the root cause is identified. Read the evaluator report (`specs/reviews/evaluator-report.md`) and, for security failures, the security verdict (`specs/reviews/security-verdict.json`) for specific failure details. Identify the exact check or finding that failed and the error output.
 
 2. **Classify** the failure into one of 10 categories:
 
@@ -444,6 +448,7 @@ Do not immediately revert. Attempt targeted self-healing first.
 | Design score low | Score below threshold | Apply the critique text, regenerate the UI |
 | Docker fail | Container exit code / won't start | Read `docker compose logs`, fix config or deps |
 | Architecture drift | Schema mismatch / missing file | Read the schema, fix the response or create the file |
+| Security (BLOCK) | `security-verdict.json#pass === false` (critical/high finding) | Apply the finding's `fix`; parameterize queries, add authz/validation, remove hardcoded secrets. Re-run the security-reviewer to confirm the verdict clears |
 
 3. **Spawn generator** to apply the targeted fix. The generator prompt must include:
    - The structured failure JSON from `specs/reviews/eval-failures-NNN.json` (see evaluator agent for schema).

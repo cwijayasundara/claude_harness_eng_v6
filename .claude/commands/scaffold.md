@@ -380,7 +380,7 @@ These plugins are complementary to the harness and do not conflict:
 - `superpowers` — structured workflows used by the harness pipeline for brainstorming, planning, TDD, debugging, and verification
 - `code-review` — PR review (our harness does sprint evaluation, not PR review)
 - `commit-commands` — git workflows (our harness manages commits in `/auto`, but manual commits need this)
-- `security-guidance` — real-time edit-time security patterns (XSS, eval, unsafe HTML) that complement our `detect-secrets` hook
+- `security-guidance` — real-time, in-session security review (per-edit pattern match + background diff/commit reviews). **Advisory only — it never blocks** (per its docs); findings are fed to Claude as suggestions. It complements but does not replace enforcement: the deterministic `detect-secrets` hook blocks secrets, and the **`security-reviewer` agent is the enforced gate** (its `security-verdict.json` fails `/evaluate` and the `/auto` loop on any critical/high finding). Sharpen the plugin with a project threat model in `.claude/claude-security-guidance.md` and custom deterministic patterns in `.claude/security-patterns.yaml`.
 - `pr-review-toolkit` — specialized PR agents for after the harness finishes building
 - `frontend-design` — aesthetic-direction skill. Invoked by `ui-designer` during `/design` and by frontend teammates during `/implement` to avoid raw-Tailwind-default UI. The `design-critic` GAN loop still owns scoring and iteration control — `frontend-design` does not replace it.
 - `context7` — up-to-date library/docs lookup MCP. Useful when teammates need current API references for third-party libraries.

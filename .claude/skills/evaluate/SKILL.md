@@ -165,6 +165,20 @@ This check does not require Docker to be running.
 
 ---
 
+## Layer 4 — Security Gate
+
+The validator is not security-complete without this layer. Run it in Full and Lean modes (skip only in Solo, where `/evaluate` is itself a no-op).
+
+1. Spawn the `security-reviewer` agent against the group's changed files (run it concurrently with Layers 1–2 when possible — it does not need the app running).
+2. The agent writes `specs/reviews/security-verdict.json` (`{ pass, block_severities, summary, findings[] }`). Read it.
+3. Determine the blocking threshold: use the sprint contract's `contract.security_checks.block_severities` if present, else the default `["critical", "high"]`.
+4. The security gate **FAILs** if any finding's `severity` is in the blocking set (equivalently, `security-verdict.json#pass === false`). Medium/low findings are WARN/INFO — record them, do not fail on them.
+5. If `security-verdict.json` is missing, treat that as a FAIL with `failure_layer: "security"` and reason `"security-reviewer did not produce a verdict"` — a missing scan is not a pass.
+
+This layer does not require Docker. It is independent of the app being reachable.
+
+---
+
 ## Update features.json
 
 After all checks complete, update `features.json` for every feature ID listed in the sprint contract's `features` array:
@@ -172,7 +186,7 @@ After all checks complete, update `features.json` for every feature ID listed in
 - `passes`: `true` if all checks for that feature passed, `false` otherwise.
 - `last_evaluated`: current timestamp in ISO 8601 format.
 - `failure_reason`: `null` if passing; otherwise a human-readable description of the first failure (e.g., `"GET /users/1 returned 404, expected 200"`).
-- `failure_layer`: `null` if passing; otherwise one of `"api"`, `"playwright"`, `"design"`, `"unit_test"`, `"docker"`.
+- `failure_layer`: `null` if passing; otherwise one of `"api"`, `"playwright"`, `"design"`, `"unit_test"`, `"docker"`, `"security"`.
 
 Do not remove existing fields from `features.json`. Merge the updates into the existing structure.
 Only update evaluation state fields: `passes`, `last_evaluated`, `failure_reason`, and `failure_layer`. Preserve immutable feature identity/specification fields such as `id`, `category`, `story`, `group`, `description`, and `steps`.
@@ -211,6 +225,11 @@ VERDICT: PASS | FAIL
 - [PASS] All expected files exist ✓
 - [FAIL] Missing: src/repository/user-repository.ts
 
+## Security Gate
+
+- [FAIL] VULN-001 (high): SQL injection in src/api/users.ts:47
+- block: 1, warn: 2, info: 0 → gate FAIL
+
 ## Features Updated
 
 - F001: PASS
@@ -218,17 +237,17 @@ VERDICT: PASS | FAIL
 - F003: PASS
 ```
 
-The overall VERDICT is PASS only if every check across all layers passes. A single FAIL in any layer produces a FAIL verdict.
+The overall VERDICT is PASS only if every check across all layers passes **and** the security gate passes (`security-verdict.json#pass === true`). A single FAIL in any layer — including an open BLOCK (critical/high) security finding — produces a FAIL verdict.
 
 ---
 
 ## Mode Behavior
 
-| Mode  | Layer 1 (API) | Layer 2 (Playwright) | Layer 3 (Design) |
-|-------|--------------|---------------------|-----------------|
-| Full  | Run          | Run                 | Run             |
-| Lean  | Run          | Run                 | Skip            |
-| Solo  | No-op — print "Solo mode: skipping evaluator" and exit |
+| Mode  | Layer 1 (API) | Layer 2 (Playwright) | Layer 3 (Design) | Layer 4 (Security) |
+|-------|--------------|---------------------|-----------------|--------------------|
+| Full  | Run          | Run                 | Run             | Run                |
+| Lean  | Run          | Run                 | Skip            | Run                |
+| Solo  | No-op — print "Solo mode: skipping evaluator" and exit (use `/review` for the Solo security gate) |
 
 Determine the current mode from `project-manifest.json` field `mode`. Default to Full if the field is absent.
 

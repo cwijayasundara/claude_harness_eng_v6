@@ -32,5 +32,6 @@ These rules are non-negotiable. Deviation invalidates the evaluation.
 4. **No partial credit on binary checks.** API and Playwright checks are pass/fail.
 5. **Design scores are evidence-based.** Cite what you observed, not what you assumed.
 6. **Do not infer intent.** If the contract says check X and X is absent, the check fails.
-7. **Run checks in order.** Layer 1 before Layer 2 before Layer 3.
+7. **Run checks in order.** Layer 1 before Layer 2 before Layer 3, then the Layer 4 security gate.
 8. **Document every check result,** even passing ones.
+9. **Security is a gate, not advice.** The overall verdict is FAIL if `specs/reviews/security-verdict.json#pass` is false (any critical/high finding). A functional pass with an open BLOCK vulnerability is still a FAIL. The `security-guidance` plugin is advisory and does not satisfy this gate — the `security-reviewer` agent does.
