@@ -57,6 +57,8 @@ The validator gate fails on any BLOCK (critical/high) finding. This is the thres
 
 ## Scan Process
 
+0. **Load the project threat model** — If `.claude/claude-security-guidance.md` exists, read it first and treat its rules as additional, project-specific checks **on top of** the OWASP categories above. A violation of a `MUST` or `NEVER` rule is a real finding; assign severity by impact (an unauthorized-data-exposure or auth-bypass rule is `critical`/`high` → BLOCK). These rules and the built-in categories are cumulative — the threat model never suppresses a built-in finding.
+
 1. **Grep for patterns** — Use Grep to find common vulnerability patterns across all source files:
    - Hardcoded credential patterns: assignment of string literals to variables named `password`, `api_key`, `secret`, `token`
    - Raw queries with string interpolation or concatenation

@@ -1,0 +1,36 @@
+# Custom per-edit security patterns for the security-guidance plugin.
+# These run as deterministic string/regex matches when Claude writes a file and
+# append a reminder to its context. They are ADVISORY (the plugin never blocks);
+# for hard blocking use the harness's detect-secrets hook or the security-reviewer
+# gate. Built-in plugin patterns cannot be disabled here — this file is additive.
+#
+# REQUIRES PyYAML importable by the plugin's Python. If your patterns are not
+# firing, the plugin is silently ignoring this file because PyYAML is missing —
+# rename it to `security-patterns.json` (same schema, JSON syntax) which needs no
+# PyYAML. Verify in ~/.claude/security/log.txt.
+#
+# Fields: rule_name (id), reminder (warning text, <=1KB), and EITHER regex
+# (Python regex) OR substrings (literal list). Optional: paths / exclude_paths
+# (globs; prefix project-relative globs with **/).
+
+patterns:
+  # --- Safe defaults (low false-positive; overlap with detect-secrets) ---
+  - rule_name: hardcoded_cloud_key_prefix
+    substrings: ["AKIA", "sk_live_", "sk-ant-", "ghp_"]
+    reminder: "Hardcoded cloud/API key prefix. Load credentials from the secret manager, never source."
+
+  - rule_name: insecure_random_for_secrets
+    regex: "Math\\.random\\(\\)"
+    paths: ["**/auth/**", "**/security/**", "**/crypto/**"]
+    reminder: "Math.random() is not cryptographically secure. Use crypto.randomBytes / secrets.token_bytes for tokens."
+
+  # --- Project-specific examples — uncomment and adapt, or delete ---
+  # - rule_name: tenant_unfiltered_query
+  #   regex: "\\.objects\\.all\\(\\)"
+  #   paths: ["**/src/tenants/**"]
+  #   reminder: "Multi-tenant code must filter by org_id, not .all()."
+  #
+  # - rule_name: raw_html_render
+  #   substrings: ["dangerouslySetInnerHTML", ".innerHTML ="]
+  #   exclude_paths: ["**/tests/**"]
+  #   reminder: "Raw HTML injection — sanitize with DOMPurify before rendering."
