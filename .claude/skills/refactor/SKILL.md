@@ -12,9 +12,11 @@ context: fork
 ```
 /refactor src/service/extraction.py
 /refactor src/repository/
+/refactor --sweep            # whole-repo entropy scan (formerly /lint-drift)
+/refactor --sweep --auto-fix # sweep + auto-commit CLEANUP-class items
 ```
 
-Provide a file path or directory. The skill analyzes the target against core quality principles, plans the changes, and executes them one principle at a time.
+Provide a file path or directory for a **targeted** refactor. Use `--sweep` for a **whole-repo entropy scan** that reports accumulated drift and routes findings back into the per-principle fix flow. The skill analyzes the target against core quality principles, plans the changes, and executes them one principle at a time.
 
 ---
 
@@ -23,6 +25,27 @@ Provide a file path or directory. The skill analyzes the target against core qua
 Refactoring improves the internal structure of existing code without changing its observable behavior. No new features. No behavior changes. Every change must trace to a violation of the core quality principles.
 
 For tiny cleanup that is obviously safe and local (for example one unused import, one typo in a comment, one lint-only change), use `/vibe` instead. Use `/refactor` when the change affects structure, module boundaries, tests, or multiple files.
+
+---
+
+## Drift Sweep Mode (`/refactor --sweep`)
+
+`/refactor <path>` fixes a targeted area. `/refactor --sweep` runs the whole-repo **entropy scan** (this absorbs the former `/lint-drift` skill): it *reports* accumulated drift and routes the findings back into the per-principle fix flow below. Entropy control for agent-generated code — as agents replicate patterns, drift accumulates.
+
+What the sweep scans:
+- **Structural drift (from `code-graph.json`, not grep):** orphan/dead files (`fan_in == 0`), layer-violation import directions, unstable hubs, cycles. Run `/code-map` first if the graph is missing or stale; prefer the graph over grep. Always grep for *dynamic* references (`getattr`, registries, `importlib`) before declaring anything dead.
+- **Cross-file duplicate logic:** near-identical function bodies across 3+ files → extract a shared utility. This is the sweep's unique signal (neither `code-map` nor a targeted refactor finds it).
+- **Principle violations:** file/function length, missing types, bare excepts, hardcoded config. Thresholds are single-sourced in `code-gen/SKILL.md` (do not restate them); the length/type cases are also enforced live by the hooks — the sweep catches what predates them.
+- **Test-quality drift:** assert-nothing tests, mocked business logic.
+
+Sweep workflow:
+1. Refresh `code-graph.json` (`/code-map`) if missing or stale.
+2. Scan files changed since the last sweep (marker `.claude/state/last-drift-scan.txt`, a commit SHA); full scan if no marker.
+3. Write `specs/reviews/drift-report.md` — category, `file:line`, suggested fix, severity (CLEANUP / REFACTOR / DEBT).
+4. Route REFACTOR-class items through Steps 1–7 below (the ratchet-gated fix). With `--auto-fix`, CLEANUP-class items may be auto-committed — they must pass the full ratchet gate.
+5. Record the new scan SHA to `.claude/state/last-drift-scan.txt`.
+
+When to sweep: after every ~5 `/auto` iterations, before a release, or when `learned-rules.md` grows past ~10 rules (pattern-accumulation signal). Do not refactor code outside the current change's scope without recording it as drift first.
 
 ---
 

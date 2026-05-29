@@ -306,7 +306,7 @@ test -f "$PLUGIN_SOURCE/templates/story.template.md"
 SKILL_COUNT=$(find "$PLUGIN_SOURCE/skills" -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')
 TEMPLATE_COUNT=$(find "$PLUGIN_SOURCE/templates" -maxdepth 1 -type f | wc -l | tr -d ' ')
 WORKFLOW_COUNT=$(find "$PLUGIN_SOURCE/workflows" -maxdepth 1 -name '*.js' | wc -l | tr -d ' ')
-test "$SKILL_COUNT" = "28"
+test "$SKILL_COUNT" = "27"
 test "$TEMPLATE_COUNT" = "16"
 test "$WORKFLOW_COUNT" = "4"
 test -f "$PLUGIN_SOURCE/git-hooks/prepare-commit-msg"
@@ -1012,7 +1012,7 @@ next_action: Run /brd to start
 
 ## Step 10: Report
 
-The skill count is 28. The Step 3 validation also asserts this — keep both in sync if you add or remove skills.
+The skill count is 27. The Step 3 validation also asserts this — keep both in sync if you add or remove skills.
 
 Tailor the "Next steps" ordering based on the project-type decision:
 
@@ -1025,7 +1025,7 @@ Tailor the "Next steps" ordering based on the project-type decision:
 
 Installed:
   8 agents      → .claude/agents/
-  28 skills     → .claude/skills/
+  27 skills     → .claude/skills/
   22 hooks      → .claude/hooks/
   16 templates  → .claude/templates/
   4 workflows   → .claude/workflows/  (/harness-review, /harness-implement-group, /harness-brownfield-map, /harness-eval)
@@ -1061,7 +1061,7 @@ Next steps:
 
 Installed:
   8 agents      → .claude/agents/
-  28 skills     → .claude/skills/
+  27 skills     → .claude/skills/
   22 hooks      → .claude/hooks/
   16 templates  → .claude/templates/
   4 workflows   → .claude/workflows/  (/harness-review, /harness-implement-group, /harness-brownfield-map, /harness-eval)

@@ -39,7 +39,7 @@ A GAN-inspired harness combining Karpathy ratcheting + Anthropic/OpenAI harness 
 | `/fix-issue` | GitHub issue workflow |
 | `/refactor` | Quality-driven refactoring |
 | `/improve` | Feature enhancement |
-| `/lint-drift` | Entropy scanner for pattern drift |
+| `/refactor --sweep` | Whole-repo entropy scan for pattern drift (formerly `/lint-drift`) |
 
 ## Agents (8)
 

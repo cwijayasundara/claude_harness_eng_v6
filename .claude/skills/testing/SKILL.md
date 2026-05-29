@@ -89,15 +89,7 @@ If the only way to test behavior is through fragile internals, flag an interface
 
 ## Tracer-Bullet TDD
 
-Do not batch all tests before implementation. Work in vertical slices:
-
-1. Write one failing behavior test.
-2. Verify it fails for the expected reason.
-3. Implement the minimum code.
-4. Verify it passes.
-5. Repeat for the next behavior.
-
-Each tracer bullet should be independently demoable or verifiable.
+The red-green-refactor / vertical-slice discipline (one failing behavior test → minimum code → pass → repeat) is canonical in `.claude/skills/code-gen/SKILL.md` and the `superpowers:test-driven-development` skill — follow those rather than a second copy here. This skill's contribution is the layer model and the boundary-condition checklist above, not the TDD loop.
 
 ---
 
