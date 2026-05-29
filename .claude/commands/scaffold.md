@@ -300,12 +300,14 @@ test -f "$PLUGIN_SOURCE/workflows/harness-implement-group.js"
 test -f "$PLUGIN_SOURCE/workflows/harness-brownfield-map.js"
 test -f "$PLUGIN_SOURCE/workflows/harness-eval.js"
 test -f "$PLUGIN_SOURCE/templates/context.template.md"
+test -f "$PLUGIN_SOURCE/templates/claude-security-guidance.template.md"
+test -f "$PLUGIN_SOURCE/templates/security-patterns.template.yaml"
 test -f "$PLUGIN_SOURCE/templates/story.template.md"
 SKILL_COUNT=$(find "$PLUGIN_SOURCE/skills" -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')
 TEMPLATE_COUNT=$(find "$PLUGIN_SOURCE/templates" -maxdepth 1 -type f | wc -l | tr -d ' ')
 WORKFLOW_COUNT=$(find "$PLUGIN_SOURCE/workflows" -maxdepth 1 -name '*.js' | wc -l | tr -d ' ')
 test "$SKILL_COUNT" = "28"
-test "$TEMPLATE_COUNT" = "12"
+test "$TEMPLATE_COUNT" = "16"
 test "$WORKFLOW_COUNT" = "4"
 test -f "$PLUGIN_SOURCE/git-hooks/prepare-commit-msg"
 test -f "$HARNESS_ROOT/README.md"
@@ -399,6 +401,17 @@ cp $PLUGIN_SOURCE/templates/mcp-config.template.json .mcp.json
 ```
 
 All servers are disabled by default. The user enables servers they need and configures connection details. Add `.mcp.json` to version control so all team members get the same MCP server configuration.
+
+### Generate Security Threat-Model Files
+
+Copy the security starter files to `.claude/` (read by both the `security-guidance` plugin and the `security-reviewer` gate):
+
+```bash
+cp $PLUGIN_SOURCE/templates/claude-security-guidance.template.md .claude/claude-security-guidance.md
+cp $PLUGIN_SOURCE/templates/security-patterns.template.yaml .claude/security-patterns.yaml
+```
+
+`claude-security-guidance.md` holds the project threat model; its `MUST`/`NEVER` rules are advisory in the plugin but become **blocking** findings in the `security-reviewer` gate. `security-patterns.yaml` adds deterministic per-edit warning patterns (plugin-only, advisory). Commit both. Tell the user to fill in the project-specific rules and note that `security-patterns.yaml` requires PyYAML in the plugin's Python — otherwise rename it to `security-patterns.json` (same schema).
 
 ## Step 4: Create Output Directories
 
@@ -968,6 +981,7 @@ package-lock.json
 .claude/state/archive/
 .claude/state/lane-router-last.txt
 .claude/tdd-guard/
+.claude/claude-security-guidance.local.md
 ```
 
 ## Step 9: Initialize State Files
@@ -1011,7 +1025,7 @@ Installed:
   8 agents      → .claude/agents/
   28 skills     → .claude/skills/
   21 hooks      → .claude/hooks/
-  12 templates  → .claude/templates/
+  16 templates  → .claude/templates/
   4 workflows   → .claude/workflows/  (/harness-review, /harness-implement-group, /harness-brownfield-map, /harness-eval)
   6 state files → .claude/state/
   1 manifest    → .claude/.claude-plugin/plugin.json
@@ -1047,7 +1061,7 @@ Installed:
   8 agents      → .claude/agents/
   28 skills     → .claude/skills/
   21 hooks      → .claude/hooks/
-  12 templates  → .claude/templates/
+  16 templates  → .claude/templates/
   4 workflows   → .claude/workflows/  (/harness-review, /harness-implement-group, /harness-brownfield-map, /harness-eval)
   6 state files → .claude/state/
   1 manifest    → .claude/.claude-plugin/plugin.json
