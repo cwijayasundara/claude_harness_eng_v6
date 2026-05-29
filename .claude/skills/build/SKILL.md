@@ -1,13 +1,13 @@
 ---
 name: build
 description: Full SDLC pipeline. Runs all phases end-to-end with human gates on phases 1-3.
-argument-hint: "[path-to-BRD] [--mode full|lean|solo]"
+argument-hint: "[path-to-BRD] [--mode full|lean|solo|turbo]"
 context: fork
 ---
 
 # Build Skill
 
-Full software development lifecycle pipeline. Orchestrates BRD creation, story specification, architecture design, state initialization, and autonomous build execution across 8 sequential phases.
+Full software development lifecycle pipeline. Orchestrates BRD creation, story specification, architecture design, state initialization, and autonomous build execution across sequential phases (Phase 0 through Phase 10).
 
 ---
 
@@ -23,7 +23,7 @@ The `--mode` flag controls which ratchet gates `/auto` enforces. Default: `full`
 
 ---
 
-## 8-Phase Pipeline
+## Pipeline Phases (0–10)
 
 ### Phase 0 — Brownfield Discovery [EXISTING CODEBASES]
 
@@ -53,7 +53,7 @@ If the user already has product stories, `/spec` may normalize those existing st
 
 Run `/design` and `/test --plan-only` **in parallel** using two concurrent Agent calls. Both consume `/spec` output independently:
 
-- **`/design`** — produces architecture artifacts in `specs/design/` (system-design, api-contracts, component-map, data-models, schemas).
+- **`/design`** — produces architecture artifacts in `specs/design/` (architecture, api-contracts, component-map, data-models, schemas).
 - **`/test --plan-only`** — produces test plan, test cases mapped to acceptance criteria, and test data fixtures in `specs/test_artefacts/` (test-plan.md, test-cases.md, test-data/).
 
 Wait for BOTH to complete before presenting results.
@@ -212,6 +212,7 @@ Commit the README: `git add README.md && git commit -m "docs: add README with ar
 | `full` | All ratchet gates including design critic and GAN loop |
 | `lean` | Skip design critic and GAN loop; keep API + Playwright checks |
 | `solo` | Generator works alone; skip evaluator, team, and Docker checks |
+| `turbo` | For highly capable models: single-pass implementation, ratchet gates 4–6 batched once at the end (see `/auto` → Turbo Mode) |
 
 ---
 

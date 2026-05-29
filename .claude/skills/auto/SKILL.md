@@ -303,7 +303,7 @@ If `--parallel-groups N > 3`, accept it but emit a warning to the iteration log.
 
 ## SECTION 5: Ratchet Gate (Step 5)
 
-After the agent team completes, run the ratchet gate. The ratchet is monotonic: progress never regresses. Six sub-gates, mode-dependent:
+After the agent team completes, run the ratchet gate. The ratchet is monotonic: progress never regresses. Seven sub-gates, mode-dependent:
 
 | Gate | Full | Lean | Solo | Turbo |
 |------|------|------|------|-------|
@@ -313,6 +313,7 @@ After the agent team completes, run the ratchet gate. The ratchet is monotonic: 
 | 4. Architecture (files exist, schema validation) | Yes | Yes | No | Once at end |
 | 5. Evaluator (API + Playwright vs running Docker) | Yes | Yes | No | Once at end |
 | 6. Design critic (vision scoring, GAN loop) | Yes | No | No | Once at end |
+| 7. Security (security-reviewer, block on critical/high) | Yes | Yes | No | Once at end |
 
 ### Turbo Mode (for highly capable models)
 
@@ -613,7 +614,7 @@ After each iteration, check the last `plateau_window` weighted scores:
 ```
 === Session {N} ===
 date: {ISO 8601}
-mode: {full|lean|solo}
+mode: {full|lean|solo|turbo}
 groups_completed: [A, B, C]
 groups_remaining: [D, E, F]
 current_group: D (extraction)

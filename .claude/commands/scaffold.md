@@ -981,6 +981,7 @@ package-lock.json
 .claude/runs/
 .claude/state/archive/
 .claude/state/lane-router-last.txt
+.claude/state/last-drift-scan.txt
 .claude/tdd-guard/
 .claude/claude-security-guidance.local.md
 ```

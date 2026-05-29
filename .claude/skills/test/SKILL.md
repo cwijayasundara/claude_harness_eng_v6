@@ -91,6 +91,8 @@ Create `e2e/` at the project root if it does not exist.
 
 For each story, generate a Playwright test file named `{story-id}.spec.ts`.
 
+Selector and assertion rules are single-sourced in `.claude/skills/evaluation/references/playwright-patterns.md` (the canonical Playwright reference, shared with `/evaluate`). The rules below summarize it — defer to that file if they differ.
+
 Rules for Playwright tests:
 - Use `getByRole`, `getByLabel`, `getByText` — never CSS selectors or XPath.
 - No `waitForTimeout`. Use `expect(locator).toBeVisible()` with retry.

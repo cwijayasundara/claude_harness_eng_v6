@@ -120,7 +120,7 @@ As a visitor, I want to create an account with email and password so that I can 
 
 ### Step 6 — Generate `features.json`
 
-This is the key enhancement over forge_v2. Transform every acceptance criterion into one or more testable features.
+Transform every acceptance criterion into one or more testable features.
 
 **Mapping rule:** Each acceptance criterion produces 1-3 feature entries. The feature description must be a specific, observable behavior. Each feature has executable steps describing how to verify it.
 

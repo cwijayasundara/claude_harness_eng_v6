@@ -120,6 +120,8 @@ If `time_ms > max_response_time_ms`, report as WARN (not BLOCK — performance i
 
 ## Layer 2 — Playwright Checks
 
+Selector and assertion rules are single-sourced in `.claude/skills/evaluation/references/playwright-patterns.md` (the canonical Playwright reference, shared with `/test`). The rules below are a summary — defer to that file if they differ.
+
 For each entry in `playwright_checks`:
 
 1. Use Playwright MCP tools to execute the interaction sequence:
@@ -249,7 +251,7 @@ The overall VERDICT is PASS only if every check across all layers passes **and**
 | Lean  | Run          | Run                 | Skip            | Run                |
 | Solo  | No-op — print "Solo mode: skipping evaluator" and exit (use `/review` for the Solo security gate) |
 
-Determine the current mode from `project-manifest.json` field `mode`. Default to Full if the field is absent.
+Determine the current execution mode from `project-manifest.json` field `execution.default_mode` (`full`/`lean`/`solo`/`turbo`), or the `--mode` override when invoked under `/auto` or `/build`. Default to Full if absent. Note: this is distinct from `verification.mode` (`docker`/`local`/`stub`), which controls how the app is reached — do not confuse the two.
 
 ---
 

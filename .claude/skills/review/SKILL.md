@@ -91,9 +91,19 @@ In Solo mode, only the security-reviewer runs. The evaluator is skipped because 
 After both agents complete (or in Solo mode, after the security reviewer completes):
 
 - `specs/reviews/evaluator-report.md` — overall PASS/FAIL verdict with per-check detail.
-- `specs/reviews/security-review.md` — list of BLOCK/WARN/INFO findings with file references.
+- `specs/reviews/security-review.md` — human-readable list of BLOCK/WARN/INFO findings with file references.
+- `specs/reviews/security-verdict.json` — the machine-readable security verdict (`pass`, `block_severities`, `findings[]`). This is the **canonical** security artifact.
 
-Both files must exist before the review cycle is considered complete. If either agent fails to produce its output file, treat that as a BLOCK finding.
+All three files must exist before the review cycle is considered complete. If either agent fails to produce its output, treat that as a BLOCK finding.
+
+## Canonical ownership (vs `/evaluate`)
+
+The security gate has **one** canonical definition — the `security-reviewer` agent's `security-verdict.json` (block on critical/high). There are two entry points to it, and they are not duplicate scans:
+
+- **`/evaluate` Layer 4 / `/auto` Gate 7** — the security gate *inside* the build loop. This is the authoritative in-pipeline owner.
+- **`/review`** — the *on-demand, pre-merge* gate that runs the evaluator + security-reviewer together. Use it for a manual quality gate or in **Solo mode**, where `/evaluate` is a no-op and `/review` is the *only* security gate.
+
+Both consume the same `security-verdict.json` with identical semantics. Do not treat `/review` and `/evaluate` as two different gates — run whichever entry point fits the moment; in `/auto`, Layer 4/Gate 7 already covers it, so a separate `/review` is only needed for manual or Solo gating.
 
 ---
 

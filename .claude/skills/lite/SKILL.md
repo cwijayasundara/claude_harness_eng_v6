@@ -47,7 +47,7 @@ Escalate to `/brd → /spec → /design → /auto` (or `/build`) when **any** ar
 - UI/UX is a meaningful product surface (use the full design lane with `ui-designer`).
 - Requirements remain ambiguous after the bounded interview below.
 
-If eligibility is uncertain, ask at most 3 clarifying questions. If still uncertain, escalate and stop.
+If eligibility is uncertain, use the `clarify` gate (`.claude/skills/clarify/SKILL.md`) — ask at most 3 questions, prefer recording assumptions over interrogating. If still uncertain, escalate and stop.
 
 ---
 
@@ -158,7 +158,7 @@ Write **only these** files under `specs/design/`:
 3. **`api-contracts.md`** — internal contracts only. For a CLI, document the invocation shape, flags, and exit codes. For a library, document the public functions and their signatures. No OpenAPI/JSON Schema unless the project actually exposes HTTP.
 
 Do **not** generate:
-- `system-design.md` (a folder tree is sufficient at this scale)
+- `architecture.md` (a folder tree is sufficient at this scale)
 - `data-models.md` / `data-models.schema.json` (Pydantic/TypeScript types live in code)
 - `api-contracts.schema.json` (no HTTP surface)
 - `deployment.md` (covered by `init.sh` and the project README)
@@ -219,7 +219,7 @@ Before declaring the lite pass complete, verify:
 - [ ] `specs/design/api-contracts.md` exists (CLI invocation OR public library functions; not OpenAPI unless HTTP)
 - [ ] `features.json` exists at project root with one entry per story
 - [ ] `claude-progress.txt` `next_action` points at `/auto --group A`
-- [ ] No `system-design.md`, `data-models.schema.json`, `api-contracts.schema.json`, `deployment.md`, or mockups created
+- [ ] No `architecture.md`, `data-models.schema.json`, `api-contracts.schema.json`, `deployment.md`, or mockups created
 
 If any item fails, fix it before handing off. If a missing artifact is one `/auto` actually requires (component-map, dependency-graph, features.json, epics.md), the autonomous loop will refuse to start.
 
