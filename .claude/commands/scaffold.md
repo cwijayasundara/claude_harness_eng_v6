@@ -294,12 +294,17 @@ test -f "$PLUGIN_SOURCE/scripts/telemetry-memory.js"
 test -f "$PLUGIN_SOURCE/scripts/replay-telemetry.js"
 test -d "$PLUGIN_SOURCE/skills/seam-finder"
 test -d "$PLUGIN_SOURCE/skills/vibe"
+test -d "$PLUGIN_SOURCE/workflows"
+test -f "$PLUGIN_SOURCE/workflows/harness-review.js"
+test -f "$PLUGIN_SOURCE/workflows/harness-implement-group.js"
 test -f "$PLUGIN_SOURCE/templates/context.template.md"
 test -f "$PLUGIN_SOURCE/templates/story.template.md"
 SKILL_COUNT=$(find "$PLUGIN_SOURCE/skills" -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')
 TEMPLATE_COUNT=$(find "$PLUGIN_SOURCE/templates" -maxdepth 1 -type f | wc -l | tr -d ' ')
+WORKFLOW_COUNT=$(find "$PLUGIN_SOURCE/workflows" -maxdepth 1 -name '*.js' | wc -l | tr -d ' ')
 test "$SKILL_COUNT" = "28"
 test "$TEMPLATE_COUNT" = "12"
+test "$WORKFLOW_COUNT" = "2"
 test -f "$PLUGIN_SOURCE/git-hooks/prepare-commit-msg"
 test -f "$HARNESS_ROOT/README.md"
 test -f "$HARNESS_ROOT/telemetry_docker_compose.yml"
@@ -323,6 +328,7 @@ cp -r $PLUGIN_SOURCE/hooks/ .claude/hooks/
 cp -r $PLUGIN_SOURCE/scripts/ .claude/scripts/
 cp -r $PLUGIN_SOURCE/state/ .claude/state/
 cp -r $PLUGIN_SOURCE/templates/ .claude/templates/
+cp -r $PLUGIN_SOURCE/workflows/ .claude/workflows/
 cp $PLUGIN_SOURCE/architecture.md .claude/architecture.md
 cp $PLUGIN_SOURCE/program.md .claude/program.md
 cp $PLUGIN_SOURCE/settings.json .claude/settings.json
@@ -522,6 +528,7 @@ One-way dependencies only. See `.claude/architecture.md` for full rules.
 | Sprint contract format | `.claude/skills/evaluation/references/contract-schema.json` |
 | Playwright patterns | `.claude/skills/evaluation/references/playwright-patterns.md` |
 | Human control knobs | `.claude/program.md` |
+| Dynamic workflows | `.claude/workflows/` (each `.js` → a `/<name>` command) |
 | Small work lane | `.claude/skills/vibe/SKILL.md` |
 | Code graph mapping | `.claude/skills/code-map/SKILL.md` |
 | Seam ranking | `.claude/skills/seam-finder/SKILL.md` |
@@ -549,6 +556,17 @@ One-way dependencies only. See `.claude/architecture.md` for full rules.
 | `/evaluate` | Run app, verify contract |
 | `/review` | Evaluator + security review |
 | `/deploy` | Docker Compose + init.sh |
+
+## Dynamic Workflows
+
+`.claude/workflows/*.js` files auto-register as `/<name>` slash commands — deterministic multi-agent orchestration (fan-out → verify → synthesize), shared via git. Shipped with the harness:
+
+| Command | Mirrors | Purpose |
+|---------|---------|---------|
+| `/harness-review` | `/review` | Multi-dimension review of the diff (correctness · security · architecture · quality), adversarially verified |
+| `/harness-implement-group <group-id>` | `/implement` | Parallel TDD build of a sprint group's stories in isolated worktrees, each acceptance-reviewed |
+
+Enablement is plan/runtime-gated, not a project setting: requires Pro+ (toggle in `/config` on Pro; default-on for Max/Team/Enterprise), and is triggered by the word `workflow` in a prompt, a saved `/<name>` command, or `/effort ultracode` (auto-orchestration). Workflows use substantially more tokens than a normal turn. Do **not** add `disableWorkflows` to `.claude/settings.json` — that turns the feature off. See `.claude/workflows/README.md` to add your own.
 
 ## LSP Integration
 
@@ -961,6 +979,7 @@ Installed:
   28 skills     → .claude/skills/
   18 hooks      → .claude/hooks/
   12 templates  → .claude/templates/
+  2 workflows   → .claude/workflows/  (/harness-review, /harness-implement-group)
   6 state files → .claude/state/
   1 manifest    → .claude/.claude-plugin/plugin.json
 
@@ -996,6 +1015,7 @@ Installed:
   28 skills     → .claude/skills/
   18 hooks      → .claude/hooks/
   12 templates  → .claude/templates/
+  2 workflows   → .claude/workflows/  (/harness-review, /harness-implement-group)
   6 state files → .claude/state/
   1 manifest    → .claude/.claude-plugin/plugin.json
 

@@ -121,5 +121,6 @@ The harness follows [Anthropic's guidance for large codebases](https://claude.co
 
 - `.claude/program.md` — Karpathy human-agent bridge (edit to steer /auto)
 - `.claude/settings.json` — Hook config, permissions, enabled plugins
+- `.claude/workflows/` — Dynamic workflows (each `.js` → a `/<name>` command; `/scaffold` copies these into target projects). See `.claude/workflows/README.md`
 - `design.md` — Full architecture reference (copied to target projects)
 - `README.md` — Installation and usage guide
