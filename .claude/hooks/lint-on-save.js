@@ -6,6 +6,33 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
+// Block only on a genuine tool failure (lint errors), never because the tool
+// or environment is missing/unprovisioned — otherwise every edit blocks before
+// `uv sync` / `npm ci`. Exit code alone is insufficient: `uv run ruff` exits 1
+// when ruff itself is absent, indistinguishable from "lint errors found", so we
+// also scan the output for tool/environment-missing signatures.
+const MISSING_SIGNATURES = [
+  'failed to spawn',
+  'no such file or directory',
+  'command not found',
+  'not recognized',
+  'no module named',
+  'no virtual environment',
+  'no `pyproject',
+  'cannot find module',
+  'eslint couldn\'t find',
+  'eslint could not find',
+];
+
+function shouldBlock(result) {
+  if (!result || result.error) return false; // spawn failed (e.g. sh missing)
+  if (result.status === null || result.status === 127) return false; // killed / not found
+  if (result.status === 0) return false; // clean
+  const out = ((result.stdout || '') + (result.stderr || '')).toLowerCase();
+  if (MISSING_SIGNATURES.some((s) => out.includes(s))) return false; // unprovisioned
+  return true;
+}
+
 try {
   const input = JSON.parse(fs.readFileSync('/dev/stdin', 'utf8'));
   const filePath = (input.tool_input && input.tool_input.file_path) || '';
@@ -55,8 +82,12 @@ try {
         encoding: 'utf8',
         cwd: detectCwd(filePath),
       });
-      if (result.status !== 0 && result.stdout) {
-        process.stdout.write(result.stdout);
+      // ruff auto-fixes what it can; a genuine non-zero status means unfixable lint errors remain.
+      if (shouldBlock(result)) {
+        process.stdout.write(
+          `BLOCKED: lint errors remain in ${filePath} after ruff --fix:\n${(result.stdout || '') + (result.stderr || '')}\nFix: resolve the lint errors above.\n`
+        );
+        process.exit(2);
       }
     }
   } else if (isTypeScript) {
@@ -66,8 +97,11 @@ try {
         encoding: 'utf8',
         cwd: detectCwd(filePath),
       });
-      if (result.status !== 0 && result.stdout) {
-        process.stdout.write(result.stdout);
+      if (shouldBlock(result)) {
+        process.stdout.write(
+          `BLOCKED: lint errors remain in ${filePath} after eslint --fix:\n${(result.stdout || '') + (result.stderr || '')}\nFix: resolve the lint errors above.\n`
+        );
+        process.exit(2);
       }
     }
   }
