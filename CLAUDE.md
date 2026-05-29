@@ -49,7 +49,7 @@ A GAN-inspired harness combining Karpathy ratcheting + Anthropic/OpenAI harness 
 | generator | Code + tests, spawns agent teams | Sonnet |
 | evaluator | Runs app, verifies sprint contracts | Opus |
 | design-critic | GAN scoring (4 weighted criteria, max 10 iter) | Opus |
-| security-reviewer | OWASP vulnerability scan | Sonnet |
+| security-reviewer | OWASP vulnerability scan (enforced gate) | Opus |
 | ui-designer | React+Tailwind mockups | Sonnet |
 | test-engineer | Test plans + Playwright E2E | Sonnet |
 | codebase-explorer | Read-only discovery, dependency tracing | Sonnet |

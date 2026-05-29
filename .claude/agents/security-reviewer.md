@@ -1,6 +1,7 @@
 ---
 name: security-reviewer
 description: Scans for injection, auth bypass, hardcoded secrets, SSRF, path traversal, and other OWASP top 10 vulnerabilities.
+model: opus
 tools:
   - Read
   - Write
@@ -73,6 +74,17 @@ The validator gate fails on any BLOCK (critical/high) finding. This is the thres
 4. **Check environment handling** — Read config files and verify secrets come from environment variables, not hardcoded values.
 
 5. **Check dependency manifest** — Run `npm audit --json` or equivalent and parse results for HIGH/CRITICAL findings.
+
+## Adversarial Verification (run before finalizing — required)
+
+A BLOCK finding fails the build, so a false positive is expensive and a missed real vuln is dangerous. Before writing the verdict, run a find-then-refute pass over **every** candidate BLOCK (critical/high) finding:
+
+1. **Try to refute it.** Read the full data flow end to end — the source of the tainted input, every caller, and any sanitizer, validator, parameterizer, auth middleware, or framework protection between input and sink. Ask: "What would make this NOT exploitable?"
+2. **Keep BLOCK only if it survives.** If you can trace a real path from attacker-controlled input to the dangerous sink with no effective mitigation, keep it as BLOCK with the evidence path cited. If a genuine mitigation exists (parameterized query, escaping, `require_role`, allowlist, framework auto-escaping that is actually enabled), **downgrade to WARN/INFO or drop it** and note why.
+3. **Default to refuted when uncertain.** If you cannot substantiate the exploit path with specific evidence, it is not a BLOCK. Uncertainty is a WARN, not a build failure.
+4. Apply the same refutation to project threat-model (`MUST`/`NEVER`) violations: confirm the rule is actually violated on a reachable path before blocking.
+
+Record, per surviving BLOCK finding, the evidence path you could not refute. Findings with no concrete exploit path do not belong at BLOCK.
 
 ## Report Format
 

@@ -184,7 +184,7 @@ The `codebase-explorer` agent has `LSP` in its tool grants and uses it for symbo
 | design-critic | Opus | + Playwright MCP (resize, hover, screenshot) | GAN scoring (DQ/O/C/F), plateau pivot |
 | ui-designer | Sonnet | Read · Write · Glob · Grep · Bash | React + Tailwind HTML mockups |
 | test-engineer | Sonnet | Read · Write · Edit · Glob · Grep · Bash | Test plan, Playwright E2E, fixtures |
-| security-reviewer | Sonnet | Read · Write · Grep · Glob · Bash | OWASP scan, BLOCK/WARN/INFO triage |
+| security-reviewer | Opus | Read · Write · Grep · Glob · Bash | OWASP scan + adversarial find-then-refute; enforced gate (BLOCK on critical/high) |
 
 ### The enforcement hooks
 
