@@ -193,7 +193,7 @@ All hooks include remediation instructions ("Fix: …") so they steer the agent,
 | Event matcher | Hook | Purpose |
 |---|---|---|
 | `PreToolUse Write|Edit|MultiEdit` | `enforce-length-pre.js` | Block oversized files at intent time |
-| `PreToolUse Write|Edit|MultiEdit` | `test-first-gate.js` | Block `src/` code with no test (TDD; `HARNESS_TDD_GATE=off` bypass) |
+| `PreToolUse Write|Edit|MultiEdit` | `test-first-gate.js` | Block any source file with no test, across common conventions (TDD; `HARNESS_TDD_GATE=off` bypass) |
 | `PostToolUse Edit|Write|MultiEdit` | `scope-directory.js` | Reject writes outside the project |
 | `PostToolUse Edit|Write|MultiEdit` | `protect-env.js` | Refuse changes to `.env` files |
 | `PostToolUse Edit|Write|MultiEdit` | `detect-secrets.js` | Refuse hardcoded secrets |
@@ -210,6 +210,8 @@ All hooks include remediation instructions ("Fix: …") so they steer the agent,
 | `Stop` | `require-review.js` | Force reviewer agent before turn ends |
 | `TaskCompleted` | `task-completed.js` | Architecture scan + `/review` reminder |
 | `TeammateIdle` | `teammate-idle-check.js` | Nudge stuck teammates; no tests = no idle |
+
+**TDD is enforced in two complementary layers.** Layer 1, `test-first-gate.js` (above), is deterministic and on by default: it blocks any source write with no test, but enforces test *existence* only. Layer 2 is the optional third-party [`tdd-guard`](https://github.com/nizos/tdd-guard) plugin, which adds LLM-judged red-green *ordering* (it reads live test results to catch implementation-before-failing-test and over-implementing). tdd-guard is opt-in — it needs an interactive `/plugin install` + `/tdd-guard:setup` plus per-project test reporters, so a scaffold can't auto-provision it. The two run as separate PreToolUse hooks; do not hand-add tdd-guard's command to `settings.json` (its setup registers its own hook). See the scaffold's generated `design.md` for the enable steps.
 
 ---
 
