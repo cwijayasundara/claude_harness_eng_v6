@@ -194,6 +194,7 @@ All hooks include remediation instructions ("Fix: …") so they steer the agent,
 |---|---|---|
 | `PreToolUse Write|Edit|MultiEdit` | `enforce-length-pre.js` | Block oversized files at intent time |
 | `PreToolUse Write|Edit|MultiEdit` | `test-first-gate.js` | Block any source file with no test, across common conventions (TDD; `HARNESS_TDD_GATE=off` bypass) |
+| `PreToolUse Write|Edit|MultiEdit` | `security-pattern-gate.js` | Hard-block edits matching `security-patterns.{json,yaml}` rules flagged `block: true` (`HARNESS_PATTERN_BLOCK=off` bypass) |
 | `PostToolUse Edit|Write|MultiEdit` | `scope-directory.js` | Reject writes outside the project |
 | `PostToolUse Edit|Write|MultiEdit` | `protect-env.js` | Refuse changes to `.env` files |
 | `PostToolUse Edit|Write|MultiEdit` | `detect-secrets.js` | Refuse hardcoded secrets |
