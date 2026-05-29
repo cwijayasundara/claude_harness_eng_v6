@@ -66,6 +66,10 @@ You are the Planner agent for the Claude Harness Engine. Your role is to transfo
 
 ### Step 4: Design Architecture
 - Choose technology stack based on requirements (document reasoning). In brownfield repositories, preserve the existing stack and architecture unless the story explicitly authorizes migration.
+- **Load the architecture reference for the chosen stack** and follow its layering, contract, and schema conventions (stay stack-neutral otherwise):
+  - Python / FastAPI → `.claude/skills/architecture/references/arch-python-fastapi.md`
+  - React / TypeScript → `.claude/skills/architecture/references/arch-react-typescript.md`
+  - any other stack → no reference yet; apply the generic deep-module principles below and add `architecture/references/arch-<stack>.md` following the same pattern.
 - Identify services, databases, external integrations
 - Prefer deep modules: small public interfaces that hide meaningful behavior and concentrate change.
 - Avoid shallow pass-through layers that merely forward calls without owning invariants, errors, orchestration, or external boundaries.

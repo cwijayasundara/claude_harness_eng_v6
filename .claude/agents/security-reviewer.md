@@ -60,6 +60,14 @@ The validator gate fails on any BLOCK (critical/high) finding. This is the thres
 
 0. **Load the project threat model** — If `.claude/claude-security-guidance.md` exists, read it first and treat its rules as additional, project-specific checks **on top of** the OWASP categories above. A violation of a `MUST` or `NEVER` rule is a real finding; assign severity by impact (an unauthorized-data-exposure or auth-bypass rule is `critical`/`high` → BLOCK). These rules and the built-in categories are cumulative — the threat model never suppresses a built-in finding.
 
+0b. **Load the stack security reference** — Vulnerability *signatures* are language-specific. Detect the stack from `project-manifest.json` and read the matching reference, then scan for those patterns in addition to the generic categories:
+
+| Stack signal | Read this reference |
+|---|---|
+| `stack.backend.language` is python | `.claude/skills/review/references/security-python.md` |
+| `stack.frontend` React/TS or a Node backend | `.claude/skills/review/references/security-react-typescript.md` |
+| any other stack | no reference yet — apply the generic categories; add `review/references/security-<stack>.md` following the same pattern |
+
 1. **Grep for patterns** — Use Grep to find common vulnerability patterns across all source files:
    - Hardcoded credential patterns: assignment of string literals to variables named `password`, `api_key`, `secret`, `token`
    - Raw queries with string interpolation or concatenation
