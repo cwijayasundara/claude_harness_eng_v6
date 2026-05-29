@@ -240,7 +240,7 @@ Then verify: `/install-framework-packs`
 | `/fix-issue` | GitHub issue → branch → fix → test → PR |
 | `/refactor` | Quality-driven refactoring with ratchet gate |
 | `/improve` | Feature enhancement with verification |
-| `/lint-drift` | Entropy scanner for pattern drift |
+| `/refactor --sweep` | Whole-repo entropy scan for pattern drift (formerly `/lint-drift`) |
 | `/tracker-publish` | Publish dependency groups to Linear/Jira |
 | `/install-framework-packs` | Verify configured framework packs and print manual install commands for missing packs |
 

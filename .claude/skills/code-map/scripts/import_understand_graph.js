@@ -180,6 +180,9 @@ function buildHarnessGraph(understandGraph, inputPath) {
 
   const edges = [];
   const seenEdges = new Set();
+  // O(1) node lookup by id — avoids an O(n) scan per edge (was O(n·e) on big graphs).
+  const nodeById = new Map();
+  for (const n of fileNodes.values()) nodeById.set(n.id, n);
 
   for (const edge of understandGraph.edges || []) {
     const source = understandToHarness.get(edge.source);
@@ -195,8 +198,8 @@ function buildHarnessGraph(understandGraph, inputPath) {
     }
     if (source === target) continue;
 
-    const sourceNode = [...fileNodes.values()].find((n) => n.id === source);
-    const targetNode = [...fileNodes.values()].find((n) => n.id === target);
+    const sourceNode = nodeById.get(source);
+    const targetNode = nodeById.get(target);
     const kind = EDGE_KIND_MAP[edge.type] || edge.type || 'related';
     const key = `${source}|${target}|${kind}`;
     if (seenEdges.has(key)) continue;
@@ -280,44 +283,53 @@ function computeMetrics(nodes, edges) {
   };
 }
 
+// Iterative Tarjan SCC (explicit work-stack) — stack-safe on large graphs,
+// unlike a recursive strongconnect which can overflow Node's call stack.
+function tarjanPush(v, st) {
+  st.indexOf.set(v, st.index);
+  st.lowlink.set(v, st.index);
+  st.index++;
+  st.tstack.push(v);
+  st.onStack.add(v);
+}
+
+function tarjanEmitScc(v, st, cycles) {
+  const comp = [];
+  let w;
+  do {
+    w = st.tstack.pop();
+    st.onStack.delete(w);
+    comp.push(w);
+  } while (w !== v);
+  if (comp.length > 1) cycles.push(comp.sort());
+}
+
 function findCycles(adj) {
-  const indexOf = new Map();
-  const lowlink = new Map();
-  const onStack = new Set();
-  const stack = [];
+  const st = { indexOf: new Map(), lowlink: new Map(), onStack: new Set(), tstack: [], index: 0 };
   const cycles = [];
-  let index = 0;
-
-  function strongconnect(v) {
-    indexOf.set(v, index);
-    lowlink.set(v, index);
-    index++;
-    stack.push(v);
-    onStack.add(v);
-
-    for (const w of adj.get(v) || []) {
-      if (!indexOf.has(w)) {
-        strongconnect(w);
-        lowlink.set(v, Math.min(lowlink.get(v), lowlink.get(w)));
-      } else if (onStack.has(w)) {
-        lowlink.set(v, Math.min(lowlink.get(v), indexOf.get(w)));
+  for (const root of adj.keys()) {
+    if (st.indexOf.has(root)) continue;
+    tarjanPush(root, st);
+    const work = [{ v: root, nbrs: adj.get(root) || [], i: 0 }];
+    while (work.length) {
+      const f = work[work.length - 1];
+      if (f.i < f.nbrs.length) {
+        const w = f.nbrs[f.i++];
+        if (!st.indexOf.has(w)) {
+          tarjanPush(w, st);
+          work.push({ v: w, nbrs: adj.get(w) || [], i: 0 });
+        } else if (st.onStack.has(w)) {
+          st.lowlink.set(f.v, Math.min(st.lowlink.get(f.v), st.indexOf.get(w)));
+        }
+      } else {
+        if (st.lowlink.get(f.v) === st.indexOf.get(f.v)) tarjanEmitScc(f.v, st, cycles);
+        work.pop();
+        if (work.length) {
+          const p = work[work.length - 1].v;
+          st.lowlink.set(p, Math.min(st.lowlink.get(p), st.lowlink.get(f.v)));
+        }
       }
     }
-
-    if (lowlink.get(v) === indexOf.get(v)) {
-      const component = [];
-      while (true) {
-        const w = stack.pop();
-        onStack.delete(w);
-        component.push(w);
-        if (w === v) break;
-      }
-      if (component.length > 1) cycles.push(component.sort());
-    }
-  }
-
-  for (const v of adj.keys()) {
-    if (!indexOf.has(v)) strongconnect(v);
   }
   return cycles;
 }

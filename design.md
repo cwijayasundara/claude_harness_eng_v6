@@ -169,7 +169,7 @@ The `codebase-explorer` agent has `LSP` in its tool grants and uses it for symbo
 |---|---|
 | Greenfield pipeline | `brd`, `spec`, `design`, `implement`, `evaluate`, `review`, `test`, `deploy`, `build`, `auto` |
 | Lite/brownfield/vibe | `lite`, `brownfield`, `code-map`, `seam-finder`, `vibe` |
-| Improvement | `improve`, `refactor`, `fix-issue`, `lint-drift` |
+| Improvement | `improve`, `refactor` (incl. `--sweep`), `fix-issue` |
 | Reference (loaded on intent) | `architecture`, `code-gen`, `testing`, `evaluation`, `clarify` |
 | Tracker add-on | `tracker`, `tracker-publish` |
 | Framework packs | `install-framework-packs` |
@@ -670,7 +670,6 @@ Agent contract: in brownfield mode, "module X depends on Y" claims must cite `co
 | `/improve` | Feature enhancement | No | — |
 | `/refactor` | Quality-driven refactoring | No | writing-plans |
 | `/fix-issue` | GitHub issue workflow | No | systematic-debugging |
-| `/lint-drift` | Entropy scanner for pattern drift | No | — |
 | `/tracker` | Optional Linear/Jira orchestration overview | Yes | — |
 | `/tracker-publish` | Publish approved dependency groups to tracker issues | Yes | — |
 | `/install-framework-packs` | Re-attempt installs for framework packs declared in `project-manifest.json` (idempotent) | No | — |
