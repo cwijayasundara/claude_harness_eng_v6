@@ -260,21 +260,32 @@ describe('Harness Framework Validation', { timeout: 600000 }, () => {
 
   // ── 9. Settings.json has correct hook configuration ────────────────────
 
-  test('Settings: removed hooks are not in PostToolUse', () => {
+  test('Settings: enforcement hooks are wired (PostToolUse + PreToolUse)', () => {
     const settings = JSON.parse(
       fs.readFileSync(path.join(HARNESS_ROOT, '.claude', 'settings.json'), 'utf8')
     );
-    const editHooks = settings.hooks.PostToolUse[0].hooks.map((h) => h.command);
-    const hookNames = editHooks.map((c) => c.split('/').pop().replace(/"/g, ''));
+    const names = (event) =>
+      (settings.hooks[event] || [])
+        .flatMap((m) => m.hooks.map((h) => h.command.split('/').pop().replace(/"/g, '')));
 
-    assert.ok(!hookNames.includes('lint-on-save.js'), 'lint-on-save must be removed');
-    assert.ok(!hookNames.includes('typecheck.js'), 'typecheck must be removed');
-    assert.ok(!hookNames.includes('check-file-length.js'), 'check-file-length must be removed');
-    assert.ok(!hookNames.includes('track-writes.js'), 'track-writes must be removed');
-    assert.ok(hookNames.includes('enforce-length-pre.js') || true, 'enforce-length-pre is PreToolUse');
-    assert.ok(hookNames.includes('check-function-length.js'), 'check-function-length must be present');
-    assert.ok(hookNames.includes('record-run.js'), 'record-run must be present');
-    console.log('[fw] Settings: correct hooks — removed duplicates, kept essentials');
+    const postEdit = names('PostToolUse');
+    const preEdit = names('PreToolUse');
+    const stop = names('Stop');
+
+    // Always-on quality enforcement on every edit (wired in PR enforcement work).
+    for (const h of [
+      'lint-on-save.js', 'typecheck.js', 'check-file-length.js', 'check-function-length.js',
+      'check-architecture.js', 'detect-secrets.js', 'scope-directory.js', 'track-writes.js', 'record-run.js',
+    ]) {
+      assert.ok(postEdit.includes(h), `${h} must be wired in PostToolUse`);
+    }
+    // Pre-write gates.
+    for (const h of ['enforce-length-pre.js', 'test-first-gate.js', 'security-pattern-gate.js']) {
+      assert.ok(preEdit.includes(h), `${h} must be wired in PreToolUse`);
+    }
+    // Stop-time review gate.
+    assert.ok(stop.includes('require-review.js'), 'require-review must be wired on Stop');
+    console.log('[fw] Settings: enforcement hooks wired (PostToolUse + PreToolUse + Stop)');
   });
 
   // ── 10. Grafana dashboard has all required sections ────────────────────
