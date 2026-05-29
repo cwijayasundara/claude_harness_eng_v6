@@ -24,89 +24,82 @@ function classify(length) {
   return null;
 }
 
+const PY_FUNC_RE = /^(\s*)(async\s+)?def\s+(\w+)\s*\(/;
+const NAMED_FUNC_RE = /\bfunction\s+(\w+)\s*[(<]/;
+// Arrow functions MUST contain `=>`, otherwise `const x = (a && b)` (a plain
+// parenthesised expression) is misread as a function. We track a function only
+// once its body brace actually opens (surroundDepth model), so expression-bodied
+// arrows and multi-line signatures never over-count.
+const ARROW_FUNC_RE = /\bconst\s+(\w+)\s*=\s*(async\s*)?(\([^)]*\)|\w+)\s*=>/;
+
+function makeEmitter(findings, filePath) {
+  return (fn, length) => {
+    const level = classify(length);
+    if (level) findings.push({ level, name: fn.name, filePath, startLine: fn.startLine, length });
+  };
+}
+
+function netBraces(line) {
+  let net = 0;
+  for (const ch of line) {
+    if (ch === '{') net++;
+    else if (ch === '}') net--;
+  }
+  return net;
+}
+
+// Pop Python scopes whose indent is >= untilIndent (use 0 to drain all at EOF).
+function flushPython(funcStack, untilIndent, curLine, emit) {
+  while (funcStack.length > 0 && funcStack[funcStack.length - 1].indent >= untilIndent) {
+    const fn = funcStack.pop();
+    emit(fn, curLine - fn.startLine);
+  }
+}
+
 function checkPython(lines, filePath) {
   const findings = [];
-  const funcDef = /^(\s*)(async\s+)?def\s+(\w+)\s*\(/;
-  const funcStack = []; // { name, startLine, indent }
-
+  const emit = makeEmitter(findings, filePath);
+  const funcStack = [];
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const match = line.match(funcDef);
-
+    const match = lines[i].match(PY_FUNC_RE);
     if (match) {
-      const indent = indentLen(line);
-      const name = match[3];
-
-      while (funcStack.length > 0 && funcStack[funcStack.length - 1].indent >= indent) {
-        const ended = funcStack.pop();
-        const length = i - ended.startLine;
-        const level = classify(length);
-        if (level) findings.push({ level, name: ended.name, filePath, startLine: ended.startLine, length });
-      }
-
-      funcStack.push({ name, startLine: i, indent });
+      const indent = indentLen(lines[i]);
+      flushPython(funcStack, indent, i, emit);
+      funcStack.push({ name: match[3], startLine: i, indent });
     }
   }
-
-  const totalLines = lines.length;
-  while (funcStack.length > 0) {
-    const ended = funcStack.pop();
-    const length = totalLines - ended.startLine;
-    const level = classify(length);
-    if (level) findings.push({ level, name: ended.name, filePath, startLine: ended.startLine, length });
-  }
-
+  flushPython(funcStack, 0, lines.length, emit);
   return findings;
 }
 
 function checkBraceLang(lines, filePath) {
   const findings = [];
-  const namedFuncRe = /\bfunction\s+(\w+)\s*[(<]/;
-  const arrowFuncRe = /\bconst\s+(\w+)\s*=\s*(async\s*)?\(/;
-
+  const emit = makeEmitter(findings, filePath);
   const funcStack = [];
-  let braceDepth = 0;
-
+  let depth = 0;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    const namedMatch = line.match(namedFuncRe);
-    const arrowMatch = line.match(arrowFuncRe);
-    const funcName = (namedMatch && namedMatch[1]) || (arrowMatch && arrowMatch[1]) || null;
-
-    let openCount = 0;
-    let closeCount = 0;
-    for (const ch of line) {
-      if (ch === '{') openCount++;
-      else if (ch === '}') closeCount++;
+    const named = line.match(NAMED_FUNC_RE);
+    const arrow = line.match(ARROW_FUNC_RE);
+    const name = (named && named[1]) || (arrow && arrow[1]) || null;
+    if (name) funcStack.push({ name, startLine: i, surroundDepth: depth, opened: false });
+    depth += netBraces(line);
+    for (const fn of funcStack) {
+      if (!fn.opened && depth > fn.surroundDepth) fn.opened = true; // body brace opened
     }
-
-    if (funcName) {
-      funcStack.push({ name: funcName, startLine: i, braceDepth: braceDepth + openCount });
-    }
-
-    braceDepth += openCount - closeCount;
-
     while (funcStack.length > 0) {
       const top = funcStack[funcStack.length - 1];
-      if (braceDepth < top.braceDepth) {
-        const ended = funcStack.pop();
-        const length = i - ended.startLine + 1;
-        const level = classify(length);
-        if (level) findings.push({ level, name: ended.name, filePath, startLine: ended.startLine, length });
-      } else {
-        break;
-      }
+      if (top.opened && depth <= top.surroundDepth) {
+        funcStack.pop();
+        emit(top, i - top.startLine + 1);
+      } else break;
     }
   }
-
-  const totalLines = lines.length;
+  // EOF: count only functions that actually opened a brace body.
   while (funcStack.length > 0) {
-    const ended = funcStack.pop();
-    const length = totalLines - ended.startLine;
-    const level = classify(length);
-    if (level) findings.push({ level, name: ended.name, filePath, startLine: ended.startLine, length });
+    const fn = funcStack.pop();
+    if (fn.opened) emit(fn, lines.length - fn.startLine);
   }
-
   return findings;
 }
 

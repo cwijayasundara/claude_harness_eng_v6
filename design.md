@@ -186,24 +186,27 @@ The `codebase-explorer` agent has `LSP` in its tool grants and uses it for symbo
 | test-engineer | Sonnet | Read · Write · Edit · Glob · Grep · Bash | Test plan, Playwright E2E, fixtures |
 | security-reviewer | Sonnet | Read · Write · Grep · Glob · Bash | OWASP scan, BLOCK/WARN/INFO triage |
 
-### The 15 hooks
+### The enforcement hooks
 
-All hooks include remediation instructions ("Fix: …") so they steer the agent, not just block it.
+All hooks include remediation instructions ("Fix: …") so they steer the agent, not just block it. They key off the tool name only — no per-command/agent gating — so they fire on every matching edit, including raw ad-hoc edits made outside any slash command.
 
 | Event matcher | Hook | Purpose |
 |---|---|---|
 | `PreToolUse Write|Edit|MultiEdit` | `enforce-length-pre.js` | Block oversized files at intent time |
+| `PreToolUse Write|Edit|MultiEdit` | `test-first-gate.js` | Block `src/` code with no test (TDD; `HARNESS_TDD_GATE=off` bypass) |
 | `PostToolUse Edit|Write|MultiEdit` | `scope-directory.js` | Reject writes outside the project |
 | `PostToolUse Edit|Write|MultiEdit` | `protect-env.js` | Refuse changes to `.env` files |
 | `PostToolUse Edit|Write|MultiEdit` | `detect-secrets.js` | Refuse hardcoded secrets |
 | `PostToolUse Edit|Write|MultiEdit` | `lint-on-save.js` | ruff / eslint on every save |
 | `PostToolUse Edit|Write|MultiEdit` | `typecheck.js` | mypy / tsc on every save |
 | `PostToolUse Edit|Write|MultiEdit` | `check-architecture.js` | One-way layer imports |
-| `PostToolUse Edit|Write|MultiEdit` | `check-function-length.js` | Warn >50 / block >100 lines |
+| `PostToolUse Edit|Write|MultiEdit` | `check-function-length.js` | Warn >25 / block >30 lines |
 | `PostToolUse Edit|Write|MultiEdit` | `check-file-length.js` | Warn 200 / block 300 lines |
 | `PostToolUse Edit|Write|MultiEdit` | `track-writes.js` | Append edits to `pending-reviews.jsonl` |
 | `PostToolUse Bash` | `pre-commit-gate.js` | Block commit if gates fail |
 | `PostToolUse Bash` | `sprint-contract-gate.js` | Block `/build` until contract approved |
+| `PostToolUse Bash` | `coverage-gate.js` | Block commit if coverage drops below baseline / 80% floor (`HARNESS_COVERAGE_GATE=off` bypass) |
+| `UserPromptSubmit` | `lane-router.js` | Nudge `/lane-classify` on free-text code-change prompts (advisory) |
 | `Stop` | `require-review.js` | Force reviewer agent before turn ends |
 | `TaskCompleted` | `task-completed.js` | Architecture scan + `/review` reminder |
 | `TeammateIdle` | `teammate-idle-check.js` | Nudge stuck teammates; no tests = no idle |

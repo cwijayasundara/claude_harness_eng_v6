@@ -731,24 +731,35 @@ Planner   Generator  Evaluator  Test Eng  Security Rev
 | Test Engineer    | `.claude/agents/test-engineer.md` | Test authoring and execution       |
 | Security Reviewer| `.claude/agents/security-reviewer.md` | Vulnerability auditing         |
 
-## Hook Execution Order
+## Hook Registration (settings.json)
 
-| # | Hook                  | File                               | Trigger                        |
-|---|-----------------------|------------------------------------|--------------------------------|
-| 1 | protect-env           | `hooks/protect-env.js`             | Any file write                 |
-| 2 | detect-secrets        | `hooks/detect-secrets.js`          | Pre-commit                     |
-| 3 | scope-directory       | `hooks/scope-directory.js`         | File access                    |
-| 4 | lint-on-save          | `hooks/lint-on-save.js`            | File save (.py, .ts)           |
-| 5 | typecheck             | `hooks/typecheck.js`               | File save (.py, .ts)           |
-| 6 | check-function-length | `hooks/check-function-length.js`   | File save                      |
-| 7 | check-file-length     | `hooks/check-file-length.js`       | File save                      |
-| 8 | check-architecture    | `hooks/check-architecture.js`      | File save                      |
-| 9 | sprint-contract-gate  | `hooks/sprint-contract-gate.js`    | Pre-build                      |
-|10 | pre-commit-gate       | `hooks/pre-commit-gate.js`         | Pre-commit                     |
-|11 | task-completed        | `hooks/task-completed.js`          | Post-task                      |
-|12 | teammate-idle-check   | `hooks/teammate-idle-check.js`     | Periodic                       |
-|13 | record-run            | `hooks/record-run.js`              | UserPromptSubmit · PostToolUse(Write/Edit/MultiEdit/Bash/Task) · Stop · SubagentStop |
-|14 | brownfield-staleness  | `hooks/brownfield-staleness.js`    | UserPromptSubmit · PreToolUse(Task)     |
+Hooks key off the **tool name only** — there is no per-command or per-agent gating, so these fire on every matching edit whether it came from `/implement`, `/vibe`, an agent teammate, or a raw ad-hoc edit. Enforcement is uniform. Blocking hooks exit 2; advisory hooks exit 0 with a `Fix:` message.
+
+| Event matcher | Hook | Blocks? | Purpose |
+|---|---|---|---|
+| `PreToolUse Write\|Edit\|MultiEdit` | `enforce-length-pre.js` | yes | Block oversized files at intent time (500-line cap) |
+| `PreToolUse Write\|Edit\|MultiEdit` | `test-first-gate.js` | yes | Block writing `src/` code with no test file (TDD; `HARNESS_TDD_GATE=off` to bypass) |
+| `PostToolUse Edit\|Write\|MultiEdit` | `scope-directory.js` | yes | Reject writes outside the project |
+| `PostToolUse Edit\|Write\|MultiEdit` | `protect-env.js` | yes | Refuse changes to `.env` files |
+| `PostToolUse Edit\|Write\|MultiEdit` | `detect-secrets.js` | yes | Refuse hardcoded secrets |
+| `PostToolUse Edit\|Write\|MultiEdit` | `check-architecture.js` | yes | One-way layer imports (Python) |
+| `PostToolUse Edit\|Write\|MultiEdit` | `check-function-length.js` | yes | Warn >25 / block >30 lines |
+| `PostToolUse Edit\|Write\|MultiEdit` | `check-file-length.js` | yes | Warn 200 / block 300 lines |
+| `PostToolUse Edit\|Write\|MultiEdit` | `lint-on-save.js` | yes | ruff / eslint `--fix` on every save; block on unfixable errors |
+| `PostToolUse Edit\|Write\|MultiEdit` | `typecheck.js` | yes | mypy / tsc on every save; block on type errors |
+| `PostToolUse Edit\|Write\|MultiEdit` | `track-writes.js` | no | Append edited files to `pending-reviews.jsonl` (producer) |
+| `PostToolUse Bash` | `pre-commit-gate.js` | yes | Block commit if architecture gates fail |
+| `PostToolUse Bash` | `sprint-contract-gate.js` | yes | Block `/build` until contract approved |
+| `PostToolUse Bash` | `coverage-gate.js` | yes | On `git commit`, block if coverage drops below baseline / 80% floor (Python; `HARNESS_COVERAGE_GATE=off` to bypass) |
+| `UserPromptSubmit` | `brownfield-staleness.js` | no | Warn when brownfield maps are stale |
+| `UserPromptSubmit` | `lane-router.js` | no | Nudge `/lane-classify` on free-text code-change prompts (debounced) |
+| `Stop` | `require-review.js` | yes | Force clean-code + security reviewer before turn ends (consumes `pending-reviews.jsonl`) |
+| `Stop` | `session-learnings.js` | no | Suggest CLAUDE.md updates from accumulated rules |
+| `TaskCompleted` | `task-completed.js` | no | Architecture scan + `/review` reminder |
+| `TeammateIdle` | `teammate-idle-check.js` | yes | Nudge stuck teammates; no tests = no idle |
+| `record-run.js` | — | no | Telemetry journal on UserPromptSubmit · PostToolUse(Write/Edit/MultiEdit/Bash/Task) · Stop · SubagentStop |
+
+> **Note:** The deterministic hooks above are the *only* always-on enforcement. The generator, evaluator, design-critic, and reviewer **agents** run solely when a slash command (`/build`, `/implement`, `/evaluate`, `/review`, `/vibe`, …) invokes them or when the model chooses to — a raw ad-hoc edit is guarded by hooks alone. Do not add `disableWorkflows` and do not assume agent-level validation fires without a command.
 
 ## State Files
 
@@ -981,7 +992,7 @@ Tailor the "Next steps" ordering based on the project-type decision:
 Installed:
   8 agents      → .claude/agents/
   28 skills     → .claude/skills/
-  18 hooks      → .claude/hooks/
+  21 hooks      → .claude/hooks/
   12 templates  → .claude/templates/
   4 workflows   → .claude/workflows/  (/harness-review, /harness-implement-group, /harness-brownfield-map, /harness-eval)
   6 state files → .claude/state/
@@ -1017,7 +1028,7 @@ Next steps:
 Installed:
   8 agents      → .claude/agents/
   28 skills     → .claude/skills/
-  18 hooks      → .claude/hooks/
+  21 hooks      → .claude/hooks/
   12 templates  → .claude/templates/
   4 workflows   → .claude/workflows/  (/harness-review, /harness-implement-group, /harness-brownfield-map, /harness-eval)
   6 state files → .claude/state/
