@@ -60,10 +60,10 @@
     },
     "deploy": {
       "max_iterations": 2,
-      "upstream": "specs/design/system-design.md",
+      "upstream": "specs/design/architecture.md",
       "criteria": {
-        "completeness": "Every service in system-design has a Dockerfile and a docker-compose entry",
-        "traceability": "Docker Compose service names match component names from system-design document",
+        "completeness": "Every service in architecture has a Dockerfile and a docker-compose entry",
+        "traceability": "Docker Compose service names match component names from architecture document",
         "specificity": "YAML is syntactically valid; base images use pinned tags (no :latest); health checks defined for every service",
         "consistency": "No port conflicts between services; environment variable names are consistent across compose and application config",
         "actionability": "init.sh bootstraps all services end-to-end; .env.example contains every required variable with placeholder values"

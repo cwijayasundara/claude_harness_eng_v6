@@ -459,7 +459,7 @@ Rules:
 
 ### Structured Error Responses
 
-All API error responses follow a consistent envelope:
+The canonical error-envelope shape and the layering rules live in `.claude/skills/architecture/SKILL.md` — defer to it if the two ever differ. Repeated here for convenience: all API error responses follow a consistent envelope:
 
 ```json
 {

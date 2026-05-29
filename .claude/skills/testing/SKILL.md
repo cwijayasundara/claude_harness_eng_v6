@@ -41,12 +41,11 @@ Across all layers, tests verify behavior through public interfaces. They should 
 
 | Layer | Minimum Threshold |
 |-------|-------------------|
-| Unit | 100% of business logic branches |
+| Unit | 100% of business-logic branches (target); the ratchet **floor is 80%** |
 | Integration | All happy paths + documented error paths per endpoint |
 | E2E | All user stories in the current sprint contract |
 
-Coverage tools (pytest-cov, Vitest coverage) must pass CI gates. A failing coverage
-gate blocks merge — it is not advisory.
+The numeric gate is single-sourced: the **floor is 80%, target 100%**, enforced by `/auto` Gate 3 and the coverage hook (see `.claude/skills/code-gen/SKILL.md`). This skill defers to those for the exact number. TDD discipline and mock-boundary rules are likewise canonical in `code-gen/SKILL.md` — this skill adds the layer model and boundary-condition checklist, not a second copy of those rules. A failing coverage gate blocks merge — it is not advisory.
 
 ---
 

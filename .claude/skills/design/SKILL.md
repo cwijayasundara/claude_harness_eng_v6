@@ -42,7 +42,7 @@ Use the clarification budget:
 - Ask at most 10 questions by default.
 - Continue to 15 only if the user explicitly asks.
 - Prefer existing code, `CONTEXT.md`, ADRs, stories, and manifest data over asking.
-- Record assumptions in `system-design.md` or `api-contracts.md` when risk is low.
+- Record assumptions in `architecture.md` or `api-contracts.md` when risk is low.
 
 ## Step 1 — Spawn Two Agents Concurrently
 
@@ -58,7 +58,7 @@ In a single message, invoke both agents using the Agent tool. Do not wait for th
 >
 > Write the following files to specs/design/:
 >
-> 1. **system-design.md** — High-level architecture overview: components, data flows, infrastructure topology, key design decisions and rationale.
+> 1. **architecture.md** — High-level architecture overview: components, data flows, infrastructure topology, key design decisions and rationale.
 >    For every major module, describe its public interface, invariants, error modes, and why it is deep enough to justify existing as a module. Avoid pass-through modules that only forward calls.
 >
 > 2. **api-contracts.md** — Every API endpoint in detail: method, path, request schema (headers, params, body), response schema (success and error shapes), authentication requirements, rate limits. Use a consistent format for each endpoint.
@@ -103,7 +103,7 @@ After both agents (planner + ui-designer) complete, spawn the `phase-evaluator` 
 
 Spawn Agent with subagent_type="phase-evaluator" and prompt:
 - Phase: design
-- Artifacts: specs/design/system-design.md, specs/design/api-contracts.md, specs/design/api-contracts.schema.json, specs/design/data-models.md, specs/design/data-models.schema.json, specs/design/folder-structure.md, specs/design/component-map.md, specs/design/deployment.md, all specs/design/mockups/*.html files
+- Artifacts: specs/design/architecture.md, specs/design/api-contracts.md, specs/design/api-contracts.schema.json, specs/design/data-models.md, specs/design/data-models.schema.json, specs/design/folder-structure.md, specs/design/component-map.md, specs/design/deployment.md, all specs/design/mockups/*.html files
 - Upstream: specs/stories/ (all story files for cross-phase traceability)
 - Rubric: Read .claude/templates/phase-eval-rubrics.json, key "design"
 - Iteration: 1 (increment on retry)
@@ -121,7 +121,7 @@ Spawn Agent with subagent_type="phase-evaluator" and prompt:
 
 ---
 
-## New Artifacts vs forge_v2
+## Machine-Readable Artifacts
 
 | Artifact | Purpose |
 |----------|---------|
@@ -129,7 +129,7 @@ Spawn Agent with subagent_type="phase-evaluator" and prompt:
 | `data-models.schema.json` | JSON Schema — used by builder agents to generate type-safe code |
 | `component-map.md` | Maps stories to implementation files — used by builder agents for routing |
 
-These are new in this pipeline. forge_v2 produced only markdown documents. The `.schema.json` files enable automated validation in later pipeline stages.
+The `.schema.json` files enable automated validation in later pipeline stages (the evaluator validates contracts and shapes against them).
 
 ---
 
@@ -137,7 +137,7 @@ These are new in this pipeline. forge_v2 produced only markdown documents. The `
 
 | File | Purpose |
 |------|---------|
-| `specs/design/system-design.md` | Architecture overview |
+| `specs/design/architecture.md` | Architecture overview |
 | `specs/design/api-contracts.md` | Human-readable API contracts |
 | `specs/design/api-contracts.schema.json` | OpenAPI 3.0 machine-readable schema |
 | `specs/design/data-models.md` | Human-readable data model definitions |

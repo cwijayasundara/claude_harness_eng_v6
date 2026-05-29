@@ -2,6 +2,7 @@
 .claude/state/telemetry-ledger.jsonl
 .claude/state/process-*.log
 .claude/state/lane-router-last.txt
+.claude/state/last-drift-scan.txt
 .claude/tdd-guard/
 node_modules/
 dist/

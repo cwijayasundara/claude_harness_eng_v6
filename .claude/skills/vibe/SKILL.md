@@ -68,7 +68,7 @@ State:
 - Why this does not need the full SDLC pipeline
 - Escalation trigger: what would make you stop and switch lanes
 
-If classification is uncertain, ask at most 3 clarification questions. If still uncertain, escalate.
+If classification is uncertain, use the `clarify` gate (`.claude/skills/clarify/SKILL.md`) — ask at most 3 questions, prefer recording assumptions over interrogating. If still uncertain, escalate.
 
 ### Step 2 — Write a Micro-Contract
 

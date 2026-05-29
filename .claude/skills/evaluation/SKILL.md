@@ -21,6 +21,8 @@ Read `.claude/skills/evaluate/SKILL.md` for the complete three-layer verificatio
 | `references/scoring-rubric.md` | Design scoring rubric (4 criteria, weights, exemplars) |
 | `references/scoring-examples.md` | Calibration anchors (score 5, 7, 9) — read before scoring |
 | `references/playwright-patterns.md` | Selector patterns and assertion patterns for Layer 2 |
+| `references/verify-python.md` | Deep Python verification rigor (pytest/mypy/ruff, traceback parsing, FastAPI/async) — load when the backend is Python |
+| `references/verify-react.md` | Deep React/TS verification rigor (build/tsc/vitest, browser/console/hydration signals) — load when the frontend is React/TS |
 
 ## Evaluator Behavioral Rules
 

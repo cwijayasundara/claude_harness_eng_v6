@@ -1,6 +1,6 @@
 ---
 name: lane-classify
-description: Classify an incoming change request into the right harness lane (vibe / fix-issue / improve / refactor / build), write the result to .claude/state/current-lane, and explain the decision. Use proactively before any non-trivial code change so the commit-trailer git hook can segment downstream metrics correctly.
+description: Classify an incoming change request into the right harness lane (vibe / fix-issue / improve / refactor / lite / build), write the result to .claude/state/current-lane, and explain the decision. Use proactively before any non-trivial code change so the commit-trailer git hook can segment downstream metrics correctly.
 argument-hint: "[change-description]"
 context: same
 ---
@@ -25,11 +25,12 @@ You do not need to invoke this for purely read-only investigation.
 
 | Signal | Lane | Notes |
 |---|---|---|
-| Single file, <30 LOC, no public API change, no auth/security | `vibe` | Typos, copy, null guards, docs, single-line fixes |
+| 1–3 files, <150 changed LOC, no public API change, no auth/security | `vibe` | Typos, copy, null guards, docs, small bug/guard fixes (threshold matches the `vibe` skill) |
 | GitHub issue reference, bug reproduction available | `fix-issue` | Standard issue workflow |
 | New user-visible behavior, touches 1–3 modules, requires tests | `improve` | The default feature lane |
 | Quality / structural change, no behavior change, may touch many files | `refactor` | Renames, layer reorgs, dead-code removal |
-| Greenfield or substantial new feature, multi-story, needs spec/design | `build` | Full SDLC pipeline |
+| Greenfield **new small** project (≤5 stories, single module), no existing code | `lite` | Compressed greenfield lane; skips full BRD/spec/design ceremony |
+| Greenfield **large/substantial**, multi-story, needs full spec + design | `build` | Full SDLC pipeline |
 
 Escalation rule (from CLAUDE.md): touches >3 source files OR new workflow OR public API change OR migration OR auth/security/privacy work OR ambiguous requirements → escalate to `improve` or `build`. Do **not** use `vibe` for these even if they "feel small."
 
@@ -51,4 +52,4 @@ That is the entire skill. Do not change code from inside this skill.
 
 Without a written lane marker, the commit-trailer hook cannot tag commits, and the productivity dashboard cannot tell `/vibe` work apart from `/refactor` work — making the brownfield yield numbers uninterpretable. One small file, written deliberately, unlocks every downstream segmentation chart.
 
-See `matrices.pptx` slide 4 (Lane correctness) and slide 6 (Commit trailers).
+The lane trailer feeds the harness telemetry/Grafana dashboards that segment lane correctness and commit-trailer coverage.
