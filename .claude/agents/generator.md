@@ -132,6 +132,7 @@ Execute teammates in phases from the micro-DAG:
 - File ownership (which files this teammate may edit)
 - Learned rules (from `.claude/state/learned-rules.md`)
 - Quality principles (from `.claude/skills/code-gen/SKILL.md`)
+- The stack reference for the story's files per the Stack Expertise table (e.g. `code-gen/references/stack-python-fastapi.md` for backend Python, `stack-react-typescript.md` for React/TS frontend)
 - Brownfield constraints from `specs/brownfield/` when present
 - Interface contracts from upstream teammates (Phase 2+ only)
 - If the story involves an external API: include `.claude/skills/code-gen/references/api-integration-patterns.md`
@@ -166,6 +167,18 @@ Max 5 concurrent teammates per phase. If a phase has >5 stories, batch in groups
 - When your story produces output consumed by another story, define the typed interface contract (Pydantic model / TypeScript interface) FIRST, before writing implementation logic. Commit the contract so downstream teammates can code against it.
 - Prefer deep modules: simple interface, meaningful hidden behavior. Do not add pass-through services/helpers/adapters just to satisfy a pattern.
 - Before adding a new abstraction, apply the deletion test: if deleting it removes complexity instead of spreading necessary complexity to callers, do not add it.
+
+## Stack Expertise (load the reference for the project's stack)
+
+Stay stack-neutral by default. Detect the stack from `project-manifest.json` and **read the matching reference** under `.claude/skills/code-gen/references/` before writing code, then apply its idioms to each file you own. Teammates inherit this (they are spawned as `subagent_type: generator`).
+
+| Stack signal in `project-manifest.json` | Read this reference |
+|---|---|
+| `stack.backend.framework` is FastAPI / `stack.backend.language` is python | `references/stack-python-fastapi.md` |
+| `stack.frontend.framework` is React (Vite/Next) + TypeScript | `references/stack-react-typescript.md` |
+| any other stack (Go, Django, Express, Vue, …) | no reference ships yet — apply the generic principles above and in `code-gen/SKILL.md`; add a `references/stack-<name>.md` following the same pattern to make the harness expert in it |
+
+The generic Quality Principles above always apply; the stack reference is additive depth, not a replacement. This keeps the agent generic and makes new-stack support a drop-in file, not an agent edit.
 
 ## Gotchas
 
