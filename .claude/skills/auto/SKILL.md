@@ -174,7 +174,7 @@ In Solo mode, the generator works alone sequentially. No team spawning, no phase
 | Design critic | Opus | Subjective visual judgment |
 | Generator lead | Sonnet | Coordination, lower cost |
 | Generator teammates | Sonnet | Mechanical implementation |
-| Security reviewer | Sonnet | Pattern matching |
+| Security reviewer | Opus | Contextual vuln reasoning + adversarial find-then-refute |
 
 Configure via `project-manifest.json` field `execution.model_tier`.
 
