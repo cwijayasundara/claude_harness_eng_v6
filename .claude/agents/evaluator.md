@@ -70,6 +70,55 @@ Invoke `superpowers:verification-before-completion` before emitting any PASS ver
 
 Read `.claude/skills/evaluate/SKILL.md` for the full three-layer verification workflow, verdict format, and mode behavior. That file is the source of truth for execution steps.
 
+## Python Verification Rigor
+
+Apply this section when `project-manifest.json` → `stack.backend.language` is `python`. It stays black-box: **the tools produce the evidence; you never form an opinion by reading source.** `pytest`/`mypy`/`ruff` are objective instruments, not invitations to eyeball the code.
+
+### Environment — run it the project's way
+
+- Resolve the interpreter the project uses. With `package_manager: uv`, run **everything** as `uv run <cmd>`; never bare `python`/`pytest` (wrong interpreter / missing deps). For plain venv, activate `.venv` first.
+- Run backend commands from the backend directory (`cd backend` when the preset has one). A "module not found" from the wrong CWD is an environment artifact, not a real failure — fix the CWD and re-run before recording a verdict.
+- If deps are not installed (`uv run` reports a missing tool/module for the *tooling itself*), that is an infrastructure FAIL (`failure_layer: "docker"`/`"infrastructure"`), not a code FAIL — report it as such.
+
+### Tests — the authoritative behavioral evidence
+
+- `uv run pytest -x -q` — stop at first failure. Nonzero exit is a FAIL; capture the failing **test id** (`path::test_name`) and the assertion/exception, not just "tests failed".
+- Distinguish **collection errors** (a module fails to import during collection) from **assertion failures**. A collection error means the code doesn't even import → `error_type: import_error`, not `assertion_error`.
+- Coverage: `uv run pytest --cov=src --cov-report=term-missing -q`; parse the `TOTAL` line. Under `/auto`, Gate 3 owns the coverage threshold — don't double-fail; cite the number.
+- **Never** edit a test to make it pass. A red test is a real failure. A test that asserts nothing (or is skipped/xfail to dodge a bug) is itself a finding.
+
+### Types & lint — objective gates
+
+- `uv run mypy src/` (or the configured typechecker). A type error is a FAIL with `error_type: type_error`; capture `file:line` from mypy's output.
+- `uv run ruff check .` — surface lint errors. These are evidence from a tool, fully consistent with "don't read code to judge it."
+
+### Traceback parsing — give the generator the real cause
+
+On any failure, capture the **full** traceback and read it bottom-up (the last frame is where it was raised). Map the exception to `error_type`:
+
+| Exception | error_type |
+|---|---|
+| `KeyError` | `key_error` |
+| `TypeError` / `AttributeError` | `type_error` |
+| `ImportError` / `ModuleNotFoundError` | `import_error` |
+| `pydantic.ValidationError` | `validation_error` |
+| `AssertionError` | `assertion_error` |
+| `asyncio.TimeoutError` / read timeout | `timeout` |
+| `ConnectionRefusedError` / `OSError` connect | `connection_refused` |
+
+For `files_likely_involved`, take the **deepest project-owned frame** (a path under `src/` / the backend package) — not the library frame where the exception surfaced.
+
+### FastAPI / async signals (interpret observed behavior, never read code to guess)
+
+- **HTTP 500 with empty/opaque body** → an unhandled server exception. Pull the traceback from `docker compose logs backend --tail=50` (docker) or process stderr (local) before classifying. Do not report "500" without the underlying exception.
+- **HTTP 422** → a Pydantic request-validation rejection, usually a **contract/schema mismatch** (request shape vs. model), often a contract problem rather than a server bug — note which.
+- **"coroutine was never awaited"**, "event loop is already running", or endpoint timeouts under light load → a missing `await` or a blocking/sync call inside an async route. Classify (`timeout`/`type_error`) from the actual warning/error; do not infer it by reading the handler.
+
+### Persistence & wiring — verify, don't assume
+
+- A health-check `200` already proves the app imports and boots; if health fails with `ImportError`/`ModuleNotFoundError` in the logs, that's `import_error` (circular import or missing `__init__.py`), not "app down".
+- When the contract involves persistence, verify a real **round-trip**: a write (`POST`/`PUT`) followed by an independent read (`GET`) that returns the persisted value. A `201` that doesn't actually persist is a FAIL. Confirm migrations are applied (`uv run alembic current`, or the configured tool) when the contract depends on schema.
+
 ## Structured Failure Report
 
 In addition to the prose verdict, write a structured failure JSON to `specs/reviews/eval-failures-NNN.json` for each failing check:
