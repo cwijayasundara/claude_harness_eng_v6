@@ -9,6 +9,8 @@ context: fork
 
 Run a comprehensive quality gate by spawning the evaluator and security reviewer as concurrent agents. Both must pass before the group is considered ready for merge.
 
+> **Ultracode tip:** Multi-dimension review with adversarial verification is a natural fan-out, so `/effort ultracode` pays off on this plain skill form. The dynamic-workflow form (`/harness-review`) already fans out — don't run both at full effort.
+
 ---
 
 ## Usage

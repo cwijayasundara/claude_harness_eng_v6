@@ -10,6 +10,8 @@ agent: evaluator
 
 Verify that the implemented group meets all sprint contract criteria by running live checks against the application: API calls, Playwright browser interaction, and schema validation.
 
+> **Ultracode tip:** Leave ultracode **off** here (`/effort high`). Evaluation is deterministic three-layer verification against a fixed contract — there is nothing to fan out, and the dynamic-workflow form (`/harness-eval`) already parallelizes the three layers.
+
 ---
 
 ## Usage

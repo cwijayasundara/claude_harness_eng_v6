@@ -10,6 +10,8 @@ agent: generator
 
 Generate production-quality code and tests for all stories in a dependency group, using a Claude Code agent team for parallel execution.
 
+> **Ultracode tip:** Leave ultracode **off** here (`/effort high`). This skill already spawns an agent team for parallel story execution; ultracode's auto-workflows would double-orchestrate and conflict with the per-story contracts. (The dynamic-workflow form `/harness-implement-group` likewise already fans out.)
+
 ---
 
 ## Usage

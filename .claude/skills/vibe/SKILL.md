@@ -11,6 +11,8 @@ Use `/vibe` for small, low-risk changes where the full BRD → spec → design �
 
 This is not permission to free-code. It is a bounded engineering lane with explicit scope, targeted verification, and reviewer enforcement.
 
+> **Ultracode tip:** Leave ultracode **off** here (`/effort high` or lower). This lane exists to keep small, low-risk changes proportionate — fanning out workflows would defeat its entire purpose.
+
 ---
 
 ## Usage

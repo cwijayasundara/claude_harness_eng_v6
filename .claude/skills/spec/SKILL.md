@@ -8,6 +8,8 @@ agent: planner
 
 # Spec Skill — Story Decomposition & Feature Generation
 
+> **Ultracode tip:** Decomposition benefits from broad parallel exploration of stories and dependency edges, so `/effort ultracode` is a good fit here. Drop back to `/effort high` before the execution phases (`/auto`, `/implement`).
+
 ## Usage
 
 ```

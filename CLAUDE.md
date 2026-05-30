@@ -18,53 +18,9 @@ A GAN-inspired harness combining Karpathy ratcheting + Anthropic/OpenAI harness 
 2. Load as plugin: `claude --plugin-dir ~/claude_harness_eng_v4/.claude`
 3. Scaffold a project: `/claude_harness_eng_v4:scaffold`
 
-## Commands
+## Commands, Agents & Superpowers Integration
 
-| Command | Purpose |
-|---------|---------|
-| `/scaffold` | Initialize project with harness |
-| `/vibe` | Controlled small-change lane |
-| `/brownfield` | Map an existing codebase before broad edits |
-| `/brd` | Socratic interview -> BRD |
-| `/spec` | BRD -> stories + dependency graph + features.json |
-| `/design` | Architecture + schemas + mockups (parallel with `/test`) |
-| `/test` | Test plan + cases + fixtures + Playwright E2E |
-| `/build` | Full 10-phase pipeline |
-| `/auto` | Autonomous ratcheting loop (4 modes) |
-| `/implement` | Code generation with agent teams |
-| `/evaluate` | Run app, verify sprint contract |
-| `/review` | Evaluator + security review |
-| `/test` | Test plan + Playwright E2E |
-| `/deploy` | Docker Compose + init.sh |
-| `/fix-issue` | GitHub issue workflow |
-| `/refactor` | Quality-driven refactoring |
-| `/improve` | Feature enhancement |
-| `/refactor --sweep` | Whole-repo entropy scan for pattern drift (formerly `/lint-drift`) |
-
-## Agents (8)
-
-| Agent | Role | Model |
-|-------|------|-------|
-| planner | BRD, specs, architecture, feature list | Opus |
-| generator | Code + tests, spawns agent teams | Sonnet |
-| evaluator | Runs app, verifies sprint contracts | Opus |
-| design-critic | GAN scoring (4 weighted criteria, max 10 iter) | Opus |
-| security-reviewer | OWASP vulnerability scan (enforced gate) | Opus |
-| ui-designer | React+Tailwind mockups | Sonnet |
-| test-engineer | Test plans + Playwright E2E | Sonnet |
-| codebase-explorer | Read-only discovery, dependency tracing | Sonnet |
-
-## Superpowers Integration
-
-The harness integrates with the [Superpowers](https://github.com/obra/superpowers) plugin at these pipeline stages:
-
-| Stage | Skill | Purpose |
-|---|---|---|
-| `/brd`, `/design` | `brainstorming` | Explore alternatives before committing |
-| `/implement`, `/refactor` | `writing-plans` | Structured plans before code |
-| `/implement` (teammates) | `test-driven-development` | Red-green-refactor in every agent |
-| `/fix-issue`, `/auto` (heal) | `systematic-debugging` | Root cause analysis before fixing |
-| `/auto` (done), evaluator | `verification-before-completion` | Evidence before claiming PASS |
+The full Commands table, the 8-agent team (roles + model assignments), and the Superpowers pipeline-stage integration table live in `README.md` (sections *Command reference*, *Agent team*, *Superpowers integration*). They are reference material, not always-on rules, so they are kept out of this always-loaded file to preserve the prompt-cache prefix. Read `README.md` when you need the command/agent inventory.
 
 ## Coding Principles (Karpathy Guidelines)
 
@@ -116,6 +72,18 @@ The harness follows [Anthropic's guidance for large codebases](https://claude.co
 - **LSP integration** — `/scaffold` auto-detects LSP servers from the stack (pyright, typescript-language-server, gopls, etc.), writes them to `project-manifest.json`, and checks availability in `init.sh`
 - **MCP servers** — `.mcp.json` template for connecting to internal tools, databases, and documentation
 - **Subdirectory commands** — Scope test/lint commands per module to avoid running full suites on minor changes
+
+## Prompt Caching
+
+Claude Code is built around prompt caching: the API caches the request prefix (static system prompt + tools → `CLAUDE.md` → session context) and reuses it across turns, which is what makes long agentic sessions cheap and fast. **Caching is automatic and always-on inside Claude Code — there is nothing to enable**, and the harness makes no direct Anthropic API calls, so there are no `cache_control` breakpoints to manage. The only job is to avoid invalidating the cached prefix: a change anywhere in the prefix invalidates everything after it.
+
+Three rules keep the prefix stable during a run:
+
+1. **Don't churn tools mid-session.** Adding/removing a tool, plugin, or MCP server during a run rebuilds the whole cache. Settle `enabledPlugins` and `.mcp.json` *before* long `/auto` runs. (Claude Code defers MCP tool schemas via tool search rather than removing them — leave that mechanism in place.)
+2. **Don't edit `CLAUDE.md` mid-session.** It's cached per-project; an edit busts the prefix for every later turn. The `session-learnings` Stop hook only *suggests* updates — apply them between sessions, not during a build.
+3. **Don't swap the orchestrator's model mid-session.** Model changes happen via subagents with their own context windows (planner=Opus, generator=Sonnet, etc. — see the Agents table), never by `/model`-switching the main loop. Dynamic values (dates, timestamps) belong in messages / `<system-reminder>` tags, never in cached content.
+
+Monitor cache hit rate like uptime. The harness already exports OTEL telemetry (`CLAUDE_CODE_ENABLE_TELEMETRY=1` in `.claude/settings.json`); `telemetry/cache-alerts.rules.yml` (wired into `telemetry/prometheus.yml`) and `telemetry/grafana/dashboards/cache-health.json` (auto-provisioned) add a hit-rate alert and dashboard on top of it. See `telemetry/CACHE_MONITORING.md`.
 
 ## Key Files
 

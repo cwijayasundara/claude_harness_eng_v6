@@ -1,0 +1,72 @@
+# Prometheus recording + alerting rules for Claude Code prompt-cache health.
+#
+# Wire-up: reference this file from telemetry/prometheus.yml:
+#   rule_files:
+#     - /etc/prometheus/cache-alerts.rules.yml   # (or the path it is mounted at)
+# then reload Prometheus. See telemetry/CACHE_MONITORING.md.
+#
+# Source metric: Claude Code exports `claude_code.token.usage` (OTEL counter, unit
+# `tokens`) when CLAUDE_CODE_ENABLE_TELEMETRY=1. After the OTLP -> Prometheus export
+# in this stack it appears as `claude_code_token_usage_tokens_total`, with label `type`
+# whose values are: input | output | cacheRead | cacheCreation (camelCase). Other
+# labels include `model` and `session_id`.
+#
+# If these rules return no data, query {__name__=~"claude_code_token_usage.*"} in
+# Prometheus and adjust the metric name below — some collector configs drop the
+# `_tokens` unit suffix (giving `claude_code_token_usage_total`).
+
+groups:
+  - name: claude-code-prompt-cache
+    rules:
+      # Fraction of input tokens served from cache (5m window).
+      # cache_hit_rate = cacheRead / (input + cacheRead + cacheCreation).
+      # `output` is excluded — it is generated, never cached input.
+      - record: claude_code:cache_hit_rate:ratio_rate5m
+        expr: |
+          sum(rate(claude_code_token_usage_tokens_total{type="cacheRead"}[5m]))
+          /
+          clamp_min(
+            sum(rate(claude_code_token_usage_tokens_total{type=~"input|cacheRead|cacheCreation"}[5m])),
+            1
+          )
+
+      # Per-model breakdown — a single agent (e.g. a Sonnet teammate) regressing shows
+      # up here before it drags the fleet-wide number down.
+      - record: claude_code:cache_hit_rate:ratio_rate5m_by_model
+        expr: |
+          sum by (model) (rate(claude_code_token_usage_tokens_total{type="cacheRead"}[5m]))
+          /
+          clamp_min(
+            sum by (model) (rate(claude_code_token_usage_tokens_total{type=~"input|cacheRead|cacheCreation"}[5m])),
+            1
+          )
+
+      # Sustained low hit rate — the "alert like uptime" rule. Thresholds are starting
+      # points; calibrate to your own steady-state baseline.
+      - alert: ClaudeCodePromptCacheHitRateLow
+        expr: claude_code:cache_hit_rate:ratio_rate5m < 0.70
+        for: 15m
+        labels:
+          severity: warning
+          component: prompt-cache
+        annotations:
+          summary: "Claude Code prompt-cache hit rate below 70% for 15m"
+          description: >
+            Cache hit rate is {{ $value | humanizePercentage }} (5m rate). Likely cause:
+            prefix invalidation — a mid-session tool/plugin/MCP change, a CLAUDE.md edit,
+            a model swap on the main loop, or a dynamic value in cached content.
+            See telemetry/CACHE_MONITORING.md.
+
+      - alert: ClaudeCodePromptCacheHitRateCritical
+        expr: claude_code:cache_hit_rate:ratio_rate5m < 0.40
+        for: 10m
+        labels:
+          severity: critical
+          component: prompt-cache
+        annotations:
+          summary: "Claude Code prompt-cache hit rate below 40% for 10m"
+          description: >
+            Cache hit rate is {{ $value | humanizePercentage }} (5m rate). Cost/latency
+            incident — the cached prefix is being rebuilt repeatedly. Investigate recent
+            changes to the tool set, enabled plugins/MCP servers, CLAUDE.md, or the
+            session model.
