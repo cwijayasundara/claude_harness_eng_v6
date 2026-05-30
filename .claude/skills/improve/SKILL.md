@@ -22,6 +22,8 @@ Provide either a plain description of the improvement or an existing story ID fr
 
 Improvements intentionally change behavior. This distinguishes them from `/refactor`, which must not change behavior. Every improvement is traceable to a story, has acceptance criteria, and requires tests to be updated or added.
 
+> **/goal tip (optional unattended iteration):** On Claude Code v2.1.139+ you can let `/goal` drive this single bounded session toward a verifiable condition — e.g. `/goal pytest exits 0 and lint is clean, or stop after N turns`. Always include the "or stop after N turns" safety clause, and phrase conditions so each turn must produce *fresh* evidence (re-run the tests, show the exit code) to avoid false-positive completion. `/goal`'s evaluator (Haiku) only judges what is in the transcript — it does **not** run tools or read files — so the proof (test output, exit codes) must be printed in the conversation, not routed through subagents. That makes `/goal` suitable for this small lane only. Do **not** use `/goal` inside `/auto`: it is single-session and would conflict with session chaining, the GAN evaluator, and sprint contracts. `/goal` does not replace the evaluator/sprint-contract gate.
+
 For tiny low-risk behavior changes that do not need a new product story, use `/vibe` instead. If the change introduces a new user workflow, public API behavior, persistence behavior, or acceptance criteria that product stakeholders would care about, stay in `/improve`.
 
 ---

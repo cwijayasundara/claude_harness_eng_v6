@@ -12,6 +12,8 @@ Generate production-quality code and tests for all stories in a dependency group
 
 > **Ultracode tip:** Leave ultracode **off** here (`/effort high`). This skill already spawns an agent team for parallel story execution; ultracode's auto-workflows would double-orchestrate and conflict with the per-story contracts. (The dynamic-workflow form `/harness-implement-group` likewise already fans out.)
 
+> **/goal tip (single-story only, optional unattended iteration):** For a focused *single-story* group (Step 6, generator-direct path), Claude Code v2.1.139+ lets `/goal` drive that one bounded session toward a verifiable condition — e.g. `/goal the story's tests pass and lint is clean, or stop after N turns`. Always include the "or stop after N turns" safety clause, and phrase conditions so each turn must produce *fresh* evidence (re-run the tests, show the exit code) to avoid false-positive completion. `/goal`'s evaluator (Haiku) only judges what is in the transcript — it does **not** run tools or read files — so the proof must be printed in the conversation. Because that conflicts with routing verbose output through the parallel teammate subagents of a multi-story group, reserve `/goal` for the single-story lane. Do **not** use `/goal` inside `/auto`: it is single-session and would conflict with session chaining, the GAN evaluator, and sprint contracts. `/goal` does not replace the evaluator/sprint-contract gate.
+
 ---
 
 ## Usage

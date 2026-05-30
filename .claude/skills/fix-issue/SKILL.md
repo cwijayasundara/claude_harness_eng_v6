@@ -21,6 +21,8 @@ Provide the GitHub issue number. The skill reads the issue, branches, reproduces
 
 This skill enforces a test-first bug fix workflow. The fix is not complete until a test that previously failed now passes, and the full suite still passes.
 
+> **/goal tip (optional unattended iteration):** On Claude Code v2.1.139+ you can let `/goal` drive this single bounded session toward a verifiable condition — e.g. `/goal the failing repro test now passes and lint is clean, or stop after N turns`. Always include the "or stop after N turns" safety clause, and phrase conditions so each turn must produce *fresh* evidence (re-run the test, show the exit code) to avoid false-positive completion. `/goal`'s evaluator (Haiku) only judges what is in the transcript — it does **not** run tools or read files — so the proof (test output, exit codes) must be printed in the conversation, not routed through subagents. That makes `/goal` suitable for this small lane only. Do **not** use `/goal` inside `/auto`: it is single-session and would conflict with session chaining, the GAN evaluator, and sprint contracts. `/goal` does not replace the evaluator/sprint-contract gate.
+
 For tiny, low-risk bugs with a clear reproduction and a likely 1-3 file fix, consider `/vibe` first. Use `/fix-issue` when the bug comes from a tracker issue, requires branching/PR workflow, has unclear root cause, touches risky behavior, or needs full regression discipline.
 
 ---

@@ -13,6 +13,8 @@ This is not permission to free-code. It is a bounded engineering lane with expli
 
 > **Ultracode tip:** Leave ultracode **off** here (`/effort high` or lower). This lane exists to keep small, low-risk changes proportionate — fanning out workflows would defeat its entire purpose.
 
+> **/goal tip (optional unattended iteration):** On Claude Code v2.1.139+ you can let `/goal` drive this single bounded session toward a verifiable condition — e.g. `/goal the targeted test passes and lint is clean, or stop after N turns`. Always include the "or stop after N turns" safety clause, and phrase conditions so each turn must produce *fresh* evidence (re-run the test, show the exit code) to avoid false-positive completion. `/goal`'s evaluator (Haiku) only judges what is in the transcript — it does **not** run tools or read files — so the proof (test output, exit codes) must be printed in the conversation, not routed through subagents. That makes `/goal` suitable for this small lane only. Do **not** use `/goal` inside `/auto`: it is single-session and would conflict with session chaining, the GAN evaluator, and sprint contracts. `/goal` does not replace the evaluator/sprint-contract gate.
+
 ---
 
 ## Usage
