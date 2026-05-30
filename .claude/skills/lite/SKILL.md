@@ -11,6 +11,8 @@ Use `/lite` for small new projects where the full `/brd → /spec → /design �
 
 `/lite` is **not** permission to skip engineering discipline. It enforces a 5-story cap, a single dependency group, and a one-page BRD-lite. If the project grows beyond those limits, escalate to the full pipeline.
 
+> **Ultracode tip:** Leave ultracode **off** here (`/effort high` or lower). Like `/vibe`, this is a deliberately low-ceremony lane — fanning out workflows would be disproportionate to the scope it's built for.
+
 ---
 
 ## Usage

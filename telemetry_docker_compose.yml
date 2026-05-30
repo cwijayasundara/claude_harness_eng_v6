@@ -21,6 +21,7 @@ services:
       - "--storage.tsdb.retention.time=90d"
     volumes:
       - ./telemetry/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./telemetry/cache-alerts.rules.yml:/etc/prometheus/cache-alerts.rules.yml:ro
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"

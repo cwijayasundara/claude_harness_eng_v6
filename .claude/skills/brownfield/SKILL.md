@@ -12,6 +12,8 @@ Use `/brownfield` in existing repositories before substantial planning, improvem
 
 This skill does not change production code.
 
+> **Ultracode tip:** Mapping an unknown codebase is the canonical fan-out task, so run `/effort ultracode` *before* this phase — broad parallel coverage plus adversarial verification produces better maps. Drop back to `/effort high` before the execution phases (`/auto`, `/implement`). Note: the dynamic-workflow form (`/harness-brownfield-map`) already fans out, so ultracode's marginal value is highest on this plain skill form — don't pay for both.
+
 ---
 
 ## Usage

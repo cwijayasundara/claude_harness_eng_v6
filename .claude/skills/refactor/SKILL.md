@@ -7,6 +7,8 @@ context: fork
 
 # Refactor Skill — Quality-Driven Code Improvement
 
+> **Ultracode tip:** A whole-repo `--sweep` is a broad "scan many files, report the conclusion" task — run `/effort ultracode` before it for wider coverage. A **targeted** `/refactor <path>` is narrow and deterministic; leave ultracode off (`/effort high`) for those.
+
 ## Usage
 
 ```

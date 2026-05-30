@@ -6,6 +6,8 @@ context: fork
 
 # Design Skill — System Architecture & UI Mockups
 
+> **Ultracode tip:** This is the most reasoning-heavy, divergent phase in the pipeline — exploring a wide space of architecture and schema alternatives. Run `/effort ultracode` before invoking it so the design space is explored as a judge-panel of approaches, then drop back to `/effort high` before the execution phases (`/auto`, `/implement`).
+
 ## Usage
 
 ```

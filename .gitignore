@@ -3,6 +3,7 @@
 .claude/state/process-*.log
 .claude/state/lane-router-last.txt
 .claude/state/last-drift-scan.txt
+.claude/scheduled_tasks.lock
 .claude/tdd-guard/
 node_modules/
 dist/

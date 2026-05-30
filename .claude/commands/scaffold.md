@@ -314,7 +314,9 @@ test -f "$HARNESS_ROOT/README.md"
 test -f "$HARNESS_ROOT/telemetry_docker_compose.yml"
 test -f "$HARNESS_ROOT/telemetry/otel-collector-config.yml"
 test -f "$HARNESS_ROOT/telemetry/prometheus.yml"
+test -f "$HARNESS_ROOT/telemetry/cache-alerts.rules.yml"
 test -f "$HARNESS_ROOT/telemetry/grafana/dashboards/harness-overview.json"
+test -f "$HARNESS_ROOT/telemetry/grafana/dashboards/cache-health.json"
 test -f "$HARNESS_ROOT/telemetry/grafana/provisioning/dashboards/dashboards.yml"
 test -f "$HARNESS_ROOT/telemetry/grafana/provisioning/datasources/prometheus.yml"
 ```
@@ -345,6 +347,8 @@ cp "$HARNESS_ROOT/telemetry_docker_compose.yml" ./telemetry_docker_compose.yml
 mkdir -p telemetry
 cp "$HARNESS_ROOT/telemetry/otel-collector-config.yml" ./telemetry/
 cp "$HARNESS_ROOT/telemetry/prometheus.yml" ./telemetry/
+cp "$HARNESS_ROOT/telemetry/cache-alerts.rules.yml" ./telemetry/
+cp "$HARNESS_ROOT/telemetry/CACHE_MONITORING.md" ./telemetry/
 rm -rf ./telemetry/grafana && cp -r "$HARNESS_ROOT/telemetry/grafana" ./telemetry/
 cp "$HARNESS_ROOT/README.md" ./SCAFFOLD_README.md
 ```

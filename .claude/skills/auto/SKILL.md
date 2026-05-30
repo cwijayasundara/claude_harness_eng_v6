@@ -9,6 +9,8 @@ context: fork
 
 Autonomous build loop implementing Karpathy's ratcheting pattern with GAN-style generator-evaluator separation, agent teams for parallel execution, sprint contracts for verifiable done-criteria, self-healing with failure-driven learning, and session chaining for multi-context-window builds.
 
+> **Ultracode tip:** Leave ultracode **off** here (`/effort high` or lower). This loop already orchestrates its own agent teams and generator↔evaluator fan-out against sprint contracts; ultracode's auto-workflows would double-orchestrate, fight the contracts, and burn tokens. Do the divergent thinking earlier (`/brownfield`, `/design`, `/spec`) with ultracode on, then turn it off before running `/auto`.
+
 ---
 
 ## SECTION 1: Usage, Prerequisites, and Agent Delegation
@@ -52,6 +54,16 @@ If any prerequisite is missing, stop and report what is absent. Do not proceed w
 - Code verification is delegated to the **evaluator** agent (via `/evaluate` or direct agent spawn).
 - Design critique is delegated to the **design-critic** agent.
 - `/auto` never writes application code, tests, or configuration files itself.
+
+### Context & Token Discipline
+
+`/auto` is the longest-running, most token-heavy loop in the harness. Every token in the orchestrator's context window is re-sent (cache permitting) on every turn, so keep the orchestrator context lean — delegate verbose work into subagents whose context is discarded when they return.
+
+- **Keep verbose output out of the orchestrator.** Test logs, build output, full-file reads, and evaluation transcripts must be produced and consumed inside the `evaluator` / `codebase-explorer` / generator subagents — only their short verdict (PASS/FAIL + summary) returns to `/auto`. Never read raw test or build logs into the orchestrator directly.
+- **Prefer Grep/Glob over full Reads.** When the orchestrator needs a fact from a file, search for it; do not read whole files into the loop's context.
+- **Bound noisy command output.** Tool output cannot be compressed after the fact by a hook — `suppressOutput` only hides it from the UI, not from the model. So bound it *before* it crosses the tool boundary: run verbose commands as `cmd > /tmp/out.log 2>&1` then surface only what matters with `tail -n 50 /tmp/out.log` or `grep -E 'FAIL|Error' /tmp/out.log`, or have a subagent run the command and return only a summary. Never let a full build/test log stream into the orchestrator.
+- **Compact at group boundaries, not mid-group.** Run `/compact` (or rely on session chaining via `claude-progress.txt`) at the seam between dependency groups, where the summary is cheap and the prefix rebuild is amortized — never mid-implementation, which throws away a warm cache. (See SECTION 10: Session Chaining.)
+- **Don't break the cache prefix mid-run.** No tool/plugin/MCP churn, no `CLAUDE.md` edits, no main-loop model swap during a run (see the Prompt Caching rules in `CLAUDE.md`). Model changes happen via subagents only.
 
 ---
 
