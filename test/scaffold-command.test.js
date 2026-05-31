@@ -56,8 +56,8 @@ test('/scaffold does not vendor redundant Karpathy guidelines as a separate skil
 
   assert.equal(fs.existsSync(skillPath), false);
   assert.doesNotMatch(scaffold, /karpathy-guidelines/);
-  assert.match(scaffold, /test "\$SKILL_COUNT" = "28"/);
-  assert.match(scaffold, /28 skills\s+→ \.claude\/skills\//);
+  assert.match(scaffold, /test "\$SKILL_COUNT" = "27"/);
+  assert.match(scaffold, /27 skills\s+→ \.claude\/skills\//);
 });
 
 test('/scaffold does not attempt auto-mode-blocked framework pack installs', () => {

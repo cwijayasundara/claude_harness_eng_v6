@@ -107,57 +107,57 @@ test('check-function-length.js contains WARN_LINES = 25', () => {
   assert.match(checkFunctionLength, /WARN_LINES\s*=\s*25/);
 });
 
-test('check-file-length.js is NOT in settings.json PostToolUse hooks', () => {
-  assert.doesNotMatch(settingsJson, /check-file-length\.js/);
-});
+// ── 5. Settings.json consistency — lane-independent enforcement hooks ────────
+// These hooks are deliberately wired into every edit/turn so that ad-hoc edits
+// (outside /build, /auto, /brownfield, /vibe) still enforce quality gates. See
+// commit "fix(hooks): make ad-hoc edits enforce quality gates".
 
-// ── 5. Settings.json consistency — removed hooks ────────────────────────────
-
-test('lint-on-save.js is NOT in PostToolUse hooks', () => {
+function postToolUseCommands() {
   const settings = JSON.parse(settingsJson);
-  const postToolUseHooks = settings.hooks.PostToolUse || [];
-  const allCommands = postToolUseHooks.flatMap((entry) =>
+  return (settings.hooks.PostToolUse || []).flatMap((entry) =>
     (entry.hooks || []).map((h) => h.command || '')
   );
-  assert.ok(
-    !allCommands.some((cmd) => cmd.includes('lint-on-save.js')),
-    'lint-on-save.js should not be in PostToolUse hooks'
-  );
-});
+}
 
-test('typecheck.js is NOT in PostToolUse hooks', () => {
+function stopCommands() {
   const settings = JSON.parse(settingsJson);
-  const postToolUseHooks = settings.hooks.PostToolUse || [];
-  const allCommands = postToolUseHooks.flatMap((entry) =>
+  return (settings.hooks.Stop || []).flatMap((entry) =>
     (entry.hooks || []).map((h) => h.command || '')
   );
+}
+
+test('check-file-length.js is wired into PostToolUse hooks', () => {
   assert.ok(
-    !allCommands.some((cmd) => cmd.includes('typecheck.js')),
-    'typecheck.js should not be in PostToolUse hooks'
+    postToolUseCommands().some((cmd) => cmd.includes('check-file-length.js')),
+    'check-file-length.js should be in PostToolUse hooks'
   );
 });
 
-test('track-writes.js is NOT in PostToolUse hooks', () => {
-  const settings = JSON.parse(settingsJson);
-  const postToolUseHooks = settings.hooks.PostToolUse || [];
-  const allCommands = postToolUseHooks.flatMap((entry) =>
-    (entry.hooks || []).map((h) => h.command || '')
-  );
+test('lint-on-save.js is wired into PostToolUse hooks', () => {
   assert.ok(
-    !allCommands.some((cmd) => cmd.includes('track-writes.js')),
-    'track-writes.js should not be in PostToolUse hooks'
+    postToolUseCommands().some((cmd) => cmd.includes('lint-on-save.js')),
+    'lint-on-save.js should be in PostToolUse hooks'
   );
 });
 
-test('require-review.js is NOT in Stop hooks', () => {
-  const settings = JSON.parse(settingsJson);
-  const stopHooks = settings.hooks.Stop || [];
-  const allCommands = stopHooks.flatMap((entry) =>
-    (entry.hooks || []).map((h) => h.command || '')
-  );
+test('typecheck.js is wired into PostToolUse hooks', () => {
   assert.ok(
-    !allCommands.some((cmd) => cmd.includes('require-review.js')),
-    'require-review.js should not be in Stop hooks'
+    postToolUseCommands().some((cmd) => cmd.includes('typecheck.js')),
+    'typecheck.js should be in PostToolUse hooks'
+  );
+});
+
+test('track-writes.js is wired into PostToolUse hooks', () => {
+  assert.ok(
+    postToolUseCommands().some((cmd) => cmd.includes('track-writes.js')),
+    'track-writes.js should be in PostToolUse hooks'
+  );
+});
+
+test('require-review.js is wired into Stop hooks', () => {
+  assert.ok(
+    stopCommands().some((cmd) => cmd.includes('require-review.js')),
+    'require-review.js should be in Stop hooks'
   );
 });
 
