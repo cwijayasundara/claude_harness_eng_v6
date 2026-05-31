@@ -1,108 +1,14 @@
 const assert = require('assert');
 const fs = require('fs');
-const http = require('http');
-const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
 const { test } = require('node:test');
-
-function withGateway(handler) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('timed out waiting for Pushgateway request')), 2000);
-    const server = http.createServer((req, res) => {
-      let body = '';
-      req.setEncoding('utf8');
-      req.on('data', (chunk) => { body += chunk; });
-      req.on('end', () => {
-        clearTimeout(timer);
-        res.statusCode = 202;
-        res.end('ok');
-        resolve({ server, req, body });
-      });
-    });
-    server.on('error', reject);
-    server.listen(0, '127.0.0.1', () => handler(server.address().port));
-  });
-}
-
-function withGatewayRequests(count, handler) {
-  return new Promise((resolve, reject) => {
-    const requests = [];
-    const timer = setTimeout(() => reject(new Error(`timed out waiting for ${count} Pushgateway requests`)), 3000);
-    const server = http.createServer((req, res) => {
-      let body = '';
-      req.setEncoding('utf8');
-      req.on('data', (chunk) => { body += chunk; });
-      req.on('end', () => {
-        requests.push({ req, body });
-        res.statusCode = 202;
-        res.end('ok');
-        if (requests.length === count) {
-          clearTimeout(timer);
-          resolve({ server, requests });
-        }
-      });
-    });
-    server.on('error', reject);
-    server.listen(0, '127.0.0.1', () => handler(server.address().port));
-  });
-}
-
-function runHook(projectDir, input, env) {
-  const hookPath = path.join(projectDir, '.claude', 'hooks', 'record-run.js');
-  return new Promise((resolve) => {
-    const child = spawn(process.execPath, [hookPath], {
-      cwd: projectDir,
-      env: { ...process.env, ...env },
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-    let stdout = '';
-    let stderr = '';
-    child.stdout.setEncoding('utf8');
-    child.stderr.setEncoding('utf8');
-    child.stdout.on('data', (chunk) => { stdout += chunk; });
-    child.stderr.on('data', (chunk) => { stderr += chunk; });
-    child.on('close', (status) => resolve({ status, stdout, stderr }));
-    child.stdin.end(JSON.stringify(input));
-  });
-}
-
-function makeProject() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'record-run-hook-'));
-  const hooksDir = path.join(dir, '.claude', 'hooks');
-  const scriptsDir = path.join(dir, '.claude', 'scripts');
-  const skillsDir = path.join(dir, '.claude', 'skills');
-  const stateDir = path.join(dir, '.claude', 'state');
-  fs.mkdirSync(hooksDir, { recursive: true });
-  fs.mkdirSync(scriptsDir, { recursive: true });
-  fs.mkdirSync(skillsDir, { recursive: true });
-  fs.mkdirSync(stateDir, { recursive: true });
-  fs.copyFileSync(
-    path.join(__dirname, '..', '.claude', 'hooks', 'record-run.js'),
-    path.join(hooksDir, 'record-run.js')
-  );
-  for (const scriptName of ['telemetry-memory.js', 'replay-telemetry.js']) {
-    const source = path.join(__dirname, '..', '.claude', 'scripts', scriptName);
-    if (fs.existsSync(source)) {
-      fs.copyFileSync(source, path.join(scriptsDir, scriptName));
-    }
-  }
-  fs.writeFileSync(path.join(stateDir, 'current-lane'), 'improve');
-  fs.writeFileSync(path.join(stateDir, 'current-mode'), 'full');
-  fs.writeFileSync(path.join(stateDir, 'current-iteration'), '3');
-  fs.writeFileSync(path.join(stateDir, 'current-group'), 'group "A"');
-  fs.writeFileSync(path.join(stateDir, 'current-story'), 'story\\one');
-  for (const [name, description] of Object.entries({
-    brd: 'Create a business requirements document.',
-    spec: 'Write implementation stories and acceptance criteria.',
-    brownfield: 'Map an existing codebase before refactoring.',
-  })) {
-    const skillDir = path.join(skillsDir, name);
-    fs.mkdirSync(skillDir, { recursive: true });
-    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), `---\nname: ${name}\ndescription: ${description}\n---\n\n# ${name}\n`);
-  }
-  return dir;
-}
+const {
+  withGateway,
+  withGatewayRequests,
+  runHook,
+  makeProject,
+} = require('./helpers/record-run-fixture');
 
 test('record-run pushes escaped custom metrics to a configured Pushgateway path', async () => {
   const projectDir = makeProject();
