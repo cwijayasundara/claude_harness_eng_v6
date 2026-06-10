@@ -20,6 +20,7 @@ const MISSING_SIGNATURES = [
   'could not find a declaration',
   'could not determine executable',
   'no tests ran',
+  'canceled due to missing packages',
 ];
 
 // Run a command with an explicit argv array — NEVER a shell string. File paths

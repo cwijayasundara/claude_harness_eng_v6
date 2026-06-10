@@ -54,6 +54,7 @@
     "brownfield": {
       "max_iterations": 2,
       "upstream": null,
+      "hard_gate": "specs/brownfield/code-graph.json must exist, parse as JSON, and have a non-empty nodes array with meta.producer set; and all five prose maps (codebase-map.md, architecture-map.md, test-map.md, risk-map.md, change-strategy.md) must exist and be non-empty. A missing or empty graph or map is an automatic FAIL regardless of the weighted average — prose claims about a codebase with no deterministic graph behind them are unverifiable.",
       "criteria": {
         "completeness": "All source directories and modules appear in the architecture map; no discovered code left unmapped",
         "traceability": "Every architectural claim cites a specific graph edge, file path, or test name as evidence",

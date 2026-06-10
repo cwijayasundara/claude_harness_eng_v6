@@ -38,6 +38,9 @@ Always pass a concrete goal. Without one, the skill ranks structural seams gener
 1. Suggest running `/code-map` first.
 2. Stop. Do not try to score seams from grep results.
 
+Staleness check: if `.claude/state/graph-dirty.jsonl` exists and is non-empty, the graph is behind recent edits — the `graph-refresh` Stop hook normally drains it, but if entries remain, patch first:
+`python3 .claude/skills/code-map/scripts/code_index/code_index.py --root . --out specs/brownfield/code-graph.json --files <dirty paths>`.
+
 If `specs/brownfield/coupling-report.md` exists, prefer it for hub data; otherwise compute on the fly from `code-graph.json`.
 
 ---

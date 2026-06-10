@@ -84,7 +84,7 @@ The commands you'll actually type are the lane entry points above. The full surf
 | `/auto` | Autonomous ratcheting loop |
 | `/vibe` | Controlled small-change lane |
 | `/brownfield` | Map an existing codebase before changing it |
-| `/code-map` | Build deterministic dependency graph |
+| `/code-map` | Build deterministic dependency graph (AST for Python/React/JS/TS; symbol map + god-file skeletons; hook-refreshed) |
 | `/seam-finder` | Rank safe cut-points for a goal |
 | `/implement` | Code generation with agent teams |
 | `/evaluate` | Run app, verify sprint contract |

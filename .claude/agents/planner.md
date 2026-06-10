@@ -39,7 +39,7 @@ You are the Planner agent for the Claude Harness Engine. Your role is to transfo
 
 ### Step 1: Analyze Requirements
 - Read all existing files in `specs/` (if any) to avoid duplication
-- If `specs/brownfield/` exists, read `codebase-map.md`, `architecture-map.md`, `test-map.md`, `risk-map.md`, and `change-strategy.md` before proposing requirements, stories, or architecture
+- If `specs/brownfield/` exists, read `codebase-map.md`, `architecture-map.md`, `test-map.md`, `risk-map.md`, and `change-strategy.md` before proposing requirements, stories, or architecture. Navigate via `symbol-map.md` (fan-in-ranked signatures with `Lstart-Lend` anchors); for god files use `skeletons/` + `Read(offset, limit)` symbol slices instead of whole-file reads. Treat the graph as stale if `.claude/state/graph-dirty.jsonl` is non-empty
 - Identify functional requirements, non-functional requirements, and constraints
 - Clarify ambiguities by making reasonable, documented assumptions
 - Write the BRD to `specs/brd/brd.md`

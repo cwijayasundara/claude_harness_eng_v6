@@ -55,7 +55,7 @@ function recommendAction(observable, funnel, asym, fanIn, fanOut) {
   return 'wrap';
 }
 
-function scoreSeams(graph, goal, opts = {}) {
+function filterNodes(graph, opts) {
   const includeTests = Boolean(opts.includeTests);
   const includeFixtures = Boolean(opts.includeFixtures);
   const filtered = graph.nodes.filter((n) => {
@@ -63,69 +63,71 @@ function scoreSeams(graph, goal, opts = {}) {
     if (!includeFixtures && FIXTURE_PATH_RE.test(n.path)) return false;
     return true;
   });
-  const nodesById = new Map(filtered.map((n) => [n.id, n]));
+  return new Map(filtered.map((n) => [n.id, n]));
+}
+
+function computeFans(graph, nodesById) {
   const fanIn = new Map();
   const fanOut = new Map();
   const inbound = new Map();
-
   for (const e of graph.edges) {
     if (e.target.startsWith('ext:') || e.target.startsWith('sym:')) continue;
+    if (e.import_kind === 'type') continue; // type-only imports are not runtime coupling
     if (!nodesById.has(e.target) || !nodesById.has(e.source)) continue;
     fanIn.set(e.target, (fanIn.get(e.target) || 0) + 1);
     fanOut.set(e.source, (fanOut.get(e.source) || 0) + 1);
     if (!inbound.has(e.target)) inbound.set(e.target, []);
     inbound.get(e.target).push(e.evidence);
   }
-
   let maxFunnel = 1;
   for (const id of nodesById.keys()) {
     const total = (fanIn.get(id) || 0) + (fanOut.get(id) || 0);
     if (total > maxFunnel) maxFunnel = total;
   }
+  return { fanIn, fanOut, inbound, maxFunnel };
+}
 
+function scoreNode(id, node, fans, terms, cycleMembers) {
+  const fi = fans.fanIn.get(id) || 0;
+  const fo = fans.fanOut.get(id) || 0;
+  const [kind, observable] = classifyObservable(node.path);
+  const funnel = (fi + fo) / fans.maxFunnel;
+  const asym = asymmetry(fi, fo);
+  let base = W_OBSERVABLE * observable + W_FUNNEL * funnel + W_ASYMMETRY * asym;
+  const haystack = `${node.path} ${(node.symbols || []).join(' ')}`.toLowerCase();
+  const matched = terms.filter((t) => haystack.includes(t));
+  const relevance = matched.length ? Math.min(1, 0.2 * matched.length) : 0;
+  if (matched.length) base *= GOAL_BUMP;
+  return {
+    id,
+    path: node.path,
+    kind,
+    fan_in: fi,
+    fan_out: fo,
+    observable_score: round3(observable),
+    funnel_score: round3(funnel),
+    asymmetry_score: round3(asym),
+    goal_relevance: round3(relevance),
+    matched_terms: matched,
+    in_cycle: cycleMembers.has(id),
+    total_score: round3(base),
+    evidence: (fans.inbound.get(id) || []).slice(0, 5),
+    recommended_action: recommendAction(observable, funnel, asym, fi, fo),
+  };
+}
+
+function scoreSeams(graph, goal, opts = {}) {
+  const nodesById = filterNodes(graph, opts);
+  const fans = computeFans(graph, nodesById);
   const cycleMembers = new Set();
   for (const cycle of (graph.metrics && graph.metrics.cycles) || []) {
     for (const id of cycle) cycleMembers.add(id);
   }
-
   const terms = goalTerms(goal);
   const out = [];
-
   for (const [id, node] of nodesById) {
-    const fi = fanIn.get(id) || 0;
-    const fo = fanOut.get(id) || 0;
-    const [kind, observable] = classifyObservable(node.path);
-    const funnel = (fi + fo) / maxFunnel;
-    const asym = asymmetry(fi, fo);
-
-    let base =
-      W_OBSERVABLE * observable +
-      W_FUNNEL * funnel +
-      W_ASYMMETRY * asym;
-
-    const haystack = `${node.path} ${(node.symbols || []).join(' ')}`.toLowerCase();
-    const matched = terms.filter((t) => haystack.includes(t));
-    const relevance = matched.length ? Math.min(1, 0.2 * matched.length) : 0;
-    if (matched.length) base *= GOAL_BUMP;
-
-    out.push({
-      id,
-      path: node.path,
-      kind,
-      fan_in: fi,
-      fan_out: fo,
-      observable_score: round3(observable),
-      funnel_score: round3(funnel),
-      asymmetry_score: round3(asym),
-      goal_relevance: round3(relevance),
-      matched_terms: matched,
-      in_cycle: cycleMembers.has(id),
-      total_score: round3(base),
-      evidence: (inbound.get(id) || []).slice(0, 5),
-      recommended_action: recommendAction(observable, funnel, asym, fi, fo),
-    });
+    out.push(scoreNode(id, node, fans, terms, cycleMembers));
   }
-
   out.sort((a, b) => b.total_score - a.total_score);
   return out;
 }
@@ -134,20 +136,11 @@ function round3(n) {
   return Math.round(n * 1000) / 1000;
 }
 
-function render(candidates, goal, top) {
-  const lines = [`# Seam Candidates — \`${goal}\``, ''];
-  if (!candidates.length) {
-    lines.push('_No candidates found. The graph may be empty; run `/code-map` first._');
-    return lines.join('\n') + '\n';
-  }
-
-  lines.push(
-    'Ranked by combined score (observable + funnel + asymmetry, with a goal-relevance ' +
-    'bump when the candidate\'s path or symbols match goal keywords).'
-  );
-  lines.push('');
-  lines.push('| # | Path | Kind | Fan-in | Fan-out | Score | Action |');
-  lines.push('|---:|---|---|---:|---:|---:|---|');
+function renderTable(candidates, top) {
+  const lines = [
+    '| # | Path | Kind | Fan-in | Fan-out | Score | Action |',
+    '|---:|---|---|---:|---:|---:|---|',
+  ];
   candidates.slice(0, top).forEach((c, i) => {
     const flag = c.in_cycle ? ' ⚠ in cycle' : '';
     lines.push(
@@ -156,31 +149,48 @@ function render(candidates, goal, top) {
     );
   });
   lines.push('');
+  return lines;
+}
 
+function renderDetail(c) {
+  const lines = [`### \`${c.path}\``, ''];
+  lines.push(`- **Action:** \`${c.recommended_action}\``);
+  lines.push(`- **Kind:** ${c.kind}  `);
+  lines.push(
+    `- **Scores:** observable=${c.observable_score}, ` +
+    `funnel=${c.funnel_score}, asymmetry=${c.asymmetry_score}, total=${c.total_score}`
+  );
+  if (c.matched_terms.length) {
+    lines.push(`- **Goal terms matched:** ${c.matched_terms.map((t) => `\`${t}\``).join(', ')}`);
+  }
+  if (c.in_cycle) {
+    lines.push('- ⚠ **In cycle** — fan-in / fan-out are unreliable here');
+  }
+  if (c.evidence.length) {
+    lines.push('- **Inbound evidence (sample):**');
+    for (const ev of c.evidence) lines.push(`  - \`${ev}\``);
+  }
+  lines.push('');
+  return lines;
+}
+
+function render(candidates, goal, top) {
+  const lines = [`# Seam Candidates — \`${goal}\``, ''];
+  if (!candidates.length) {
+    lines.push('_No candidates found. The graph may be empty; run `/code-map` first._');
+    return lines.join('\n') + '\n';
+  }
+  lines.push(
+    'Ranked by combined score (observable + funnel + asymmetry, with a goal-relevance ' +
+    'bump when the candidate\'s path or symbols match goal keywords).'
+  );
+  lines.push('');
+  lines.push(...renderTable(candidates, top));
   lines.push('## Top candidates — detail');
   lines.push('');
   for (const c of candidates.slice(0, Math.min(5, top))) {
-    lines.push(`### \`${c.path}\``);
-    lines.push('');
-    lines.push(`- **Action:** \`${c.recommended_action}\``);
-    lines.push(`- **Kind:** ${c.kind}  `);
-    lines.push(
-      `- **Scores:** observable=${c.observable_score}, ` +
-      `funnel=${c.funnel_score}, asymmetry=${c.asymmetry_score}, total=${c.total_score}`
-    );
-    if (c.matched_terms.length) {
-      lines.push(`- **Goal terms matched:** ${c.matched_terms.map((t) => `\`${t}\``).join(', ')}`);
-    }
-    if (c.in_cycle) {
-      lines.push('- ⚠ **In cycle** — fan-in / fan-out are unreliable here');
-    }
-    if (c.evidence.length) {
-      lines.push('- **Inbound evidence (sample):**');
-      for (const ev of c.evidence) lines.push(`  - \`${ev}\``);
-    }
-    lines.push('');
+    lines.push(...renderDetail(c));
   }
-
   lines.push('---');
   lines.push('');
   lines.push(

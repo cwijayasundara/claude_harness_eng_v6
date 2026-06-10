@@ -23,21 +23,43 @@ const QUEUE_SKIP_DIRS = new Set([
   '.next', '.venv', 'venv', '.claude',
 ]);
 
+// Extensions the AST indexer covers — edits to these mark the code graph dirty
+// so the Stop/SubagentStop graph-refresh hook can patch it incrementally.
+const INDEX_EXTS = new Set(['.py', '.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx']);
+
 function block(message) {
   process.stdout.write(message);
   process.stderr.write(message);
   process.exit(2);
 }
 
+function inSkippedDir(n) {
+  return n.split('/').some((p) => QUEUE_SKIP_DIRS.has(p));
+}
+
 function queueForReview(projectDir, filePath, n, ext) {
   if (!TRACKED_EXTS.has(ext)) return;
   if (isTestFile(n)) return;
-  if (n.split('/').some((p) => QUEUE_SKIP_DIRS.has(p))) return;
+  if (inSkippedDir(n)) return;
   const stateDir = path.join(projectDir, '.claude', 'state');
   fs.mkdirSync(stateDir, { recursive: true });
   fs.appendFileSync(
     path.join(stateDir, 'pending-reviews.jsonl'),
     JSON.stringify({ file: filePath, ts: Date.now() }) + '\n'
+  );
+}
+
+function markGraphDirty(projectDir, filePath, n, ext) {
+  if (!INDEX_EXTS.has(ext) || inSkippedDir(n)) return;
+  const graph = path.join(projectDir, 'specs', 'brownfield', 'code-graph.json');
+  if (!fs.existsSync(graph)) return;
+  const rel = path.relative(projectDir, path.resolve(filePath)).split(path.sep).join('/');
+  if (rel.startsWith('..')) return;
+  const stateDir = path.join(projectDir, '.claude', 'state');
+  fs.mkdirSync(stateDir, { recursive: true });
+  fs.appendFileSync(
+    path.join(stateDir, 'graph-dirty.jsonl'),
+    JSON.stringify({ file: rel, ts: Date.now() }) + '\n'
   );
 }
 
@@ -105,8 +127,11 @@ try {
   const ext = path.extname(n).toLowerCase();
 
   queueForReview(projectDir, filePath, n, ext);
-  checkLayers(filePath, n, ext);
-  checkToolchain(projectDir, filePath, ext);
+  markGraphDirty(projectDir, filePath, n, ext);
+  if (!inSkippedDir(n)) {
+    checkLayers(filePath, n, ext);
+    checkToolchain(projectDir, filePath, ext);
+  }
 } catch (err) {
   reportFailure('verify-on-save', err);
 }

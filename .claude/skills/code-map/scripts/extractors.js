@@ -84,6 +84,33 @@ function lineFor(text, offset) {
   return line;
 }
 
+function applyPattern(spec, text, relPath, nid, edges, symbolSet) {
+  const { label, re } = spec;
+  for (const m of text.matchAll(re)) {
+    const importTarget = m[1];
+    if (IMPORT_LABELS.has(label)) {
+      edges.push({
+        source: nid,
+        target: `ext:${importTarget}`,
+        kind: 'imports',
+        evidence: `${relPath}:${lineFor(text, m.index)} ${label} ${importTarget}`,
+      });
+    }
+    if (SYMBOL_LABELS.has(label)) {
+      symbolSet.add(importTarget);
+    } else if (NAMESPACE_LABELS.has(label)) {
+      symbolSet.add(`ns:${importTarget}`);
+    }
+    if (REEXPORT_LABELS.has(label) && spec.symbolGroup) {
+      const tokenSrc = m[spec.symbolGroup] || '';
+      for (const tok of tokenSrc.match(/[A-Za-z_][\w]*/g) || []) {
+        if (tok === 'as') continue;
+        symbolSet.add(tok);
+      }
+    }
+  }
+}
+
 function extractFile(absPath, relPath) {
   const ext = path.extname(absPath).toLowerCase();
   const language = LANG_BY_SUFFIX[ext];
@@ -94,7 +121,6 @@ function extractFile(absPath, relPath) {
       warnings: [],
     };
   }
-
   const nid = nodeId(language, relPath);
   const node = { id: nid, kind: 'file', language, path: relPath, symbols: [] };
   const edges = [];
@@ -106,72 +132,17 @@ function extractFile(absPath, relPath) {
     warnings.push(`${relPath}: read error: ${err.message}`);
     return { node, edges, warnings };
   }
-
   const symbolSet = new Set();
   for (const spec of PATTERNS[language] || []) {
-    const { label, re } = spec;
-    for (const m of text.matchAll(re)) {
-      const importTarget = m[1];
-      const line = lineFor(text, m.index);
-      if (IMPORT_LABELS.has(label)) {
-        edges.push({
-          source: nid,
-          target: `ext:${importTarget}`,
-          kind: 'imports',
-          evidence: `${relPath}:${line} ${label} ${importTarget}`,
-        });
-      }
-      if (SYMBOL_LABELS.has(label)) {
-        symbolSet.add(importTarget);
-      } else if (NAMESPACE_LABELS.has(label)) {
-        symbolSet.add(`ns:${importTarget}`);
-      }
-      if (REEXPORT_LABELS.has(label) && spec.symbolGroup) {
-        const tokenSrc = m[spec.symbolGroup] || '';
-        for (const tok of tokenSrc.match(/[A-Za-z_][\w]*/g) || []) {
-          if (tok === 'as') continue;
-          symbolSet.add(tok);
-        }
-      }
-    }
+    applyPattern(spec, text, relPath, nid, edges, symbolSet);
   }
-
-  if (language === 'python') {
-    for (const call of extractPythonCalls(text, relPath, nid, symbolSet)) {
-      edges.push(call);
-    }
-  }
-
   node.symbols = [...symbolSet].sort();
   return { node, edges, warnings };
 }
 
-const PY_CALL_RE = /\b([A-Za-z_][\w]*)\s*\(/g;
-const PY_KEYWORDS = new Set([
-  'if', 'while', 'for', 'return', 'yield', 'print', 'isinstance',
-  'issubclass', 'len', 'range', 'list', 'dict', 'set', 'tuple', 'str',
-  'int', 'float', 'bool', 'super', 'type', 'open', 'enumerate', 'zip',
-  'map', 'filter', 'sorted', 'any', 'all', 'min', 'max', 'sum', 'abs',
-  'getattr', 'setattr', 'hasattr', 'callable', 'iter', 'next', 'repr',
-  'self', 'cls',
-]);
-
-function extractPythonCalls(text, relPath, nid, knownSymbols) {
-  const out = [];
-  const seen = new Set();
-  for (const m of text.matchAll(PY_CALL_RE)) {
-    const name = m[1];
-    if (PY_KEYWORDS.has(name) || knownSymbols.has(name)) continue;
-    if (seen.has(name)) continue;
-    seen.add(name);
-    out.push({
-      source: nid,
-      target: `sym:${name}`,
-      kind: 'calls',
-      evidence: `${relPath}:${lineFor(text, m.index)} call ${name}(...)`,
-    });
-  }
-  return out;
-}
+// Python call edges are produced by the AST indexer (code-map/scripts/code_index/),
+// which only emits calls to locally-defined or explicitly-imported names. The old
+// regex call scan (`sym:` edges) was removed: it fired on strings, comments, and
+// builtins, polluting the graph with unresolvable targets.
 
 module.exports = { LANG_BY_SUFFIX, NODE_PREFIX, nodeId, extractFile };

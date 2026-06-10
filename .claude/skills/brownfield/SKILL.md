@@ -67,7 +67,21 @@ Use `rg`, `find`, package manifests, config files, and existing docs. Prefer pri
 
 ## Step 1.5 — Build the Dependency Graph
 
-Run `/code-map` or invoke the graph scripts directly to produce deterministic graph artifacts the rest of this skill cites as evidence. If the Understand-Anything Claude Code plugin already produced `.understand-anything/knowledge-graph.json`, import that richer AST graph first:
+Run `/code-map` or invoke the graph scripts directly to produce deterministic graph artifacts the rest of this skill cites as evidence. Preferred producer — the vendored AST indexer (Python via stdlib `ast`; JS/JSX/TS/TSX via tree-sitter pip wheels):
+
+```bash
+python3 .claude/skills/code-map/scripts/code_index/code_index.py \
+  --root . --out specs/brownfield/code-graph.json \
+  --skeleton-dir specs/brownfield/skeletons
+python3 .claude/skills/code-map/scripts/code_index/code_index.py \
+  --render-map specs/brownfield/code-graph.json \
+  --out specs/brownfield/symbol-map.md
+```
+
+If the indexer reports `ModuleNotFoundError` on a JS/TS repo, run
+`pip3 install tree-sitter tree-sitter-typescript tree-sitter-javascript` and retry.
+
+If the Understand-Anything Claude Code plugin already produced `.understand-anything/knowledge-graph.json`, you may import that graph instead:
 
 ```bash
 node .claude/skills/code-map/scripts/import_understand_graph.js \
@@ -75,7 +89,7 @@ node .claude/skills/code-map/scripts/import_understand_graph.js \
   --out specs/brownfield/code-graph.json
 ```
 
-Otherwise build the vendored fallback graph:
+For C#/Java/Go repos, or when no `python3` is available, build the regex fallback graph:
 
 ```bash
 node .claude/skills/code-map/scripts/build_graph.js \
@@ -95,12 +109,11 @@ node .claude/skills/code-map/scripts/build_graph.js \
 
 Producer resolution order:
 
-1. Understand-Anything `.understand-anything/knowledge-graph.json`, if present.
-2. `graphify` skill, if installed by the user.
-3. `hex-graph` MCP, if available.
-4. Vendored zero-dependency Node.js scripts in `.claude/skills/code-map/scripts/`.
+1. Vendored AST indexer (`scripts/code_index/code_index.py`) — preferred for Python/React/JS/TS repos.
+2. Understand-Anything import, if `.understand-anything/knowledge-graph.json` already exists.
+3. Vendored regex script (`scripts/build_graph.js`) — C#/Java/Go, or no `python3`.
 
-If Understand-Anything, `graphify`, or `hex-graph` is available, prefer it and project the result into the same `code-graph.json` schema. If the graph is empty or has only warnings, stop and report. Do not invent architecture from filenames.
+If the graph is empty or has only warnings, stop and report. Do not invent architecture from filenames. When the AST producer ran, treat `symbol-map.md` and `skeletons/` as the navigation layer: read a single symbol with `Read(offset=START, limit=END-START+1)` instead of reading god files whole.
 
 ---
 

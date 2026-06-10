@@ -75,6 +75,32 @@ test('passes a Python file with a legal downward import', async () => {
   assert.strictEqual(result.status, 0, result.stdout + result.stderr);
 });
 
+test('does not lint, typecheck, or layer-check fixture files', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  // Layer-violating content under test/fixtures/ — fixture data, not production code.
+  const p = writeFileIn(
+    projectDir,
+    'test/fixtures/sample/src/service/user.py',
+    'from src.api import routes\n'
+  );
+  const result = await runHook(projectDir, HOOK, {
+    tool_name: 'Write',
+    tool_input: { file_path: p },
+  });
+  assert.strictEqual(result.status, 0, result.stdout + result.stderr);
+  assert.strictEqual(readPending(projectDir).length, 0, 'fixtures are not queued for review');
+});
+
+test('treats "npx canceled due to missing packages" as unprovisioned, not a failure', () => {
+  const { unavailable } = require(path.join(
+    __dirname, '..', '.claude', 'hooks', 'lib', 'toolchain.js'
+  ));
+  assert.strictEqual(
+    unavailable('npm error npx canceled due to missing packages and no YES option: ["eslint@10.4.1"]'),
+    true
+  );
+});
+
 test('does not block when the lint/typecheck toolchain is unprovisioned', async () => {
   // Temp project has no pyproject/eslint config — the hook must fail open.
   const projectDir = makeHookProject([HOOK]);

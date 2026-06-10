@@ -35,7 +35,7 @@ For tiny cleanup that is obviously safe and local (for example one unused import
 `/refactor <path>` fixes a targeted area. `/refactor --sweep` runs the whole-repo **entropy scan** (this absorbs the former `/lint-drift` skill): it *reports* accumulated drift and routes the findings back into the per-principle fix flow below. Entropy control for agent-generated code — as agents replicate patterns, drift accumulates.
 
 What the sweep scans:
-- **Structural drift (from `code-graph.json`, not grep):** orphan/dead files (`fan_in == 0`), layer-violation import directions, unstable hubs, cycles. Run `/code-map` first if the graph is missing or stale; prefer the graph over grep. Always grep for *dynamic* references (`getattr`, registries, `importlib`) before declaring anything dead.
+- **Structural drift (from `code-graph.json`, not grep):** orphan/dead files (`fan_in == 0`), layer-violation import directions, unstable hubs, cycles. Run `/code-map` first if the graph is missing or stale (stale = `.claude/state/graph-dirty.jsonl` non-empty — the `graph-refresh` Stop hook normally drains it); prefer the graph over grep. Always grep for *dynamic* references (`getattr`, registries, `importlib`) before declaring anything dead.
 - **Cross-file duplicate logic:** near-identical function bodies across 3+ files → extract a shared utility. This is the sweep's unique signal (neither `code-map` nor a targeted refactor finds it).
 - **Principle violations:** file/function length, missing types, bare excepts, hardcoded config. Thresholds are single-sourced in `code-gen/SKILL.md` (do not restate them); the length/type cases are also enforced live by the hooks — the sweep catches what predates them.
 - **Test-quality drift:** assert-nothing tests, mocked business logic.

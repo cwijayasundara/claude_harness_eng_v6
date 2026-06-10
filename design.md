@@ -615,16 +615,22 @@ Brownfield discovery is the entry point for existing-codebase work. v5 uses grap
 /brownfield
     |
     v
-/code-map  --> graphify skill | hex-graph MCP | vendored Node.js scripts
+/code-map  --> AST indexer (Python ast + tree-sitter wheels) | regex fallback
     |
     v
-specs/brownfield/code-graph.json
+specs/brownfield/code-graph.json   (+ per-file symbol records with line ranges)
     |
+    +--> symbol-map.md        (fan-in-ranked signatures, token-budgeted)
+    +--> skeletons/*.skel.md  (god files: signature-only views, Read(offset,limit) slices)
     +--> dependency-graph.md
-    +--> coupling-report.md
+    +--> coupling-report.md   (hubs, cycles, unstable hubs, dead-code candidates)
     |
     v
 architecture-map.md, risk-map.md, change-strategy.md
+    |
+    | freshness: PostToolUse(Edit|Write) appends to .claude/state/graph-dirty.jsonl;
+    | Stop/SubagentStop (graph-refresh.js) re-parses only dirty files and
+    | re-renders symbol-map.md — the graph never goes stale mid-build.
     |
     v
 /seam-finder "<goal>"  -->  seams-<goal>.md
