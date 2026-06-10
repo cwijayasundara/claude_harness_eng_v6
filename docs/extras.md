@@ -77,4 +77,4 @@ Understand-Anything is optional. If its graph is absent, `/code-map` falls back 
 
 ## Dynamic workflows
 
-Four `/harness-*` dynamic workflows (`harness-brownfield-map`, `harness-eval`, `harness-implement-group`, `harness-review`) provide parallel-fan-out alternatives to `/brownfield`, `/evaluate`, `/implement`, and `/review`. See `.claude/workflows/README.md`. Use the skill form **or** the workflow form for a given step — never both in the same run.
+Dynamic workflows are JavaScript files in `.claude/workflows/` that auto-register as `/<name>` slash commands for deterministic multi-agent orchestration (fan-out -> verify -> synthesize). The harness ships none — earlier `/harness-*` workflows merely duplicated existing skills and were removed. Author your own when you have a genuinely new fan-out; see `.claude/workflows/README.md`.

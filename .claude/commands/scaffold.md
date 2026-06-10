@@ -295,10 +295,6 @@ test -f "$PLUGIN_SOURCE/scripts/replay-telemetry.js"
 test -d "$PLUGIN_SOURCE/skills/seam-finder"
 test -d "$PLUGIN_SOURCE/skills/vibe"
 test -d "$PLUGIN_SOURCE/workflows"
-test -f "$PLUGIN_SOURCE/workflows/harness-review.js"
-test -f "$PLUGIN_SOURCE/workflows/harness-implement-group.js"
-test -f "$PLUGIN_SOURCE/workflows/harness-brownfield-map.js"
-test -f "$PLUGIN_SOURCE/workflows/harness-eval.js"
 test -f "$PLUGIN_SOURCE/templates/context.template.md"
 test -f "$PLUGIN_SOURCE/templates/claude-security-guidance.template.md"
 test -f "$PLUGIN_SOURCE/templates/security-patterns.template.yaml"
@@ -584,14 +580,7 @@ One-way dependencies only. See `.claude/architecture.md` for full rules.
 
 ## Dynamic Workflows
 
-`.claude/workflows/*.js` files auto-register as `/<name>` slash commands — deterministic multi-agent orchestration (fan-out → verify → synthesize), shared via git. Shipped with the harness:
-
-| Command | Mirrors | Purpose |
-|---------|---------|---------|
-| `/harness-review` | `/review` | Multi-dimension review of the diff (correctness · security · architecture · quality), adversarially verified |
-| `/harness-implement-group <group-id>` | `/implement` | Parallel TDD build of a sprint group's stories in isolated worktrees, each acceptance-reviewed |
-| `/harness-brownfield-map [scope]` | `/brownfield` | Multi-lens codebase survey (structure · entry points · deps · tests · risk) synthesized into `specs/brownfield/` maps |
-| `/harness-eval <contract-id>` | `/evaluate` | Three-layer verification (API · UI · schema) run in parallel against the running app → one PASS/FAIL verdict |
+`.claude/workflows/*.js` files auto-register as `/<name>` slash commands — deterministic multi-agent orchestration (fan-out → verify → synthesize), shared via git. The harness ships **no** built-in workflows: earlier `/harness-eval`, `/harness-review`, `/harness-brownfield-map`, and `/harness-implement-group` each merely duplicated an existing skill (`/evaluate`, `/review`, `/brownfield`, `/implement`) — the weaker duplicate at that — so they were removed to avoid two confusing lanes for one task. Use the skill forms; author your own workflow when you have a genuinely new fan-out.
 
 Enablement is plan/runtime-gated, not a project setting: requires Pro+ (toggle in `/config` on Pro; default-on for Max/Team/Enterprise), and is triggered by the word `workflow` in a prompt, a saved `/<name>` command, or `/effort ultracode` (auto-orchestration). Workflows use substantially more tokens than a normal turn. Do **not** add `disableWorkflows` to `.claude/settings.json` — that turns the feature off. See `.claude/workflows/README.md` to add your own.
 
@@ -1029,7 +1018,7 @@ Installed:
   skills        → .claude/skills/
   hooks         → .claude/hooks/ (one per event + lib/)
   16 templates  → .claude/templates/
-  4 workflows   → .claude/workflows/  (/harness-review, /harness-implement-group, /harness-brownfield-map, /harness-eval)
+  workflows/    → .claude/workflows/  (no built-ins; author your own)
   6 state files → .claude/state/
   1 manifest    → .claude/.claude-plugin/plugin.json
 
@@ -1065,7 +1054,7 @@ Installed:
   skills        → .claude/skills/
   hooks         → .claude/hooks/ (one per event + lib/)
   16 templates  → .claude/templates/
-  4 workflows   → .claude/workflows/  (/harness-review, /harness-implement-group, /harness-brownfield-map, /harness-eval)
+  workflows/    → .claude/workflows/  (no built-ins; author your own)
   6 state files → .claude/state/
   1 manifest    → .claude/.claude-plugin/plugin.json
 

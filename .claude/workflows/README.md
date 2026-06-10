@@ -1,20 +1,20 @@
 # Dynamic Workflows
 
 JavaScript files in this directory auto-register as `/<name>` slash commands
-(the `name` from each script's `export const meta` block). They are the
-project's **dynamic workflows** — deterministic multi-agent orchestration that
-fans out subagents, verifies their work, and synthesizes a result. They are
-shared via git, so everyone on the project inherits them, exactly like the
-bundled `/deep-research`.
+(the `name` from each script's `export const meta` block). They are
+**dynamic workflows** — deterministic multi-agent orchestration that fans out
+subagents, verifies their work, and synthesizes a result. They are shared via
+git, so everyone on the project inherits them, exactly like the bundled
+`/deep-research`.
 
-## Shipped with the harness
-
-| Command | File | What it does |
-|---|---|---|
-| `/harness-review` | `harness-review.js` | Reviews the current diff across correctness / security / architecture / quality, adversarially verifies each finding, synthesizes a report. Dynamic-workflow form of `/review`. |
-| `/harness-implement-group <group-id>` | `harness-implement-group.js` | Builds a sprint group's stories in parallel — one TDD implementer per story in an isolated worktree, then an independent acceptance-criteria reviewer. Dynamic-workflow form of the `/implement` agent-team lane. |
-| `/harness-brownfield-map [scope]` | `harness-brownfield-map.js` | Surveys an existing codebase through five parallel lenses (structure, entry points, dependencies, tests, risk), then synthesizes the `specs/brownfield/` maps. Dynamic-workflow form of `/brownfield`. |
-| `/harness-eval <contract-id>` | `harness-eval.js` | Runs the three harness verification layers (API, UI/Playwright, schema) in parallel against the running app and aggregates one PASS/FAIL verdict. Dynamic-workflow form of `/evaluate`. |
+The harness ships **no** built-in workflows: earlier versions bundled
+`/harness-eval`, `/harness-review`, `/harness-brownfield-map`, and
+`/harness-implement-group`, but each merely duplicated an existing skill
+(`/evaluate`, `/review`, `/brownfield`, `/implement`) — and the weaker
+duplicate at that (no security gate, no `security-verdict.json`, no quality
+gate). They were removed to avoid two confusing lanes for the same task. Use
+the skill forms; author your own workflow below when you have a genuinely new
+fan-out to orchestrate.
 
 ## Enablement (not a project setting)
 
