@@ -1,6 +1,6 @@
 ---
 name: scaffold
-description: Initialize a new project with the Claude Harness Engine v4 scaffold.
+description: Initialize a new project with the Claude Harness Engine v5 scaffold.
 ---
 
 # /scaffold — Project Initialization
@@ -265,17 +265,17 @@ First, locate the plugin source directory by finding the newest installed local-
 
 ```bash
 # Prefer the newest local marketplace cache for this plugin.
-PLUGIN_SOURCE=$(find ~/.claude/plugins/cache/local-harness/claude_harness_eng_v4 -maxdepth 3 -path "*/.claude-plugin/plugin.json" -print 2>/dev/null | sort -V | tail -1 | sed 's|/.claude-plugin/plugin.json||')
+PLUGIN_SOURCE=$(find ~/.claude/plugins/cache/local-harness/claude_harness_eng_v5 -maxdepth 3 -path "*/.claude-plugin/plugin.json" -print 2>/dev/null | sort -V | tail -1 | sed 's|/.claude-plugin/plugin.json||')
 
 # Fallback for --plugin-dir development sessions.
 if [ -z "$PLUGIN_SOURCE" ]; then
-  PLUGIN_SOURCE=$(find ~/claude_harness_eng_v4/.claude ~/Documents/rnd_2026/claude_scaffold_research/claude_harness_eng_v4/.claude -maxdepth 3 -path "*/.claude-plugin/plugin.json" -exec grep -l '"name": "claude_harness_eng_v4"' {} \; 2>/dev/null | head -1 | sed 's|/.claude-plugin/plugin.json||')
+  PLUGIN_SOURCE=$(find ~/claude_harness_eng_v5/.claude ~/Documents/rnd_2026/claude_scaffold_research/claude_harness_eng_v5/.claude -maxdepth 3 -path "*/.claude-plugin/plugin.json" -exec grep -l '"name": "claude_harness_eng_v5"' {} \; 2>/dev/null | head -1 | sed 's|/.claude-plugin/plugin.json||')
 fi
 
 echo "Found plugin at: $PLUGIN_SOURCE"
 ```
 
-If `$PLUGIN_SOURCE` is empty, ask the user: "Where is the claude_harness_eng_v4 repo cloned? I need the path to copy scaffold files." Then set `PLUGIN_SOURCE=/path/they/give/.claude`.
+If `$PLUGIN_SOURCE` is empty, ask the user: "Where is the claude_harness_eng_v5 repo cloned? I need the path to copy scaffold files." Then set `PLUGIN_SOURCE=/path/they/give/.claude`.
 
 Resolve the harness root (one level above `.claude/`) before validation:
 
@@ -382,7 +382,7 @@ Merge the selected official plugins into the project's existing `.claude/setting
 }
 ```
 
-Do not replace the whole `enabledPlugins` object if it already exists. Preserve existing project/plugin entries such as `claude_harness_eng_v4@local-harness`; otherwise a project-scoped plugin install can be disabled by the scaffold copy.
+Do not replace the whole `enabledPlugins` object if it already exists. Preserve existing project/plugin entries such as `claude_harness_eng_v5@local-harness`; otherwise a project-scoped plugin install can be disabled by the scaffold copy.
 
 If the user chose "Let me pick," only include the plugins they selected.
 
@@ -687,7 +687,7 @@ Architecture reference document (~200-300 lines):
 ### design.md Template
 
 ```markdown
-# Claude Harness Engine v4 — Design Reference
+# Claude Harness Engine v5 — Design Reference
 
 ## System Architecture
 
@@ -1023,7 +1023,7 @@ Tailor the "Next steps" ordering based on the project-type decision:
 
 **Default report (questions 3 = A / B / C):**
 ```
-✓ Claude Harness Engine v4 scaffolded successfully.
+✓ Claude Harness Engine v5 scaffolded successfully.
 
 Installed:
   8 agents      → .claude/agents/
@@ -1059,7 +1059,7 @@ Next steps:
 
 **Minimal report (project type = D):**
 ```
-✓ Claude Harness Engine v4 scaffolded successfully (minimal project mode).
+✓ Claude Harness Engine v5 scaffolded successfully (minimal project mode).
 
 Installed:
   8 agents      → .claude/agents/

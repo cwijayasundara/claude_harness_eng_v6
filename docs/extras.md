@@ -10,7 +10,7 @@ For teams that want a visible queue, parallel execution, and tracker-based revie
 2. After planning, run `/tracker-publish` — creates one Linear/Jira issue per dependency group
 3. Start the orchestrator:
    ```bash
-   cd ~/claude_harness_eng_v4/symphony_clone
+   cd ~/claude_harness_eng_v5/symphony_clone
    cp .env.example .env && $EDITOR .env
    docker compose up --build
    ```

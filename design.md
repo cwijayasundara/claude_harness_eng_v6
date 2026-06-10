@@ -1,12 +1,12 @@
-# Claude Harness Engine v4 — Architecture Reference
+# Claude Harness Engine v5 — Architecture Reference
 
 Comprehensive design document for the Claude Harness Engine: a GAN-inspired orchestration system for autonomous, long-running application development with Claude Code.
 
 Copied into target projects by `/scaffold`.
 
-Current scaffold version: `1.1.5`.
+Current scaffold version: `2.0.0`.
 
-Canonical repository: `https://github.com/cwijayasundara/claude_harness_eng_v4.git`.
+Canonical repository: `https://github.com/cwijayasundara/claude_harness_eng_v5.git`.
 
 Based on:
 - [Anthropic: Harness Design for Long-Running Apps](https://www.anthropic.com/engineering/harness-design-long-running-apps)
@@ -479,7 +479,7 @@ The chosen packs are recorded in `project-manifest.json` under a `framework_skil
 A solo engineer (or small pod) drives Claude Code directly:
 
 ```
-$ claude --plugin-dir ~/claude_harness_eng_v4/.claude
+$ claude --plugin-dir ~/claude_harness_eng_v5/.claude
 > /scaffold                # one time
 > /brd                     # or /lite, or /brownfield
 > /spec                    # human gate
@@ -607,7 +607,7 @@ The harness handles **what** to build (SDLC pipeline, sprint contracts, ratchet 
 
 ## 14. Graph-Grounded Brownfield Discovery
 
-Brownfield discovery is the entry point for existing-codebase work. v4 uses graph-grounded artifacts so planner and generator agents cite evidence instead of inferring architecture from filenames.
+Brownfield discovery is the entry point for existing-codebase work. v5 uses graph-grounded artifacts so planner and generator agents cite evidence instead of inferring architecture from filenames.
 
 ```text
 /brownfield

@@ -193,7 +193,7 @@ The reclaim writes a Linear comment so the human reviewer sees that a previous r
 | `scripts/bootstrap.sh` | Validate `.env`, build image, start container, verify Claude auth. Idempotent — safe to re-run. |
 | `scripts/diagnose-linear.js` | Print Linear project state counts and configured target states. Useful when issues are not being picked up. |
 | `scripts/create-group-issue.js` | Create a Linear "harness group" issue with the correct labels and description format. Idempotent — refuses to create duplicates for the same group ID. |
-| `scripts/sync-to-template.sh` | (Canonical only.) Sync this codebase into the `claude_harness_eng_v4/symphony_clone` template so scaffolded projects inherit fixes. |
+| `scripts/sync-to-template.sh` | (Canonical only.) Sync this codebase into the `claude_harness_eng_v5/symphony_clone` template so scaffolded projects inherit fixes. |
 
 ### Creating multiple group issues
 

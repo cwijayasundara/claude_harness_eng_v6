@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "phase-eval-result.schema.json",
   "title": "Phase Evaluation Result",
-  "description": "Schema for phase ratchet evaluator output used by the Claude Harness Engine v4 GAN loop",
+  "description": "Schema for phase ratchet evaluator output used by the Claude Harness Engine v5 GAN loop",
   "type": "object",
   "required": [
     "phase",

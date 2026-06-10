@@ -1,8 +1,8 @@
-# Claude Harness Engine v4 — Getting Started
+# Claude Harness Engine v5 — Getting Started
 
 A Claude Code plugin for autonomous, long-running application development. GAN-inspired generator-evaluator architecture with Karpathy ratcheting — quality only moves forward.
 
-Current version: `1.1.5`
+Current version: `2.0.0`
 
 You need to hold exactly four ideas to use this:
 
@@ -19,11 +19,11 @@ Everything else (telemetry, trackers, modes, framework packs) is optional tuning
 
 ```bash
 # 1. Clone the harness
-git clone https://github.com/cwijayasundara/claude_harness_eng_v4.git ~/claude_harness_eng_v4
+git clone https://github.com/cwijayasundara/claude_harness_eng_v5.git ~/claude_harness_eng_v5
 
 # 2. Load it as a plugin from your target project
 cd ~/my-project
-claude --plugin-dir ~/claude_harness_eng_v4/.claude
+claude --plugin-dir ~/claude_harness_eng_v5/.claude
 ```
 
 Then, inside Claude Code:
@@ -177,7 +177,7 @@ Unit suite (fast, no API calls): `node --test test/*.test.js`. Full E2E pipeline
 | Problem | Fix |
 |---|---|
 | `/auto` runs but quality regresses | Check `.claude/program.md` — edit to steer. Check `learned-rules.md` for accumulated rules |
-| Scaffold says "plugin source stale" | Update the harness: `cd ~/claude_harness_eng_v4 && git pull` |
+| Scaffold says "plugin source stale" | Update the harness: `cd ~/claude_harness_eng_v5 && git pull` |
 | A hook blocks a legitimate write | The block message names the gate; fix the cause rather than disabling. Escape hatches: `HARNESS_TDD_GATE=off`, `HARNESS_COVERAGE_GATE=off` (use sparingly) |
 | Telemetry problems (no metrics, Grafana empty, missing `user` label) | See [docs/telemetry.md](docs/telemetry.md) troubleshooting table |
 | Framework pack `PENDING MANUAL INSTALL` | See [docs/extras.md](docs/extras.md) |
