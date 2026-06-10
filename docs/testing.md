@@ -22,7 +22,7 @@ This auto-starts the telemetry stack (Docker Compose) if not running, then execu
 | 3 - Spec | Stories + features.json decomposed from BRD | Haiku | $1.00 |
 | 3b - Spec LLM | LLM validates spec quality (advisory) | Haiku | $0.15 |
 | 4 - Design | Architecture artifacts generated | Haiku | $1.50 |
-| 5 - Auto/Solo | Working code built (todo CLI app) | Sonnet | $5.00 |
+| 5 - Auto | Working code built (todo CLI app) | Sonnet | $5.00 |
 | 6 - Brownfield | Codebase discovery maps generated | Haiku | $1.00 |
 | 7 - Telemetry | Prometheus metrics exist | — | — |
 | 8 - Grafana | Dashboard loads, Phase Quality panels visible | — | — |

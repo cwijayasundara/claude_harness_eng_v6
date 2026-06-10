@@ -7,7 +7,7 @@
 - **Date:** {ISO 8601}
 - **Status:** PASS | FAIL (attempt {N} of 3) | BLOCKED
 - **Stories:** [{story IDs}]
-- **Mode:** full | lean | solo | turbo
+- **Mode:** full | lean
 - **Summary:** {1-2 sentence description of what happened}
 - **Checks:** {N} API, {N} Playwright, {N} design passed
 - **Coverage:** {N}% (baseline: {N}%)

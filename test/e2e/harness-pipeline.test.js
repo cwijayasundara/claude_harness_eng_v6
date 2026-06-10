@@ -322,7 +322,7 @@ describe('Harness E2E Pipeline', { timeout: 900000 }, () => {
 
   // ── Stage 4: Auto/Solo ───────────────────────────────────────────────────
 
-  test('Stage 4 - Auto/Solo: autonomous build loop', { timeout: 180000 }, () => {
+  test('Stage 4 - Auto: autonomous build loop', { timeout: 180000 }, () => {
     const autoPrompt =
       'Create a Node.js CLI todo app. Write these files directly — do NOT read any other files first.\n\n' +
       'FILE 1: todo.js — CLI entry point that parses process.argv for commands: add <text>, list, complete <id>, delete <id>.\n' +
@@ -362,7 +362,7 @@ describe('Harness E2E Pipeline', { timeout: 900000 }, () => {
       runFiles = fs.readdirSync(runsDir).filter((f) => f.endsWith('.jsonl'));
     }
 
-    logResult('stage-5-auto-solo', {
+    logResult('stage-5-auto', {
       exitCode: result.exitCode,
       signal: result.signal,
       sourceFileCount,

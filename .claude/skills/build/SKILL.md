@@ -1,7 +1,7 @@
 ---
 name: build
 description: Full SDLC pipeline. Runs all phases end-to-end with human gates on phases 1-3.
-argument-hint: "[path-to-BRD] [--mode full|lean|solo|turbo]"
+argument-hint: "[path-to-BRD] [--mode full|lean]"
 context: fork
 ---
 
@@ -16,7 +16,6 @@ Full software development lifecycle pipeline. Orchestrates BRD creation, story s
 ```
 /build path/to/requirements.md
 /build path/to/requirements.md --mode lean
-/build path/to/requirements.md --mode solo
 /build --lite "Python CLI that summarizes a URL"   # small new project
 ```
 
@@ -222,8 +221,6 @@ Commit the README: `git add README.md && git commit -m "docs: add README with ar
 |------|-------------|
 | `full` | All ratchet gates including design critic and GAN loop |
 | `lean` | Skip design critic and GAN loop; keep API + Playwright checks |
-| `solo` | Generator works alone; skip evaluator, team, and Docker checks |
-| `turbo` | For highly capable models: single-pass implementation, ratchet gates 4–6 batched once at the end (see `/auto` → Turbo Mode) |
 
 ---
 

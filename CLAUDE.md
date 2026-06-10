@@ -10,7 +10,7 @@ A GAN-inspired harness combining Karpathy ratcheting + Anthropic/OpenAI harness 
 - Session chaining for multi-context-window builds
 - Three-layer evaluation (API + Playwright + Vision with weighted scoring)
 - Superpowers integration (brainstorming, TDD, debugging, verification at key stages)
-- 4 execution modes: Full, Lean, Solo, Turbo
+- 2 execution modes: Full, Lean
 
 ## Installation
 

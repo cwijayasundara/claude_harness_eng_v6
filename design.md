@@ -425,12 +425,12 @@ Configured in `project-manifest.json` under `verification.mode`. All modes use t
 
 | Mode | Cost | Gates | Agent Teams | Evaluator | Design Critic | When to Use |
 |------|------|-------|-------------|-----------|---------------|-------------|
-| **Full** | $100–300 | All 6 | Yes (phased) | Per group | Per group | Production apps, complex requirements |
-| **Lean** | $30–80 | 1–5 | Yes | Per group | Skipped | Backend-heavy, internal tools |
-| **Solo** | $5–15 | 1–3 | No | Skipped | Skipped | Bug fixes, small features, prototyping |
-| **Turbo** | $30–50 | 1–3 per commit, 4–6 at end | No | Once at end | Once at end | Well-specified spec + capable model |
+| **Full** | $100–300 | All 7 | Yes (phased) | Per group | Per group | Production apps, complex requirements |
+| **Lean** | $30–80 | All 7 except design-critic | Yes | Per group | Once at group end | Backend-heavy, internal tools |
 
-**Fast-lane optimization:** for trivial changes (lint, docs, type annotations), gates 4–6 are skipped. Detection: `git diff --name-only` shows only non-code files, or the commit message matches lint/doc patterns.
+Both modes run every gate including the Gate 7 security review and the evaluator; **Lean** differs only by skipping the per-iteration design-critic vision loop. (The former Solo and Turbo modes were removed — Solo skipped the security gate and the evaluator, and Turbo deferred all verification to the end; both defeated the ratchet. For small/quick work use `/build --lite` or `/vibe` instead.)
+
+**Fast-lane optimization:** for trivial changes (lint, docs, type annotations), gates 4–6 are skipped on that commit only. Detection: `git diff --name-only` shows only non-code files, or the commit message matches lint/doc patterns.
 
 ---
 

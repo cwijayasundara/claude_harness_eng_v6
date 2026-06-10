@@ -147,7 +147,7 @@ For each entry in `playwright_checks`:
 
 ## Layer 3 — Design Checks (Full Mode Only)
 
-Skip this layer entirely in **Lean** or **Solo** mode.
+Skip this layer entirely in **Lean** mode (the design-critic runs once at group end instead).
 
 In Full mode, delegate to the `design-critic` agent:
 - Pass the list of `design_checks` entries from the sprint contract.
@@ -171,7 +171,7 @@ This check does not require Docker to be running.
 
 ## Layer 4 — Security Gate
 
-The validator is not security-complete without this layer. Run it in Full and Lean modes (skip only in Solo, where `/evaluate` is itself a no-op).
+The validator is not security-complete without this layer. Run it in Full and Lean modes — every mode runs the security gate.
 
 1. Spawn the `security-reviewer` agent against the group's changed files (run it concurrently with Layers 1–2 when possible — it does not need the app running).
 2. The agent writes `specs/reviews/security-verdict.json` (`{ pass, block_severities, summary, findings[] }`). Read it.
@@ -251,9 +251,8 @@ The overall VERDICT is PASS only if every check across all layers passes **and**
 |-------|--------------|---------------------|-----------------|--------------------|
 | Full  | Run          | Run                 | Run             | Run                |
 | Lean  | Run          | Run                 | Skip            | Run                |
-| Solo  | No-op — print "Solo mode: skipping evaluator" and exit (use `/review` for the Solo security gate) |
 
-Determine the current execution mode from `project-manifest.json` field `execution.default_mode` (`full`/`lean`/`solo`/`turbo`), or the `--mode` override when invoked under `/auto` or `/build`. Default to Full if absent. Note: this is distinct from `verification.mode` (`docker`/`local`/`stub`), which controls how the app is reached — do not confuse the two.
+Determine the current execution mode from `project-manifest.json` field `execution.default_mode` (`full`/`lean`), or the `--mode` override when invoked under `/auto` or `/build`. Default to Full if absent. Note: this is distinct from `verification.mode` (`docker`/`local`/`stub`), which controls how the app is reached — do not confuse the two.
 
 ---
 

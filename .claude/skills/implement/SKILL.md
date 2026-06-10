@@ -99,9 +99,9 @@ Read `.claude/state/learned-rules.md`. Inject ALL rules verbatim into every team
 
 ### Step 5 — Spawn Agent Team (Multiple Stories — MANDATORY)
 
-If the group contains **2 or more stories**, you **MUST** spawn a Claude Code agent team. This is not a judgment call — it applies even for tiny groups (e.g., 2-4 small stories) where solo implementation seems faster. The only bypass is `execution.default_mode == "solo"` in `project-manifest.json`.
+If the group contains **2 or more stories**, you **MUST** spawn a Claude Code agent team. This is not a judgment call — it applies even for tiny groups (e.g., 2-4 small stories) where solo implementation seems faster.
 
-If you find yourself about to call Write or Edit on a production file before any teammate has been spawned for a multi-story non-solo group, **STOP** and dispatch the team first. Log every teammate spawn to `.claude/state/iteration-log.md` as evidence the team executed.
+If you find yourself about to call Write or Edit on a production file before any teammate has been spawned for a multi-story group, **STOP** and dispatch the team first. Log every teammate spawn to `.claude/state/iteration-log.md` as evidence the team executed.
 
 Team spawn rules:
 

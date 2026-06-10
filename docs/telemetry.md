@@ -150,7 +150,7 @@ harness_agent_runs_total{
   job="claude_harness",           ← always "claude_harness"
   kind="subagent",                ← event type (subagent / subagent_stop)
   lane="change",                  ← which lane (/change, /vibe, /auto, etc.)
-  mode="full"                     ← execution mode (full / lean / solo / turbo)
+  mode="full"                     ← execution mode (full / lean)
 }  →  value: 1
 ```
 
@@ -312,7 +312,7 @@ Groups with high error counts or outsized agent-run counts are complexity hotspo
 harness_pending_reviews
 ```
 
-Rising pending reviews means the harness is producing faster than humans can review. Either add reviewers or switch to Lean/Solo mode to slow output.
+Rising pending reviews means the harness is producing faster than humans can review. Either add reviewers or switch to Lean mode to slow output.
 
 **8. "How is each team member using the harness?"**
 

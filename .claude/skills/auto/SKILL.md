@@ -1,7 +1,7 @@
 ---
 name: auto
 description: Autonomous build loop with Karpathy ratcheting, GAN evaluator, and session chaining. Iterates story groups until all features pass or stopping criteria met.
-argument-hint: "[--mode full|lean|solo|turbo] [--group GROUP_ID]"
+argument-hint: "[--mode full|lean] [--group GROUP_ID]"
 context: fork
 ---
 
@@ -20,13 +20,13 @@ Autonomous build loop implementing Karpathy's ratcheting pattern with GAN-style 
 ```
 /auto
 /auto --mode lean
-/auto --mode solo
+
 /auto --group D
 /auto --parallel-groups 3
 /auto --sequential
 ```
 
-- `--mode` controls which ratchet gates are enforced. Default: `full`. Options: `full`, `lean`, `solo`, `turbo`.
+- `--mode` controls which ratchet gates are enforced. Default: `full`. Options: `full`, `lean` (`lean` skips only the per-iteration design-critic).
 - `--group` resumes or targets a specific dependency group. If omitted, picks the next unfinished group from the dependency graph.
 - `--parallel-groups N` enables cross-group parallelism: up to N independent dependency groups run concurrently as separate group-orchestrator subagents. Default: `3`. Set `1` (or pass `--sequential`) to force one-group-at-a-time behavior.
 - `--sequential` shorthand for `--parallel-groups 1`. Use when you need deterministic group ordering for debugging.
@@ -103,7 +103,6 @@ Spawn evaluator as a subagent with this prompt:
 Rules:
 - **No back-and-forth.** The evaluator has final say. The generator does not get to dispute.
 - **Contract is immutable after negotiation.** Once the evaluator writes the final version, no one edits it.
-- **Skip in Solo mode.** In Solo mode, the generator works directly without contracts or evaluator verification.
 
 ---
 
@@ -126,7 +125,7 @@ You are dispatching, not implementing. Concretely:
 5. Log every teammate spawn to .claude/state/iteration-log.md with the story ID, owned files, and phase.
 6. After all teammates complete, run the validation gate (pytest, ruff, mypy/tsc, coverage) and hand off to the evaluator.
 
-This applies for any group with N_STORIES >= 2 regardless of how small the stories look. The only bypass is execution.default_mode == "solo" in project-manifest.json.
+This applies for any group with N_STORIES >= 2 regardless of how small the stories look. There is no bypass — every multi-story group spawns a team.
 ```
 
 If the group has only **1 story**, use the legacy single-generator prompt instead — no team needed.
@@ -173,10 +172,6 @@ Every teammate receives:
 - Interface contracts from upstream teammates (Phase 2+ only)
 - If story involves external API: `.claude/skills/code-gen/references/api-integration-patterns.md`
 
-### Solo Mode
-
-In Solo mode, the generator works alone sequentially. No team spawning, no phases. Read stories in dependency order and implement one at a time.
-
 ### Model Tiering
 
 | Role | Model | Rationale |
@@ -201,7 +196,6 @@ Within-group teams (Section 4) parallelize *stories inside one group*. Cross-gro
 Cross-group parallelism activates when **all** of the following hold:
 - `--parallel-groups N` is `> 1` (default `3`; pass `--sequential` or `--parallel-groups 1` to opt out).
 - The dependency graph (`specs/stories/dependency-graph.md`) declares **two or more groups whose upstream dependencies are all satisfied** (already-complete groups or zero upstream deps).
-- The project is not in `solo` mode.
 
 If only one group is ready in the current wave, behave exactly as sequential `/auto` — no extra branches, no parent/child split. Don't pay the coordination tax when there's nothing to coordinate.
 
@@ -317,28 +311,17 @@ If `--parallel-groups N > 3`, accept it but emit a warning to the iteration log.
 
 After the agent team completes, run the ratchet gate. The ratchet is monotonic: progress never regresses. Seven sub-gates, mode-dependent:
 
-| Gate | Full | Lean | Solo | Turbo |
-|------|------|------|------|-------|
-| 1. Unit tests (pytest, vitest) | Yes | Yes | Yes | Yes (per commit) |
-| 2. Lint + types (ruff, mypy, tsc) | Yes | Yes | Yes | Yes (per commit) |
-| 3. Coverage >= baseline | Yes | Yes | Yes | Yes (per commit) |
-| 4. Architecture (files exist, schema validation) | Yes | Yes | No | Once at end |
-| 5. Evaluator (API + Playwright vs running Docker) | Yes | Yes | No | Once at end |
-| 6. Design critic (vision scoring, GAN loop) | Yes | No | No | Once at end |
-| 7. Security (security-reviewer, block on critical/high) | Yes | Yes | No | Once at end |
+| Gate | Full | Lean |
+|------|------|------|
+| 1. Unit tests (pytest, vitest) | Yes | Yes |
+| 2. Lint + types (ruff, mypy, tsc) | Yes | Yes |
+| 3. Coverage >= baseline | Yes | Yes |
+| 4. Architecture (files exist, schema validation) | Yes | Yes |
+| 5. Evaluator (API + Playwright vs running Docker) | Yes | Yes |
+| 6. Design critic (vision scoring, GAN loop) | Yes | No |
+| 7. Security (security-reviewer, block on critical/high) | Yes | Yes |
 
-### Turbo Mode (for highly capable models)
-
-For builds using Opus 4.6+ where the model can sustain coherence across long tasks:
-- Generator works without story group decomposition — implements all stories sequentially in a single pass
-- Sprint contracts NOT negotiated per-group — one contract for the entire build
-- Evaluator runs ONCE at the end (not per-group)
-- Ratchet gates 1-3 still run after each commit (tests + lint + coverage)
-- Design critic runs once at the end
-- Significantly cheaper (~$30-50) but less incremental verification
-
-Use when: Model is highly capable AND project is well-specified AND you trust the generator to self-correct.
-Do NOT use when: External API integrations, complex multi-service architecture, or first time using the harness.
+**Lean** differs from **Full** only at Gate 6: it skips the per-iteration design-critic vision loop (run it once at group end instead). Every other gate — including the Gate 7 security review — runs in both modes. There is no mode that skips the security gate or the evaluator; that is the whole point of the ratchet.
 
 ### Fast Lane (trivial changes)
 
@@ -613,7 +596,7 @@ After each iteration, check the last `plateau_window` weighted scores:
 
 - Score meets threshold → PASS, move to next page
 - `max_iterations` reached → log to `failures.md`, extract learned rule, escalate to user. Do NOT revert (ratchet gate already passed for functional checks).
-- Lean/Solo/Turbo modes: skip this section entirely
+- Lean mode: skips this section entirely (design-critic runs once at group end)
 
 ---
 
@@ -626,7 +609,7 @@ After each iteration, check the last `plateau_window` weighted scores:
 ```
 === Session {N} ===
 date: {ISO 8601}
-mode: {full|lean|solo|turbo}
+mode: {full|lean}
 groups_completed: [A, B, C]
 groups_remaining: [D, E, F]
 current_group: D (extraction)

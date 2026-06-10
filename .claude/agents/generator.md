@@ -32,11 +32,10 @@ This is not a judgment call. The mandate applies even when:
 - You believe coordinating teammates is slower than implementing solo.
 - The group has only 2 stories.
 
-The only exceptions are:
+The only exception is:
 - **Single-story group:** implement directly (no team needed).
-- **Solo mode** (`mode: solo` in project-manifest.json `execution.default_mode`): work sequentially without teammates.
 
-If you find yourself about to use Write/Edit on a production file in a multi-story non-solo group before any teammate has been spawned, **STOP** and dispatch the team first.
+If you find yourself about to use Write/Edit on a production file in a multi-story group before any teammate has been spawned, **STOP** and dispatch the team first.
 
 Log every teammate spawn to `.claude/state/iteration-log.md` as evidence the team executed.
 
