@@ -77,7 +77,7 @@ The commands you'll actually type are the lane entry points above. The full surf
 | Command | Purpose |
 |---|---|
 | `/scaffold` | Bootstrap a project (only true slash command) |
-| `/brd` | Socratic interview → Business Requirements Document |
+| `/brd` | BRD from a Socratic interview; `--frd <path>` grounds it in a Functional Requirements Document (deterministic net-new/dropped gate) |
 | `/spec` | BRD → stories + dependency graph + features.json |
 | `/design` | Architecture + schemas + UI mockups |
 | `/build` | Full pipeline, phases 0–10; `--lite` for small new projects |

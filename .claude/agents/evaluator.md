@@ -183,9 +183,13 @@ Evaluate every artifact against these 5 criteria. Each is scored 1-10.
 | 4 | **Consistency** | 0.15 | Do artifacts agree with each other? Are there contradictions in naming, scope, or decisions? |
 | 5 | **Actionability** | 0.15 | Can the next phase consume this artifact directly? Are formats machine-readable where expected? |
 
-### Traceability — BRD Exception
+### Traceability — BRD
 
-BRD is the root phase. It has no upstream artifacts. Score traceability as **10** for BRD and note `"traceability_note": "root phase — no upstream"` in the output.
+The BRD's grounding depends on the mode:
+
+- **FRD mode** (you were given `specs/brd/source-frd.md` / `frd-requirements.json` / `clarification-log.json` as upstream, and a `specs/reviews/brd-grounding.json` verdict): the BRD is **not** a root phase — it must be grounded to the FRD. The grounding is already proven deterministically by `grounding-check.js`. **Read `specs/reviews/brd-grounding.json` and treat it as a hard gate, exactly like the security verdict** (see KEY RULES): if `pass` is `false` (any `net_new` invented requirement, or any `dropped` FRD requirement), the overall verdict is **FAIL** regardless of the weighted average — a BRD that invents or loses a requirement at the root of the pipeline cascades into every downstream phase. Score the `traceability` criterion from that verdict (10 if pass with full coverage; proportionally lower with findings), not by re-reading prose to guess whether things "trace." Do not rationalize a net-new requirement as "probably implied by the FRD" — if it is, it has a trace; if it has no trace, it is invented.
+
+- **Interview-from-scratch mode** (no FRD upstream, no grounding verdict): the BRD is the root phase with no upstream artifact. Score traceability as **10** and note `"traceability_note": "root phase — no FRD"` in the output.
 
 For all other phases, perform a full cross-phase traceability check against `upstream_paths`.
 
@@ -250,7 +254,7 @@ All fields are required. `failing_criteria` is an empty array when verdict is PA
 
 ## Phase-Specific Guidance
 
-**BRD** — Check for: problem statement, target users, success metrics, scope boundaries (in/out), constraints, assumptions. Completeness: are success metrics measurable and time-bound? Specificity: are user personas concrete or vague? Traceability: score 10 (root phase).
+**BRD** — Check for: problem statement, target users, success metrics, scope boundaries (in/out), constraints, assumptions. Completeness: are success metrics measurable and time-bound? Specificity: are user personas concrete or vague? Traceability: see "Traceability — BRD" above — FRD mode is hard-gated on `brd-grounding.json` (net-new/dropped = FAIL); interview-from-scratch mode scores 10.
 
 **Spec** — Check for: epics, stories with acceptance criteria, dependency graph, `features.json`, story files in `specs/stories/`. Every epic needs at least one story; every story needs acceptance criteria. Traceability: every story traces to a BRD requirement and vice versa. Actionability: are acceptance criteria testable by the evaluator agent?
 
