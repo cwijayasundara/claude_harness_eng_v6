@@ -15,7 +15,7 @@ A REFACTOR COMMIT CHANGES NO BEHAVIOR; A BEHAVIOR COMMIT REFACTORS NOTHING
 
 ## Process
 
-1. **Classify every hunk** before committing: *structural* (rename, move, extract, formatting, dead-code removal) or *behavioral* (any observable difference). Mixed staging → split into two commits, structural first.
+1. **Classify every hunk** before committing: *structural* (rename, move, extract, formatting, dead-code removal) or *behavioral* (any observable difference). Mixed staging → split into two commits, structural first. An **urgent** behavioral bug discovered mid-refactor goes further: onto its own hotfix branch off main (issue filed and cited), so the fix ships on the smallest review while the refactor stays pure.
 2. **In a refactor commit:**
    - All existing tests and pin-down snapshots pass **byte-identical** — no snapshot updates, no test edits, no assertion changes.
    - Every renamed/moved symbol: enumerate its callers from `specs/brownfield/code-graph.json` (`edges` targeting the symbol's file) and verify each call site updated. No orphaned imports or dead copies left behind.
@@ -31,6 +31,8 @@ A REFACTOR COMMIT CHANGES NO BEHAVIOR; A BEHAVIOR COMMIT REFACTORS NOTHING
 | "The test needed a tiny update for the rename" | A pure rename never changes assertions. If it did, behavior moved. |
 | "Splitting commits is ceremony" | Bisecting a tangled regression costs hours; splitting costs seconds. |
 | "I updated the snapshot because the output is equivalent" | Equivalent-but-different output IS a behavior change. Prove it in a behavior commit. |
+| "The git log is full of mixed commits and nobody complained" | Survivorship bias — nobody complains until the first tangled bisect on a money path. Precedent is not justification. |
+| "The bug is urgent, splitting delays the fix" | Urgency argues FOR splitting: an urgent fix belongs on the smallest, fastest-reviewed branch (hotfix off main), not bolted to a 200-file refactor review. |
 
 ## Red Flags — STOP
 

@@ -15,7 +15,7 @@ NO EDIT TO A SYMBOL UNTIL YOU KNOW WHICH TESTS COVER IT
 
 ## Process
 
-1. Ensure coverage data exists. Python: `pytest --cov --cov-context=test` (writes `.coverage` with per-test contexts). JS: `nyc --reporter=json` (or Jest `--coverage`, file-level). If data is missing or older than the last test run: regenerate — it is one suite run.
+1. Ensure coverage data exists. Python: `pytest --cov --cov-context=test` (writes `.coverage` with per-test contexts). JS: `nyc --reporter=json` (or Jest `--coverage`, file-level). If data is missing or stale, regenerate. **Under time pressure, scope the regen** — `pytest tests/<area> --cov=<affected.module> --cov-context=test` answers the symbol's verdict in minutes; the Iron Law needs this symbol's verdict, not the whole repo's. A scoped regen is compliance; a skipped one is not.
 2. Run the verdict script for every symbol in the planned diff:
 
 ```bash
@@ -38,12 +38,16 @@ python3 .claude/skills/code-map/scripts/code_index/coverage_map.py \
 | "The evaluator will catch it later" | The evaluator checks sprint contracts, not the legacy behavior you just altered. |
 | "Coverage data is stale, skip it" | Regenerating it is one test run. Stale data is an instruction, not an excuse. |
 | "The suite is green, so I'm safe" | Green proves the *covered* code works. The verdict tells you whether yours is. |
+| "The deploy pipeline's suite is my backstop" | Only if the verdict proves the suite reaches this symbol. Green without coverage is noise, not a backstop. |
+| "I'll honor the Iron Law in substance with something cheaper" | Grepping for test files and manually tracing logic is not a verdict. Violating the letter is violating the spirit — run the script on real (scoped is fine) coverage data. |
 
 ## Red Flags — STOP
 
 - About to Edit a production file with no coverage verdict for its symbols
 - Treating a file-level coverage % as a symbol-level answer
 - Skipping the check because the diff "only touches one function"
+- Substituting `grep` for test files in place of a `coverage_map.py` verdict
+- Declaring the check "honored in substance" while the script never ran
 
 ## Checklist
 

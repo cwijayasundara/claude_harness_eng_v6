@@ -36,12 +36,15 @@ IF YOU CANNOT PIN IT, DO NOT EDIT IT — SPROUT BESIDE IT
 | "I'll just quickly inline it" | Inlining into unpinned code is an unobserved behavior change. That is the definition of risk. |
 | "The function is only 30 lines, editing is fine" | Size is not coverage. Unpinned is unpinned. |
 | "A sprout adds indirection" | One extra call is cheaper than one silent regression. Fold it in later, under tests. |
+| "The new lines match the existing style exactly" | Style fit is not coverage. Five untestable lines next to other untestable lines are still untestable. |
+| "Last review mocked my 'enterprise abstractions'" | A sprout forced by an unpinnable call site is a coverage requirement, not architecture theater — say exactly that in the PR description, preemptively. |
 
 ## Red Flags — STOP
 
 - More than one changed line in the legacy file (excluding the wrap rename pair)
 - New logic appearing inside the legacy function body
 - Sprout code written before its failing test
+- Re-running seam-finder hoping for a score above the threshold — 0.31 is the answer, not a negotiation
 
 ## Checklist
 
