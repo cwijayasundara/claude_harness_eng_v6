@@ -42,6 +42,8 @@ Do not proceed until acceptance criteria are written and confirmed.
 Read the current codebase to understand what is affected:
 
 - **Brownfield map:** if `specs/brownfield/` exists, read `codebase-map.md`, `architecture-map.md`, `test-map.md`, `risk-map.md`, and `change-strategy.md` before assessing impact. If this is a non-trivial existing codebase and the brownfield map is missing, recommend `/brownfield` first.
+- **Symbol navigation:** use `specs/brownfield/symbol-map.md` to locate the affected symbols (signatures with `Lstart-Lend` anchors). For files flagged in `skeletons/`, read the `.skel.md` first and then only the relevant symbol slice via `Read(offset, limit)` — never whole-file-read a skeleton-flagged file.
+- **Seam plan:** if `specs/brownfield/seams-<goal-slug>.md` exists for this change's goal (or the user named a seam), read it and prefer its top-ranked seam (`extend`/`wrap`/`introduce-adapter` action) as the cut-point for the change. Note in the impact assessment which seam you adopted or why you rejected it.
 - **Affected files:** which source files implement the functionality being changed?
 - **Affected API contracts:** does this change any request/response shape, endpoint signature, or event payload?
 - **Existing test coverage:** run the current suite. Record which tests cover the affected files — these must keep passing (with updates where behavior changes intentionally).

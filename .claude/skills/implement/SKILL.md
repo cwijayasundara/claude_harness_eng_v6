@@ -49,6 +49,7 @@ If `specs/brownfield/` exists, read `architecture-map.md`, `test-map.md`, `risk-
 - Preserve existing public interfaces unless the story explicitly changes them.
 - Reuse established modules, framework patterns, and test entry points.
 - Escalate if the target path is marked high-risk or requires human approval.
+- Navigate via `symbol-map.md` and, for files flagged in `skeletons/`, read only the relevant symbol slice with `Read(offset, limit)` — never whole-file-read a skeleton-flagged file. Pass this instruction into teammate spawn prompts.
 
 ### Step 0 — Write Implementation Plan with Superpowers
 
@@ -97,43 +98,15 @@ This ownership map is the single source of truth for file assignments during par
 
 Read `.claude/state/learned-rules.md`. Inject ALL rules verbatim into every teammate spawn prompt. Learned rules include anti-pattern code examples and better approach code — teammates must study these before writing code, not just read the rule text. Rules represent project-specific decisions made during previous sprints (naming conventions, library choices, API patterns). Skipping this step causes regressions.
 
-### Step 5 — Spawn Agent Team (Multiple Stories — MANDATORY)
+### Step 5 — Execute the Group via the /auto Team Protocol
 
-If the group contains **2 or more stories**, you **MUST** spawn a Claude Code agent team. This is not a judgment call — it applies even for tiny groups (e.g., 2-4 small stories) where solo implementation seems faster.
+The agent-team execution protocol is defined **once**, in `/auto` SECTION 4 (Agent Team Execution) — `.claude/skills/auto/SKILL.md`. Follow it verbatim in **standalone mode** (skip SECTION 3's sprint-contract negotiation): the mandatory team spawn for 2+ story groups (1 teammate per story, max 5 concurrent, batch the remainder), the orchestrator and teammate spawn prompt templates, model tiering, the shared-type dependency handshake, and the spawn-evidence logging to `.claude/state/iteration-log.md`. Do not restate or improvise that protocol here — if this skill and SECTION 4 ever disagree, SECTION 4 wins.
 
-If you find yourself about to call Write or Edit on a production file before any teammate has been spawned for a multi-story group, **STOP** and dispatch the team first. Log every teammate spawn to `.claude/state/iteration-log.md` as evidence the team executed.
+For a **single-story** group, skip the team: use the generator agent directly — present a plan, await approval, write the failing test first, watch it fail, then implement the minimum to pass.
 
-Team spawn rules:
+> **Ratchet warning:** `/implement` runs outside the `/auto` loop, so its output bypasses auto's ratchet Gates 1–7 (contract negotiation, evaluator scoring, regression ratchet, security gate). Steps 6–7 below cover validation and clean-code review only. **Run `/evaluate` (or `/review`) on the group after this skill completes** before treating it as merge-ready.
 
-- Create **1 teammate per story**, up to a maximum of **5 concurrent teammates**.
-- If the group has more than 5 stories, batch them: first 5 stories run, then the remainder after all complete.
-- Each teammate spawn prompt must include:
-  - The story's acceptance criteria (full text).
-  - The file ownership list from component-map.md for that story.
-  - All learned rules from `.claude/state/learned-rules.md`.
-  - All core quality principles from `.claude/skills/code-gen/SKILL.md`.
-  - Brownfield constraints from `specs/brownfield/` when present.
-  - Instruction to follow `superpowers:test-driven-development` — write failing tests before implementation code (red-green-refactor cycle).
-  - Instruction to use tracer-bullet TDD: one behavior test, minimum implementation, next behavior.
-  - Instruction to test observable behavior through public interfaces, not private helpers or internal mock calls.
-  - Instruction to **message teammates** before modifying any shared type or interface file.
-  - Instruction to **await plan approval** before writing any code (present the plan, wait for confirmation).
-
-- Teammates must coordinate on shared types:
-  - Before editing a type definition used by another story's files, send a message to the affected teammate describing the change.
-  - Teammate receiving the message must acknowledge before the edit proceeds.
-
-- If two teammates claim ownership of the same file, escalate to the orchestrator (this agent). Do not merge partial changes. Resolve ownership, then continue.
-
-### Step 6 — Use Generator Directly (Single Story)
-
-If the group contains exactly **1 story**, do not spawn a team. Execute the story using the generator agent directly:
-
-- Present a plan (files to create/modify, type definitions, test strategy).
-- Await approval.
-- Write the failing test first, verify it fails for the expected reason, then implement the minimum code to pass.
-
-### Step 7 — Validation Gate
+### Step 6 — Validation Gate
 
 After all teammates (or the generator) complete:
 
@@ -143,7 +116,7 @@ After all teammates (or the generator) complete:
 
 All three must pass with zero errors before proceeding. If any fails, return the failure output to the responsible teammate for a fix, then re-run the validation gate.
 
-### Step 8 — Code Review
+### Step 7 — Code Review
 
 Spawn the `clean-code-reviewer` agent (plugin-provided; recognized by the `review-on-stop` Stop hook) on the set of changed files:
 

@@ -78,7 +78,7 @@ For each sprint group:
 - Invoke `superpowers:test-driven-development` — follow the red-green-refactor cycle for every function
 - Note any rules relevant to the current sprint group
 
-If `specs/brownfield/` exists, also read `architecture-map.md`, `test-map.md`, `risk-map.md`, and `change-strategy.md`. Preserve existing public interfaces and framework patterns unless the story/design explicitly authorizes a change.
+If `specs/brownfield/` exists, also read `architecture-map.md`, `test-map.md`, `risk-map.md`, and `change-strategy.md`. Preserve existing public interfaces and framework patterns unless the story/design explicitly authorizes a change. Navigate with `symbol-map.md` (fan-in-ranked signatures with `Lstart-Lend` anchors) instead of grepping blind; for any file flagged in `skeletons/`, read its `.skel.md` to pick the right symbol, then read only that slice with `Read(offset=START, limit=END-START+1)` — never whole-file-read a skeleton-flagged file. Check downstream impact of a symbol via its edges in `code-graph.json` before changing it.
 
 ### Step 2: Read Stories and Component Map
 - List stories for this sprint (or all stories if no sprint boundary is given)

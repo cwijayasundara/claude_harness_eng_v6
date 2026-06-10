@@ -9,6 +9,16 @@ echo "=== Bootstrapping dev environment ==="
 # Frontend dependencies
 {{FRONTEND_INSTALL}}
 
+# Code-map AST indexer deps (brownfield discovery + graph-refresh hook).
+# Python repos need none of these (stdlib ast); the wheels cover JS/JSX/TS/TSX.
+# Fail-open: missing pip only degrades JS/TS indexing to the regex fallback.
+if command -v pip3 >/dev/null 2>&1; then
+  pip3 install --quiet tree-sitter tree-sitter-typescript tree-sitter-javascript \
+    || echo "WARN: tree-sitter wheels not installed — JS/TS code-map falls back to regex"
+else
+  echo "WARN: pip3 not found — JS/TS code-map falls back to regex indexing"
+fi
+
 # Environment
 if [ -f ".env.example" ] && [ ! -f ".env" ]; then
   cp .env.example .env

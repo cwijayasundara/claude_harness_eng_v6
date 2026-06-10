@@ -66,6 +66,11 @@ function filterNodes(graph, opts) {
   return new Map(filtered.map((n) => [n.id, n]));
 }
 
+// Recomputes fan-in/out rather than reading graph.metrics.hubs: hubs is capped
+// at the top 25 nodes and cannot honor the test/fixture filtering applied here.
+// Edge semantics (skip ext:/sym: targets and type-only imports) intentionally
+// mirror code_index/graph_metrics.py so scores stay comparable to the
+// coupling report, modulo the documented test-file exclusion.
 function computeFans(graph, nodesById) {
   const fanIn = new Map();
   const fanOut = new Map();

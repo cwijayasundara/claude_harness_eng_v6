@@ -128,7 +128,7 @@ Consumers get a staleness contract: every reader of `code-graph.json` (seam-find
 
 - **Delete** the 4-way producer fallback. One vendored indexer; keep *only* the Understand-Anything import behind an explicit `--import` flag (it's the only documented external integration). Removes graphify/hex-graph probes.
 - **Delete** `extractPythonCalls` regex and the JS/TS regex extractors for Py/React (superseded by §3.1). Java/C#/Go regex extractors stay as-is (out of scope, still functional).
-- **Fix** `score_seams.js` to consume `metrics.hubs` instead of recomputing fan-in/out.
+- **Fix** `score_seams.js` edge semantics to match `graph_metrics.py` (skip type-only imports). *(Amended during implementation: full `metrics.hubs` reuse is not possible — hubs is top-25-capped and cannot honor seam-finder's test/fixture filtering, so the scorer keeps its own pass with aligned filters.)*
 - **Fix** `render.js` to actually emit the orphan/dead-code section SKILL.md promises.
 - **Tag** test files in the graph (`is_test: true`) so coupling metrics can exclude them.
 - Net effect: fewer code paths than today, one new well-tested script, two pip wheels.

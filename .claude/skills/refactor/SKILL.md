@@ -59,7 +59,7 @@ Read `.claude/skills/code-gen/SKILL.md` in full. Its core quality principles are
 
 ### Step 2 — Analyze Current State
 
-If `specs/brownfield/` exists, read `architecture-map.md`, `test-map.md`, `risk-map.md`, and `change-strategy.md` before analyzing the target. If this is a non-trivial existing codebase and those maps do not exist, recommend `/brownfield` before broad refactoring.
+If `specs/brownfield/` exists, read `architecture-map.md`, `test-map.md`, `risk-map.md`, and `change-strategy.md` before analyzing the target. If this is a non-trivial existing codebase and those maps do not exist, recommend `/brownfield` before broad refactoring. Locate target symbols via `symbol-map.md` (`Lstart-Lend` anchors); for files flagged in `skeletons/`, read the `.skel.md` and then only the relevant symbol slice with `Read(offset, limit)` instead of the whole file.
 
 For each file in the target path:
 
