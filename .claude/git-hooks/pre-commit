@@ -16,6 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { checkContentViolations } = require(path.join(__dirname, '..', 'hooks', 'lib', 'layers'));
+const { isTestFile } = require(path.join(__dirname, '..', 'hooks', 'lib', 'tdd'));
 const { run, output, shouldBlock, unavailable } = require(path.join(__dirname, '..', 'hooks', 'lib', 'toolchain'));
 
 const SOURCE_EXTS = new Set(['.py', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
@@ -49,6 +50,24 @@ function checkLayers(stagedPy) {
     const lines = violations.map((v) => `  ${v.filePath}:${v.line} — ${v.layer} cannot import from ${v.imported}`);
     fail(`BLOCKED: Architecture violations found — fix before committing:\n${lines.join('\n')}\nFix: Move imports to the correct layer or extract shared types to src/types/.\n`);
   }
+}
+
+// keeping-refactors-pure: a refactor commit changes no behavior, so it may not
+// touch tests or snapshots. The skill sets HARNESS_COMMIT_KIND=refactor on the
+// commit command; without it this gate is inert.
+const SNAPSHOT_RE = /(^|\/)__snapshots__\/|\.(snap|ambr|approved\.txt|received\.txt)$/;
+
+function checkRefactorPurity(staged) {
+  if (process.env.HARNESS_COMMIT_KIND !== 'refactor') return;
+  const impure = staged.filter((f) => SNAPSHOT_RE.test(f) || isTestFile(f));
+  if (impure.length === 0) return;
+  fail(
+    'BLOCKED: refactor commit touches test/snapshot files:\n' +
+    impure.map((f) => `  ${f}`).join('\n') +
+    '\nFix: a refactor commit changes no behavior — tests and snapshots must stay ' +
+    'byte-identical. Split the behavioral work into its own commit ' +
+    '(see .claude/skills/keeping-refactors-pure/SKILL.md).\n'
+  );
 }
 
 function checkSprintContract(projectDir) {
@@ -129,6 +148,7 @@ try {
   const stagedPy = stagedSource.filter((f) => f.endsWith('.py'));
   const stagedTs = stagedSource.filter((f) => f.endsWith('.ts') || f.endsWith('.tsx'));
 
+  checkRefactorPurity(staged);
   checkLayers(stagedPy);
   checkSprintContract(projectDir);
   checkTypescript(projectDir, stagedTs);

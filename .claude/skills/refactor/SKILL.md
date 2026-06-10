@@ -61,6 +61,8 @@ Read `.claude/skills/code-gen/SKILL.md` in full. Its core quality principles are
 
 If `specs/brownfield/` exists, read `architecture-map.md`, `test-map.md`, `risk-map.md`, and `change-strategy.md` before analyzing the target. If this is a non-trivial existing codebase and those maps do not exist, recommend `/brownfield` before broad refactoring. Locate target symbols via `symbol-map.md` (`Lstart-Lend` anchors); for files flagged in `skeletons/`, read the `.skel.md` and then only the relevant symbol slice with `Read(offset, limit)` instead of the whole file.
 
+**Coverage preflight — REQUIRED SUB-SKILL: `checking-coverage-before-change`** for every symbol in the target path before the first edit. COVERED symbols give you the regression oracle to run after each step; UNCOVERED symbols route to `pinning-down-behavior` (or `sprouting-instead-of-editing`) before any in-place edit.
+
 For each file in the target path:
 
 - **Architecture compliance:** does the file import from a layer above it? (see layering rules in `code-gen/references/architecture.md`)
@@ -121,6 +123,8 @@ Order of execution:
 8. Self-documenting cleanup
 
 After each principle: run tests, run lint, run type checks. If anything breaks, fix it before moving to the next principle.
+
+When committing, follow **`keeping-refactors-pure`**: commit with `HARNESS_COMMIT_KIND=refactor git commit …` — the pre-commit hook then blocks any staged test/snapshot edits (a pure refactor leaves them byte-identical). Any behavioral fix discovered en route goes in a separate behavior commit.
 
 ### Step 6 — Spawn clean-code-reviewer
 

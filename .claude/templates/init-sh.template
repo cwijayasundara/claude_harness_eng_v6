@@ -15,6 +15,9 @@ echo "=== Bootstrapping dev environment ==="
 if command -v pip3 >/dev/null 2>&1; then
   pip3 install --quiet tree-sitter tree-sitter-typescript tree-sitter-javascript \
     || echo "WARN: tree-sitter wheels not installed — JS/TS code-map falls back to regex"
+  # Behavior-preservation toolkit (coverage preflight + pin-down snapshots).
+  pip3 install --quiet pytest-cov syrupy diff-cover \
+    || echo "WARN: behavior-preservation deps missing — coverage preflight degrades"
 else
   echo "WARN: pip3 not found — JS/TS code-map falls back to regex indexing"
 fi

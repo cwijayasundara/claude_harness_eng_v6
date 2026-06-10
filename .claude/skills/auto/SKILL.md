@@ -180,6 +180,7 @@ Every teammate receives:
 - Quality principles (from `.claude/skills/code-gen/SKILL.md`)
 - Interface contracts from upstream teammates (Phase 2+ only)
 - If story involves external API: `.claude/skills/code-gen/references/api-integration-patterns.md`
+- If the story edits pre-existing (non-sprint-new) symbols and `specs/brownfield/code-graph.json` exists: run `checking-coverage-before-change` on those symbols before the first edit; UNCOVERED routes through `pinning-down-behavior` / `sprouting-instead-of-editing`
 
 ### Model Tiering
 

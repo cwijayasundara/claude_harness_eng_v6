@@ -72,3 +72,31 @@ test('respects HARNESS_COVERAGE_GATE=off', async () => {
   const result = await runGitHook(projectDir, HOOK, { HARNESS_COVERAGE_GATE: 'off' });
   assert.strictEqual(result.status, 0, result.stdout + result.stderr);
 });
+
+test('refactor commits may not touch test or snapshot files', async () => {
+  const projectDir = makeGitProject();
+  stage(projectDir, 'src/service/logic.py', 'X = 1\n');
+  stage(projectDir, 'tests/__snapshots__/logic.ambr', '# serializer: ambr\n');
+  const result = await runGitHook(projectDir, HOOK, {
+    HARNESS_COMMIT_KIND: 'refactor',
+    HARNESS_COVERAGE_GATE: 'off',
+  });
+  assert.notStrictEqual(result.status, 0);
+  assert.ok(
+    /refactor commit/i.test(result.stdout + result.stderr),
+    result.stdout + result.stderr
+  );
+});
+
+test('refactor purity gate ignores behavior commits and unset kind', async () => {
+  const projectDir = makeGitProject();
+  stage(projectDir, 'src/service/logic.py', 'X = 1\n');
+  stage(projectDir, 'tests/test_logic.py', 'def test_x():\n    assert True\n');
+  const unset = await runGitHook(projectDir, HOOK, { HARNESS_COVERAGE_GATE: 'off' });
+  assert.strictEqual(unset.status, 0, unset.stdout + unset.stderr);
+  const behavior = await runGitHook(projectDir, HOOK, {
+    HARNESS_COMMIT_KIND: 'behavior',
+    HARNESS_COVERAGE_GATE: 'off',
+  });
+  assert.strictEqual(behavior.status, 0, behavior.stdout + behavior.stderr);
+});

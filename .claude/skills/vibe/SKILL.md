@@ -95,6 +95,8 @@ Read only the relevant files and nearby tests. Prefer existing project patterns 
 
 If `specs/brownfield/change-strategy.md` exists, read it before editing. If it marks the affected area as high-risk, stop and escalate out of `/vibe`.
 
+If `specs/brownfield/code-graph.json` exists and the change edits an existing production symbol, run the coverage preflight (`checking-coverage-before-change`). An **UNCOVERED verdict is a hard block for `/vibe`**: silent breakage hides exactly here — escalate to `/change` or `/refactor`, where pinning/sprouting applies.
+
 ### Step 4 — Test First When Behavior Changes
 
 For CV2 behavior changes:
