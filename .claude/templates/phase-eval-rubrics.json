@@ -44,7 +44,7 @@
         "traceability": "Every architectural claim cites a specific graph edge, file path, or test name as evidence",
         "specificity": "Risk map entries cite specific file paths and quantified metrics (coupling score, test coverage %, cyclomatic complexity)",
         "consistency": "Coupling numbers and dependency counts match values in code-graph.json; no contradictions between sections",
-        "actionability": "Concrete lane recommendation (vibe/fix-issue/improve/refactor/build) provided per area with justification"
+        "actionability": "Concrete lane recommendation (vibe/change/refactor/build) provided per area with justification"
       }
     },
     "seam": {

@@ -43,8 +43,7 @@ Are you building something NEW?
 │
 └── No (existing codebase) → first time here? run /brownfield once, then:
           ├── tiny safe edit (≤3 files, <150 lines, no auth/API) → /vibe
-          ├── bug with a GitHub issue                            → /fix-issue
-          ├── new or changed behavior                            → /improve
+          ├── changed behavior (add --issue N for a GitHub bug)  → /change
           ├── structure only, no behavior change                 → /refactor
           └── big enough to need specs → /seam-finder, then /spec → /design → /auto
 ```
@@ -93,9 +92,8 @@ The commands you'll actually type are the lane entry points above. The full surf
 | `/review` | Evaluator + security review |
 | `/test` | Test plan + Playwright E2E |
 | `/deploy` | Docker Compose + init.sh |
-| `/fix-issue` | GitHub issue → branch → fix → test → PR |
+| `/change` | Behavior change on existing code (test-first); `--issue N` for a GitHub bug fix |
 | `/refactor` | Quality-driven refactoring with ratchet gate |
-| `/improve` | Feature enhancement with verification |
 | `/refactor --sweep` | Whole-repo entropy scan for pattern drift |
 | `/tracker-publish` | Publish dependency groups to Linear/Jira (optional) |
 | `/install-framework-packs` | Verify configured framework packs (optional) |

@@ -1100,7 +1100,7 @@ Tracker orchestration ({mode display name}):
   1. Set {provider}_API_KEY in your shell or .env (never commit it).
   2. Replace project_slug "replace-with-{provider}-project-slug" in tracker-config.json.
   3. Confirm the configured states ({readyState}, {runningState}, ...) exist in your tracker workflow.
-  4. (If mode D) prepare an isolated workspace runner — see .claude/skills/tracker/SKILL.md and the symphony_clone README.
+  4. (If mode D) prepare an isolated workspace runner — see .claude/skills/tracker-publish/SKILL.md and the symphony_clone README.
 ```
 
 Substitute placeholders from the user's wizard answers and from the values written into `.claude/tracker-config.json` during Step 4. Use the actual provider name (Linear or Jira) in the prerequisite list. Do NOT print this block when the user selected mode A (Local-only).

@@ -37,7 +37,7 @@ Use `/lite` only when **all** are true:
 - No auth, billing, payments, PII, or compliance-sensitive data.
 - No real-time/streaming infrastructure (Kafka, websockets, etc.).
 - Estimated implementation surface ≤ ~5 source files and ≤ ~5 stories.
-- New project (not adding to an existing codebase — for that, use `/improve` or `/fix-issue`).
+- New project (not adding to an existing codebase — for that, use `/change`).
 
 Escalate to `/brd → /spec → /design → /auto` (or `/build`) when **any** are true:
 

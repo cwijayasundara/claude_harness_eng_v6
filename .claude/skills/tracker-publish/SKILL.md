@@ -9,6 +9,23 @@ context: fork
 
 Publish approved story groups to an external tracker. This skill prepares the handoff contract used by the standalone orchestrator; it does not start the orchestrator.
 
+## Operating Model (overview)
+
+This optional add-on mirrors approved Claude Harness story groups into an external tracker (Linear/Jira), then lets a standalone orchestrator schedule unblocked groups and launch Claude Code in isolated workspaces. The default scaffold remains local-only — use tracker orchestration only when a project wants Linear/Jira to act as the visible work queue and human review surface.
+
+Claude Harness stays the source of truth for planning and verification (`/brd` → `/spec` → `/design` → `/auto --group <id>`). The tracker is only a control plane: issue status gates whether a group may run, blocker links mirror the local dependency graph, and comments hold proof/PR links. Human review and final merge stay outside the autonomous loop. The orchestrator is external — it polls the tracker, claims eligible unblocked group issues, creates one workspace per group, launches `claude --print`, reads `.claude/state/tracker-runs/<group>/result.json`, updates the tracker, and leaves completed work in `Human Review`.
+
+**Recommended tracker states:** `Published`/`Todo` (created, not eligible) → `Ready for Agent` (eligible when blockers are terminal/pass) → `In Progress` (claimed) → `Human Review` (branch/PR/proof ready) → `Done` (after human merge). Plus `Blocked`, `Canceled`/`Cancelled`/`Duplicate` as terminal states.
+
+**Safety rules:**
+- Do not dispatch work unless the issue carries the configured ready label/state.
+- Never mark tracker issues `Done` automatically.
+- Do not bypass local story readiness, design approval, sprint contracts, or evaluator gates.
+- Keep tracker API keys in environment variables, not repo files.
+- Use isolated workspaces for unattended runs; prefer group-level execution (the external orchestrator schedules groups; `/auto` creates the internal agent teams).
+
+Related files: `.claude/templates/tracker-config.template.json`, `.claude/templates/tracker-workflow.template.md`, `.claude/state/tracker-map.json`, `.claude/state/tracker-runs/`, and the `symphony_clone/` orchestrator.
+
 ## Granularity
 
 The `--granularity` flag chooses what becomes a tracker issue:

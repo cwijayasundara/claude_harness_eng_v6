@@ -143,7 +143,7 @@ If BLOCK findings remain after 3 cycles, stop and report the unresolved issues. 
 
 - **Tests must pass after every change.** If a refactor breaks a test, fix the code — not the test.
 - **No behavior changes.** The refactored code must produce identical outputs for all existing inputs.
-- **No new features.** If you identify a missing capability, open a story and use `/improve`.
+- **No new features.** If you identify a missing capability, open a story and use `/change`.
 - **Every change traces to a principle.** If you cannot cite which principle a change addresses, do not make the change.
 - **Update all call sites.** When renaming or moving a symbol, update every import and reference before committing.
 - **Do not add fake abstractions.** If an interface has one implementation and no clear external boundary or domain seam, keep the code concrete.

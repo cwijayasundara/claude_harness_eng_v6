@@ -169,7 +169,7 @@ The `codebase-explorer` agent has `LSP` in its tool grants and uses it for symbo
 |---|---|
 | Greenfield pipeline | `brd`, `spec`, `design`, `implement`, `evaluate`, `review`, `test`, `deploy`, `build`, `auto` |
 | Lite/brownfield/vibe | `lite`, `brownfield`, `code-map`, `seam-finder`, `vibe` |
-| Improvement | `improve`, `refactor` (incl. `--sweep`), `fix-issue` |
+| Behavior change | `change` (incl. `--issue N`), `refactor` (incl. `--sweep`) |
 | Reference (loaded on intent) | `architecture`, `code-gen`, `testing`, `evaluation`, `clarify` |
 | Tracker add-on | `tracker`, `tracker-publish` |
 | Framework packs | `install-framework-packs` |
@@ -594,7 +594,7 @@ The harness integrates with the [Superpowers](https://github.com/obra/superpower
 | `/design` (Step 0) | `superpowers:brainstorming` | Evaluate architectural trade-offs before committing to a design |
 | `/implement` (Step 0) | `superpowers:writing-plans` | Produce structured implementation plan before spawning agent teams |
 | `/implement` (teammates) | `superpowers:test-driven-development` | Red-green-refactor enforced in every teammate prompt |
-| `/fix-issue` (Step 1.5) | `superpowers:systematic-debugging` | Root cause analysis before writing failing test |
+| `/change --issue N` (Step I2) | `superpowers:systematic-debugging` | Root cause analysis before writing failing test |
 | `/refactor` (Step 4) | `superpowers:writing-plans` | Structured refactoring plan before execution |
 | `/auto` (self-healing) | `superpowers:systematic-debugging` | Diagnose failure root cause before each fix attempt |
 | `/auto` (completion) | `superpowers:verification-before-completion` | Evidence-based verification before claiming build complete |
@@ -663,9 +663,8 @@ Agent contract: in brownfield mode, "module X depends on Y" claims must cite `co
 | `/brownfield` | Graph-grounded map of an existing codebase | No | — |
 | `/code-map` | Deterministic dependency graph | No | — |
 | `/seam-finder` | Ranked cut-points for a concrete goal | No | — |
-| `/improve` | Feature enhancement | No | — |
+| `/change` | Behavior change (story or --issue N) | No | systematic-debugging (issue mode) |
 | `/refactor` | Quality-driven refactoring | No | writing-plans |
-| `/fix-issue` | GitHub issue workflow | No | systematic-debugging |
 | `/tracker` | Optional Linear/Jira orchestration overview | Yes | — |
 | `/tracker-publish` | Publish approved dependency groups to tracker issues | Yes | — |
 | `/install-framework-packs` | Re-attempt installs for framework packs declared in `project-manifest.json` (idempotent) | No | — |

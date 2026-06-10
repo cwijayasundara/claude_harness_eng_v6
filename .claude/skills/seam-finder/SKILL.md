@@ -15,7 +15,7 @@ A "seam" is a junction point where program flow can be diverted without rewritin
 2. Are a **funnel** — many modules converge on them
 3. Have **read/write asymmetry** — pure readers and pure writers are safer than mixed-use nodes
 
-This skill is the bridge between brownfield discovery and `/improve`, `/refactor`, `/spec`. Run it before deciding *where* in the existing code to land a change.
+This skill is the bridge between brownfield discovery and `/change`, `/refactor`, `/spec`. Run it before deciding *where* in the existing code to land a change.
 
 ---
 
@@ -140,7 +140,7 @@ Spawn Agent with subagent_type="phase-evaluator" and prompt:
 
 Reference the chosen seam in the next step:
 
-- `/improve "<goal>" — extend seam: <path>`
+- `/change "<goal>" — extend seam: <path>`
 - `/refactor <path>` (when the seam is the refactor target)
 - `/spec` (when no seam fits and a new module is the right call)
 

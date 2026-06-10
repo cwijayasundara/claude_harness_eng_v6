@@ -149,7 +149,7 @@ harness_agent_runs_total{
   instance="abc-123",             ← Claude Code session ID
   job="claude_harness",           ← always "claude_harness"
   kind="subagent",                ← event type (subagent / subagent_stop)
-  lane="improve",                 ← which lane (/improve, /vibe, /auto, etc.)
+  lane="change",                  ← which lane (/change, /vibe, /auto, etc.)
   mode="full"                     ← execution mode (full / lean / solo / turbo)
 }  →  value: 1
 ```
@@ -208,7 +208,7 @@ A single metric like this:
 harness_agent_runs_total{user="Alice", agent="generator", exit="ok", lane="improve", mode="full", group="group-01"} 1
 ```
 
-Tells you: **Alice's** Claude Code instance ran the **generator** agent once, it **succeeded** (`exit="ok"`), was working in the **/improve** lane, using **full** execution mode, on dependency **group-01**.
+Tells you: **Alice's** Claude Code instance ran the **generator** agent once, it **succeeded** (`exit="ok"`), was working in the **/change** lane, using **full** execution mode, on dependency **group-01**.
 
 A metric like this:
 
@@ -349,7 +349,7 @@ Run these queries weekly and track the trend:
 | Evaluator pass rate | `sum(harness_agent_runs_total{agent="evaluator",exit="ok"}) / sum(harness_agent_runs_total{agent="evaluator"})` | > 80% |
 | Design-critic / generator ratio | `sum(harness_agent_runs_total{agent="design-critic"}) / sum(harness_agent_runs_total{agent="generator"})` | < 2.0 |
 | Pending reviews | `harness_pending_reviews` | < 5 |
-| Lane distribution | `sum by (lane) (harness_agent_runs_total)` | Bulk in auto/improve, minimal in vibe |
+| Lane distribution | `sum by (lane) (harness_agent_runs_total)` | Bulk in auto/change, minimal in vibe |
 
 ### Cost tracking (native OTEL — available once Claude Code sessions run with .env)
 

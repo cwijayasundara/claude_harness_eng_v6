@@ -40,7 +40,7 @@ Write these files:
 | `specs/brownfield/architecture-map.md` | Modules, layers, data flow, public interfaces, external dependencies — cites graph evidence |
 | `specs/brownfield/test-map.md` | Test commands, coverage signals, public interfaces covered/missing, slow/flaky tests |
 | `specs/brownfield/risk-map.md` | Sensitive areas, fragile zones, structural risks, auth/security/billing/data risks |
-| `specs/brownfield/change-strategy.md` | Recommended lane for future work: `/vibe`, `/fix-issue`, `/improve`, `/refactor`, `/spec`, `/auto` |
+| `specs/brownfield/change-strategy.md` | Recommended lane for future work: `/vibe`, `/change`, `/refactor`, `/spec`, `/auto` |
 | `specs/brownfield/seams-<goal>.md` | Optional ranked seam candidates produced by `/seam-finder "<goal>"` |
 | `CONTEXT.md` | Optional domain glossary, created only when meaningful domain terms are discovered |
 
@@ -167,8 +167,7 @@ For each risk, include the evidence path or graph node id.
 Write `change-strategy.md` with:
 
 - What qualifies for `/vibe`
-- What should use `/fix-issue`
-- What should use `/improve`
+- What should use `/change` (behavior change; `--issue N` for a tracked bug)
 - What should use `/refactor`
 - What requires `/spec` → `/design` → `/auto`
 - What should require explicit human approval before touching

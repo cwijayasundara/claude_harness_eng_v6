@@ -70,7 +70,7 @@ For brownfield refactors, the scaffold can consume an [Understand-Anything](http
      --coupling-report specs/brownfield/code-graph.json \
      --out specs/brownfield/coupling-report.md
    ```
-4. Run `/brownfield`, then `/seam-finder "<change goal>"` before `/improve` or `/refactor`.
+4. Run `/brownfield`, then `/seam-finder "<change goal>"` before `/change` or `/refactor`.
 5. For visual exploration, run `/understand-dashboard` from the plugin. For keeping graphs fresh, use `/understand --auto-update` or re-run `/understand` before large releases.
 
 Understand-Anything is optional. If its graph is absent, `/code-map` falls back to the vendored deterministic extractor, then `/brownfield` still writes the same `specs/brownfield/` artifacts.

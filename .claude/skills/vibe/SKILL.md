@@ -38,7 +38,7 @@ Use controlled vibe coding only when all are true:
 - The affected area can be verified with a targeted command.
 - Rollback is simple.
 
-Escalate to `/improve`, `/fix-issue`, `/refactor`, `/spec`, or `/auto` when any are true:
+Escalate to `/change`, `/refactor`, `/spec`, or `/auto` when any are true:
 
 - More than 3 source files are likely to change.
 - A new user story, feature, endpoint, table, queue, background job, or external integration is needed.
@@ -144,6 +144,6 @@ Report:
 ## Gotchas
 
 - **Small does not mean unsafe.** Auth, security, billing, migrations, and public API changes are never vibe work.
-- **No hidden stories.** If the change introduces user-visible behavior that needs product acceptance, write a story and use `/improve`.
+- **No hidden stories.** If the change introduces user-visible behavior that needs product acceptance, write a story and use `/change`.
 - **No drive-by cleanup.** Adjacent cleanup belongs in a separate `/vibe` or `/refactor` task.
-- **No unverifiable fixes.** If you cannot prove the change, escalate to `/fix-issue` or `/spec`.
+- **No unverifiable fixes.** If you cannot prove the change, escalate to `/change --issue N` or `/spec`.

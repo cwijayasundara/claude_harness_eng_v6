@@ -7,7 +7,7 @@ context: fork
 
 # Code Map — Deterministic Dependency Graph
 
-`/code-map` produces a structured, queryable map of the codebase that downstream skills (`/brownfield`, `/seam-finder`, `/refactor`, `/improve`) consume instead of free-form grepping.
+`/code-map` produces a structured, queryable map of the codebase that downstream skills (`/brownfield`, `/seam-finder`, `/refactor`, `/change`) consume instead of free-form grepping.
 
 It is deterministic-first: AST/regex extraction runs without an LLM. The LLM only interprets the artifact afterwards.
 
@@ -196,7 +196,7 @@ Downstream skills should treat `code-graph.json` as the source of truth for stru
 | `/brownfield` | All four artifacts; cites edge evidence in `architecture-map.md` and `risk-map.md` |
 | `/seam-finder` | `code-graph.json` only; computes seam scores from edges + CRUD edges if available |
 | `/refactor` | `coupling-report.md` to identify hubs and unstable modules |
-| `/improve` | `code-graph.json` to enumerate downstream consumers of a changed symbol |
+| `/change` | `code-graph.json` to enumerate downstream consumers of a changed symbol |
 | `planner` agent | All four; preserves existing public interfaces it sees |
 | `generator` agent | `code-graph.json` to avoid creating parallel implementations |
 
