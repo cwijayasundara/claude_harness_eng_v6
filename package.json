@@ -1,0 +1,11 @@
+{
+  "name": "claude-harness-eng-v4",
+  "version": "1.1.5",
+  "private": true,
+  "description": "Claude Code plugin scaffold for autonomous long-running application development.",
+  "scripts": {
+    "test": "node --test \"test/*.test.js\"",
+    "test:e2e": "node --test \"test/e2e/*.test.js\"",
+    "test:all": "node --test \"test/*.test.js\" \"test/e2e/*.test.js\""
+  }
+}

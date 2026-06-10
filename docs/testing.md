@@ -47,14 +47,30 @@ node --test test/e2e/harness-pipeline.test.js --timeout 1200000
 
 ## Unit tests (fast, no API calls)
 
+Run the whole unit suite:
+
+```bash
+npm test
+```
+
+> Use `npm test` (or `node --test "test/*.test.js"`), **not** `node --test test/`.
+> Passing a bare directory makes Node try to load `test/` as a module and fails
+> with `MODULE_NOT_FOUND` (`cjs/loader:1408`). `npm test` also scopes to the unit
+> suite so the costly e2e tests (which spawn `claude`) are not swept in — run
+> those with `npm run test:e2e`.
+
+Run a single file while iterating:
+
 ```bash
 node --test test/phase-eval-unit.test.js         # rubrics, schema, hooks, skills
 node --test test/phase-eval-integration.test.js  # telemetry snapshot, Grafana, deck
 node --test test/scaffold-command.test.js        # scaffold config validation
+node --test test/skills-consistency.test.js      # skill cross-reference integrity
 node --test test/pre-write-gate.test.js          # consolidated pre-write gate (scope/env/secrets/length/TDD)
 node --test test/verify-on-save.test.js          # post-save lint/layers + review queue
 node --test test/pre-commit-git-hook.test.js     # git commit gate (layers/contract/coverage)
 node --test test/review-on-stop.test.js          # Stop-hook review gate + advisories
+node --test test/hook-security.test.js           # hook injection/scope/exemption regressions
 node --test test/record-run-hook.test.js         # telemetry hook
 ```
 
