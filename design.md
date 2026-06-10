@@ -186,6 +186,8 @@ The `codebase-explorer` agent has `LSP` in its tool grants and uses it for symbo
 | generator | Sonnet | Read · Write · Edit · Glob · Grep · Bash | Test plan, Playwright E2E, fixtures |
 | security-reviewer | Opus | Read · Write · Grep · Glob · Bash | OWASP scan + adversarial find-then-refute; enforced gate (BLOCK on critical/high) |
 
+"Opus" here is the **top-capability tier** — those roles run on **Opus 4.8 or Fable 5 interchangeably** (the prompts are model-agnostic by construction; see `docs/prompting-standards.md`). The actual model is the `model:` frontmatter in each `.claude/agents/<name>.md`.
+
 ### The enforcement hooks
 
 All hooks include remediation instructions ("Fix: …") so they steer the agent, not just block it. They key off the tool name only — no per-command/agent gating — so they fire on every matching edit, including raw ad-hoc edits made outside any slash command.

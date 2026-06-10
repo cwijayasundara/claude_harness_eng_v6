@@ -114,6 +114,8 @@ Six agents (model pinned in each agent's frontmatter):
 | Security Reviewer | OWASP audit, blocking `security-verdict.json` | Opus |
 | Codebase Explorer | Read-only discovery for brownfield work | Sonnet |
 
+"Opus" denotes the **top-capability tier** — those agents (and the `/auto` orchestrator's session model) run on **Opus 4.8 or Fable 5 interchangeably**; the prompts are written to serve both (see [docs/prompting-standards.md](docs/prompting-standards.md) → "Model-agnostic by construction"). Swapping a role between them is a one-line `model:` frontmatter change.
+
 The former `phase-evaluator` is now the evaluator's **artifact mode**; `test-engineer` and `ui-designer` folded into the **generator** (their authoring guides live in `skills/test/references/` and `skills/design/references/`).
 
 ---

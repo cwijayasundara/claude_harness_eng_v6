@@ -183,16 +183,21 @@ Every teammate receives:
 
 ### Model Tiering
 
-| Role | Model | Rationale |
-|------|-------|-----------|
-| `/auto` orchestrator | Opus | Judgment, architectural decisions |
-| Evaluator | Opus | Skeptical verification |
-| Design critic | Opus | Subjective visual judgment |
-| Generator lead | Sonnet | Coordination, lower cost |
-| Generator teammates | Sonnet | Mechanical implementation |
-| Security reviewer | Opus | Contextual vuln reasoning + adversarial find-then-refute |
+Roles are assigned by **capability tier**, not a specific model — no prompt in this harness assumes which model it is running on (see `docs/prompting-standards.md` → "Model-agnostic by construction").
 
-Configure via `project-manifest.json` field `execution.model_tier`.
+| Role | Tier | Rationale |
+|------|------|-----------|
+| `/auto` orchestrator | top-capability | Judgment, architectural decisions |
+| Evaluator | top-capability | Skeptical verification |
+| Design critic | top-capability | Subjective visual judgment |
+| Generator lead | cost-efficient | Coordination, lower cost |
+| Generator teammates | cost-efficient | Mechanical implementation |
+| Security reviewer | top-capability | Contextual vuln reasoning + adversarial find-then-refute |
+
+- **top-capability** = Opus 4.8 *or* Fable 5 — interchangeable; these roles run the same prompts unchanged on either.
+- **cost-efficient** = Sonnet 4.6.
+
+The orchestrator runs on the **session model** (whatever `/model` is set to — Opus 4.8 or Fable 5 both work). Subagent models are pinned per agent in `.claude/agents/<name>.md` frontmatter (`model:`); swapping a top-capability role between Opus 4.8 and Fable 5 is a one-line frontmatter change, never a prompt rewrite. The default tier mapping can be steered via `project-manifest.json` field `execution.model_tier`.
 
 ---
 

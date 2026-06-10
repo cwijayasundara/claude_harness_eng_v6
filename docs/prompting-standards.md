@@ -4,13 +4,37 @@ How to write the harness's prompt surfaces (`.claude/agents/*.md`, `.claude/skil
 
 ## Which model runs where (tune the prompt to its reader)
 
-| Surface | Model | Implication for the prompt |
+| Surface | Model (tier) | Implication for the prompt |
 |---|---|---|
-| `/auto` orchestrator, direct chat | **Fable 5** (session model) | Long-horizon autonomy; needs grounded-progress + don't-stop-early + reversible-action guidance. Do **not** ask it to echo its reasoning as response text (see §7). |
-| `planner`, `evaluator` agents | **Opus 4.8** | Literal instruction follower; report-everything-then-filter for judging; effort matters. |
-| `generator` agent | **Sonnet 4.6** | Set effort explicitly; precise, observable acceptance criteria. |
+| `/auto` orchestrator, direct chat | **Opus 4.8 *or* Fable 5** (session model) | Top-capability tier — either runs the same prompt. Long-horizon autonomy; needs grounded-progress + don't-stop-early + reversible-action guidance. Do **not** ask it to echo its reasoning as response text (see §7). |
+| `planner`, `evaluator`, `design-critic`, `security-reviewer` | **Opus 4.8 *or* Fable 5** (top-capability) | Literal instruction follower; report-everything-then-filter for judging; effort matters. |
+| `generator`, `codebase-explorer` | **Sonnet 4.6** (cost-efficient) | Set effort explicitly; precise, observable acceptance criteria. |
 
-These assignments live in each agent's `model:` frontmatter — keep prompt tuning consistent with the assigned model.
+The top-capability roles are **interchangeable between Opus 4.8 and Fable 5** — the prompts are written to serve both (see "Model-agnostic by construction" below). The actual model is pinned in each agent's `model:` frontmatter (and the session model for the orchestrator); that frontmatter is the *only* place a model is named — never the prompt body.
+
+## Model-agnostic by construction
+
+The harness targets two top-capability models (Opus 4.8 and Fable 5) for the same roles. Their prompting guidance is ~85–90% identical; where they diverge, **Fable 5 needs the stricter version of a rule that is harmless on Opus 4.8.** Two principles keep one prompt serving both:
+
+**Principle A — Write to the stricter union.** Where the two diverge, adopt the rule that is safe on both (always Fable 5's tighter one). It costs nothing on Opus 4.8 and prevents a Fable-5-only failure. Examples already applied: never echo reasoning as text (§7), ground every progress claim, lead-with-outcome brevity, never end a turn on a promise.
+
+**Principle B — Criterion, not nudge.** Phrase every *steerable* behavior as a condition to evaluate, never a directional push. A nudge ("delegate more" / "spawn fewer subagents") assumes a specific innate default and inverts on the model with the opposite lean. A criterion ("delegate when fanning out across independent items; work directly for single-file/sequential work") is self-correcting — both models converge to the same behavior regardless of default. The harness's subagent structure is the worked example: the generator spawns *one teammate per story per phase* and `/auto` spawns *named agents for named roles*, so neither Opus 4.8's under-delegation nor Fable 5's over-delegation default matters.
+
+### Divergence map — write the right-hand column
+
+| Behavior | Opus 4.8 lean | Fable 5 lean | Model-agnostic instruction to write |
+|---|---|---|---|
+| Subagents | spawns fewer | spawns more | Criterion: "spawn when fanning out across independent items / isolated context; work directly for single-file, sequential, context-sharing work." |
+| Reasoning visibility | fine to show | **refuses** if asked to echo | Never instruct echoing reasoning; read structured `thinking` blocks instead. |
+| Verbosity | narrates more | over-elaborates more at high effort | "Lead with the outcome; be selective about what you include." |
+| Early stopping | rare | rare + "promise without tool call" | "Don't end a turn on a promise — issue the tool call now." |
+| Effort sweet spot | xhigh for coding | high default, xhigh for hardest | "`high` floor; `xhigh` for the hardest agentic/coding work." |
+| Progress claims | grounded | can fabricate on long runs | "Audit each claim against a tool result before reporting." |
+| Prescriptiveness | tolerates rigid steps | rigid steps can degrade output | Prescribe only where determinism is load-bearing (the gates); elsewhere give goal + boundaries. |
+
+### Keep the divergence in one place
+
+The *only* legitimate per-model knobs are **`model:` (frontmatter / session model)** and **effort** (the `/effort` convention + the per-skill "ultracode tip"). Never name a model or assume a model's default in prompt prose. Swapping a top-capability role between Opus 4.8 and Fable 5 must be a one-line frontmatter change. Do **not** template prompts per-model (`{{IF FABLE}}…`) — the divergences are too small to justify it, and Anthropic designed Fable 5 to run existing Opus 4.8 prompts.
 
 ## The standards
 
@@ -43,3 +67,4 @@ These assignments live in each agent's `model:` frontmatter — keep prompt tuni
 - [ ] No "show/echo/transcribe your reasoning as text" (Fable-5 refusal risk).
 - [ ] Distinct blocks in XML tags; examples where behavior is subtle.
 - [ ] Effort expectation noted for agentic/coding skills (high/xhigh).
+- [ ] No model named in the prompt body, and no behavior phrased as a directional nudge that assumes one model's default (criterion, not nudge) — top-capability prompts must run unchanged on Opus 4.8 *and* Fable 5.
