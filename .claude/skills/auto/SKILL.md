@@ -55,6 +55,15 @@ If any prerequisite is missing, stop and report what is absent. Do not proceed w
 - Design critique is delegated to the **design-critic** agent.
 - `/auto` never writes application code, tests, or configuration files itself.
 
+### Long-run autonomy & grounded progress
+
+`/auto` is an autonomous, multi-context-window loop. These rules keep it honest and unblocked over long runs (they matter most on the most capable orchestrator models, which sustain hours-long runs):
+
+- **Ground every progress claim in evidence.** Before reporting that a group passed, a gate cleared, or tests are green, point to the actual tool result from this session that proves it — the evaluator verdict file, the test exit code, the `*-grounding.json`. Never report work you cannot point to; if something is not yet verified, say so explicitly. If tests failed, say so with the output; if a step was skipped, say that. This is the same groundedness discipline the pipeline enforces on artifacts, applied to the loop's own status.
+- **Do not stop early on context-budget concern.** The context window compacts (or you start a fresh window from `claude-progress.txt`, `features.json`, and git state) — you can continue indefinitely. Do not summarize-and-hand-off or suggest a new session because tokens look low; save state to `claude-progress.txt` and keep going.
+- **Proceed on reversible actions; pause only for genuine checkpoints.** Editing files, running tests, and committing to the work branch follow from the build goal — do them without asking. Pause and end the turn only for a truly destructive or irreversible action, a real scope change beyond the approved stories, or input only the human can provide. Do not end a turn on a promise ("I'll now run the evaluator…") — issue the tool call and do the work now.
+- **Give subagents the full task spec up front.** When spawning generator/evaluator/design-critic agents, put the complete story context, acceptance criteria, and constraints in the first prompt rather than dripping them across turns — well-specified delegation is what makes the autonomous loop efficient.
+
 ### Context & Token Discipline
 
 `/auto` is the longest-running, most token-heavy loop in the harness. Every token in the orchestrator's context window is re-sent (cache permitting) on every turn, so keep the orchestrator context lean — delegate verbose work into subagents whose context is discarded when they return.

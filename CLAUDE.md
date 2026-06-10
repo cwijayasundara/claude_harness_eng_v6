@@ -92,3 +92,4 @@ Monitor cache hit rate like uptime. Telemetry is **off by default** (opt-in) —
 - `.claude/workflows/` — Dynamic workflows (each `.js` → a `/<name>` command; `/scaffold` copies these into target projects). See `.claude/workflows/README.md`
 - `design.md` — Full architecture reference (copied to target projects)
 - `README.md` — Installation and usage guide
+- `docs/prompting-standards.md` — How to author agent/skill prompts for the current models (read before editing any `.claude/agents/*` or `.claude/skills/*` prompt)
