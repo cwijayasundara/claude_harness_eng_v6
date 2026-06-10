@@ -150,7 +150,8 @@ Based on their answers, write `project-manifest.json` to the project root. Fill 
 - stack.database: primary, secondary
 - stack.deployment: method ("docker-compose"), services list
 - evaluation: api_base_url, ui_base_url, health_check, design_score_threshold (7), design_max_iterations (10), test_corpus_dir
-- execution: default_mode ("full"), max_self_heal_attempts (3), max_auto_iterations (50), coverage_threshold (80), session_chaining (true), agent_team_size ("auto"), teammate_model ("sonnet")
+- execution: default_mode ("full"), max_self_heal_attempts (3), max_auto_iterations (50), coverage_threshold (80), session_chaining (true), agent_team_size ("auto"), teammate_model ("sonnet"), model_tier ("balanced")
+  - `model_tier` sets the cost posture by stamping each agent's `model:` pin (applied in Step 3). `cost` = zero Fable (Sonnet generation, Opus judgment); `balanced` (default, Profile B) = Fable only on the planner, everything else cost-conscious; `max-quality` = Fable on the judgment roles. The `security-reviewer` is **never** Fable in any tier (its cyber safety classifiers can refuse offensive-security reasoning). See `docs/model-allocation.md`.
 - lsp: detected language servers and install commands (see below)
 - verification: mode, health_check, and mode-specific config (see below)
 
@@ -342,6 +343,14 @@ cp $PLUGIN_SOURCE/program.md .claude/program.md
 cp $PLUGIN_SOURCE/settings.json .claude/settings.json
 ```
 
+**Apply the cost-posture preset.** Stamp each agent's `model:` pin from the manifest's `execution.model_tier` (default `balanced` = Profile B — Fable 5 only on the planner, cost-conscious elsewhere). This is the one place a model is named; the prompt bodies stay model-agnostic.
+
+```bash
+node .claude/scripts/model-tier.js "$(node -e "process.stdout.write(require('./project-manifest.json').execution?.model_tier || 'balanced')")" --apply .claude/agents
+```
+
+To change a project's cost posture later, edit `execution.model_tier` in `project-manifest.json` and re-run that command (`cost` | `balanced` | `max-quality`). See `docs/model-allocation.md` for the profiles and the decision rule.
+
 Copy the telemetry stack config (OTEL Collector + Prometheus + Pushgateway). These files are **dormant** — telemetry stays off until the user enables it in Step 8 — but copying them now makes enabling a one-step change later:
 
 ```bash
@@ -354,7 +363,7 @@ cp "$HARNESS_ROOT/telemetry/CACHE_MONITORING.md" ./telemetry/
 rm -rf ./telemetry/grafana && cp -r "$HARNESS_ROOT/telemetry/grafana" ./telemetry/
 cp "$HARNESS_ROOT/README.md" ./SCAFFOLD_README.md
 mkdir -p docs
-cp "$HARNESS_ROOT/docs/telemetry.md" "$HARNESS_ROOT/docs/testing.md" "$HARNESS_ROOT/docs/extras.md" "$HARNESS_ROOT/docs/prompting-standards.md" ./docs/
+cp "$HARNESS_ROOT/docs/telemetry.md" "$HARNESS_ROOT/docs/testing.md" "$HARNESS_ROOT/docs/extras.md" "$HARNESS_ROOT/docs/prompting-standards.md" "$HARNESS_ROOT/docs/model-allocation.md" ./docs/
 ```
 
 **Important:** Do NOT run `mkdir -p` on any of the file paths inside `telemetry/` — that would create directories where files should be. The `cp` commands above handle the file creation directly.

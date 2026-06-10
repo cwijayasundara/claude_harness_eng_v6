@@ -114,7 +114,9 @@ Six agents (model pinned in each agent's frontmatter):
 | Security Reviewer | OWASP audit, blocking `security-verdict.json` | Opus |
 | Codebase Explorer | Read-only discovery for brownfield work | Sonnet |
 
-"Opus" denotes the **top-capability tier** — those agents (and the `/auto` orchestrator's session model) run on **Opus 4.8 or Fable 5 interchangeably**; the prompts are written to serve both (see [docs/prompting-standards.md](docs/prompting-standards.md) → "Model-agnostic by construction"). Swapping a role between them is a one-line `model:` frontmatter change.
+"Opus" denotes the **top-capability tier** — those agents (and the `/auto` orchestrator's session model) run on **Opus 4.8 or Fable 5 interchangeably**; the prompts are written to serve both (see [docs/prompting-standards.md](docs/prompting-standards.md) → "Model-agnostic by construction").
+
+The cost/quality posture is one field — `execution.model_tier` in `project-manifest.json` (`cost` / `balanced` / `max-quality`), stamped onto the agent `model:` pins by `.claude/scripts/model-tier.js`. The default **`balanced`** spends Fable 5 only on the planner (cascade-preventing, low-volume) and keeps generation on Sonnet and the gate on Opus; the `security-reviewer` is never Fable in any tier. Full rationale + decision rule: [docs/model-allocation.md](docs/model-allocation.md).
 
 The former `phase-evaluator` is now the evaluator's **artifact mode**; `test-engineer` and `ui-designer` folded into the **generator** (their authoring guides live in `skills/test/references/` and `skills/design/references/`).
 

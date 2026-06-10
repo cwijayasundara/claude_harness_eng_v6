@@ -197,7 +197,13 @@ Roles are assigned by **capability tier**, not a specific model — no prompt in
 - **top-capability** = Opus 4.8 *or* Fable 5 — interchangeable; these roles run the same prompts unchanged on either.
 - **cost-efficient** = Sonnet 4.6.
 
-The orchestrator runs on the **session model** (whatever `/model` is set to — Opus 4.8 or Fable 5 both work). Subagent models are pinned per agent in `.claude/agents/<name>.md` frontmatter (`model:`); swapping a top-capability role between Opus 4.8 and Fable 5 is a one-line frontmatter change, never a prompt rewrite. The default tier mapping can be steered via `project-manifest.json` field `execution.model_tier`.
+The orchestrator runs on the **session model** (whatever `/model` is set to — Opus 4.8 or Fable 5 both work). Subagent models are pinned per agent in `.claude/agents/<name>.md` frontmatter (`model:`), stamped from the cost-posture preset in `project-manifest.json` → `execution.model_tier` (default `balanced`):
+
+- **cost** — zero Fable (Sonnet generation, Opus judgment).
+- **balanced** (default) — Fable 5 only on the planner (the cascade-preventing, low-volume phase); cost-conscious elsewhere. For long unattended runs, the operator may set the *session* model to Fable 5 — its long-horizon coherence can reduce total iterations and net cheaper.
+- **max-quality** — Fable on the judgment roles; generator bumped to Opus; **security-reviewer stays Opus in every tier** (Fable's cyber classifiers can refuse vuln reasoning).
+
+Re-stamp after editing the manifest: `node .claude/scripts/model-tier.js <preset> --apply .claude/agents`. Full rationale + decision rule: `docs/model-allocation.md`.
 
 ---
 
