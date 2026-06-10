@@ -51,7 +51,7 @@ Document this assessment before writing any code.
 
 ### Step S3 — Consult Architecture Docs
 
-Read `specs/design/` for relevant architecture decisions and `.claude/skills/architecture/SKILL.md` for layering rules. Confirm the planned implementation stays within the correct layer (new type → `types/`, new query → `repository/`, …). Do not shortcut layers.
+Read `specs/design/` for relevant architecture decisions and `.claude/skills/code-gen/references/architecture.md` for layering rules. Confirm the planned implementation stays within the correct layer (new type → `types/`, new query → `repository/`, …). Do not shortcut layers.
 
 ### Step S4 — Write the Failing Test(s) First
 

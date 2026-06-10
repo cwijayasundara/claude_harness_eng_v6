@@ -63,7 +63,7 @@ If `specs/brownfield/` exists, read `architecture-map.md`, `test-map.md`, `risk-
 
 For each file in the target path:
 
-- **Architecture compliance:** does the file import from a layer above it? (see layering rules in `architecture/SKILL.md`)
+- **Architecture compliance:** does the file import from a layer above it? (see layering rules in `code-gen/references/architecture.md`)
 - **Function lengths:** count lines in each function. Flag any over 50 lines.
 - **Type coverage:** identify any `any` (TypeScript) or missing type hints (Python). Count unannotated parameters and return types.
 - **Test coverage baseline:** run the test suite and record current pass/fail counts and coverage percentage.

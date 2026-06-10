@@ -60,7 +60,7 @@ test('every referenced skills/ path resolves on disk', () => {
 
 // Deleted skills must not be referenced anywhere by directory name.
 test('no doc references a removed skill directory', () => {
-  const removed = ['evaluation', 'testing', 'tracker', 'lane-classify', 'improve', 'fix-issue', 'lite'];
+  const removed = ['evaluation', 'testing', 'tracker', 'lane-classify', 'improve', 'fix-issue', 'lite', 'architecture'];
   const present = new Set(listSkills());
   const offenders = [];
   for (const name of removed) {
