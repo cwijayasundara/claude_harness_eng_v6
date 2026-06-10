@@ -178,15 +178,15 @@ The `codebase-explorer` agent has `LSP` in its tool grants and uses it for symbo
 
 | Agent | Model | Tool grants | Responsibility |
 |---|---|---|---|
-| planner | Opus | Read · Write · Glob · Grep · Bash | BRD, stories, dep graph, architecture, schemas |
-| generator | Sonnet | + Edit · Agent (spawns teammates) | Code + tests, spawns agent team, TDD |
-| evaluator | Opus | + Playwright MCP (navigate, click, fill, snap) | Runs app, 3-layer verification, structured failures |
-| design-critic | Opus | + Playwright MCP (resize, hover, screenshot) | GAN scoring (DQ/O/C/F), plateau pivot |
-| generator | Sonnet | Read · Write · Glob · Grep · Bash | React + Tailwind HTML mockups |
-| generator | Sonnet | Read · Write · Edit · Glob · Grep · Bash | Test plan, Playwright E2E, fixtures |
-| security-reviewer | Opus | Read · Write · Grep · Glob · Bash | OWASP scan + adversarial find-then-refute; enforced gate (BLOCK on critical/high) |
+| planner | Fable 5 | Read · Write · Glob · Grep · Bash | BRD, stories, dep graph, architecture, schemas |
+| generator | Sonnet 4.6 | + Edit · Agent (spawns teammates) | Code + tests, spawns agent team, TDD |
+| evaluator | Opus 4.8 | + Playwright MCP (navigate, click, fill, snap) | Runs app, 3-layer verification, structured failures |
+| design-critic | Opus 4.8 | + Playwright MCP (resize, hover, screenshot) | GAN scoring (DQ/O/C/F), plateau pivot |
+| generator | Sonnet 4.6 | Read · Write · Glob · Grep · Bash | React + Tailwind HTML mockups |
+| generator | Sonnet 4.6 | Read · Write · Edit · Glob · Grep · Bash | Test plan, Playwright E2E, fixtures |
+| security-reviewer | Opus 4.8 | Read · Write · Grep · Glob · Bash | OWASP scan + adversarial find-then-refute; enforced gate (BLOCK on critical/high) |
 
-"Opus" here is the **top-capability tier** — those roles run on **Opus 4.8 or Fable 5 interchangeably** (the prompts are model-agnostic by construction; see `docs/prompting-standards.md`). The actual model is the `model:` frontmatter in each `.claude/agents/<name>.md`.
+The Model column shows the **`balanced` default**. **Opus 4.8 and Fable 5 are both the top-capability tier** and run those roles interchangeably (prompts are model-agnostic by construction; see `docs/prompting-standards.md`) — `balanced` defaults the planner to Fable 5 and the rest of the top tier to Opus 4.8. The cost posture is set by `execution.model_tier` (`cost`/`balanced`/`max-quality`) and stamped as exact model ids into each `.claude/agents/<name>.md` `model:` line; see `docs/model-allocation.md`.
 
 ### The enforcement hooks
 

@@ -107,16 +107,16 @@ Six agents (model pinned in each agent's frontmatter):
 
 | Agent | Role | Model |
 |---|---|---|
-| Planner | Sprint planning, story breakdown, design architecture | Opus |
-| Generator | Feature implementation (spawns teammates); also authors tests and UI mockups | Sonnet |
-| Evaluator | Runtime mode: runs app, API + Playwright verification. Artifact mode: rubric-scores planning docs (BRD/spec/design/brownfield/seam-finder/deploy) | Opus |
-| Design Critic | GAN visual scoring loop (max 10 iterations) | Opus |
-| Security Reviewer | OWASP audit, blocking `security-verdict.json` | Opus |
-| Codebase Explorer | Read-only discovery for brownfield work | Sonnet |
+| Planner | Sprint planning, story breakdown, design architecture | Fable 5 |
+| Generator | Feature implementation (spawns teammates); also authors tests and UI mockups | Sonnet 4.6 |
+| Evaluator | Runtime mode: runs app, API + Playwright verification. Artifact mode: rubric-scores planning docs (BRD/spec/design/brownfield/seam-finder/deploy) | Opus 4.8 |
+| Design Critic | GAN visual scoring loop (max 10 iterations) | Opus 4.8 |
+| Security Reviewer | OWASP audit, blocking `security-verdict.json` | Opus 4.8 |
+| Codebase Explorer | Read-only discovery for brownfield work | Sonnet 4.6 |
 
-"Opus" denotes the **top-capability tier** — those agents (and the `/auto` orchestrator's session model) run on **Opus 4.8 or Fable 5 interchangeably**; the prompts are written to serve both (see [docs/prompting-standards.md](docs/prompting-standards.md) → "Model-agnostic by construction").
+The Model column shows the **`balanced` default** (Profile B). **Opus 4.8 and Fable 5 are both the top-capability tier** and run those roles interchangeably — the prompts are written to serve both (see [docs/prompting-standards.md](docs/prompting-standards.md) → "Model-agnostic by construction"); under `balanced` the planner defaults to Fable 5, the rest of the top tier to Opus 4.8.
 
-The cost/quality posture is one field — `execution.model_tier` in `project-manifest.json` (`cost` / `balanced` / `max-quality`), stamped onto the agent `model:` pins by `.claude/scripts/model-tier.js`. The default **`balanced`** spends Fable 5 only on the planner (cascade-preventing, low-volume) and keeps generation on Sonnet and the gate on Opus; the `security-reviewer` is never Fable in any tier. Full rationale + decision rule: [docs/model-allocation.md](docs/model-allocation.md).
+The cost/quality posture is one field — `execution.model_tier` in `project-manifest.json` (`cost` / `balanced` / `max-quality`), stamped onto the agent `model:` pins (exact ids like `claude-opus-4-8`) by `.claude/scripts/model-tier.js`. The default **`balanced`** spends Fable 5 only on the planner (cascade-preventing, low-volume) and keeps generation on Sonnet 4.6 and the gate on Opus 4.8; the `security-reviewer` is never Fable 5 in any tier. Full rationale + decision rule: [docs/model-allocation.md](docs/model-allocation.md).
 
 The former `phase-evaluator` is now the evaluator's **artifact mode**; `test-engineer` and `ui-designer` folded into the **generator** (their authoring guides live in `skills/test/references/` and `skills/design/references/`).
 

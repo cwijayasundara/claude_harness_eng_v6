@@ -38,13 +38,15 @@ True for low-volume, high-leverage reasoning (planning, long-horizon orchestrati
 
 | Role | `cost` (A) | **`balanced` (B, default)** | `max-quality` |
 |---|---|---|---|
-| planner | opus | **fable** | fable |
-| generator | sonnet | **sonnet** | opus |
-| evaluator | opus | **opus** | fable |
-| design-critic | opus | **opus** | fable |
-| security-reviewer | opus | **opus** | opus *(never fable)* |
-| codebase-explorer | sonnet | **sonnet** | sonnet |
-| *session / orchestrator* | opus | opus *(fable for long `/auto`)* | fable |
+| planner | Opus 4.8 | **Fable 5** | Fable 5 |
+| generator | Sonnet 4.6 | **Sonnet 4.6** | Opus 4.8 |
+| evaluator | Opus 4.8 | **Opus 4.8** | Fable 5 |
+| design-critic | Opus 4.8 | **Opus 4.8** | Fable 5 |
+| security-reviewer | Opus 4.8 | **Opus 4.8** | Opus 4.8 *(never Fable 5)* |
+| codebase-explorer | Sonnet 4.6 | **Sonnet 4.6** | Sonnet 4.6 |
+| *session / orchestrator* | Opus 4.8 | Opus 4.8 *(Fable 5 for long `/auto`)* | Fable 5 |
+
+Pins are written as **exact model IDs** in the agent frontmatter — `claude-fable-5`, `claude-opus-4-8`, `claude-sonnet-4-6` — not bare aliases, so they are version-pinned and unambiguous.
 
 - **`cost` (Profile A):** screws fully tightened — zero Fable. Lowest bill; relies on Opus 4.8 planning being good enough.
 - **`balanced` (Profile B, shipped default):** Fable 5 only on the planner — the cascade-preventing, low-volume phase — and cost-conscious everywhere else. Buys first-shot planning quality cheaply without touching the volume bucket or the gate.
@@ -55,5 +57,4 @@ Rough relative build cost (illustrative, generation ≈ 60% of output tokens): `
 ## Operating it
 
 - **Set the posture:** `execution.model_tier` in `project-manifest.json`, then `node .claude/scripts/model-tier.js <preset> --apply .claude/agents`. The scaffold does this on init (default `balanced`).
-- **Session/orchestrator model** is not an agent pin — it's the operator's `/model`. Default to `opus` for cost; switch to `fable` for `/brd`·`/spec`·`/design` on genuinely hard briefs (then back to `opus` before execution), and optionally for long unattended `/auto` runs.
-- **Alias note:** the pins use the `fable` alias. If your runtime needs the full id, set `model: claude-fable-5` (or use the `cost` preset, which uses no Fable).
+- **Session/orchestrator model** is not an agent pin — it's the operator's `/model` (`claude-opus-4-8` for cost; `claude-fable-5` for `/brd`·`/spec`·`/design` on genuinely hard briefs, then back to Opus 4.8 before execution, and optionally for long unattended `/auto` runs).

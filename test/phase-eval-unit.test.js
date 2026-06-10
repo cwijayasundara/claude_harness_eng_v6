@@ -72,8 +72,8 @@ test('evaluator.md exists and is non-empty', () => {
   assert.ok(agentContent.length > 0, 'agent file is empty');
 });
 
-test('evaluator.md is pinned to model: opus', () => {
-  assert.match(agentContent, /^---\n[\s\S]*?model:\s*opus[\s\S]*?\n---/);
+test('evaluator.md is pinned to Opus 4.8 (exact id)', () => {
+  assert.match(agentContent, /^---\n[\s\S]*?model:\s*claude-opus-4-8[\s\S]*?\n---/);
 });
 
 test('evaluator.md documents the artifact mode', () => {

@@ -1,7 +1,7 @@
 ---
 name: security-reviewer
 description: Scans for injection, auth bypass, hardcoded secrets, SSRF, path traversal, and other OWASP top 10 vulnerabilities.
-model: opus
+model: claude-opus-4-8
 tools:
   - Read
   - Write

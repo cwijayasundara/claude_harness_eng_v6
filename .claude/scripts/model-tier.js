@@ -22,29 +22,34 @@
 const fs = require('fs');
 const path = require('path');
 
+// Exact model IDs (not bare aliases) — version-pinned and unambiguous.
+const FABLE = 'claude-fable-5';
+const OPUS = 'claude-opus-4-8';
+const SONNET = 'claude-sonnet-4-6';
+
 const PRESETS = {
   cost: {
-    planner: 'opus', generator: 'sonnet', evaluator: 'opus',
-    'design-critic': 'opus', 'security-reviewer': 'opus', 'codebase-explorer': 'sonnet',
+    planner: OPUS, generator: SONNET, evaluator: OPUS,
+    'design-critic': OPUS, 'security-reviewer': OPUS, 'codebase-explorer': SONNET,
   },
   balanced: {
-    planner: 'fable', generator: 'sonnet', evaluator: 'opus',
-    'design-critic': 'opus', 'security-reviewer': 'opus', 'codebase-explorer': 'sonnet',
+    planner: FABLE, generator: SONNET, evaluator: OPUS,
+    'design-critic': OPUS, 'security-reviewer': OPUS, 'codebase-explorer': SONNET,
   },
   'max-quality': {
-    planner: 'fable', generator: 'opus', evaluator: 'fable',
-    'design-critic': 'fable', 'security-reviewer': 'opus', 'codebase-explorer': 'sonnet',
+    planner: FABLE, generator: OPUS, evaluator: FABLE,
+    'design-critic': FABLE, 'security-reviewer': OPUS, 'codebase-explorer': SONNET,
   },
 };
 
 // Recommended session/orchestrator model per tier (guidance, not an agent pin).
-const SESSION = { cost: 'opus', balanced: 'opus', 'max-quality': 'fable' };
+const SESSION = { cost: OPUS, balanced: OPUS, 'max-quality': FABLE };
 
 function modelsForTier(preset) {
   const pins = PRESETS[preset];
   if (!pins) throw new Error(`unknown model tier preset: ${preset}`);
-  if (pins['security-reviewer'] === 'fable') {
-    throw new Error('invariant violated: security-reviewer must never be Fable');
+  if (pins['security-reviewer'] === FABLE) {
+    throw new Error('invariant violated: security-reviewer must never be Fable 5');
   }
   return { ...pins };
 }
