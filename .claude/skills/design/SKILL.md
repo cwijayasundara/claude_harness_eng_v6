@@ -99,6 +99,29 @@ Spawn the `generator` agent for the mockup step, pointed at `.claude/skills/desi
 
 ---
 
+### Step 1.9 — Emit the trace spine + Grounding Gate [HARD BLOCK — when `specs/stories/story-traces.json` exists]
+
+After both agents complete, write `specs/design/design-traces.json` — one entry per design component (module/service/endpoint group from `component-map.md`), each tracing to the story ids it realizes:
+
+```json
+[
+  { "id": "auth-service", "text": "Registration + login endpoints", "traces": ["E1-S1", "E1-S2"] },
+  { "id": "user-repository", "text": "User persistence", "traces": ["E1-S1"] }
+]
+```
+
+Every component must trace to at least one story. A component realizing no story is scope creep or dead design; a story with no component will never be built. Prove it deterministically (when the spec emitted a trace spine):
+
+```bash
+node .claude/scripts/trace-check.js \
+  --required specs/stories/story-traces.json \
+  --downstream specs/design/design-traces.json \
+  --layer design \
+  --out specs/reviews/design-grounding.json
+```
+
+`specs/reviews/design-grounding.json` is a **hard gate independent of the rubric**: any `net_new` (component tracing to no story) or `dropped` (story no component realizes) blocks. Resolve before Step 2. (Skip when `story-traces.json` does not exist.)
+
 ### Step 2 — Phase Evaluation Gate
 
 After both agents (planner + generator) complete, spawn the `evaluator` agent (artifact mode). This replaces and extends the previous field-shape validation.
@@ -108,11 +131,12 @@ After both agents (planner + generator) complete, spawn the `evaluator` agent (a
 Spawn Agent with subagent_type="evaluator" and prompt:
 - Phase: design
 - Artifacts: specs/design/architecture.md, specs/design/api-contracts.md, specs/design/api-contracts.schema.json, specs/design/data-models.md, specs/design/data-models.schema.json, specs/design/folder-structure.md, specs/design/component-map.md, specs/design/deployment.md, all specs/design/mockups/*.html files
-- Upstream: specs/stories/ (all story files for cross-phase traceability)
+- Upstream: specs/stories/ (all story files; and specs/stories/story-traces.json when present)
+- Grounding verdict: specs/reviews/design-grounding.json when present (already PASS from Step 1.9 — anchor the traceability criterion to it)
 - Rubric: Read .claude/templates/phase-eval-rubrics.json, key "design"
 - Iteration: 1 (increment on retry)
 - Previous score: null (or previous iteration's weighted_average)
-- Cross-phase traceability: Verify every story ID appears in component-map.md. Verify every API-layer story has endpoints in api-contracts.schema.json. Verify every UI-layer story has a mockup in specs/design/mockups/.
+- Cross-phase traceability: with a grounding verdict, confirm it; otherwise verify every story ID appears in component-map.md, every API-layer story has endpoints in api-contracts.schema.json, and every UI-layer story has a mockup in specs/design/mockups/.
 - Include field-shape check: Compare mockup field names against API contract field names. Flag mismatches.
 - Write result to specs/reviews/phase-design-eval.json
 
@@ -148,6 +172,8 @@ The `.schema.json` files enable automated validation in later pipeline stages (t
 | `specs/design/data-models.schema.json` | JSON Schema for all data entities |
 | `specs/design/folder-structure.md` | Proposed directory tree with annotations |
 | `specs/design/component-map.md` | Story ID → implementation files mapping |
+| `specs/design/design-traces.json` | Trace spine: each component → story id(s) |
+| `specs/reviews/design-grounding.json` | (when story-traces exists) deterministic story-coverage verdict |
 | `specs/design/deployment.md` | Deployment architecture and CI/CD plan |
 | `specs/design/mockups/E{n}-S{n}.html` | One self-contained HTML mockup per UI story |
 

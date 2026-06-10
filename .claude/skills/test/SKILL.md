@@ -83,7 +83,33 @@ Create `specs/test_artefacts/` if it does not exist.
 - Data must be domain-representative: real-looking emails, valid UUIDs, plausible amounts.
 - Never use `"foo"`, `123`, or `"test"` as stand-in values.
 
-**If `--plan-only`: STOP HERE.** Steps 4 (plan + cases + fixtures) are the complete deliverable for the planning phase. Do not proceed to Playwright generation — source code does not exist yet. Report the generated artifacts and exit.
+**`specs/test_artefacts/test-traces.json`** — the trace spine: one entry per test case, each tracing to the acceptance-criterion id(s) it verifies:
+```json
+[
+  { "id": "TC-1", "text": "register returns 201 on valid input", "traces": ["E1-S1-AC1"] },
+  { "id": "TC-2", "text": "register rejects duplicate email with 409", "traces": ["E1-S1-AC2"] }
+]
+```
+Every test case must trace to at least one `{story}-AC{n}` id from `specs/stories/story-traces.json`. A test case tracing to no AC tests behavior nobody asked for; an AC with no test case is an untested requirement.
+
+### Step 4.5 — Grounding Gate [HARD BLOCK — when `specs/stories/story-traces.json` exists]
+
+Build the AC index (the acceptance criteria are the upstream this layer must cover) and run the deterministic check:
+
+```bash
+# Flatten every story's acceptance-criterion ids into the upstream index
+node -e "const fs=require('fs');const s=JSON.parse(fs.readFileSync('specs/stories/story-traces.json'));fs.writeFileSync('specs/test_artefacts/ac-index.json',JSON.stringify(s.flatMap(x=>(x.acs||[]).map(id=>({id})))))"
+
+node .claude/scripts/trace-check.js \
+  --required specs/test_artefacts/ac-index.json \
+  --downstream specs/test_artefacts/test-traces.json \
+  --layer test \
+  --out specs/reviews/test-grounding.json
+```
+
+`specs/reviews/test-grounding.json` is a **hard gate**: any `net_new` (test case tracing to no AC) or `dropped` (AC with no test case — an untested requirement) blocks. Resolve before reporting the plan. (Skip when `story-traces.json` does not exist.)
+
+**If `--plan-only`: STOP HERE.** Steps 4–4.5 (plan + cases + fixtures + trace spine + grounding gate) are the complete deliverable for the planning phase. Do not proceed to Playwright generation — source code does not exist yet. Report the generated artifacts and exit.
 
 ### Step 5 — Generate Playwright E2E Tests (`e2e/`)
 
@@ -133,6 +159,8 @@ All tests must pass on the first run against the target environment. A failing t
 | `specs/test_artefacts/test-plan.md` | Sprint test plan |
 | `specs/test_artefacts/test-cases.md` | Full test case inventory mapped to ACs |
 | `specs/test_artefacts/test-data/` | JSON fixture files per domain entity |
+| `specs/test_artefacts/test-traces.json` | Trace spine: each test case → AC id(s) |
+| `specs/reviews/test-grounding.json` | (when story-traces exists) deterministic AC-coverage verdict |
 | `e2e/{story-id}.spec.ts` | Playwright tests per story |
 | `playwright.config.ts` | Playwright configuration |
 

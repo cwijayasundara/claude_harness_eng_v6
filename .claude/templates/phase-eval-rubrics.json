@@ -27,12 +27,25 @@
         "actionability": "All stories are implementation-ready with 3-6 acceptance criteria, groups assigned, every AC maps to a features.json entry, and every AC has a stable {story}-AC{n} id in story-traces.json"
       }
     },
+    "test": {
+      "max_iterations": 3,
+      "upstream": "specs/stories/story-traces.json (acceptance-criterion ids)",
+      "hard_gate": "When specs/stories/story-traces.json exists, specs/reviews/test-grounding.json (trace-check.js over test-traces.json vs the AC index) must have pass=true. Any net_new (test case tracing to no AC) or dropped (AC with no test case — an untested requirement) is an automatic FAIL regardless of the weighted average.",
+      "criteria": {
+        "completeness": "Every acceptance criterion has >= 1 test case (zero dropped in test-grounding.json when present); success, error, and boundary paths covered",
+        "traceability": "Every test case in test-traces.json traces to a {story}-AC{n} id; zero net-new test cases — anchored to specs/reviews/test-grounding.json when present",
+        "specificity": "Test cases assert observable outcomes (status codes, exact values, error types), not 'works correctly'; fixtures use domain-representative data, never 'foo'/'test'/123",
+        "consistency": "Test data fixtures match the data-model schemas; test case ids are unique; AC references resolve to real story acceptance criteria",
+        "actionability": "Each test case has preconditions, ordered steps, and an expected result an evaluator can execute"
+      }
+    },
     "design": {
       "max_iterations": 3,
-      "upstream": "specs/stories/",
+      "upstream": "specs/stories/ (and specs/stories/story-traces.json when present)",
+      "hard_gate": "When specs/stories/story-traces.json exists, specs/reviews/design-grounding.json (trace-check.js over design-traces.json vs the stories) must have pass=true. Any net_new (component realizing no story) or dropped (story no component realizes) is an automatic FAIL regardless of the weighted average.",
       "criteria": {
-        "completeness": "Component-map covers every story; UI stories have mockups, API stories have endpoint definitions",
-        "traceability": "Every story ID appears in component-map; API endpoints trace back to specific acceptance criteria",
+        "completeness": "Component-map covers every story; UI stories have mockups, API stories have endpoint definitions (zero dropped stories in design-grounding.json when present)",
+        "traceability": "Every component in design-traces.json traces to >= 1 story; zero net-new components — anchored to specs/reviews/design-grounding.json when present, else every story ID appears in component-map and API endpoints trace to acceptance criteria",
         "specificity": "OpenAPI specs and JSON Schemas are syntactically valid; entity definitions are cross-referenced across components",
         "consistency": "Mockup form fields match API request/response schemas; no port conflicts between services; each source file owned by exactly one component",
         "actionability": "Folder structure is viable and buildable; shared files are annotated with owning component and consumers"

@@ -152,3 +152,23 @@ test('evaluator treats a {phase}-grounding.json verdict as a hard gate', () => {
   assert.match(ev, /\{phase\}-grounding\.json/);
   assert.match(ev, /spec-grounding\.json/);
 });
+
+test('/design and /test thread their trace spine + grounding gate', () => {
+  const design = fsw.readFileSync(pathw.join(ROOTW, '.claude', 'skills', 'design', 'SKILL.md'), 'utf8');
+  assert.match(design, /design-traces\.json/);
+  assert.match(design, /trace-check\.js/);
+  assert.match(design, /design-grounding\.json/);
+  assert.match(design, /HARD BLOCK/);
+  const tst = fsw.readFileSync(pathw.join(ROOTW, '.claude', 'skills', 'test', 'SKILL.md'), 'utf8');
+  assert.match(tst, /test-traces\.json/);
+  assert.match(tst, /trace-check\.js/);
+  assert.match(tst, /test-grounding\.json/);
+  assert.match(tst, /HARD BLOCK/);
+});
+
+test('rubric now has a test phase, and design/test phases hard-gate on grounding', () => {
+  const rubric = JSON.parse(fsw.readFileSync(pathw.join(ROOTW, '.claude', 'templates', 'phase-eval-rubrics.json'), 'utf8'));
+  assert.ok(rubric.phases.test, 'test phase must exist');
+  assert.match(rubric.phases.test.hard_gate, /test-grounding\.json/);
+  assert.match(rubric.phases.design.hard_gate, /design-grounding\.json/);
+});
