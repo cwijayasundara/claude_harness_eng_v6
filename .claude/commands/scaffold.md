@@ -342,7 +342,7 @@ cp $PLUGIN_SOURCE/program.md .claude/program.md
 cp $PLUGIN_SOURCE/settings.json .claude/settings.json
 ```
 
-Copy the telemetry stack (OTEL Collector + Prometheus + Pushgateway):
+Copy the telemetry stack config (OTEL Collector + Prometheus + Pushgateway). These files are **dormant** — telemetry stays off until the user enables it in Step 8 — but copying them now makes enabling a one-step change later:
 
 ```bash
 cp "$HARNESS_ROOT/telemetry_docker_compose.yml" ./telemetry_docker_compose.yml
@@ -618,7 +618,7 @@ If `lsp.servers` is empty, replace `{{LSP_HEALTH_CHECKS}}` with `echo "  (no LSP
 git init
 ```
 
-Install the harness commit-trailer git hook and enable Claude Code native telemetry:
+Install the harness commit-trailer and pre-commit git hooks (always):
 
 ```bash
 cp $PLUGIN_SOURCE/git-hooks/prepare-commit-msg .git/hooks/prepare-commit-msg
@@ -627,9 +627,13 @@ chmod +x .git/hooks/prepare-commit-msg .git/hooks/pre-commit
 mkdir -p .claude/runs
 ```
 
-**Native OTEL telemetry** — Claude Code ships 8 metrics (tokens, cost, sessions, commits, PRs, LOC, tool acceptance, active time) and 24 event types. These env vars must be set **both** in `.claude/settings.json` (so Claude Code loads them automatically) and in `.env` (for shell scripts and docker compose).
+### Optional: Enable telemetry (default: OFF)
 
-**Step A — Add telemetry env vars to `.claude/settings.json`'s `env` block.** This is the critical step — Claude Code only reads env vars from `settings.json`, not from `.env` files. Use the Edit tool to merge these into the existing `env` object (do NOT overwrite keys already present like `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`):
+**Telemetry is off by default.** The copied `settings.json` sets no OTEL/Pushgateway env vars, so Claude Code exports nothing and the `record-run` hook runs inert (it only pushes when `HARNESS_PUSHGATEWAY_URL` is set). **Do NOT do the steps below unless the user explicitly asks for telemetry dashboards.** If they don't, skip to the `.gitignore` step. (Full setup + how to read the dashboards lives in `docs/telemetry.md`.)
+
+To **enable** telemetry, Claude Code ships 8 native OTEL metrics (tokens, cost, sessions, commits, PRs, LOC, tool acceptance, active time); the harness adds custom lane/agent metrics via `record-run`. Set the env vars **both** in `.claude/settings.json` (so Claude Code loads them) and in `.env` (for shell scripts and docker compose).
+
+**Step A — Add telemetry env vars to `.claude/settings.json`'s `env` block.** Claude Code only reads env vars from `settings.json`, not `.env`. Merge these into the existing `env` object (do NOT overwrite keys already present like `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`):
 
 ```json
 "env": {
@@ -665,9 +669,9 @@ HARNESS_USER=${GIT_USER}
 ENVEOF
 ```
 
-You MUST complete both steps. Each team member's `settings.json` and `.env` must have their own `HARNESS_USER` so metrics are attributed correctly in the shared Prometheus/Grafana stack.
+If enabling, complete both steps. Each team member's `settings.json` and `.env` must have their own `HARNESS_USER` so metrics are attributed correctly in the shared Prometheus/Grafana stack.
 
-The telemetry stack is included at `telemetry_docker_compose.yml`. Start it with:
+The telemetry stack is included at `telemetry_docker_compose.yml`. Once the env vars above are set, start it with:
 
 ```bash
 docker compose -f telemetry_docker_compose.yml up -d
@@ -784,10 +788,9 @@ Installed:
   6 state files → .claude/state/
   1 manifest    → .claude/.claude-plugin/plugin.json
 
-Telemetry stack:
-  telemetry_docker_compose.yml    → OTEL Collector (:4317) + Prometheus (:9090) + Pushgateway (:9091)
-  telemetry/                      → Collector + Prometheus config
-  Start: docker compose -f telemetry_docker_compose.yml up -d
+Telemetry (OFF by default — opt-in):
+  telemetry_docker_compose.yml    → dormant OTEL Collector + Prometheus + Pushgateway stack
+  Enable: see docs/telemetry.md (set OTEL env vars in .claude/settings.json, then start the stack)
 
 LSP servers (auto-detected from stack):
   {for each lsp.servers entry, run `command -v {binary}` and print one of:}
@@ -820,10 +823,9 @@ Installed:
   6 state files → .claude/state/
   1 manifest    → .claude/.claude-plugin/plugin.json
 
-Telemetry stack:
-  telemetry_docker_compose.yml    → OTEL Collector (:4317) + Prometheus (:9090) + Pushgateway (:9091)
-  telemetry/                      → Collector + Prometheus config
-  Start: docker compose -f telemetry_docker_compose.yml up -d
+Telemetry (OFF by default — opt-in):
+  telemetry_docker_compose.yml    → dormant OTEL Collector + Prometheus + Pushgateway stack
+  Enable: see docs/telemetry.md (set OTEL env vars in .claude/settings.json, then start the stack)
 
 LSP servers (auto-detected from stack):
   {for each lsp.servers entry, run `command -v {binary}` and print ✓ or ✗ — same format as default report}

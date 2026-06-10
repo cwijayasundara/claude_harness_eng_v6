@@ -259,15 +259,17 @@ test('replay-telemetry seeds the ledger from existing run receipts', async () =>
   assert.equal(fs.existsSync(path.join(projectDir, '.claude', 'state', 'telemetry-ledger.jsonl')), true);
 });
 
-test('settings enable native Claude Code telemetry for the OTEL collector', () => {
+test('telemetry is OFF by default — no OTEL/Pushgateway env vars, but record-run stays wired', () => {
   const settings = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '.claude', 'settings.json'), 'utf8'));
 
-  assert.equal(settings.env.CLAUDE_CODE_ENABLE_TELEMETRY, '1');
-  assert.equal(settings.env.OTEL_METRICS_EXPORTER, 'otlp');
-  assert.equal(settings.env.OTEL_EXPORTER_OTLP_PROTOCOL, 'grpc');
-  assert.equal(settings.env.OTEL_EXPORTER_OTLP_ENDPOINT, 'http://localhost:4317');
-  assert.equal(settings.env.HARNESS_PUSHGATEWAY_URL, 'http://localhost:9091');
+  // Telemetry is opt-in (docs/telemetry.md). A fresh project must not export
+  // OTEL or push to a Pushgateway until the user explicitly enables it.
+  assert.equal(settings.env.CLAUDE_CODE_ENABLE_TELEMETRY, undefined);
+  assert.equal(settings.env.OTEL_METRICS_EXPORTER, undefined);
+  assert.equal(settings.env.OTEL_EXPORTER_OTLP_ENDPOINT, undefined);
+  assert.equal(settings.env.HARNESS_PUSHGATEWAY_URL, undefined);
 
+  // The record-run hook is still wired (it just runs inert without a gateway URL).
   const settingsText = JSON.stringify(settings);
   assert.match(settingsText, /UserPromptSubmit/);
   assert.match(settingsText, /record-run\.js/);
@@ -279,4 +281,17 @@ test('settings enable native Claude Code telemetry for the OTEL collector', () =
   );
   assert.ok(!perEditCommands.some((c) => c.includes('record-run.js')));
   assert.ok(!(settings.hooks.PostToolUse || []).some((m) => m.matcher === 'Bash'));
+});
+
+test('record-run does not push metrics when no Pushgateway URL is configured', async () => {
+  const projectDir = makeProject();
+  // Run the hook with HARNESS_PUSHGATEWAY_URL explicitly unset.
+  const env = { ...process.env };
+  delete env.HARNESS_PUSHGATEWAY_URL;
+  const result = await runHook(projectDir, {
+    hook_event_name: 'Stop',
+    session_id: 'no-telemetry',
+  }, { HARNESS_PUSHGATEWAY_URL: '' });
+  // It must exit cleanly (inert) without attempting a network push.
+  assert.strictEqual(result.status, 0, result.stderr);
 });

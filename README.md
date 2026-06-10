@@ -162,7 +162,35 @@ Hooks enforce these in real time; ratchet gates enforce them at commit time.
 | Tracker agent factory | Linear/Jira queue + parallel orchestrator | [docs/extras.md](docs/extras.md) |
 | Framework skill packs | LangChain / Google ADK aware codegen | [docs/extras.md](docs/extras.md) |
 | Understand-Anything | AST-backed graphs for brownfield work | [docs/extras.md](docs/extras.md) |
-| Dynamic workflows | Parallel fan-out forms of four skills | [docs/extras.md](docs/extras.md) |
+| Dynamic workflows | Author your own multi-agent orchestration | [docs/extras.md](docs/extras.md) |
+
+### Enable telemetry (off by default)
+
+The harness ships with telemetry **off** — a fresh scaffold sets no OTEL or Pushgateway env vars, Claude Code exports nothing, and the `record-run` hook stays inert (it only pushes when `HARNESS_PUSHGATEWAY_URL` is set). The `record-run` hook and the `telemetry/` config files are still installed, just dormant, so turning it on is a small change. To enable it:
+
+1. **Add the env vars to `.claude/settings.json`** (Claude Code reads env only from here, not `.env`). Merge into the existing `env` object:
+
+   ```json
+   "env": {
+     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+     "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+     "OTEL_METRICS_EXPORTER": "otlp",
+     "OTEL_LOGS_EXPORTER": "otlp",
+     "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+     "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
+     "OTEL_LOG_TOOL_DETAILS": "1",
+     "HARNESS_PUSHGATEWAY_URL": "http://localhost:9091",
+     "HARNESS_USER": "Your Name"
+   }
+   ```
+
+   `HARNESS_PUSHGATEWAY_URL` is the switch the `record-run` hook checks — without it, no metrics are pushed. Give each team member their own `HARNESS_USER`.
+
+2. **Start the stack:** `docker compose -f telemetry_docker_compose.yml up -d` (OTEL Collector :4317, Prometheus :9090, Pushgateway :9091, Grafana :3001 — login `admin`/`harness`).
+
+3. **Restart the Claude Code session** so it picks up the new env block.
+
+Point `OTEL_EXPORTER_OTLP_ENDPOINT` / `HARNESS_PUSHGATEWAY_URL` at a shared host to aggregate a whole team. Full setup, the metric catalog, and PromQL queries are in [docs/telemetry.md](docs/telemetry.md).
 
 ---
 

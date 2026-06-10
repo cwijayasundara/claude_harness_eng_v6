@@ -83,7 +83,7 @@ Three rules keep the prefix stable during a run:
 2. **Don't edit `CLAUDE.md` mid-session.** It's cached per-project; an edit busts the prefix for every later turn. The `session-learnings` Stop hook only *suggests* updates — apply them between sessions, not during a build.
 3. **Don't swap the orchestrator's model mid-session.** Model changes happen via subagents with their own context windows (planner=Opus, generator=Sonnet, etc. — see the Agents table), never by `/model`-switching the main loop. Dynamic values (dates, timestamps) belong in messages / `<system-reminder>` tags, never in cached content.
 
-Monitor cache hit rate like uptime. The harness already exports OTEL telemetry (`CLAUDE_CODE_ENABLE_TELEMETRY=1` in `.claude/settings.json`); `telemetry/cache-alerts.rules.yml` (wired into `telemetry/prometheus.yml`) and `telemetry/grafana/dashboards/cache-health.json` (auto-provisioned) add a hit-rate alert and dashboard on top of it. See `telemetry/CACHE_MONITORING.md`.
+Monitor cache hit rate like uptime. Telemetry is **off by default** (opt-in) — enable it per the README's "Enable telemetry" section (`CLAUDE_CODE_ENABLE_TELEMETRY=1` + the OTEL/Pushgateway env vars in `.claude/settings.json`). Once enabled, `telemetry/cache-alerts.rules.yml` (wired into `telemetry/prometheus.yml`) and `telemetry/grafana/dashboards/cache-health.json` (auto-provisioned) add a hit-rate alert and dashboard on top of it. See `telemetry/CACHE_MONITORING.md`.
 
 ## Key Files
 

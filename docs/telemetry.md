@@ -1,6 +1,6 @@
 # Telemetry — Setup and Reference
 
-Telemetry is **optional**. Nothing in the build loop depends on it — `record-run.js` pushes are fire-and-forget. Set it up when you want team dashboards, cost tracking, or productivity metrics.
+Telemetry is **off by default and opt-in**. Nothing in the build loop depends on it — a fresh scaffold sets no OTEL/Pushgateway env vars, so Claude Code exports nothing and the `record-run.js` hook stays inert (it only pushes when `HARNESS_PUSHGATEWAY_URL` is set). Turn it on when you want team dashboards, cost tracking, or productivity metrics: add the env vars in the **Enable** section below, then start the stack. (The quick version is in the README's "Enable telemetry" section.)
 
 ## Start the telemetry stack (one per team)
 
@@ -35,9 +35,9 @@ Developer C ──push──▶                                    │
 
 Anonymous read access is enabled — team members can view dashboards without logging in.
 
-## Verify telemetry env vars are in `settings.json`
+## Enable: add the telemetry env vars to `settings.json`
 
-Claude Code reads env vars from `.claude/settings.json`, not from `.env` files. `/scaffold` adds them automatically, but verify they're present:
+Claude Code reads env vars from `.claude/settings.json`, not from `.env` files. A fresh scaffold does **not** set these (telemetry is off by default) — add them to turn it on:
 
 Open `.claude/settings.json` and confirm the `env` block contains:
 
@@ -65,7 +65,7 @@ After changing `.claude/settings.json`, restart the active Claude Code session b
 | Metric source | Activated by | Pushed to |
 |---|---|---|
 | Native OTEL (tokens, cost, LOC, commits, PRs) | `CLAUDE_CODE_ENABLE_TELEMETRY=1` in `settings.json` | OTEL Collector → Prometheus |
-| Harness-custom (lanes, agents, turns, reviews) | `record-run.js` hook (always active) | Pushgateway → Prometheus |
+| Harness-custom (lanes, agents, turns, reviews) | `record-run.js` hook (pushes only when `HARNESS_PUSHGATEWAY_URL` is set) | Pushgateway → Prometheus |
 | JSONL run receipts | `record-run.js` hook (always active) | `.claude/runs/YYYY-MM-DD.jsonl` (local) |
 | Commit trailers | `prepare-commit-msg` git hook (always active) | Git commit messages |
 

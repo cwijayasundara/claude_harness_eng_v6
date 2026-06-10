@@ -208,12 +208,18 @@ function buildSnapshot(records, skillInventory = []) {
 
 function pushSnapshot({ projectDir, stateDir, gatewayUrl }) {
   return new Promise((resolve) => {
+    // Telemetry is opt-in: with no Pushgateway URL configured there is nothing
+    // to push to, so skip entirely rather than defaulting to localhost. Setting
+    // HARNESS_PUSHGATEWAY_URL (see docs/telemetry.md) turns the push on.
+    const target = gatewayUrl || process.env.HARNESS_PUSHGATEWAY_URL;
+    if (!target) return resolve({ pushed: false, body: '', disabled: true });
+
     seedLedgerFromRuns(projectDir, stateDir);
     const body = buildSnapshot(readLedger(stateDir), readSkillCatalog(projectDir));
     if (body.trim() === '') return resolve({ pushed: false, body });
 
     try {
-      const url = new URL(gatewayUrl || process.env.HARNESS_PUSHGATEWAY_URL || 'http://localhost:9091');
+      const url = new URL(target);
       const basePath = url.pathname.replace(/\/$/, '');
       const client = url.protocol === 'https:' ? https : http;
       const instance = encodeURIComponent(stableProjectInstance(projectDir));
