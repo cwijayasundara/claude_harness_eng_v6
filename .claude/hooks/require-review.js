@@ -54,7 +54,8 @@ function lastReviewerTs(transcriptPath) {
       (Array.isArray(msg.content) && msg.content) ||
       [];
     for (const part of parts) {
-      if (part && part.type === 'tool_use' && part.name === 'Agent') {
+      // Subagent spawns are recorded as 'Task' in transcripts; older builds used 'Agent'
+      if (part && part.type === 'tool_use' && (part.name === 'Task' || part.name === 'Agent')) {
         const sub = part.input && (part.input.subagent_type || part.input.subagent);
         if (sub && REVIEWER_AGENTS.has(sub)) {
           const tsRaw = msg.timestamp || (msg.message && msg.message.timestamp);

@@ -28,6 +28,13 @@ function countLines(text) {
   return text.endsWith('\n') ? lines.length - 1 : lines.length;
 }
 
+function applyEdit(current, oldStr, newStr, replaceAll) {
+  if (replaceAll) return current.split(oldStr).join(newStr);
+  const idx = current.indexOf(oldStr);
+  if (idx === -1) return null; // Edit will fail; don't block here
+  return current.slice(0, idx) + newStr + current.slice(idx + oldStr.length);
+}
+
 function simulateEdit(filePath, oldStr, newStr, replaceAll) {
   let current = '';
   try {
@@ -35,10 +42,27 @@ function simulateEdit(filePath, oldStr, newStr, replaceAll) {
   } catch (_) {
     return null; // file doesn't exist yet; Edit will fail on its own
   }
-  if (replaceAll) return current.split(oldStr).join(newStr);
-  const idx = current.indexOf(oldStr);
-  if (idx === -1) return null; // Edit will fail; don't block here
-  return current.slice(0, idx) + newStr + current.slice(idx + oldStr.length);
+  return applyEdit(current, oldStr, newStr, replaceAll);
+}
+
+function simulateMultiEdit(filePath, edits) {
+  let current;
+  try {
+    current = fs.readFileSync(filePath, 'utf8');
+  } catch (_) {
+    // MultiEdit may create a new file when the first edit has an empty old_string
+    if (edits.length > 0 && (edits[0].old_string || '') === '') {
+      current = edits[0].new_string || '';
+      edits = edits.slice(1);
+    } else {
+      return null; // MultiEdit will fail on its own
+    }
+  }
+  for (const e of edits) {
+    current = applyEdit(current, e.old_string || '', e.new_string || '', Boolean(e.replace_all));
+    if (current === null) return null;
+  }
+  return current;
 }
 
 try {
@@ -64,6 +88,8 @@ try {
       ti.new_string || '',
       Boolean(ti.replace_all)
     );
+  } else if (toolName === 'MultiEdit' && Array.isArray(ti.edits)) {
+    finalContent = simulateMultiEdit(filePath, ti.edits);
   }
 
   if (finalContent === null) process.exit(0);

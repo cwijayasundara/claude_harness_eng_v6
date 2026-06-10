@@ -84,9 +84,9 @@ Run the full test suite. All tests must pass.
 
 **Update test artifacts:** If `specs/test_artefacts/` exists, update `test-cases.md` and `test-data/` to reflect the changed acceptance criteria. Keep the test plan in sync with the actual state of the stories. If Playwright E2E tests exist in `e2e/`, update the affected spec files to match new behavior.
 
-### Step 6 — Spawn code-reviewer
+### Step 6 — Spawn clean-code-reviewer
 
-Spawn the `code-reviewer` agent on the full diff.
+Spawn the `clean-code-reviewer` agent (plugin-provided; recognized by the `require-review` Stop hook) on the full diff.
 
 Findings:
 - **BLOCK** — must fix before this improvement is shippable.

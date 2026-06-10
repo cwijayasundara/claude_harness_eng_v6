@@ -122,9 +122,9 @@ Order of execution:
 
 After each principle: run tests, run lint, run type checks. If anything breaks, fix it before moving to the next principle.
 
-### Step 6 — Spawn code-reviewer
+### Step 6 — Spawn clean-code-reviewer
 
-After all changes are complete, spawn the `code-reviewer` agent on the full diff.
+After all changes are complete, spawn the `clean-code-reviewer` agent (plugin-provided; recognized by the `require-review` Stop hook) on the full diff.
 
 The reviewer will return findings at three severity levels:
 - **BLOCK** — must fix before this refactor is considered complete.
