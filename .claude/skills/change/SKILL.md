@@ -22,7 +22,7 @@ One lane for changing what existing code *does*: adding to or altering observabl
 
 Both modes are **test-first**: no production code changes until a test that captures the desired behavior (or reproduces the bug) has been written and observed failing.
 
-> **/goal tip (optional unattended iteration):** On Claude Code v2.1.139+ you can let `/goal` drive this single bounded session toward a verifiable condition — e.g. `/goal pytest exits 0 and lint is clean, or stop after N turns` (issue mode: `/goal the failing repro test now passes and lint is clean, or stop after N turns`). Always include the "or stop after N turns" safety clause, and phrase conditions so each turn must produce *fresh* evidence (re-run the tests, show the exit code) to avoid false-positive completion. `/goal`'s evaluator (Haiku) only judges what is in the transcript — it does **not** run tools or read files — so the proof (test output, exit codes) must be printed in the conversation, not routed through subagents. That makes `/goal` suitable for this small lane only. Do **not** use `/goal` inside `/auto`. `/goal` does not replace the evaluator/sprint-contract gate.
+> **/goal tip (optional unattended iteration):** On Claude Code v2.1.139+ you can let `/goal` drive this single bounded session toward a verifiable condition — e.g. `/goal pytest exits 0 and lint is clean, or stop after N turns` (issue mode: `/goal the failing repro test now passes and lint is clean, or stop after N turns`). Always include the "or stop after N turns" safety clause, and phrase conditions so each turn must produce *fresh* evidence (re-run the tests, show the exit code) to avoid false-positive completion. `/goal`'s evaluator (Haiku) only judges what is in the transcript — it does **not** run tools or read files — so the proof (test output, exit codes) must be printed in the conversation, not routed through subagents. That makes `/goal` suitable for this small lane only. Do **not** use `/goal` inside `/auto`: it is single-session and would conflict with session chaining, the GAN evaluator, and sprint contracts. `/goal` does not replace the evaluator/sprint-contract gate.
 
 ---
 
@@ -71,7 +71,9 @@ Modify the existing implementation files until the red tests go green. Do not cr
 - If an API contract changes, update the schema definition and all serializers.
 - Keep changes scoped to what the acceptance criteria require.
 
-Run the full test suite — all tests must pass. If `specs/test_artefacts/` exists, update `test-cases.md`/`test-data/`; if Playwright E2E specs exist in `e2e/`, update the affected files.
+Run the full test suite — all tests must pass. Then run the project's lint and type checks (`npm run lint` / `ruff check .`, and `tsc --noEmit` / `mypy .`) and fix anything the change introduced — don't leave it for the reviewer to catch a diff that already has the error.
+
+If `specs/test_artefacts/` exists, update `test-cases.md` and `test-data/` to reflect the changed acceptance criteria — keep the test plan in sync with the actual state of the stories. If Playwright E2E specs exist in `e2e/`, update the affected files to match the new behavior.
 
 ### Step S6 — Review
 
@@ -137,7 +139,7 @@ Run the project's lint and type checks (`npm run lint`, `mypy`, `tsc --noEmit`, 
 
 ### Step I8 — Review
 
-Spawn the `clean-code-reviewer` agent on the diff; if the fix touches auth, secrets, user input, or persistence, also spawn `security-reviewer`. Resolve BLOCK findings (max 3 cycles).
+Spawn the `clean-code-reviewer` agent (plugin-provided; recognized by the `review-on-stop` Stop hook) on the diff. **If the fix touches authentication, authorization, secrets, user input handling, or data persistence, also spawn the `security-reviewer` agent** (run both in parallel in a single message). Resolve BLOCK findings (max 3 cycles).
 
 ### Step I9 — Commit and Open a PR
 
@@ -182,6 +184,6 @@ If you are not changing observable behavior, use `/refactor` instead.
 - **Updating tests to pass instead of fixing code.** Tests define expected behavior; a failing test after a change means the implementation is wrong — unless the AC explicitly changes that behavior.
 - **Fixing symptoms, not root cause** (issue mode). A null check that hides an upstream data problem is not a fix. Trace to the actual source.
 - **Scope creep.** Stick to the AC / issue. Open new stories or issues for adjacent work rather than bundling it.
-- **Not updating API contracts.** If a response shape changes, update the interface/model, the serializer, the OpenAPI spec, and any clients. Partial updates cause runtime failures.
+- **Not updating API contracts.** If a response shape changes, update the TypeScript interface or Pydantic model, the serializer, the OpenAPI spec, and any clients. Partial updates cause runtime failures.
 - **Creating parallel paths.** Adding `get_extraction_v2()` alongside `get_extraction()` is dead code. Modify in place and update callers.
 - **Incomplete staging** (issue mode). Stage every file that is part of the fix; a partial commit leaves the branch broken.

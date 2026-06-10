@@ -97,7 +97,7 @@ The commands you'll actually type are the lane entry points above. The full surf
 | `/tracker-publish` | Publish dependency groups to Linear/Jira (optional) |
 | `/install-framework-packs` | Verify configured framework packs (optional) |
 
-Execution modes for `/auto`: **Full** (all gates, the default) and **Lean** (same as Full but skips the per-iteration design-critic vision loop). Both run the security gate and the evaluator. For small or quick work use `/build --lite` or `/vibe` rather than a weaker `/auto` mode.
+Execution modes for `/auto`: **Full** (all gates, the default) and **Lean** (same as Full but does not run the design-critic vision loop). Both run the security gate and the evaluator. For small or quick work use `/build --lite` or `/vibe` rather than a weaker `/auto` mode.
 
 ---
 

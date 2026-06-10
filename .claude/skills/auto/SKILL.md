@@ -321,17 +321,19 @@ After the agent team completes, run the ratchet gate. The ratchet is monotonic: 
 | 6. Design critic (vision scoring, GAN loop) | Yes | No |
 | 7. Security (security-reviewer, block on critical/high) | Yes | Yes |
 
-**Lean** differs from **Full** only at Gate 6: it skips the per-iteration design-critic vision loop (run it once at group end instead). Every other gate — including the Gate 7 security review — runs in both modes. There is no mode that skips the security gate or the evaluator; that is the whole point of the ratchet.
+**Lean** differs from **Full** only at Gate 6: it does **not** run the design-critic vision loop at all. Every other gate — including the Gate 7 security review and the Gate 5 evaluator — runs in both modes. There is no mode that skips the security gate or the evaluator; that is the whole point of the ratchet.
 
-### Fast Lane (trivial changes)
+### Fast Lane (trivial commits)
 
-Skip gates 4-6 (architecture, evaluator, design critic) for commits that ONLY contain:
+The Fast Lane is a per-*commit* optimization (not an execution mode): for a commit that introduces no production logic, skip the expensive **gates 4, 5, and 6** (architecture, evaluator, design-critic). It applies to commits that ONLY contain:
 - Lint/format fixes (ruff auto-fix, eslint --fix)
 - Documentation updates (.md files only)
 - Type annotation fixes (no logic changes)
-- Learned rules updates
+- Learned-rules updates
 
-Detection: If `git diff --name-only` shows only .md files, or if the commit message starts with `fix: lint` or `docs:`, skip the evaluator. Gates 1-3 (tests + lint + coverage) always run.
+**Gates 1, 2, 3, and 7 still run** — tests, lint/types, coverage, **and the security review**. The security gate is never skipped, even on the Fast Lane (it is cheap and a no-op on a docs-only diff, but a "trivial" commit that quietly touches a secret or an env file must still be caught).
+
+Detection: take the Fast Lane only when `git diff --cached --name-only` shows **no** files with a source extension (`.py`/`.ts`/`.tsx`/`.js`/…) — i.e. only `.md`, config, or annotation-only changes — or the commit message starts with `fix: lint`, `style:`, or `docs:`. When in doubt, run the full ratchet.
 
 This prevents the expensive evaluator from blocking trivial housekeeping changes.
 
@@ -596,7 +598,7 @@ After each iteration, check the last `plateau_window` weighted scores:
 
 - Score meets threshold → PASS, move to next page
 - `max_iterations` reached → log to `failures.md`, extract learned rule, escalate to user. Do NOT revert (ratchet gate already passed for functional checks).
-- Lean mode: skips this section entirely (design-critic runs once at group end)
+- Lean mode: skips this section entirely (the design-critic does not run in Lean)
 
 ---
 
