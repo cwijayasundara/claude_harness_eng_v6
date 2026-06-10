@@ -1,6 +1,6 @@
 ---
 name: design
-description: Generate system architecture, machine-readable schemas, and UI mockups. Spawns planner + ui-designer concurrently.
+description: Generate system architecture, machine-readable schemas, and UI mockups. Spawns planner + generator concurrently.
 context: fork
 ---
 
@@ -20,7 +20,7 @@ No arguments. Reads from `specs/stories/` and produces architecture documents, m
 
 ## Overview
 
-This is the third gate in the SDLC pipeline. Two agents run concurrently in a single message: a `planner` agent produces system architecture and machine-readable schemas, while a `ui-designer` agent produces self-contained HTML mockups. After both complete, a `phase-evaluator` agent validates cross-phase traceability, schema correctness, and field-shape consistency between mockups and API contracts.
+This is the third gate in the SDLC pipeline. Two agents run concurrently in a single message: a `planner` agent produces system architecture and machine-readable schemas, while the `generator` agent produces self-contained HTML mockups. After both complete, an `evaluator` agent (artifact mode) validates cross-phase traceability, schema correctness, and field-shape consistency between mockups and API contracts.
 
 ---
 
@@ -48,7 +48,7 @@ Use the clarification budget:
 
 ## Step 1 — Spawn Two Agents Concurrently
 
-In a single message, invoke both agents using the Agent tool. Do not wait for the planner to finish before starting the ui-designer.
+In a single message, invoke both agents using the Agent tool. Do not wait for the planner to finish before starting the generator.
 
 ---
 
@@ -79,11 +79,13 @@ In a single message, invoke both agents using the Agent tool. Do not wait for th
 
 ---
 
-### Agent 2 — ui-designer
+### Agent 2 — generator (UI mockups)
+
+Spawn the `generator` agent for the mockup step, pointed at `.claude/skills/design/references/ui-mockups.md` for the full self-contained-HTML / CDN-React+Tailwind / aesthetic / data-fidelity guidance.
 
 **Prompt:**
 
-> Read all ready story files in specs/stories/ and specs/design/api-contracts.md (if it exists; wait or proceed with story context if not yet available).
+> Read `.claude/skills/design/references/ui-mockups.md`, then read all ready story files in specs/stories/ and specs/design/api-contracts.md (if it exists; wait or proceed with story context if not yet available).
 >
 > For every story with layer "UI", create a self-contained HTML mockup:
 >
@@ -99,11 +101,11 @@ In a single message, invoke both agents using the Agent tool. Do not wait for th
 
 ### Step 2 — Phase Evaluation Gate
 
-After both agents (planner + ui-designer) complete, spawn the `phase-evaluator` agent. This replaces and extends the previous field-shape validation.
+After both agents (planner + generator) complete, spawn the `evaluator` agent (artifact mode). This replaces and extends the previous field-shape validation.
 
 **Agent invocation:**
 
-Spawn Agent with subagent_type="phase-evaluator" and prompt:
+Spawn Agent with subagent_type="evaluator" and prompt:
 - Phase: design
 - Artifacts: specs/design/architecture.md, specs/design/api-contracts.md, specs/design/api-contracts.schema.json, specs/design/data-models.md, specs/design/data-models.schema.json, specs/design/folder-structure.md, specs/design/component-map.md, specs/design/deployment.md, all specs/design/mockups/*.html files
 - Upstream: specs/stories/ (all story files for cross-phase traceability)
@@ -117,7 +119,7 @@ Spawn Agent with subagent_type="phase-evaluator" and prompt:
 **Ratchet loop (max 3 iterations):**
 
 1. If verdict is **PASS** — proceed to human approval with eval summary + traceability report.
-2. If verdict is **FAIL** — revise design artifacts. May re-invoke planner or ui-designer for specific fixes. Re-run evaluator.
+2. If verdict is **FAIL** — revise design artifacts. May re-invoke planner or generator for specific fixes. Re-run evaluator.
 3. **Ratchet rule:** weighted_average must be >= previous iteration. Revert on regression.
 4. After 3 iterations — present best version with findings.
 
@@ -153,7 +155,7 @@ The `.schema.json` files enable automated validation in later pipeline stages (t
 
 ## Gate
 
-**Phase evaluation gate runs before human approval.** The phase-evaluator agent validates:
+**Phase evaluation gate runs before human approval.** The evaluator agent (artifact mode) validates:
 - Cross-phase traceability (every story has component-map entry, API endpoints, mockups)
 - Schema validity (OpenAPI + JSON Schema syntax)
 - Field-shape consistency (mockup fields match API contracts)
@@ -170,7 +172,7 @@ After presenting all artifacts and validation results, ask: "Does this architect
 
 ## Gotchas
 
-- **API shape divergence.** The planner and ui-designer run concurrently and may independently invent field names. The phase-evaluator gate exists specifically to catch this. Never skip it.
+- **API shape divergence.** The planner and generator run concurrently and may independently invent field names. The evaluator (artifact mode) gate exists specifically to catch this. Never skip it.
 - **Missing deployment.md.** Builder agents need to know the target environment. This file is required, not optional.
 - **Mock data must match API contracts.** If a mockup shows a `user_name` field but the API contract defines `username`, the downstream evaluator will flag a mismatch.
 - **No folder structure means builder agents guess.** The `folder-structure.md` and `component-map.md` are the routing instructions for the build phase. Missing or vague entries cause agents to create files in wrong locations.

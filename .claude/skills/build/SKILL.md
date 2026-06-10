@@ -100,7 +100,7 @@ For a multi-group project with multi-story groups, peak parallelism is 3 groups 
 
 After `/auto` completes (all groups done or stopping criteria met), run `/test --e2e-only` to generate Playwright E2E tests against the built source code. This uses the test plan and cases from Phase 3 as input.
 
-The test-engineer agent generates one Playwright spec per story (`e2e/{story-id}.spec.ts`), copies the Playwright config template, installs Playwright, and runs the full E2E suite. All tests must pass.
+The generator generates one Playwright spec per story (`e2e/{story-id}.spec.ts`), copies the Playwright config template, installs Playwright, and runs the full E2E suite. All tests must pass.
 
 If E2E tests fail, fix them before proceeding. The tests are the specification — if a test fails because the implementation is wrong, fix the implementation, not the test.
 

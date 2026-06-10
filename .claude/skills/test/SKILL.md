@@ -3,7 +3,7 @@ name: test
 description: Generate test plan, test cases, test data fixtures, and Playwright E2E tests mapped to acceptance criteria.
 argument-hint: "[--plan-only | --e2e-only]"
 context: fork
-agent: test-engineer
+agent: generator
 ---
 
 # Test Skill — Test Plan, Cases, Fixtures, and Playwright E2E
@@ -57,9 +57,9 @@ Read every story file in `specs/stories/`. For each story, extract:
 
 Every test case generated must trace to a specific AC. Record the mapping explicitly.
 
-### Step 3 — Spawn test-engineer Agent
+### Step 3 — Spawn the generator (test-authoring)
 
-Spawn the `test-engineer` agent with the full context: story files, source code structure, and the patterns read in Step 1.
+Spawn the `generator` agent with the full context: story files, source code structure, and the patterns read in Step 1. Point it at `.claude/skills/test/references/test-authoring.md` for the test-plan / test-case / Playwright-E2E / fixture authoring guidance.
 
 The agent operates in the forked context. It must not modify source code.
 

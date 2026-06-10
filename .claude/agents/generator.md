@@ -1,5 +1,6 @@
 ---
 name: generator
+model: sonnet
 description: Implements code and tests from user stories. Spawns agent teams for parallel execution. Negotiates sprint contracts with evaluator.
 tools:
   - Read

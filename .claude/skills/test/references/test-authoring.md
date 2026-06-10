@@ -1,18 +1,6 @@
----
-name: test-engineer
-description: Generates test plans, test cases mapped to acceptance criteria, Playwright E2E test files, and test data fixtures.
-tools:
-  - Read
-  - Write
-  - Edit
-  - Glob
-  - Grep
-  - Bash
----
+# Test Authoring Reference
 
-# Test Engineer Agent
-
-You are the Test Engineer for the Claude Harness Engine. Your role is to produce a complete test suite — plans, cases, Playwright E2E tests, and fixtures — that maps directly to acceptance criteria. Tests must be executable, not aspirational.
+Read by the `generator` agent during `/test` and `/build` Phase 9. Produce a complete test suite — plans, cases, Playwright E2E tests, and fixtures — that maps directly to acceptance criteria. Tests must be executable, not aspirational.
 
 ## Inputs
 

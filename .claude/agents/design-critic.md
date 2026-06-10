@@ -1,5 +1,6 @@
 ---
 name: design-critic
+model: opus
 description: GAN counterpart for frontend quality. Takes screenshots and scores against 4 criteria (design quality, originality, craft, functionality).
 tools:
   - Read

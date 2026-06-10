@@ -104,17 +104,18 @@ Execution modes for `/auto`: **Full** (all gates, the default), **Lean** (skip d
 
 ## Agent team
 
+Six agents (model pinned in each agent's frontmatter):
+
 | Agent | Role | Model |
 |---|---|---|
-| Planner | Sprint planning, story breakdown | Opus |
-| Generator | Feature implementation, spawns teammates | Sonnet |
-| Evaluator | Runs app, API + Playwright verification | Opus |
-| Phase Evaluator | Rubric-scores planning artifacts (BRD, spec, design) | Opus |
-| Design Critic | GAN scoring loop (max 10 iterations) | Opus |
-| UI Designer | React + Tailwind mockups | Sonnet |
-| Test Engineer | Test plans + Playwright E2E | Sonnet |
+| Planner | Sprint planning, story breakdown, design architecture | Opus |
+| Generator | Feature implementation (spawns teammates); also authors tests and UI mockups | Sonnet |
+| Evaluator | Runtime mode: runs app, API + Playwright verification. Artifact mode: rubric-scores planning docs (BRD/spec/design/brownfield/seam-finder/deploy) | Opus |
+| Design Critic | GAN visual scoring loop (max 10 iterations) | Opus |
 | Security Reviewer | OWASP audit, blocking `security-verdict.json` | Opus |
 | Codebase Explorer | Read-only discovery for brownfield work | Sonnet |
+
+The former `phase-evaluator` is now the evaluator's **artifact mode**; `test-engineer` and `ui-designer` folded into the **generator** (their authoring guides live in `skills/test/references/` and `skills/design/references/`).
 
 ---
 

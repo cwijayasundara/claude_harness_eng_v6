@@ -149,11 +149,11 @@ Create the `specs/brd/` directory if it does not exist.
 
 ### Step 4.5 — Phase Evaluation Gate
 
-Spawn the `phase-evaluator` agent to validate the BRD before human review.
+Spawn the `evaluator` agent (artifact mode) to validate the BRD before human review.
 
 **Agent invocation:**
 
-Spawn Agent with subagent_type="phase-evaluator" and prompt:
+Spawn Agent with subagent_type="evaluator" and prompt:
 - Phase: brd
 - Artifact: the BRD file path (specs/brd/brd.md or specs/brd/feature-{name}.md)
 - Upstream: none
@@ -186,7 +186,7 @@ Display the BRD and ask: "Does this BRD accurately capture the requirements? App
 
 ## Gate
 
-**Phase evaluation gate runs before human approval.** The phase-evaluator agent scores the BRD against 5 criteria (completeness, traceability, specificity, consistency, actionability). Threshold: average >= 7.0, all criteria >= 5.
+**Phase evaluation gate runs before human approval.** The evaluator agent (artifact mode) scores the BRD against 5 criteria (completeness, traceability, specificity, consistency, actionability). Threshold: average >= 7.0, all criteria >= 5.
 
 **Human approval is still required before proceeding to `/spec`.** The evaluator validates quality; the human validates intent.
 

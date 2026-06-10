@@ -62,25 +62,33 @@ test('phase enum contains exactly 6 values', () => {
   assert.deepStrictEqual(phaseEnum.sort(), ['brd', 'brownfield', 'deploy', 'design', 'seam', 'spec']);
 });
 
-// ── 3. Phase evaluator agent definition ─────────────────────────────────────
+// ── 3. Evaluator agent — artifact mode (merged from phase-evaluator) ─────────
 
-const agentPath = path.join(ROOT, '.claude', 'agents', 'phase-evaluator.md');
+const agentPath = path.join(ROOT, '.claude', 'agents', 'evaluator.md');
 const agentContent = fs.readFileSync(agentPath, 'utf8');
 
-test('phase-evaluator.md exists and is non-empty', () => {
+test('evaluator.md exists and is non-empty', () => {
   assert.ok(fs.existsSync(agentPath));
   assert.ok(agentContent.length > 0, 'agent file is empty');
 });
 
-test('phase-evaluator.md contains frontmatter with model: opus', () => {
+test('evaluator.md is pinned to model: opus', () => {
   assert.match(agentContent, /^---\n[\s\S]*?model:\s*opus[\s\S]*?\n---/);
 });
 
-test('phase-evaluator.md contains all 6 phase-specific guidance sections', () => {
+test('evaluator.md documents the artifact mode', () => {
+  assert.match(agentContent, /# Artifact Mode/);
+});
+
+test('evaluator.md artifact mode contains all 6 phase-specific guidance sections', () => {
   const phases = ['BRD', 'Spec', 'Design', 'Brownfield', 'Seam-Finder', 'Deploy'];
   for (const phase of phases) {
     assert.match(agentContent, new RegExp(`\\*\\*${phase}\\*\\*`), `missing guidance for ${phase}`);
   }
+});
+
+test('phase-evaluator.md no longer exists (merged into evaluator)', () => {
+  assert.ok(!fs.existsSync(path.join(ROOT, '.claude', 'agents', 'phase-evaluator.md')));
 });
 
 // ── 4. Hook limit values ────────────────────────────────────────────────────
@@ -165,16 +173,18 @@ test('telemetry-memory.js requires phase eval module', () => {
   assert.match(memoryContent, /require\(.*telemetry-phase-eval.*\)/);
 });
 
-// ── 7. Skill modifications — phase-evaluator references ─────────────────────
+// ── 7. Skill modifications — evaluator (artifact mode) references ────────────
 
 const skillNames = ['brd', 'spec', 'design', 'brownfield', 'seam-finder', 'deploy'];
 
 for (const skill of skillNames) {
-  test(`${skill}/SKILL.md contains phase-evaluator reference`, () => {
+  test(`${skill}/SKILL.md spawns evaluator in artifact mode (not the removed phase-evaluator)`, () => {
     const content = fs.readFileSync(
       path.join(ROOT, '.claude', 'skills', skill, 'SKILL.md'), 'utf8'
     );
-    assert.match(content, /phase-evaluator/);
+    assert.doesNotMatch(content, /phase-evaluator/, 'phase-evaluator was merged into evaluator');
+    assert.match(content, /evaluator/);
+    assert.match(content, /artifact mode/i);
   });
 }
 

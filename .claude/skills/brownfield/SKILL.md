@@ -222,11 +222,11 @@ Do not proceed to code changes from `/brownfield` unless the user explicitly ask
 
 ## Phase Evaluation Gate
 
-After all discovery artifacts are written, spawn the `phase-evaluator` agent to validate the brownfield analysis.
+After all discovery artifacts are written, spawn the `evaluator` agent (artifact mode) to validate the brownfield analysis.
 
 **Agent invocation:**
 
-Spawn Agent with subagent_type="phase-evaluator" and prompt:
+Spawn Agent with subagent_type="evaluator" and prompt:
 - Phase: brownfield
 - Artifacts: specs/brownfield/codebase-map.md, specs/brownfield/architecture-map.md, specs/brownfield/test-map.md, specs/brownfield/risk-map.md, specs/brownfield/coupling-report.md, specs/brownfield/code-graph.json (if exists)
 - Upstream: null (verify against actual codebase instead)

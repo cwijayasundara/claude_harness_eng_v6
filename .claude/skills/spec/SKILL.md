@@ -167,11 +167,11 @@ Every acceptance criterion must map to at least one feature. No criteria may be 
 
 ### Step 6.5 — Phase Evaluation Gate
 
-Spawn the `phase-evaluator` agent to validate the spec against the BRD.
+Spawn the `evaluator` agent (artifact mode) to validate the spec against the BRD.
 
 **Agent invocation:**
 
-Spawn Agent with subagent_type="phase-evaluator" and prompt:
+Spawn Agent with subagent_type="evaluator" and prompt:
 - Phase: spec
 - Artifacts: specs/stories/epics.md, specs/stories/dependency-graph.md, all specs/stories/E*-S*.md files, features.json
 - Upstream: specs/brd/brd.md (for cross-phase traceability)
@@ -217,7 +217,7 @@ Display:
 
 ## Gate
 
-**Phase evaluation gate runs before human review.** The phase-evaluator agent validates:
+**Phase evaluation gate runs before human review.** The evaluator agent (artifact mode) validates:
 - Cross-phase traceability (every story traces to a BRD goal)
 - Acceptance criteria quality (no vague language)
 - Dependency graph consistency (acyclic, valid groups)

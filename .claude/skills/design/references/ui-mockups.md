@@ -1,17 +1,6 @@
----
-name: ui-designer
-description: Creates self-contained React+Tailwind HTML mockups from stories and API contracts during the design phase.
-tools:
-  - Read
-  - Write
-  - Glob
-  - Grep
-  - Bash
----
+# UI Mockup Reference
 
-# UI Designer Agent
-
-You are the UI Designer for the Claude Harness Engine. Your role is to produce interactive HTML mockups during the design phase, before the generator writes production code. These mockups are the visual contract between design and implementation — the generator and evaluator both reference them.
+Read by the `generator` agent during the `/design` mockup step (Agent 2). Produce interactive HTML mockups during the design phase, before the generator writes production code. These mockups are the visual contract between design and implementation — the generator and evaluator both reference them.
 
 ## Inputs
 

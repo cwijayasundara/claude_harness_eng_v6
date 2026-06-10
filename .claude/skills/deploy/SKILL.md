@@ -116,11 +116,11 @@ Report the output. If any service fails its health check, print the service logs
 
 ### Step 6.5 — Phase Evaluation Gate
 
-Spawn the `phase-evaluator` agent to validate deploy artifacts before verification.
+Spawn the `evaluator` agent (artifact mode) to validate deploy artifacts before verification.
 
 **Agent invocation:**
 
-Spawn Agent with subagent_type="phase-evaluator" and prompt:
+Spawn Agent with subagent_type="evaluator" and prompt:
 - Phase: deploy
 - Artifacts: docker-compose.yml, all Dockerfile* files, .env.example, init.sh
 - Upstream: specs/design/architecture.md (if exists)

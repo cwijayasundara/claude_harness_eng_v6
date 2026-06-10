@@ -394,7 +394,7 @@ These plugins are complementary to the harness and do not conflict:
 - `commit-commands` — git workflows (our harness manages commits in `/auto`, but manual commits need this)
 - `security-guidance` — real-time, in-session security review (per-edit pattern match + background diff/commit reviews). **Advisory only — it never blocks** (per its docs); findings are fed to Claude as suggestions. It complements but does not replace enforcement: the deterministic `pre-write-gate` hook blocks secrets before they reach disk, and the **`security-reviewer` agent is the enforced gate** (its `security-verdict.json` fails `/evaluate` and the `/auto` loop on any critical/high finding). Sharpen the plugin with a project threat model in `.claude/claude-security-guidance.md` and custom deterministic patterns in `.claude/security-patterns.yaml`. The plugin itself **cannot block** (advisory by design), but the harness `pre-write-gate` hook reads that same patterns file and **hard-blocks** any rule you flag `block: true` — so the plugin warns on every pattern and the hook enforces the subset you choose.
 - `pr-review-toolkit` — specialized PR agents for after the harness finishes building
-- `frontend-design` — aesthetic-direction skill. Invoked by `ui-designer` during `/design` and by frontend teammates during `/implement` to avoid raw-Tailwind-default UI. The `design-critic` GAN loop still owns scoring and iteration control — `frontend-design` does not replace it.
+- `frontend-design` — aesthetic-direction skill. Invoked by `generator` during `/design` and by frontend teammates during `/implement` to avoid raw-Tailwind-default UI. The `design-critic` GAN loop still owns scoring and iteration control — `frontend-design` does not replace it.
 - `context7` — up-to-date library/docs lookup MCP. Useful when teammates need current API references for third-party libraries.
 - `code-simplifier` — in-session `/simplify` skill used during `/refactor` for reuse, quality, and efficiency cleanup.
 
@@ -678,7 +678,7 @@ For single-root projects (custom Python/Node, project type D), skip this step �
 Architecture reference document (~200-300 lines):
 - System architecture ASCII diagram
 - Karpathy ratchet loop diagram
-- Agent roles table (7 agents)
+- Agent roles table (6 agents)
 - Hook execution order (consolidated per-event hooks + git commit gates)
 - State files description
 - Sprint contract format summary
@@ -746,13 +746,12 @@ Planner   Generator  Evaluator  Test Eng  Security Rev
 
 | Agent            | File                          | Responsibility                         |
 |------------------|-------------------------------|----------------------------------------|
-| Planner          | `.claude/agents/planner.md`   | Sprint planning, story breakdown       |
-| Generator        | `.claude/agents/generator.md` | Feature implementation                 |
-| Evaluator        | `.claude/agents/evaluator.md` | API + Playwright verification          |
-| Design Critic    | `.claude/agents/design-critic.md` | Design scoring (Karpathy loop)     |
-| UI Designer      | `.claude/agents/ui-designer.md`   | Mockups, design tokens             |
-| Test Engineer    | `.claude/agents/test-engineer.md` | Test authoring and execution       |
-| Security Reviewer| `.claude/agents/security-reviewer.md` | Vulnerability auditing         |
+| Planner          | `.claude/agents/planner.md`   | Sprint planning, story breakdown, architecture |
+| Generator        | `.claude/agents/generator.md` | Feature implementation; also test authoring (`skills/test/references/test-authoring.md`) and UI mockups (`skills/design/references/ui-mockups.md`) |
+| Evaluator        | `.claude/agents/evaluator.md` | Runtime mode: API + Playwright verification. Artifact mode: rubric-scores planning docs |
+| Design Critic    | `.claude/agents/design-critic.md` | Visual design scoring (Karpathy loop) |
+| Security Reviewer| `.claude/agents/security-reviewer.md` | Vulnerability auditing             |
+| Codebase Explorer| `.claude/agents/codebase-explorer.md` | Read-only brownfield discovery     |
 
 ## Hook Registration (settings.json)
 
@@ -1026,7 +1025,7 @@ Tailor the "Next steps" ordering based on the project-type decision:
 ✓ Claude Harness Engine v5 scaffolded successfully.
 
 Installed:
-  8 agents      → .claude/agents/
+  agents        → .claude/agents/
   skills        → .claude/skills/
   hooks         → .claude/hooks/ (one per event + lib/)
   16 templates  → .claude/templates/
@@ -1062,7 +1061,7 @@ Next steps:
 ✓ Claude Harness Engine v5 scaffolded successfully (minimal project mode).
 
 Installed:
-  8 agents      → .claude/agents/
+  agents        → .claude/agents/
   skills        → .claude/skills/
   hooks         → .claude/hooks/ (one per event + lib/)
   16 templates  → .claude/templates/

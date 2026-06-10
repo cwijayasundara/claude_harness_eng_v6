@@ -115,11 +115,11 @@ If none of the top 3 candidates fit the goal:
 
 ### Step 4.5 — Phase Evaluation Gate
 
-Spawn the `phase-evaluator` agent to validate seam candidates.
+Spawn the `evaluator` agent (artifact mode) to validate seam candidates.
 
 **Agent invocation:**
 
-Spawn Agent with subagent_type="phase-evaluator" and prompt:
+Spawn Agent with subagent_type="evaluator" and prompt:
 - Phase: seam
 - Artifact: specs/brownfield/seams-{goal-slug}.md
 - Upstream: specs/brownfield/code-graph.json

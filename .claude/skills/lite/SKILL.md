@@ -46,7 +46,7 @@ Escalate to `/brd → /spec → /design → /auto` (or `/build`) when **any** ar
 - Auth, payments, multi-tenant access, or any regulated data domain.
 - More than ~5 stories or more than one dependency group.
 - Public API contract that other teams or external clients depend on.
-- UI/UX is a meaningful product surface (use the full design lane with `ui-designer`).
+- UI/UX is a meaningful product surface (use the full design lane).
 - Requirements remain ambiguous after the bounded interview below.
 
 If eligibility is uncertain, use the `clarify` gate (`.claude/skills/clarify/SKILL.md`) — ask at most 3 questions, prefer recording assumptions over interrogating. If still uncertain, escalate and stop.

@@ -74,3 +74,33 @@ test('no doc references a removed skill directory', () => {
   }
   assert.deepStrictEqual(offenders, [], offenders.join('\n'));
 });
+
+function listAgents() {
+  return fs.readdirSync(AGENTS_DIR).filter((f) => f.endsWith('.md')).map((f) => f.replace(/\.md$/, ''));
+}
+
+// Every agent has its model pinned in frontmatter — no silent inheritance drift.
+test('every agent pins a model in frontmatter', () => {
+  const missing = [];
+  for (const agent of listAgents()) {
+    const text = fs.readFileSync(path.join(AGENTS_DIR, `${agent}.md`), 'utf8');
+    if (!/^---\n[\s\S]*?\nmodel:\s*\S+[\s\S]*?\n---/.test(text)) missing.push(agent);
+  }
+  assert.deepStrictEqual(missing, [], `agents missing a model: pin: ${missing.join(', ')}`);
+});
+
+// Merged-away agents must not be referenced as spawn targets anywhere.
+test('no doc references a removed agent', () => {
+  const removed = ['phase-evaluator', 'test-engineer', 'ui-designer'];
+  const present = new Set(listAgents());
+  const offenders = [];
+  for (const name of removed) {
+    if (present.has(name)) continue; // not yet removed — skip
+    for (const file of allDocFiles()) {
+      if (new RegExp(`\\b${name}\\b`).test(fs.readFileSync(file, 'utf8'))) {
+        offenders.push(`${path.relative(ROOT, file)} references removed agent '${name}'`);
+      }
+    }
+  }
+  assert.deepStrictEqual(offenders, [], offenders.join('\n'));
+});

@@ -89,7 +89,7 @@ The harness is now an **agent factory**: one scaffold, optional framework skill 
 │                                      │    │  symphony_clone (Docker container):  │
 │  /auto orchestrates the ratchet:     │    │   • polls tracker for Ready + label  │
 │   generator → evaluator → critic     │    │   • clones repo to /workspaces/<key> │
-│   → security → test-engineer.        │    │   • runs `claude --print …` with the │
+│   → security → generator.        │    │   • runs `claude --print …` with the │
 │                                      │    │     /auto prompt for that group      │
 │  Human reviews diffs and merges.     │    │   • reads result.json proof          │
 │                                      │    │   • opens PR + comments back         │
@@ -182,8 +182,8 @@ The `codebase-explorer` agent has `LSP` in its tool grants and uses it for symbo
 | generator | Sonnet | + Edit · Agent (spawns teammates) | Code + tests, spawns agent team, TDD |
 | evaluator | Opus | + Playwright MCP (navigate, click, fill, snap) | Runs app, 3-layer verification, structured failures |
 | design-critic | Opus | + Playwright MCP (resize, hover, screenshot) | GAN scoring (DQ/O/C/F), plateau pivot |
-| ui-designer | Sonnet | Read · Write · Glob · Grep · Bash | React + Tailwind HTML mockups |
-| test-engineer | Sonnet | Read · Write · Edit · Glob · Grep · Bash | Test plan, Playwright E2E, fixtures |
+| generator | Sonnet | Read · Write · Glob · Grep · Bash | React + Tailwind HTML mockups |
+| generator | Sonnet | Read · Write · Edit · Glob · Grep · Bash | Test plan, Playwright E2E, fixtures |
 | security-reviewer | Opus | Read · Write · Grep · Glob · Bash | OWASP scan + adversarial find-then-refute; enforced gate (BLOCK on critical/high) |
 
 ### The enforcement hooks
