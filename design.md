@@ -326,7 +326,7 @@ For frontend groups, after the main ratchet passes, the design-critic runs a sec
 | Craft | 0.75× | Typography hierarchy, spacing, alignment |
 | Functionality | 0.75× | User can understand and complete tasks |
 
-Two pass conditions must BOTH be met: weighted average ≥ 7 AND every individual criterion ≥ 5. Calibration anchors at score 5, 7, 9 in `evaluation/references/scoring-examples.md`. Plateau detection (no improvement across 3 iterations) triggers a forced pivot.
+Two pass conditions must BOTH be met: weighted average ≥ 7 AND every individual criterion ≥ 5. Calibration anchors at score 5, 7, 9 in `evaluate/references/scoring-examples.md`. Plateau detection (no improvement across 3 iterations) triggers a forced pivot.
 
 ---
 

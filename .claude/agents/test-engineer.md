@@ -42,9 +42,9 @@ Stay stack-neutral. The strategy below and the Playwright E2E section are cross-
 
 | Stack signal | Read this reference |
 |---|---|
-| backend `stack.backend.language` is python | `.claude/skills/testing/references/tests-python.md` (pytest) |
-| frontend `stack.frontend` is React + TypeScript | `.claude/skills/testing/references/tests-react-typescript.md` (vitest + RTL) |
-| any other stack | no reference yet — apply the generic strategy; add `testing/references/tests-<stack>.md` following the same pattern |
+| backend `stack.backend.language` is python | `.claude/skills/code-gen/references/tests-python.md` (pytest) |
+| frontend `stack.frontend` is React + TypeScript | `.claude/skills/code-gen/references/tests-react-typescript.md` (vitest + RTL) |
+| any other stack | no reference yet — apply the generic strategy; add `code-gen/references/tests-<stack>.md` following the same pattern |
 
 The TypeScript/Playwright examples elsewhere in this file are illustrative; translate them to the project's stack via its reference. Playwright E2E itself is cross-stack and applies regardless of backend.
 

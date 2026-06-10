@@ -1,11 +1,6 @@
----
-name: testing
-description: "[Reference, not a command] Testing patterns — Playwright E2E, test structure, fixture management, mock boundaries. Read by generator teammates while writing tests. To generate test artefacts, use /test instead."
----
+# Test Strategy Reference
 
-# Testing Skill — Reference Only
-
-> **This is a reference skill, not an action skill.** It is read by generator teammates while they write test code, and by `/test` for pattern guidance. **Do not invoke `/testing` directly** — there is no workflow here. To generate test plan, cases, fixtures, and Playwright E2E files, run `/test`.
+The layer model, boundary-condition checklist, and test-data rules read by generator teammates while writing tests. Part of the engineering-standards (code-gen) reference pack. TDD discipline, mock-boundary rules, and the coverage gate are canonical in `code-gen/SKILL.md` and the `superpowers:test-driven-development` skill — this file adds the layer model and boundary checklist, not a second copy of those rules.
 
 ---
 
@@ -31,7 +26,7 @@ Across all layers, tests verify behavior through public interfaces. They should 
 
 ### Layer 3 — End-to-End Tests (E2E)
 - Test complete user flows through the running application.
-- Use Playwright (see `references/playwright.md` for config and patterns).
+- Use Playwright (see `test-playwright.md` for config and patterns).
 - Run against a locally started application with a seeded test database.
 - Location: `tests/e2e/`.
 
@@ -45,7 +40,7 @@ Across all layers, tests verify behavior through public interfaces. They should 
 | Integration | All happy paths + documented error paths per endpoint |
 | E2E | All user stories in the current sprint contract |
 
-The numeric gate is single-sourced: the **floor is 80%, target 100%**, enforced by `/auto` Gate 3 and the coverage hook (see `.claude/skills/code-gen/SKILL.md`). This skill defers to those for the exact number. TDD discipline and mock-boundary rules are likewise canonical in `code-gen/SKILL.md` — this skill adds the layer model and boundary-condition checklist, not a second copy of those rules. A failing coverage gate blocks merge — it is not advisory.
+The numeric gate is single-sourced: the **floor is 80%, target 100%**, enforced by `/auto` Gate 3 and the coverage hook (see `.claude/skills/code-gen/SKILL.md`). This file defers to those for the exact number. A failing coverage gate blocks merge — it is not advisory.
 
 ---
 
@@ -89,13 +84,13 @@ If the only way to test behavior is through fragile internals, flag an interface
 
 ## Tracer-Bullet TDD
 
-The red-green-refactor / vertical-slice discipline (one failing behavior test → minimum code → pass → repeat) is canonical in `.claude/skills/code-gen/SKILL.md` and the `superpowers:test-driven-development` skill — follow those rather than a second copy here. This skill's contribution is the layer model and the boundary-condition checklist above, not the TDD loop.
+The red-green-refactor / vertical-slice discipline (one failing behavior test → minimum code → pass → repeat) is canonical in `.claude/skills/code-gen/SKILL.md` and the `superpowers:test-driven-development` skill — follow those rather than a second copy here. This file's contribution is the layer model and the boundary-condition checklist above, not the TDD loop.
 
 ---
 
 ## Test Data Rules
 
-- Use realistic domain values in all tests. See `references/test-data.md` for fixture patterns.
+- Use realistic domain values in all tests. See `test-data.md` for fixture patterns.
 - Never use placeholder values: `"test"`, `0`, `"foo"`, `null` as stand-ins for real domain objects.
 - Use factory functions or builder patterns to construct test data — not inline object literals.
 - Randomize test data where possible using seeded fakers (Faker.js, Faker for Python).

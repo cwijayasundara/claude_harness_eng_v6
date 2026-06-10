@@ -42,11 +42,11 @@ If required prerequisites are missing, stop and report what is absent.
 
 ### Step 1 — Read Patterns
 
-Read `.claude/skills/code-gen/SKILL.md` for quality principles (typing, error handling, test structure).
+Read `.claude/skills/code-gen/SKILL.md` for quality principles (typing, error handling, test structure), plus `.claude/skills/code-gen/references/test-strategy.md` for the test-layer model and boundary checklist.
 
-Read `.claude/skills/evaluation/SKILL.md` for the Playwright patterns and contract verification approach used by the evaluator.
+Read `.claude/skills/evaluate/SKILL.md` for the contract verification approach used by the evaluator.
 
-If a `references/playwright.md` file exists under `.claude/skills/testing/`, read it now for project-specific Playwright patterns.
+Read `.claude/skills/code-gen/references/test-playwright.md` for project-specific Playwright patterns.
 
 ### Step 2 — Read Acceptance Criteria
 
@@ -91,7 +91,7 @@ Create `e2e/` at the project root if it does not exist.
 
 For each story, generate a Playwright test file named `{story-id}.spec.ts`.
 
-Selector and assertion rules are single-sourced in `.claude/skills/evaluation/references/playwright-patterns.md` (the canonical Playwright reference, shared with `/evaluate`). The rules below summarize it — defer to that file if they differ.
+Selector and assertion rules are single-sourced in `.claude/skills/evaluate/references/playwright-patterns.md` (the canonical Playwright reference, shared with `/evaluate`). The rules below summarize it — defer to that file if they differ.
 
 Rules for Playwright tests:
 - Use `getByRole`, `getByLabel`, `getByText` — never CSS selectors or XPath.

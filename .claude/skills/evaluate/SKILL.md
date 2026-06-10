@@ -38,7 +38,7 @@ Before running `/evaluate`, verify:
 
 ### Step 1 — Load Evaluation Patterns
 
-Read `.claude/skills/evaluation/SKILL.md` for project-specific evaluation patterns, custom assertion helpers, and any environment-specific overrides.
+Read the stack-matched verification reference under `.claude/skills/evaluate/references/` (see the References section below) for the rigor that applies to this project's stack, plus any custom assertion helpers.
 
 ### Step 2 — Load Sprint Contract
 
@@ -122,7 +122,7 @@ If `time_ms > max_response_time_ms`, report as WARN (not BLOCK — performance i
 
 ## Layer 2 — Playwright Checks
 
-Selector and assertion rules are single-sourced in `.claude/skills/evaluation/references/playwright-patterns.md` (the canonical Playwright reference, shared with `/test`). The rules below are a summary — defer to that file if they differ.
+Selector and assertion rules are single-sourced in `.claude/skills/evaluate/references/playwright-patterns.md` (the canonical Playwright reference, shared with `/test`). The rules below are a summary — defer to that file if they differ.
 
 For each entry in `playwright_checks`:
 
@@ -265,3 +265,32 @@ Determine the current execution mode from `project-manifest.json` field `executi
 - **Use expect().toBeVisible(), not waitForTimeout():** Arbitrary timeouts hide real failures. If an element does not appear immediately, the check fails.
 - **Docker won't start — that's a FAIL:** If the stack is unhealthy, record `failure_layer: "docker"` and stop. Do not attempt workarounds or partial evaluations.
 - **Do not modify sprint contracts:** The contract is a read-only input. If the contract appears wrong, report it; do not edit it to make checks pass.
+
+---
+
+## References
+
+The evaluation reference pack (read by the evaluator and design-critic agents) lives under `.claude/skills/evaluate/references/`:
+
+| File | Contents |
+|------|----------|
+| `references/contract-schema.json` | Sprint contract JSON schema |
+| `references/scoring-rubric.md` | Design scoring rubric (4 criteria, weights, exemplars) |
+| `references/scoring-examples.md` | Calibration anchors (score 5, 7, 9) — read before scoring |
+| `references/playwright-patterns.md` | Selector patterns and assertion patterns for Layer 2 (canonical Playwright reference, shared with `/test`) |
+| `references/verify-python.md` | Deep Python verification rigor (pytest/mypy/ruff, traceback parsing, FastAPI/async) — load when the backend is Python |
+| `references/verify-react.md` | Deep React/TS verification rigor (build/tsc/vitest, browser/console/hydration signals) — load when the frontend is React/TS |
+
+## Evaluator Behavioral Rules
+
+These rules are non-negotiable. Deviation invalidates the evaluation.
+
+1. **Execute every check.** Do not skip a check because a related check passed.
+2. **Never rationalize a failure.** If the check specifies `status: 200` and you get `201`, that is a FAIL.
+3. **Evidence over opinion.** Every verdict must cite specific output: response body, screenshot path, line number.
+4. **No partial credit on binary checks.** API and Playwright checks are pass/fail.
+5. **Design scores are evidence-based.** Cite what you observed, not what you assumed.
+6. **Do not infer intent.** If the contract says check X and X is absent, the check fails.
+7. **Run checks in order.** Layer 1 before Layer 2 before Layer 3, then the Layer 4 security gate.
+8. **Document every check result,** even passing ones.
+9. **Security is a gate, not advice.** The overall verdict is FAIL if `specs/reviews/security-verdict.json#pass` is false (any critical/high finding). A functional pass with an open BLOCK vulnerability is still a FAIL. The `security-guidance` plugin is advisory and does not satisfy this gate — the `security-reviewer` agent does.

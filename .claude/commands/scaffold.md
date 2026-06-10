@@ -303,12 +303,15 @@ test -f "$PLUGIN_SOURCE/templates/context.template.md"
 test -f "$PLUGIN_SOURCE/templates/claude-security-guidance.template.md"
 test -f "$PLUGIN_SOURCE/templates/security-patterns.template.yaml"
 test -f "$PLUGIN_SOURCE/templates/story.template.md"
+# Assert load-bearing skills exist rather than a brittle exact count (the count
+# changes whenever a skill is merged/split — existence checks don't).
+for s in scaffold build auto brownfield review vibe refactor code-gen evaluate; do
+  test -f "$PLUGIN_SOURCE/skills/$s/SKILL.md"
+done
 SKILL_COUNT=$(find "$PLUGIN_SOURCE/skills" -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')
-TEMPLATE_COUNT=$(find "$PLUGIN_SOURCE/templates" -maxdepth 1 -type f | wc -l | tr -d ' ')
-WORKFLOW_COUNT=$(find "$PLUGIN_SOURCE/workflows" -maxdepth 1 -name '*.js' | wc -l | tr -d ' ')
-test "$SKILL_COUNT" = "27"
-test "$TEMPLATE_COUNT" = "16"
-test "$WORKFLOW_COUNT" = "4"
+test "$SKILL_COUNT" -ge 15   # sanity floor, not an exact pin
+test -f "$PLUGIN_SOURCE/templates/story.template.md"
+test -f "$PLUGIN_SOURCE/templates/sprint-contract.json"
 test -f "$PLUGIN_SOURCE/git-hooks/prepare-commit-msg"
 test -f "$PLUGIN_SOURCE/git-hooks/pre-commit"
 test -f "$HARNESS_ROOT/README.md"
@@ -544,11 +547,11 @@ One-way dependencies only. See `.claude/architecture.md` for full rules.
 |------|-------|
 | Architecture rules | `.claude/architecture.md` |
 | Quality principles | `.claude/skills/code-gen/SKILL.md` |
-| Testing patterns | `.claude/skills/testing/SKILL.md` |
+| Testing patterns | `.claude/skills/code-gen/references/test-strategy.md` |
 | Brownfield discovery | `specs/brownfield/` and `.claude/skills/brownfield/SKILL.md` |
-| Evaluation rubric | `.claude/skills/evaluation/SKILL.md` |
-| Sprint contract format | `.claude/skills/evaluation/references/contract-schema.json` |
-| Playwright patterns | `.claude/skills/evaluation/references/playwright-patterns.md` |
+| Evaluation rubric | `.claude/skills/evaluate/SKILL.md` |
+| Sprint contract format | `.claude/skills/evaluate/references/contract-schema.json` |
+| Playwright patterns | `.claude/skills/evaluate/references/playwright-patterns.md` |
 | Human control knobs | `.claude/program.md` |
 | Dynamic workflows | `.claude/workflows/` (each `.js` → a `/<name>` command) |
 | Small work lane | `.claude/skills/vibe/SKILL.md` |
@@ -1011,7 +1014,7 @@ next_action: Run /brd to start
 
 ## Step 10: Report
 
-The skill count is 27. The Step 3 validation also asserts this — keep both in sync if you add or remove skills.
+The Step 3 validation asserts that the load-bearing skills exist (not an exact count), so adding or merging skills does not break the scaffold.
 
 Tailor the "Next steps" ordering based on the project-type decision:
 
@@ -1024,7 +1027,7 @@ Tailor the "Next steps" ordering based on the project-type decision:
 
 Installed:
   8 agents      → .claude/agents/
-  27 skills     → .claude/skills/
+  skills        → .claude/skills/
   hooks         → .claude/hooks/ (one per event + lib/)
   16 templates  → .claude/templates/
   4 workflows   → .claude/workflows/  (/harness-review, /harness-implement-group, /harness-brownfield-map, /harness-eval)
@@ -1060,7 +1063,7 @@ Next steps:
 
 Installed:
   8 agents      → .claude/agents/
-  27 skills     → .claude/skills/
+  skills        → .claude/skills/
   hooks         → .claude/hooks/ (one per event + lib/)
   16 templates  → .claude/templates/
   4 workflows   → .claude/workflows/  (/harness-review, /harness-implement-group, /harness-brownfield-map, /harness-eval)

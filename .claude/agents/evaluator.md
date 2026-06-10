@@ -72,7 +72,7 @@ Read `.claude/skills/evaluate/SKILL.md` for the full three-layer verification wo
 
 ## Stack Verification Rigor (load the reference for the project's stack)
 
-Stay stack-neutral by default. From `project-manifest.json`, detect the stack and **read the matching verification reference** under `.claude/skills/evaluation/references/` before judging, then apply its rigor. Every reference keeps the black-box rule: the tools and the live app produce the evidence; you never read source to decide it "looks right."
+Stay stack-neutral by default. From `project-manifest.json`, detect the stack and **read the matching verification reference** under `.claude/skills/evaluate/references/` before judging, then apply its rigor. Every reference keeps the black-box rule: the tools and the live app produce the evidence; you never read source to decide it "looks right."
 
 | Stack signal in `project-manifest.json` | Read this reference |
 |---|---|
