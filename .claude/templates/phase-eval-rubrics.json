@@ -17,13 +17,14 @@
     },
     "spec": {
       "max_iterations": 3,
-      "upstream": "specs/brd/brd.md",
+      "upstream": "specs/brd/brd.md (and specs/brd/brd-requirements.json when present)",
+      "hard_gate": "When specs/brd/brd-requirements.json exists, specs/reviews/spec-grounding.json (from trace-check.js over story-traces.json) must have pass=true. Any net_new (story tracing to no BRD requirement) or dropped (BRD requirement no story realizes) is an automatic FAIL regardless of the weighted average — same semantics as the security verdict. The check is deterministic, so the evaluator confirms it rather than re-judging traceability from prose.",
       "criteria": {
-        "completeness": "Every BRD goal has >= 1 story; no goal left uncovered",
-        "traceability": "Every story references a BRD goal ID; zero orphan stories without upstream linkage",
+        "completeness": "Every BRD requirement has >= 1 story; no requirement left uncovered (zero dropped in spec-grounding.json when present)",
+        "traceability": "Every story in story-traces.json carries >= 1 BR-n trace; zero net-new stories — anchored to specs/reviews/spec-grounding.json when present, else every story references a BRD goal with zero orphans",
         "specificity": "Acceptance criteria use observable outcomes (HTTP status codes, numeric values, measurable thresholds); reject vague language ('should work', 'handles errors')",
         "consistency": "Story dependency graph is acyclic; layer assignments (frontend/backend/infra) are valid and non-contradictory",
-        "actionability": "All stories are implementation-ready with 3-6 acceptance criteria, groups assigned, and every AC maps to a features.json entry"
+        "actionability": "All stories are implementation-ready with 3-6 acceptance criteria, groups assigned, every AC maps to a features.json entry, and every AC has a stable {story}-AC{n} id in story-traces.json"
       }
     },
     "design": {

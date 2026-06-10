@@ -165,6 +165,39 @@ Do not write `specs/features.json`. `features.json` is root-level because `/auto
 
 Every acceptance criterion must map to at least one feature. No criteria may be omitted.
 
+### Step 6.4 — Emit the trace spine `specs/stories/story-traces.json`
+
+Write the machine-readable spine that grounds the stories to the BRD requirements and seeds the test layer. One entry per story, each with a stable id, its BRD-requirement traces, and the stable ids of its acceptance criteria:
+
+```json
+[
+  { "id": "E1-S1", "text": "User registration endpoint", "traces": ["BR-1"],
+    "acs": ["E1-S1-AC1", "E1-S1-AC2"] },
+  { "id": "E1-S2", "text": "Login endpoint", "traces": ["BR-1", "BR-3"],
+    "acs": ["E1-S2-AC1"] }
+]
+```
+
+**Every story must carry at least one `BR-n` trace** (the ids in `specs/brd/brd-requirements.json`). A story that traces to no BRD requirement is scope the BRD never authorized — either remove it, or escalate to the human and add the requirement to the BRD first (re-run `/brd`). Give each acceptance criterion a stable `{story}-AC{n}` id; `/test` traces its test cases to these.
+
+### Step 6.45 — Grounding Gate [HARD BLOCK — when `specs/brd/brd-requirements.json` exists]
+
+If the BRD was produced with a machine-readable spine (FRD-grounded `/brd`), prove mechanically — not by judgement — that the stories invented and dropped nothing relative to it:
+
+```bash
+node .claude/scripts/trace-check.js \
+  --required specs/brd/brd-requirements.json \
+  --downstream specs/stories/story-traces.json \
+  --layer spec \
+  --out specs/reviews/spec-grounding.json
+```
+
+The verdict (`specs/reviews/spec-grounding.json` — `{ pass, required_covered, net_new[], dropped[] }`) is a **hard gate, independent of the rubric score**:
+- **`net_new` non-empty** → a story introduces scope tracing to no BRD requirement. Remove it, or get the requirement into the BRD first.
+- **`dropped` non-empty** → a BRD requirement that no story realizes. Add a story covering it (or, if intentionally deferred, record the deferral and re-run `/brd` so the BRD reflects it).
+
+Only proceed to Step 6.5 when `spec-grounding.json#pass === true`. (Skip this step if `brd-requirements.json` does not exist — an older or interview-only BRD; fall back to the LLM traceability check in Step 6.5 alone.)
+
 ### Step 6.5 — Phase Evaluation Gate
 
 Spawn the `evaluator` agent (artifact mode) to validate the spec against the BRD.
@@ -173,12 +206,13 @@ Spawn the `evaluator` agent (artifact mode) to validate the spec against the BRD
 
 Spawn Agent with subagent_type="evaluator" and prompt:
 - Phase: spec
-- Artifacts: specs/stories/epics.md, specs/stories/dependency-graph.md, all specs/stories/E*-S*.md files, features.json
-- Upstream: specs/brd/brd.md (for cross-phase traceability)
+- Artifacts: specs/stories/epics.md, specs/stories/dependency-graph.md, all specs/stories/E*-S*.md files, features.json, specs/stories/story-traces.json
+- Upstream: specs/brd/brd.md (and specs/brd/brd-requirements.json when present)
+- Grounding verdict: specs/reviews/spec-grounding.json when present (already PASS from Step 6.45 — anchor the traceability criterion to it instead of re-judging from prose)
 - Rubric: Read .claude/templates/phase-eval-rubrics.json, key "spec"
 - Iteration: 1 (increment on retry)
 - Previous score: null (or previous iteration's weighted_average)
-- Cross-phase traceability: Parse BRD goals (Sections 2 and 4). Verify every story traces to a BRD goal. Flag orphan stories and uncovered goals.
+- Cross-phase traceability: with a grounding verdict, confirm it; otherwise parse BRD goals and verify every story traces to one, flagging orphan stories and uncovered goals.
 - Write result to specs/reviews/phase-spec-eval.json
 
 **Ratchet loop (max 3 iterations):**
@@ -212,13 +246,17 @@ Display:
 | `specs/stories/E{n}-S{n}.md` | One file per story |
 | `specs/stories/backlog-needs-breakdown.md` | Optional list of oversized or ambiguous stories that cannot enter implementation |
 | `features.json` | Machine-readable feature list for evaluator |
+| `specs/stories/story-traces.json` | Trace spine: each story's `BR-n` traces + stable AC ids (grounds spec to BRD, seeds `/test`) |
+| `specs/reviews/spec-grounding.json` | (FRD-grounded BRD) deterministic spec-vs-BRD verdict (`pass`, `net_new[]`, `dropped[]`) |
 
 ---
 
 ## Gate
 
+**Grounding gate (FRD-grounded BRD) — hard block.** `trace-check.js` proves mechanically that no story invented scope (`net_new`) and no BRD requirement was dropped (`dropped`) — see Step 6.45. Any violation blocks before the rubric runs, independent of quality score.
+
 **Phase evaluation gate runs before human review.** The evaluator agent (artifact mode) validates:
-- Cross-phase traceability (every story traces to a BRD goal)
+- Cross-phase traceability (anchored to `spec-grounding.json` when present, else every story traces to a BRD goal)
 - Acceptance criteria quality (no vague language)
 - Dependency graph consistency (acyclic, valid groups)
 - Feature coverage (every AC maps to features.json)
