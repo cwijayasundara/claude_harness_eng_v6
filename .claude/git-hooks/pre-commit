@@ -77,7 +77,7 @@ function checkSprintContract(projectDir) {
 function checkTypescript(projectDir, stagedTs) {
   if (stagedTs.length === 0) return;
   if (!fs.existsSync(path.join(projectDir, 'tsconfig.json'))) return;
-  const res = run('npx --no-install tsc --noEmit', projectDir, 120000);
+  const res = run(['npx', '--no-install', 'tsc', '--noEmit'], projectDir, 120000);
   if (shouldBlock(res)) {
     fail(`BLOCKED: type errors in the project:\n${output(res)}\nFix: resolve the type errors above before committing.\n`);
   }
@@ -97,7 +97,7 @@ function checkCoverage(projectDir, stagedPy) {
   if (stagedPy.length === 0) return;
   if (!fs.existsSync(path.join(projectDir, 'src')) || !fs.existsSync(path.join(projectDir, 'tests'))) return;
 
-  const res = run('uv run pytest --cov=src --cov-report=term-missing -q', projectDir, 110000);
+  const res = run(['uv', 'run', 'pytest', '--cov=src', '--cov-report=term-missing', '-q'], projectDir, 110000);
   if (!res || res.error || res.status === null) return; // spawn failed / timed out → skip
   const out = output(res);
   if (unavailable(out)) return; // unprovisioned toolchain → skip

@@ -17,14 +17,25 @@ const SECRET_PATTERNS = [
 const EXEMPT_BASENAMES = new Set(['.env.example', 'settings.json', 'settings.local.json']);
 
 function redact(value) {
-  return value.substring(0, value.length <= 10 ? 4 : 10) + '...';
+  // Fixed short prefix regardless of length — never reveal more than the first
+  // 4 chars of a matched secret (a longer prefix can leak a connection-string
+  // username or the start of a password).
+  return value.substring(0, 4) + '...';
 }
 
-function secretScanExempt(filePath) {
+// projectDir anchors the directory exemption to the HARNESS's own .claude tree
+// (hooks/evals/templates legitimately carry secret-shaped fixtures). A bare
+// substring match on `/hooks/` or `/templates/` would exempt an app's own
+// src/hooks/ or src/templates/ — a real secret-leak hole.
+function secretScanExempt(filePath, projectDir) {
   if (path.extname(filePath).toLowerCase() === '.md') return true;
   if (EXEMPT_BASENAMES.has(path.basename(filePath))) return true;
+  if (!projectDir) return false;
   const n = path.resolve(filePath).replace(/\\/g, '/');
-  return n.includes('/hooks/') || n.includes('/evals/') || n.includes('/templates/');
+  const claude = path.resolve(projectDir).replace(/\\/g, '/') + '/.claude/';
+  if (!n.startsWith(claude)) return false;
+  const rel = n.slice(claude.length);
+  return rel.startsWith('hooks/') || rel.startsWith('evals/') || rel.startsWith('templates/');
 }
 
 function scanSecrets(content) {

@@ -76,7 +76,7 @@ function learningAdvisories(stateDir) {
   const failuresPath = path.join(stateDir, 'failures.md');
   if (fs.existsSync(failuresPath)) {
     const failLines = fs.readFileSync(failuresPath, 'utf8').trim().split('\n').filter((l) => l.trim());
-    if (failLines.length >= 5 && failLines[0] !== '') {
+    if (failLines.length >= 5) {
       out.push(`failures.md has ${failLines.length} entries — recurring patterns should become CLAUDE.md rules or hook enforcement`);
     }
   }

@@ -71,14 +71,14 @@ function checkToolchain(projectDir, filePath, ext) {
   if (ext === '.py') {
     const linter = (manifest && manifest.linter) || 'ruff';
     if (linter === 'ruff') {
-      const res = run(`uv run ruff check "${filePath}"`, cwd, 25000);
+      const res = run(['uv', 'run', 'ruff', 'check', filePath], cwd, 25000);
       if (shouldBlock(res)) {
         block(`BLOCKED: lint errors in ${filePath}:\n${output(res)}\nFix: resolve the lint errors above.\n`);
       }
     }
     const typechecker = (manifest && manifest.typechecker) || 'mypy';
     if (typechecker === 'mypy') {
-      const res = run(`uv run mypy "${filePath}"`, cwd, 25000);
+      const res = run(['uv', 'run', 'mypy', filePath], cwd, 25000);
       if (shouldBlock(res)) {
         block(`BLOCKED: type errors in ${filePath}:\n${output(res)}\nFix: Add type annotations or fix the type mismatch shown above.\n`);
       }
@@ -86,7 +86,7 @@ function checkToolchain(projectDir, filePath, ext) {
   } else if (ext === '.ts' || ext === '.tsx') {
     const linter = (manifest && manifest.linter) || 'eslint';
     if (linter === 'eslint') {
-      const res = run(`npx --no-install eslint "${filePath}"`, cwd, 25000);
+      const res = run(['npx', '--no-install', 'eslint', filePath], cwd, 25000);
       if (shouldBlock(res)) {
         block(`BLOCKED: lint errors in ${filePath}:\n${output(res)}\nFix: resolve the lint errors above.\n`);
       }

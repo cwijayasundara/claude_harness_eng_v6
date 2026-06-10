@@ -26,16 +26,20 @@ function block(message) {
 }
 
 function checkScope(projectDir, filePath) {
-  if (path.resolve(filePath).startsWith('/tmp')) return;
+  // Resolve symlinks on BOTH sides before comparing, and on the /tmp allowance
+  // too — a bare startsWith('/tmp') would (a) treat siblings like /tmpevil as
+  // inside and (b) skip symlink resolution, letting /tmp/link -> /etc escape.
   const resolved = realResolve(filePath);
+  const tmp = realResolve('/tmp');
+  if (resolved === tmp || resolved.startsWith(tmp + path.sep)) return;
   const project = realResolve(projectDir);
   if (!resolved.startsWith(project + path.sep) && resolved !== project) {
     block(`BLOCKED: Write outside project directory: ${resolved}\nFix: Move the file to a location within the project directory or use .claude/ for scaffold files.\n`);
   }
 }
 
-function checkSecrets(filePath, inserted) {
-  if (secretScanExempt(filePath)) return;
+function checkSecrets(filePath, inserted, projectDir) {
+  if (secretScanExempt(filePath, projectDir)) return;
   const findings = scanSecrets(inserted);
   if (findings.length === 0) return;
   const lines = [`BLOCKED: Potential secrets detected in ${filePath}:`];
@@ -91,7 +95,7 @@ try {
   const toolName = input.tool_name || '';
   const ti = input.tool_input || {};
   const filePath = ti.file_path || '';
-  if (!filePath) process.exit(0);
+  if (typeof filePath !== 'string' || !filePath) process.exit(0);
 
   const projectDir = resolveProjectDir(path.dirname(path.resolve(__filename)));
   const ext = path.extname(filePath).toLowerCase();
@@ -102,7 +106,7 @@ try {
     block(`BLOCKED: Cannot modify ${path.basename(filePath)} — environment files contain real secrets. Edit manually.\nFix: Edit .env.example instead for documentation, or edit .env manually outside Claude.\n`);
   }
   if (inserted) {
-    checkSecrets(filePath, inserted);
+    checkSecrets(filePath, inserted, projectDir);
     checkPatterns(projectDir, filePath.replace(/\\/g, '/'), inserted);
   }
   checkLength(toolName, ti, filePath, ext);

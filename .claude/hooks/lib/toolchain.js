@@ -22,8 +22,12 @@ const MISSING_SIGNATURES = [
   'no tests ran',
 ];
 
-function run(command, cwd, timeout) {
-  return spawnSync('sh', ['-c', command], { encoding: 'utf8', cwd, timeout });
+// Run a command with an explicit argv array — NEVER a shell string. File paths
+// from tool input reach this function untrusted; routing them through `sh -c`
+// would be a command-injection sink (a path like `x$(touch pwned).py` would
+// execute). spawnSync with argv passes them as literal arguments instead.
+function run(argv, cwd, timeout) {
+  return spawnSync(argv[0], argv.slice(1), { encoding: 'utf8', cwd, timeout });
 }
 
 function output(result) {
