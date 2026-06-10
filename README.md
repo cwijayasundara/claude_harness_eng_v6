@@ -38,7 +38,7 @@ This asks a few questions about your stack and project type, then generates the 
 
 ```
 Are you building something NEW?
-├── Yes → small scope (CLI, library, ≤5 stories)?  → /lite
+├── Yes → small scope (CLI, library, ≤5 stories)?  → /build --lite
 │         otherwise → /brd → /spec → /design → /auto
 │
 └── No (existing codebase) → first time here? run /brownfield once, then:
@@ -80,9 +80,8 @@ The commands you'll actually type are the lane entry points above. The full surf
 | `/brd` | Socratic interview → Business Requirements Document |
 | `/spec` | BRD → stories + dependency graph + features.json |
 | `/design` | Architecture + schemas + UI mockups |
-| `/build` | Full pipeline, phases 0–10, end to end |
+| `/build` | Full pipeline, phases 0–10; `--lite` for small new projects |
 | `/auto` | Autonomous ratcheting loop |
-| `/lite` | Compressed lane for small new projects |
 | `/vibe` | Controlled small-change lane |
 | `/brownfield` | Map an existing codebase before changing it |
 | `/code-map` | Build deterministic dependency graph |

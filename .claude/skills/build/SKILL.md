@@ -17,9 +17,14 @@ Full software development lifecycle pipeline. Orchestrates BRD creation, story s
 /build path/to/requirements.md
 /build path/to/requirements.md --mode lean
 /build path/to/requirements.md --mode solo
+/build --lite "Python CLI that summarizes a URL"   # small new project
 ```
 
 The `--mode` flag controls which ratchet gates `/auto` enforces. Default: `full`.
+
+### `--lite` — compressed greenfield lane
+
+For a **small** new project (single language/runtime, one module, no DB/auth, ≤ ~5 stories — e.g. a CLI tool, single-script utility, or small library), pass `--lite` with a one-line description. Instead of the full phases below, follow the compressed lane in **`.claude/skills/build/references/lite-lane.md`**: a 5-question interview → one-page BRD-lite → ≤5 stories in a single group → minimal design artifacts → one approval gate → hand off to `/auto --group A`. It enforces the same ratchet/gates; it only compresses the planning ceremony. If the project exceeds the lite scope caps (a database, a second service, auth, >5 stories), the lane escalates you to the full pipeline. Everything from Phase 0 below is the full (non-lite) path.
 
 ---
 
@@ -85,6 +90,12 @@ Create the following state files before entering the autonomous loop:
    learned_rules: 0
    next_action: Begin autonomous build with /auto
    ```
+
+### Phase 4.5 — Generate Deployment Artifacts [DOCKER MODE]
+
+If `project-manifest.json` has `verification.mode: "docker"` (the default for full-stack projects), run `/deploy` now — before `/auto`. It generates the Docker Compose stack, Dockerfiles, `.env.example`, and **`init.sh`**, which `/auto`'s Gate 5 (docker startup) requires to bring the app up for evaluation. Skipping this in docker mode leaves `/auto` unable to start the stack.
+
+Skip Phase 4.5 for `local` or `stub` verification modes — those reach the app without Docker, so no deploy artifacts are needed yet.
 
 ### Phases 5-8 — Autonomous Execution
 

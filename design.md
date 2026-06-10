@@ -65,7 +65,7 @@ The harness is now an **agent factory**: one scaffold, optional framework skill 
 │  1. PLANNING — Same in both runtimes                                       │
 │                                                                            │
 │  Greenfield large : /brd → /spec → /design + /test --plan-only (parallel)  │
-│  Greenfield small : /lite (compressed BRD + 1 group)                       │
+│  Greenfield small : /build --lite (compressed BRD + 1 group)                       │
 │  Brownfield       : /brownfield → /code-map → /seam-finder                 │
 │  Small fixes      : /vibe (micro-contract)                                 │
 │                                                                            │
@@ -441,7 +441,7 @@ The harness has three pre-pipeline lanes alongside the full SDLC pipeline.
 | Lane | Use it when | Outputs | Cost |
 |---|---|---|---|
 | `/brownfield` + `/code-map` + `/seam-finder` | Any substantial work in an existing codebase | `specs/brownfield/code-graph.json`, `architecture-map.md`, `risk-map.md`, `change-strategy.md`, `seams-<goal>.md` | Cheap (read-only graph build) |
-| `/lite` | New project, ≤5 stories, single group, single module, no DB/auth/billing | Compressed BRD (≤50 lines), 3–5 stories in Group A, `folder-structure.md`, `component-map.md`, `api-contracts.md` | Small |
+| `/build --lite` | New project, ≤5 stories, single group, single module, no DB/auth/billing | Compressed BRD (≤50 lines), 3–5 stories in Group A, `folder-structure.md`, `component-map.md`, `api-contracts.md` | Small |
 | `/vibe` | Tiny safe edits: ≤3 files, <150 lines, no new workflow, no auth/billing/migrations | Micro-contract + narrow diff + targeted verification | Tiny |
 | `/brd` → `/spec` → `/design` + `/test --plan-only` → `/auto` → `/test --e2e-only` | Everything else | Full BRD, stories, dependency graph, design + test plan (parallel), autonomous build, then E2E tests | Highest |
 
@@ -481,7 +481,7 @@ A solo engineer (or small pod) drives Claude Code directly:
 ```
 $ claude --plugin-dir ~/claude_harness_eng_v5/.claude
 > /scaffold                # one time
-> /brd                     # or /lite, or /brownfield
+> /brd                     # or /build --lite, or /brownfield
 > /spec                    # human gate
 > /design                  # human gate
 > /auto                    # autonomous ratchet loop
@@ -658,7 +658,7 @@ Agent contract: in brownfield mode, "module X depends on Y" claims must cite `co
 | `/deploy` | Docker Compose + init.sh | No | — |
 | `/build` | Full 10-phase pipeline | Phases 1–3 | verification |
 | `/auto` | Autonomous ratcheting loop | No (reads program.md) | debugging, verification |
-| `/lite` | Compressed greenfield lane (small projects) | One approval | — |
+| `/build --lite` | Compressed greenfield lane (small projects) | One approval | — |
 | `/vibe` | Controlled small-change lane | Micro-contract | — |
 | `/brownfield` | Graph-grounded map of an existing codebase | No | — |
 | `/code-map` | Deterministic dependency graph | No | — |

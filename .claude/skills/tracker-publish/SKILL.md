@@ -109,7 +109,7 @@ Write or update:
       "tracker_key": "ENG-101",
       "tracker_id": "tracker-internal-id-1",
       "url": "https://linear.app/example/issue/ENG-101",
-      "harness_command": "/lite --group A",
+      "harness_command": "/build --lite --group A",
       "mode_label": "mode-lite",
       "blocked_by_stories": []
     },
@@ -118,7 +118,7 @@ Write or update:
       "tracker_key": "ENG-102",
       "tracker_id": "tracker-internal-id-2",
       "url": "https://linear.app/example/issue/ENG-102",
-      "harness_command": "/lite --group A",
+      "harness_command": "/build --lite --group A",
       "mode_label": "mode-lite",
       "blocked_by_stories": ["E1-S1"]
     }
@@ -135,7 +135,7 @@ Under story granularity, the `groups` section is informational — every actual 
 1. Do not publish stories marked `needs_breakdown`.
 2. Do not dispatch any run from this skill.
 3. Apply configured labels such as `harness-group`, `agent-ready`.
-4. Always include the per-issue `mode-*` label when a non-default harness command is intended (for example `mode-lite` for a `/lite`-eligible scope).
+4. Always include the per-issue `mode-*` label when a non-default harness command is intended (for example `mode-lite` for a `/build --lite`-eligible scope).
 5. Keep `.claude/state/tracker-map.json` authoritative for the local repo. If you re-publish, update entries in place rather than creating duplicates.
 
 ### Group granularity (`--granularity group`, default)
@@ -157,7 +157,7 @@ Under story granularity, the `groups` section is informational — every actual 
 2. Include the story's acceptance criteria, owned files from `component-map.md`, and feature IDs from `features.json` filtered to that story.
 3. The harness command for each story is derived as follows:
    - If the story file declares a `Mode:` field (e.g. `Mode: lite`), use that.
-   - Otherwise, if the entire group fits `/lite` eligibility (≤5 stories, single group, no DB/auth — see `.claude/skills/lite/SKILL.md`), use `/lite --group <group-id>` for every story in that group.
+   - Otherwise, if the entire group fits `/build --lite` eligibility (≤5 stories, single group, no DB/auth — see `.claude/skills/build/references/lite-lane.md`), use `/build --lite --group <group-id>` for every story in that group.
    - Otherwise default to `/auto --group <group-id>` and let `/auto` recognise the single-story scope.
 4. Apply the matching `mode-*` label (e.g. `mode-lite`) when the harness command is not the default `/auto`.
 5. Mirror in-group story dependencies (`Depends On:` in story files) as tracker blocker relationships between story issues. Cross-group dependencies are inherited from the group's blocker links.
@@ -200,7 +200,7 @@ Under story granularity, the `groups` section is informational — every actual 
 
 - Story: E1-S1
 - Group: A
-- Harness command: /lite --group A
+- Harness command: /build --lite --group A
 - Depends on stories: none
 
 ## Acceptance Criteria

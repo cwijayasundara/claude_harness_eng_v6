@@ -1,15 +1,8 @@
----
-name: lite
-description: Compressed greenfield lane for small new projects (CLI tools, single-script utilities, small libraries). Skips full BRD/spec/design ceremony, generates minimal artifacts, hands off to /auto.
-argument-hint: "[brief-project-description]"
-context: fork
----
+# Lite Lane — Compressed Greenfield (build --lite)
 
-# Lite Skill — Compressed Greenfield Lane
+Read by `/build --lite`. Use this compressed lane for small new projects where the full `/brd → /spec → /design → /auto` pipeline would be disproportionate. This is the greenfield equivalent of `/vibe`: a bounded, low-ceremony lane with explicit scope caps that still produces the artifacts `/auto` needs as prerequisites.
 
-Use `/lite` for small new projects where the full `/brd → /spec → /design → /auto` pipeline would be disproportionate. This is the greenfield equivalent of `/vibe`: a bounded, low-ceremony lane with explicit scope caps that still produces the artifacts `/auto` needs as prerequisites.
-
-`/lite` is **not** permission to skip engineering discipline. It enforces a 5-story cap, a single dependency group, and a one-page BRD-lite. If the project grows beyond those limits, escalate to the full pipeline.
+`/build --lite` is **not** permission to skip engineering discipline. It enforces a 5-story cap, a single dependency group, and a one-page BRD-lite. If the project grows beyond those limits, escalate to the full pipeline.
 
 > **Ultracode tip:** Leave ultracode **off** here (`/effort high` or lower). Like `/vibe`, this is a deliberately low-ceremony lane — fanning out workflows would be disproportionate to the scope it's built for.
 
@@ -29,7 +22,7 @@ If no argument is given, ask the user for a one-paragraph description before sta
 
 ## Eligibility
 
-Use `/lite` only when **all** are true:
+Use `/build --lite` only when **all** are true:
 
 - Single language/runtime (e.g., Python only, or Node only).
 - One module/package; no microservices, no separate frontend + backend.
@@ -149,7 +142,7 @@ Each story file follows `.claude/templates/story.template.md` with:
 | E1-S3 | ... | ... | E1-S1 |
 ```
 
-Single group. If you find yourself wanting Group B, you are not eligible for `/lite` — escalate.
+Single group. If you find yourself wanting Group B, you are not eligible for `/build --lite` — escalate.
 
 ### Step 5 — Minimal Design Artifacts
 
@@ -202,7 +195,7 @@ Wait for explicit "approve" / "yes" / "go". Do **not** invoke `/auto` automatica
 
 On approval, the user runs `/auto --group A`. From here, the standard ratchet loop (sprint contract → generator → evaluator → review) runs unchanged.
 
-`/lite` does **not** modify the autonomous build loop, gates, or self-healing logic. It only compresses phases 1-3.
+`/build --lite` does **not** modify the autonomous build loop, gates, or self-healing logic. It only compresses phases 1-3.
 
 **Parallel execution:** if your lite project's group A contains **≥ 2 stories**, the generator is required (by Rule 2 in `.claude/agents/generator.md`) to dispatch one teammate per story rather than implementing serially. Lite-mode projects with linear chain DAGs still benefit — the generator builds phases from the component map and runs each phase's teammates in parallel. If you observe a single generator subagent doing all the work in one long pass, that is a Rule 2 violation — surface it.
 
@@ -229,7 +222,7 @@ If any item fails, fix it before handing off. If a missing artifact is one `/aut
 
 ## Escalation
 
-If at any point during `/lite` you discover the project is bigger than the eligibility criteria allow — for example, the user reveals a database, a second service, or an auth requirement — stop, delete or mark partial artifacts as draft, and recommend the full path:
+If at any point during the lite lane you discover the project is bigger than the eligibility criteria allow — for example, the user reveals a database, a second service, or an auth requirement — stop, delete or mark partial artifacts as draft, and recommend the full path:
 
 ```text
 This project exceeds the /lite scope ({reason}). Switch to:
@@ -240,4 +233,4 @@ This project exceeds the /lite scope ({reason}). Switch to:
 or restart with /build path/to/full-requirements.md.
 ```
 
-Do not silently grow `/lite` into the full pipeline. The scope cap is the contract.
+Do not silently grow `/build --lite` into the full pipeline. The scope cap is the contract.

@@ -34,7 +34,7 @@ Apply these rules. Be explicit and conservative — when the description is ambi
 - Otherwise → preset A (most common)
 
 **Project type (drives calibration):**
-- script · CLI · library · agent · tool · utility → D Minimal (`/lite` recommended, no `calibration-profile.json`)
+- script · CLI · library · agent · tool · utility → D Minimal (`/build --lite` recommended, no `calibration-profile.json`)
 - marketplace · consumer · SaaS · B2C · landing page → A Consumer-facing
 - dashboard · admin · internal tool · back-office · B2B internal → B Internal tool
 - API-only · backend service · microservice · no UI → C API-only (no UI scoring)
@@ -111,9 +111,9 @@ Ask the following one at a time, using `AskUserQuestion` for each multi-choice q
    - A) Consumer-facing app (high design bar)
    - B) Internal tool / dashboard (functional focus)
    - C) API-only / backend service (no UI scoring)
-   - D) Minimal — CLI / library / single-script (recommends `/lite`)
+   - D) Minimal — CLI / library / single-script (recommends `/build --lite`)
 
-If the user picks D, the full harness is still installed (in case scope grows) but the Step 10 report recommends `/lite` and `calibration-profile.json` is skipped.
+If the user picks D, the full harness is still installed (in case scope grows) but the Step 10 report recommends `/build --lite` and `calibration-profile.json` is skipped.
 
 4. "How will the evaluator reach the running app?":
    - A) Docker Compose (default)
@@ -252,7 +252,7 @@ For preset stacks:
 
 **If API-only (C):** Do not create `calibration-profile.json` (no UI scoring needed).
 
-**If Minimal (D):** Do not create `calibration-profile.json` (no UI scoring needed). The Step 10 report should lead with `/lite` as the recommended entry point.
+**If Minimal (D):** Do not create `calibration-profile.json` (no UI scoring needed). The Step 10 report should lead with `/build --lite` as the recommended entry point.
 
 Preset mappings:
 - A) backend: python/3.12/fastapi/uv/ruff/mypy/pytest, frontend: typescript/react/vite/npm/eslint/tsc/vitest, db: postgresql
@@ -571,7 +571,7 @@ One-way dependencies only. See `.claude/architecture.md` for full rules.
 | `/design` | Architecture + schemas + mockups (parallel with `/test`) |
 | `/test` | Test plan + cases + fixtures (`--plan-only`) or Playwright E2E (`--e2e-only`) |
 | `/build` | Full 10-phase pipeline |
-| `/lite` | Compressed greenfield lane for small projects (CLI / library / single-script) |
+| `/build --lite` | Compressed greenfield lane for small projects (CLI / library / single-script) |
 | `/vibe` | Controlled small-change lane |
 | `/brownfield` | Map an existing codebase before changing it |
 | `/code-map` | Build deterministic dependency graph for brownfield/refactor work |
@@ -615,7 +615,7 @@ Verify: `{lsp_verify_command}`
 ## Code Style
 
 - For existing codebases, run `/brownfield` before broad planning or refactoring
-- Small new projects (CLI tools, single-script utilities, small libraries) should use `/lite` instead of `/brd → /spec → /design`; see `.claude/skills/lite/SKILL.md`
+- Small new projects (CLI tools, single-script utilities, small libraries) should use `/build --lite` instead of `/brd → /spec → /design`; see `.claude/skills/build/references/lite-lane.md`
 - Small low-risk fixes may use `/vibe` instead of the full SDLC pipeline; see `.claude/skills/vibe/SKILL.md`
 - TDD mandatory: test first, then implement
 - 100% meaningful coverage target, 80% floor
@@ -1017,7 +1017,7 @@ The Step 3 validation asserts that the load-bearing skills exist (not an exact c
 
 Tailor the "Next steps" ordering based on the project-type decision:
 
-- If the user picked **D — Minimal** as the project type, lead with `/lite` and demote `/brd`.
+- If the user picked **D — Minimal** as the project type, lead with `/build --lite` and demote `/brd`.
 - Otherwise, keep `/brd` as the default first action.
 
 **Default report (questions 3 = A / B / C):**
@@ -1052,7 +1052,7 @@ Next steps:
   1. Run /brd to create your Business Requirements Document
   2. For an existing codebase, run /brownfield first
   3. Or run /build to execute the full pipeline
-  4. For small new projects (CLI / library / single-script), use /lite
+  4. For small new projects (CLI / library / single-script), use /build --lite
   5. For tiny safe changes, use /vibe with a micro-contract
 ```
 
@@ -1082,8 +1082,8 @@ Large codebase tips:
   - Use the codebase-explorer agent for read-only discovery before broad changes
 
 Next steps:
-  1. Run /lite "<one-paragraph project description>"  ← recommended for this project type
-  2. Escalate to /brd → /spec → /design → /auto if scope grows past the /lite eligibility cap
+  1. Run /build --lite "<one-paragraph project description>"  ← recommended for this project type
+  2. Escalate to /brd → /spec → /design → /auto if scope grows past the /build --lite eligibility cap
   3. For tiny safe changes later, use /vibe with a micro-contract
 ```
 
@@ -1106,7 +1106,7 @@ Substitute placeholders from the user's wizard answers and from the values writt
 
 Also append one line to Next steps when tracker mode ≠ A:
 
-- After `Run /brd …` (or `Run /lite …` in minimal mode), insert: "Then /tracker-publish to mirror approved groups to {provider}; the orchestrator will not pick anything up until enabled=true and the project_slug is real."
+- After `Run /brd …` (or `Run /build --lite …` in minimal mode), insert: "Then /tracker-publish to mirror approved groups to {provider}; the orchestrator will not pick anything up until enabled=true and the project_slug is real."
 
 If the user picked mode A, omit both the addendum and the extra Next steps line.
 
