@@ -190,29 +190,25 @@ The `codebase-explorer` agent has `LSP` in its tool grants and uses it for symbo
 
 All hooks include remediation instructions ("Fix: …") so they steer the agent, not just block it. They key off the tool name only — no per-command/agent gating — so they fire on every matching edit, including raw ad-hoc edits made outside any slash command.
 
+One consolidated hook per event — each spawns once and dispatches its checks in-process from `.claude/hooks/lib/`, so an edit costs 2 Node spawns instead of 13:
+
 | Event matcher | Hook | Purpose |
 |---|---|---|
-| `PreToolUse Write|Edit|MultiEdit` | `enforce-length-pre.js` | Block oversized files at intent time |
-| `PreToolUse Write|Edit|MultiEdit` | `test-first-gate.js` | Block any source file with no test, across common conventions (TDD; `HARNESS_TDD_GATE=off` bypass) |
-| `PreToolUse Write|Edit|MultiEdit` | `security-pattern-gate.js` | Hard-block edits matching `security-patterns.{json,yaml}` rules flagged `block: true` (`HARNESS_PATTERN_BLOCK=off` bypass) |
-| `PostToolUse Edit|Write|MultiEdit` | `scope-directory.js` | Reject writes outside the project |
-| `PostToolUse Edit|Write|MultiEdit` | `protect-env.js` | Refuse changes to `.env` files |
-| `PostToolUse Edit|Write|MultiEdit` | `detect-secrets.js` | Refuse hardcoded secrets |
-| `PostToolUse Edit|Write|MultiEdit` | `lint-on-save.js` | ruff / eslint on every save |
-| `PostToolUse Edit|Write|MultiEdit` | `typecheck.js` | mypy / tsc on every save |
-| `PostToolUse Edit|Write|MultiEdit` | `check-architecture.js` | One-way layer imports |
-| `PostToolUse Edit|Write|MultiEdit` | `check-function-length.js` | Warn >25 / block >30 lines |
-| `PostToolUse Edit|Write|MultiEdit` | `check-file-length.js` | Warn 200 / block 300 lines |
-| `PostToolUse Edit|Write|MultiEdit` | `track-writes.js` | Append edits to `pending-reviews.jsonl` |
-| `PostToolUse Bash` | `pre-commit-gate.js` | Block commit if gates fail |
-| `PostToolUse Bash` | `sprint-contract-gate.js` | Block `/build` until contract approved |
-| `PostToolUse Bash` | `coverage-gate.js` | Block commit if coverage drops below baseline / 80% floor (`HARNESS_COVERAGE_GATE=off` bypass) |
-| `UserPromptSubmit` | `lane-router.js` | Nudge `/lane-classify` on free-text code-change prompts (advisory) |
-| `Stop` | `require-review.js` | Force reviewer agent before turn ends |
-| `TaskCompleted` | `task-completed.js` | Architecture scan + `/review` reminder |
-| `TeammateIdle` | `teammate-idle-check.js` | Nudge stuck teammates; no tests = no idle |
+| `PreToolUse Write|Edit|MultiEdit` | `pre-write-gate.js` | Blocks BEFORE disk, first failure wins: scope → `.env` protection → secret scan on inserted content only → `security-patterns.{json,yaml}` `block: true` rules (`HARNESS_PATTERN_BLOCK=off`) → 300-line file cap → 30-line function cap → TDD test-first (`HARNESS_TDD_GATE=off`) |
+| `PostToolUse Edit|Write|MultiEdit` | `verify-on-save.js` | Queue file in `pending-reviews.jsonl` (silent), then one-way layer imports check, ruff/mypy or eslint on the saved file — report-only, never `--fix` |
+| `UserPromptSubmit · Stop · SubagentStop` | `record-run.js` | Telemetry journal — off the per-edit hot path |
+| `Stop` | `review-on-stop.js` | Force reviewer agents before turn ends; session-learnings advisories when clean |
 
-**TDD is enforced in two complementary layers.** Layer 1, `test-first-gate.js` (above), is deterministic and on by default: it blocks any source write with no test, but enforces test *existence* only. Layer 2 is the optional third-party [`tdd-guard`](https://github.com/nizos/tdd-guard) plugin, which adds LLM-judged red-green *ordering* (it reads live test results to catch implementation-before-failing-test and over-implementing). tdd-guard is opt-in — it needs an interactive `/plugin install` + `/tdd-guard:setup` plus per-project test reporters, so a scaffold can't auto-provision it. The two run as separate PreToolUse hooks; do not hand-add tdd-guard's command to `settings.json` (its setup registers its own hook). See the scaffold's generated `design.md` for the enable steps.
+Commit-time gates are real **git hooks** (installed by `/scaffold` Step 8) — they block the commit before it exists, fire once however the commit was invoked, and cannot be fooled by `--amend` or strings containing "git commit":
+
+| Git hook | Purpose |
+|---|---|
+| `pre-commit` | Staged-file layer scan → sprint-contract `VERDICT: PASS` check → project-wide `tsc --noEmit` (TS) → pytest coverage ratchet vs baseline / 80% floor (Python; `HARNESS_COVERAGE_GATE=off` bypass). Skips when no source files are staged |
+| `prepare-commit-msg` | Harness-Lane/Mode/Iteration/Group commit trailers |
+
+A hook crash never blocks work, but is never silent either: failures are appended to `.claude/state/hook-errors.log`.
+
+**TDD is enforced in two complementary layers.** Layer 1, the `pre-write-gate.js` test-first check (above), is deterministic and on by default: it blocks any source write with no test, but enforces test *existence* only. Layer 2 is the optional third-party [`tdd-guard`](https://github.com/nizos/tdd-guard) plugin, which adds LLM-judged red-green *ordering* (it reads live test results to catch implementation-before-failing-test and over-implementing). tdd-guard is opt-in — it needs an interactive `/plugin install` + `/tdd-guard:setup` plus per-project test reporters, so a scaffold can't auto-provision it. The two run as separate PreToolUse hooks; do not hand-add tdd-guard's command to `settings.json` (its setup registers its own hook). See the scaffold's generated `design.md` for the enable steps.
 
 ---
 
@@ -358,7 +354,7 @@ Gate 7: Security gate            [full/lean]     -- security-reviewer, fail on c
 Types (Layer 1) → Config (Layer 2) → Repository (Layer 3) → Service (Layer 4) → API (Layer 5) → UI (Layer 6)
 ```
 
-`check-architecture.js` scans every file edit. Upward imports are blocked.
+The `verify-on-save` hook scans every file edit and the git `pre-commit` gate re-scans staged files. Upward imports are blocked.
 
 **Learned rules**: when the same error appears 2+ times in `failures.md`, the harness extracts a permanent directive into `learned-rules.md`. Rules are **monotonic** — never deleted, only added. They become institutional knowledge injected into every future agent prompt.
 

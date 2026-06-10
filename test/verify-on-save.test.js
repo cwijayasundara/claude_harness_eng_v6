@@ -1,0 +1,87 @@
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const { test } = require('node:test');
+const { makeHookProject, runHook } = require('./helpers/hook-fixture');
+
+const HOOK = 'verify-on-save.js';
+
+function writeFileIn(projectDir, rel, content) {
+  const p = path.join(projectDir, rel);
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, content);
+  return p;
+}
+
+function readPending(projectDir) {
+  const p = path.join(projectDir, '.claude', 'state', 'pending-reviews.jsonl');
+  if (!fs.existsSync(p)) return [];
+  return fs.readFileSync(p, 'utf8').split('\n').filter(Boolean).map(JSON.parse);
+}
+
+test('queues a source write for review without emitting per-write chatter', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  const p = writeFileIn(projectDir, 'src/service.js', 'module.exports = 1;\n');
+  const result = await runHook(projectDir, HOOK, {
+    tool_name: 'Write',
+    tool_input: { file_path: p },
+  });
+  assert.strictEqual(result.status, 0, result.stdout + result.stderr);
+  assert.strictEqual(result.stdout, '', 'no context spam on every write');
+  const pending = readPending(projectDir);
+  assert.strictEqual(pending.length, 1);
+  assert.strictEqual(pending[0].file, p);
+  assert.ok(typeof pending[0].ts === 'number');
+});
+
+test('does not queue test files for review', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  const p = writeFileIn(projectDir, 'tests/service.test.js', 'test("x", () => {});\n');
+  const result = await runHook(projectDir, HOOK, {
+    tool_name: 'Write',
+    tool_input: { file_path: p },
+  });
+  assert.strictEqual(result.status, 0);
+  assert.strictEqual(readPending(projectDir).length, 0);
+});
+
+test('blocks a Python layer violation (service importing api)', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  const p = writeFileIn(projectDir, 'src/service/user.py', 'from src.api import routes\n');
+  const result = await runHook(projectDir, HOOK, {
+    tool_name: 'Write',
+    tool_input: { file_path: p },
+  });
+  assert.strictEqual(result.status, 2, result.stdout + result.stderr);
+  assert.ok(result.stdout.includes('service cannot import from api'), result.stdout);
+});
+
+test('passes a Python file with a legal downward import', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  // Real package layout so a provisioned mypy/ruff can resolve the import.
+  writeFileIn(projectDir, 'src/__init__.py', '');
+  writeFileIn(projectDir, 'src/service/__init__.py', '');
+  writeFileIn(projectDir, 'src/repository/__init__.py', '');
+  writeFileIn(projectDir, 'src/repository/users.py', 'X: int = 1\n');
+  const p = writeFileIn(
+    projectDir,
+    'src/service/user.py',
+    'from src.repository import users\n\n__all__ = ["users"]\n'
+  );
+  const result = await runHook(projectDir, HOOK, {
+    tool_name: 'Write',
+    tool_input: { file_path: p },
+  });
+  assert.strictEqual(result.status, 0, result.stdout + result.stderr);
+});
+
+test('does not block when the lint/typecheck toolchain is unprovisioned', async () => {
+  // Temp project has no pyproject/eslint config — the hook must fail open.
+  const projectDir = makeHookProject([HOOK]);
+  const p = writeFileIn(projectDir, 'src/svc.py', 'x: int = 1\n');
+  const result = await runHook(projectDir, HOOK, {
+    tool_name: 'Write',
+    tool_input: { file_path: p },
+  }, { PATH: '/nonexistent' });
+  assert.strictEqual(result.status, 0, result.stdout + result.stderr);
+});

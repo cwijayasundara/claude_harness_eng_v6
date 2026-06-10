@@ -51,8 +51,10 @@ node --test test/e2e/harness-pipeline.test.js --timeout 1200000
 node --test test/phase-eval-unit.test.js         # rubrics, schema, hooks, skills
 node --test test/phase-eval-integration.test.js  # telemetry snapshot, Grafana, deck
 node --test test/scaffold-command.test.js        # scaffold config validation
-node --test test/require-review-hook.test.js     # Stop-hook review gate
-node --test test/enforce-length-pre-hook.test.js # pre-write length gate (Write/Edit/MultiEdit)
+node --test test/pre-write-gate.test.js          # consolidated pre-write gate (scope/env/secrets/length/TDD)
+node --test test/verify-on-save.test.js          # post-save lint/layers + review queue
+node --test test/pre-commit-git-hook.test.js     # git commit gate (layers/contract/coverage)
+node --test test/review-on-stop.test.js          # Stop-hook review gate + advisories
 node --test test/record-run-hook.test.js         # telemetry hook
 ```
 
@@ -78,6 +80,8 @@ test/
   phase-eval-unit.test.js          # Unit tests for phase ratchet evaluators
   phase-eval-integration.test.js   # Integration tests (telemetry, Grafana, deck)
   scaffold-command.test.js         # Scaffold configuration tests
-  require-review-hook.test.js      # Stop-hook review gate tests
-  enforce-length-pre-hook.test.js  # Pre-write length gate tests
+  pre-write-gate.test.js           # Consolidated pre-write gate tests
+  verify-on-save.test.js           # Post-save verification tests
+  pre-commit-git-hook.test.js      # Git commit gate tests
+  review-on-stop.test.js           # Stop-hook review gate tests
 ```

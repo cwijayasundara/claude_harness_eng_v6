@@ -1,0 +1,114 @@
+#!/usr/bin/env node
+
+'use strict';
+
+// PostToolUse(Write|Edit|MultiEdit) — post-save verification.
+// The only legitimately post-write work: queue the file for end-of-turn review
+// (consumed by review-on-stop.js, silently — no per-write chatter), then run
+// the layer check and the project toolchain (lint + typecheck) on the saved
+// file. Tools run WITHOUT --fix so files are never mutated behind the model's
+// back, and `npx --no-install` so an unprovisioned project skips instead of
+// downloading. TypeScript typechecking is deferred to the commit gate — there
+// is no reliable per-file tsc invocation.
+
+const fs = require('fs');
+const path = require('path');
+const { TRACKED_EXTS, resolveProjectDir, readHookInput, reportFailure } = require('./lib/common');
+const { isTestFile } = require('./lib/tdd');
+const { checkContentViolations } = require('./lib/layers');
+const { run, output, shouldBlock, detectCwd } = require('./lib/toolchain');
+
+const QUEUE_SKIP_DIRS = new Set([
+  'migrations', 'fixtures', 'node_modules', 'dist', 'build',
+  '.next', '.venv', 'venv', '.claude',
+]);
+
+function block(message) {
+  process.stdout.write(message);
+  process.stderr.write(message);
+  process.exit(2);
+}
+
+function queueForReview(projectDir, filePath, n, ext) {
+  if (!TRACKED_EXTS.has(ext)) return;
+  if (isTestFile(n)) return;
+  if (n.split('/').some((p) => QUEUE_SKIP_DIRS.has(p))) return;
+  const stateDir = path.join(projectDir, '.claude', 'state');
+  fs.mkdirSync(stateDir, { recursive: true });
+  fs.appendFileSync(
+    path.join(stateDir, 'pending-reviews.jsonl'),
+    JSON.stringify({ file: filePath, ts: Date.now() }) + '\n'
+  );
+}
+
+function checkLayers(filePath, n, ext) {
+  if (ext !== '.py') return;
+  let content;
+  try {
+    content = fs.readFileSync(filePath, 'utf8');
+  } catch (_) {
+    return;
+  }
+  const violations = checkContentViolations(n, content);
+  if (violations.length === 0) return;
+  const lines = violations.map((v) =>
+    `BLOCKED: Architecture violation in ${filePath}:${v.line} — ${v.layer} cannot import from ${v.imported}`
+  );
+  block(lines.join('\n') + '\nFix: Move the import to the correct layer, or extract the shared type to src/types/.\n');
+}
+
+function readManifest(projectDir) {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(projectDir, 'project-manifest.json'), 'utf8'));
+  } catch (_) {
+    return null;
+  }
+}
+
+function checkToolchain(projectDir, filePath, ext) {
+  const manifest = readManifest(projectDir);
+  const cwd = detectCwd(filePath, projectDir);
+  if (ext === '.py') {
+    const linter = (manifest && manifest.linter) || 'ruff';
+    if (linter === 'ruff') {
+      const res = run(`uv run ruff check "${filePath}"`, cwd, 25000);
+      if (shouldBlock(res)) {
+        block(`BLOCKED: lint errors in ${filePath}:\n${output(res)}\nFix: resolve the lint errors above.\n`);
+      }
+    }
+    const typechecker = (manifest && manifest.typechecker) || 'mypy';
+    if (typechecker === 'mypy') {
+      const res = run(`uv run mypy "${filePath}"`, cwd, 25000);
+      if (shouldBlock(res)) {
+        block(`BLOCKED: type errors in ${filePath}:\n${output(res)}\nFix: Add type annotations or fix the type mismatch shown above.\n`);
+      }
+    }
+  } else if (ext === '.ts' || ext === '.tsx') {
+    const linter = (manifest && manifest.linter) || 'eslint';
+    if (linter === 'eslint') {
+      const res = run(`npx --no-install eslint "${filePath}"`, cwd, 25000);
+      if (shouldBlock(res)) {
+        block(`BLOCKED: lint errors in ${filePath}:\n${output(res)}\nFix: resolve the lint errors above.\n`);
+      }
+    }
+    // tsc is project-scoped — handled once per commit by the pre-commit gate.
+  }
+}
+
+try {
+  const input = readHookInput();
+  const filePath = (input.tool_input && input.tool_input.file_path) || '';
+  if (!filePath) process.exit(0);
+
+  const projectDir = resolveProjectDir(path.dirname(path.resolve(__filename)));
+  const n = filePath.replace(/\\/g, '/');
+  const ext = path.extname(n).toLowerCase();
+
+  queueForReview(projectDir, filePath, n, ext);
+  checkLayers(filePath, n, ext);
+  checkToolchain(projectDir, filePath, ext);
+} catch (err) {
+  reportFailure('verify-on-save', err);
+}
+
+process.exit(0);

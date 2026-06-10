@@ -1,0 +1,148 @@
+#!/usr/bin/env node
+
+'use strict';
+
+// Git pre-commit hook — the commit-time quality gate.
+// Replaces the PostToolUse(Bash) trio (pre-commit-gate, coverage-gate,
+// sprint-contract-gate): a real git hook blocks the commit BEFORE it exists,
+// fires exactly once per commit however it was invoked, and cannot be fooled
+// by `--amend` or unrelated commands containing "git commit".
+// Gates, cheapest first: staged-file layer check → sprint contract →
+// project-wide tsc (TS) → pytest coverage ratchet (Python).
+// All toolchain gates fail open when unprovisioned. HARNESS_COVERAGE_GATE=off
+// skips coverage. Runs from the repo root (git guarantees cwd).
+
+const fs = require('fs');
+const path = require('path');
+const { execFileSync } = require('child_process');
+const { checkContentViolations } = require(path.join(__dirname, '..', 'hooks', 'lib', 'layers'));
+const { run, output, shouldBlock, unavailable } = require(path.join(__dirname, '..', 'hooks', 'lib', 'toolchain'));
+
+const SOURCE_EXTS = new Set(['.py', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
+const FLOOR = 80;
+
+function fail(message) {
+  process.stdout.write(message);
+  process.stderr.write(message);
+  process.exit(1);
+}
+
+function stagedFiles() {
+  const out = execFileSync('git', ['diff', '--cached', '--name-only', '--diff-filter=ACMR'], {
+    encoding: 'utf8',
+  });
+  return out.split('\n').filter(Boolean);
+}
+
+function checkLayers(stagedPy) {
+  const violations = [];
+  for (const file of stagedPy) {
+    let content;
+    try {
+      content = fs.readFileSync(file, 'utf8');
+    } catch (_) {
+      continue;
+    }
+    violations.push(...checkContentViolations(file, content));
+  }
+  if (violations.length > 0) {
+    const lines = violations.map((v) => `  ${v.filePath}:${v.line} — ${v.layer} cannot import from ${v.imported}`);
+    fail(`BLOCKED: Architecture violations found — fix before committing:\n${lines.join('\n')}\nFix: Move imports to the correct layer or extract shared types to src/types/.\n`);
+  }
+}
+
+function checkSprintContract(projectDir) {
+  let progress;
+  try {
+    progress = fs.readFileSync(path.join(projectDir, 'claude-progress.txt'), 'utf8');
+  } catch (_) {
+    return;
+  }
+  const groupMatch = progress.match(/^current_group:\s*(.+)$/m);
+  if (!groupMatch || !groupMatch[1].trim()) return;
+  const group = groupMatch[1].trim();
+  if (!fs.existsSync(path.join(projectDir, 'sprint-contracts', `${group}.json`))) return;
+
+  let report = '';
+  try {
+    report = fs.readFileSync(path.join(projectDir, 'specs', 'reviews', 'evaluator-report.md'), 'utf8');
+  } catch (_) {
+    /* missing report = not PASS */
+  }
+  if (!/^VERDICT:\s*PASS\s*$/m.test(report)) {
+    fail(`BLOCKED: Sprint contract for group ${group} not satisfied. Run /evaluate first.\nFix: Run /evaluate to verify the sprint contract, then retry the commit.\n`);
+  }
+}
+
+function checkTypescript(projectDir, stagedTs) {
+  if (stagedTs.length === 0) return;
+  if (!fs.existsSync(path.join(projectDir, 'tsconfig.json'))) return;
+  const res = run('npx --no-install tsc --noEmit', projectDir, 120000);
+  if (shouldBlock(res)) {
+    fail(`BLOCKED: type errors in the project:\n${output(res)}\nFix: resolve the type errors above before committing.\n`);
+  }
+}
+
+function readBaseline(projectDir) {
+  try {
+    const n = parseFloat(fs.readFileSync(path.join(projectDir, '.claude', 'state', 'coverage-baseline.txt'), 'utf8').trim());
+    return Number.isFinite(n) ? n : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function checkCoverage(projectDir, stagedPy) {
+  if ((process.env.HARNESS_COVERAGE_GATE || '').toLowerCase() === 'off') return;
+  if (stagedPy.length === 0) return;
+  if (!fs.existsSync(path.join(projectDir, 'src')) || !fs.existsSync(path.join(projectDir, 'tests'))) return;
+
+  const res = run('uv run pytest --cov=src --cov-report=term-missing -q', projectDir, 110000);
+  if (!res || res.error || res.status === null) return; // spawn failed / timed out → skip
+  const out = output(res);
+  if (unavailable(out)) return; // unprovisioned toolchain → skip
+  const match = out.match(/^TOTAL\s+.*?(\d+(?:\.\d+)?)%/m);
+  if (!match) return; // could not parse coverage → do not block
+  const pct = parseFloat(match[1]);
+
+  const baseline = readBaseline(projectDir);
+  const required = baseline !== null ? baseline : FLOOR;
+  if (pct < required) {
+    const label = baseline !== null ? `baseline ${baseline}%` : `floor ${FLOOR}%`;
+    fail(`BLOCKED: coverage ${pct}% is below the ${label}.\nFix: add tests to restore coverage before committing. The ratchet only moves forward.\n`);
+  }
+  if (baseline === null || pct > baseline) {
+    try {
+      fs.writeFileSync(path.join(projectDir, '.claude', 'state', 'coverage-baseline.txt'), `${pct}\n`);
+    } catch (_) {
+      /* best effort */
+    }
+  }
+}
+
+try {
+  const projectDir = process.cwd();
+  const staged = stagedFiles();
+  const stagedSource = staged.filter((f) => SOURCE_EXTS.has(path.extname(f).toLowerCase()));
+  if (stagedSource.length === 0) process.exit(0); // docs-only commit: nothing to gate
+
+  const stagedPy = stagedSource.filter((f) => f.endsWith('.py'));
+  const stagedTs = stagedSource.filter((f) => f.endsWith('.ts') || f.endsWith('.tsx'));
+
+  checkLayers(stagedPy);
+  checkSprintContract(projectDir);
+  checkTypescript(projectDir, stagedTs);
+  checkCoverage(projectDir, stagedPy);
+} catch (err) {
+  // A broken gate must not brick committing; record it loudly instead.
+  try {
+    fs.appendFileSync(
+      path.join(process.cwd(), '.claude', 'state', 'hook-errors.log'),
+      `${new Date().toISOString()} pre-commit: ${err && err.message ? err.message : err}\n`
+    );
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+process.exit(0);

@@ -28,3 +28,4 @@ test/e2e/results/*
 !test/e2e/results/.gitkeep
 test/e2e/output/
 .playwright-mcp/
+.claude/state/hook-errors.log

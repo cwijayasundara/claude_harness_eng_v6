@@ -38,5 +38,5 @@ Top-level directory structure with one-line descriptions. Helps Claude navigate 
 ## Conventions
 
 - Layered architecture: types -> config -> repository -> service -> api
-- One-way dependencies only (enforced by check-architecture hook)
+- One-way dependencies only (enforced by the verify-on-save hook and the git pre-commit gate)
 - Functions < 50 lines, files < 300 lines (enforced by hooks)

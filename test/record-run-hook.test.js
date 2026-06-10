@@ -272,5 +272,11 @@ test('settings enable native Claude Code telemetry for the OTEL collector', () =
   assert.match(settingsText, /UserPromptSubmit/);
   assert.match(settingsText, /record-run\.js/);
   assert.match(settingsText, /Write\|Edit\|MultiEdit/);
-  assert.match(settingsText, /"matcher":"Bash"/);
+
+  // record-run stays off the per-edit/per-Bash hot path — per-turn events only.
+  const perEditCommands = (settings.hooks.PostToolUse || []).flatMap((m) =>
+    (m.hooks || []).map((h) => h.command || '')
+  );
+  assert.ok(!perEditCommands.some((c) => c.includes('record-run.js')));
+  assert.ok(!(settings.hooks.PostToolUse || []).some((m) => m.matcher === 'Bash'));
 });

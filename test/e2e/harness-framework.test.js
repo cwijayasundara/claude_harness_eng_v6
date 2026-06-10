@@ -81,65 +81,61 @@ describe('Harness Framework Validation', { timeout: 600000 }, () => {
     console.log('[fw] Files:', fs.readdirSync(PROJECT_DIR).join(', '));
   });
 
-  // ── 2. enforce-length-pre hook blocks oversized files ───────────────────
+  // ── 2. pre-write-gate blocks oversized files ─────────────────────────────
+  // Files are named *.test.js so the gate's TDD layer (which always allows
+  // test files) does not mask the length checks under test.
 
-  test('Hook: enforce-length-pre blocks files > 500 lines', () => {
-    const bigContent = 'const x = 1;\n'.repeat(501);
-    const testFile = path.join(PROJECT_DIR, 'big.js');
+  test('Hook: pre-write-gate blocks files >= 300 lines', () => {
+    const bigContent = 'const x = 1;\n'.repeat(301);
 
-    const result = runHook('enforce-length-pre.js', {
+    const result = runHook('pre-write-gate.js', {
       tool_name: 'Write',
-      tool_input: { file_path: testFile, content: bigContent },
+      tool_input: { file_path: path.join(PROJECT_DIR, 'big.test.js'), content: bigContent },
     });
 
     logResult('fw-2-enforce-length', { exitCode: result.exitCode, stdout: result.stdout });
-    assert.strictEqual(result.exitCode, 2, 'Hook must exit 2 (block) for 501-line file');
+    assert.strictEqual(result.exitCode, 2, 'Hook must exit 2 (block) for 301-line file');
     assert.ok(result.stdout.includes('BLOCKED'), 'Hook output must contain BLOCKED');
-    console.log('[fw] enforce-length-pre: correctly blocks 501-line file');
+    console.log('[fw] pre-write-gate: correctly blocks 301-line file');
   });
 
-  test('Hook: enforce-length-pre allows files <= 500 lines', () => {
-    const okContent = 'const x = 1;\n'.repeat(499);
-    const testFile = path.join(PROJECT_DIR, 'ok.js');
+  test('Hook: pre-write-gate allows files under 300 lines', () => {
+    const okContent = 'const x = 1;\n'.repeat(200);
 
-    const result = runHook('enforce-length-pre.js', {
+    const result = runHook('pre-write-gate.js', {
       tool_name: 'Write',
-      tool_input: { file_path: testFile, content: okContent },
+      tool_input: { file_path: path.join(PROJECT_DIR, 'ok.test.js'), content: okContent },
     });
 
-    assert.strictEqual(result.exitCode, 0, 'Hook must exit 0 (allow) for 499-line file');
-    console.log('[fw] enforce-length-pre: correctly allows 499-line file');
+    assert.strictEqual(result.exitCode, 0, 'Hook must exit 0 (allow) for 200-line file');
+    console.log('[fw] pre-write-gate: correctly allows 200-line file');
   });
 
-  // ── 3. check-function-length hook blocks long functions ─────────────────
+  // ── 3. pre-write-gate blocks long functions ──────────────────────────────
 
-  test('Hook: check-function-length blocks functions > 30 lines', () => {
+  test('Hook: pre-write-gate blocks functions > 30 lines', () => {
     const longFn = 'function big() {\n' + '  console.log("x");\n'.repeat(31) + '}\n';
-    const testFile = path.join(PROJECT_DIR, 'long-fn.js');
-    fs.writeFileSync(testFile, longFn);
 
-    const result = runHook('check-function-length.js', {
+    const result = runHook('pre-write-gate.js', {
       tool_name: 'Write',
-      tool_input: { file_path: testFile },
+      tool_input: { file_path: path.join(PROJECT_DIR, 'long-fn.test.js'), content: longFn },
     });
 
     logResult('fw-3-function-length', { exitCode: result.exitCode, stdout: result.stdout });
     assert.strictEqual(result.exitCode, 2, 'Hook must exit 2 (block) for 32-line function');
-    console.log('[fw] check-function-length: correctly blocks 32-line function');
+    console.log('[fw] pre-write-gate: correctly blocks 32-line function');
   });
 
-  test('Hook: check-function-length allows functions <= 30 lines', () => {
+  test('Hook: pre-write-gate allows functions <= 30 lines', () => {
     const shortFn = 'function small() {\n' + '  console.log("x");\n'.repeat(10) + '}\n';
-    const testFile = path.join(PROJECT_DIR, 'short-fn.js');
-    fs.writeFileSync(testFile, shortFn);
 
-    const result = runHook('check-function-length.js', {
+    const result = runHook('pre-write-gate.js', {
       tool_name: 'Write',
-      tool_input: { file_path: testFile },
+      tool_input: { file_path: path.join(PROJECT_DIR, 'short-fn.test.js'), content: shortFn },
     });
 
     assert.strictEqual(result.exitCode, 0, 'Hook must exit 0 (allow) for 12-line function');
-    console.log('[fw] check-function-length: correctly allows 12-line function');
+    console.log('[fw] pre-write-gate: correctly allows 12-line function');
   });
 
   // ── 4. record-run.js captures telemetry records ─────────────────────────
@@ -272,20 +268,10 @@ describe('Harness Framework Validation', { timeout: 600000 }, () => {
     const preEdit = names('PreToolUse');
     const stop = names('Stop');
 
-    // Always-on quality enforcement on every edit (wired in PR enforcement work).
-    for (const h of [
-      'lint-on-save.js', 'typecheck.js', 'check-file-length.js', 'check-function-length.js',
-      'check-architecture.js', 'detect-secrets.js', 'scope-directory.js', 'track-writes.js', 'record-run.js',
-    ]) {
-      assert.ok(postEdit.includes(h), `${h} must be wired in PostToolUse`);
-    }
-    // Pre-write gates.
-    for (const h of ['enforce-length-pre.js', 'test-first-gate.js', 'security-pattern-gate.js']) {
-      assert.ok(preEdit.includes(h), `${h} must be wired in PreToolUse`);
-    }
-    // Stop-time review gate.
-    assert.ok(stop.includes('require-review.js'), 'require-review must be wired on Stop');
-    console.log('[fw] Settings: enforcement hooks wired (PostToolUse + PreToolUse + Stop)');
+    // Consolidated enforcement: one gate per event; telemetry off the per-edit hot path.
+    assert.ok(preEdit.includes('pre-write-gate.js'), 'pre-write-gate must be wired in PreToolUse');
+    assert.ok(postEdit.includes('verify-on-save.js'), 'verify-on-save must be wired in PostToolUse');
+    assert.ok(stop.includes('review-on-stop.js') && !postEdit.includes('record-run.js'), 'Stop gate wired; record-run off PostToolUse');
   });
 
   // ── 10. Grafana dashboard has all required sections ────────────────────

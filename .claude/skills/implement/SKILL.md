@@ -145,7 +145,7 @@ All three must pass with zero errors before proceeding. If any fails, return the
 
 ### Step 8 — Code Review
 
-Spawn the `clean-code-reviewer` agent (plugin-provided; recognized by the `require-review` Stop hook) on the set of changed files:
+Spawn the `clean-code-reviewer` agent (plugin-provided; recognized by the `review-on-stop` Stop hook) on the set of changed files:
 
 - Pass the list of modified files and the story acceptance criteria.
 - The reviewer emits findings at three severity levels: **BLOCK**, **WARN**, **INFO**.

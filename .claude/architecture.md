@@ -41,7 +41,7 @@ Violations:
 - A `Config` importing from `Repository` — FORBIDDEN
 - A `Types` importing from any other layer — FORBIDDEN
 
-The `check-architecture` hook enforces this rule on every file save.
+The `verify-on-save` hook enforces this rule on every file save; the git `pre-commit` gate re-checks staged files.
 
 ## Verification Commands
 
@@ -78,7 +78,7 @@ grep -rn "from.*ui" src/api/
 ### Full architecture audit
 ```bash
 # Run the architecture check hook directly
-.claude/hooks/check-architecture.sh
+node .claude/hooks/verify-on-save.js  # per-file; the git pre-commit hook scans staged files
 ```
 
 ## Cross-Cutting Concerns
@@ -108,4 +108,4 @@ Example override:
 }
 ```
 
-When `project-manifest.json` is present, the `check-architecture` hook reads layer definitions from it instead of using the defaults above.
+When `project-manifest.json` is present, the layer check reads layer definitions from it instead of using the defaults above.

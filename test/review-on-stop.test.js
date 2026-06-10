@@ -4,7 +4,7 @@ const path = require('path');
 const { test } = require('node:test');
 const { makeHookProject, runHook } = require('./helpers/hook-fixture');
 
-const HOOK = 'require-review.js';
+const HOOK = 'review-on-stop.js';
 
 function writePending(projectDir, entries) {
   fs.writeFileSync(
@@ -23,9 +23,7 @@ function reviewerToolUse(toolName, subagentType, isoTs) {
   return {
     timestamp: isoTs,
     message: {
-      content: [
-        { type: 'tool_use', name: toolName, input: { subagent_type: subagentType } },
-      ],
+      content: [{ type: 'tool_use', name: toolName, input: { subagent_type: subagentType } }],
     },
   };
 }
@@ -36,9 +34,7 @@ test('blocks the stop when pending files were never reviewed', async () => {
   const transcriptPath = writeTranscript(projectDir, [
     { timestamp: new Date(2000).toISOString(), message: { content: [{ type: 'text', text: 'done' }] } },
   ]);
-
   const result = await runHook(projectDir, HOOK, { transcript_path: transcriptPath });
-
   assert.strictEqual(result.status, 0);
   const out = JSON.parse(result.stdout);
   assert.strictEqual(out.decision, 'block');
@@ -52,9 +48,7 @@ test('does not block when a reviewer was spawned via the Task tool after the wri
     reviewerToolUse('Task', 'clean-code-reviewer', new Date(2000).toISOString()),
     reviewerToolUse('Task', 'security-reviewer', new Date(2000).toISOString()),
   ]);
-
   const result = await runHook(projectDir, HOOK, { transcript_path: transcriptPath });
-
   assert.strictEqual(result.status, 0);
   assert.strictEqual(result.stdout, '', `expected no block, got: ${result.stdout}`);
 });
@@ -65,9 +59,7 @@ test('does not block when a reviewer was spawned via the Agent tool after the wr
   const transcriptPath = writeTranscript(projectDir, [
     reviewerToolUse('Agent', 'security-reviewer', new Date(2000).toISOString()),
   ]);
-
   const result = await runHook(projectDir, HOOK, { transcript_path: transcriptPath });
-
   assert.strictEqual(result.status, 0);
   assert.strictEqual(result.stdout, '', `expected no block, got: ${result.stdout}`);
 });
@@ -78,10 +70,17 @@ test('still blocks when the only reviewer run predates the pending write', async
   const transcriptPath = writeTranscript(projectDir, [
     reviewerToolUse('Task', 'clean-code-reviewer', new Date(2000).toISOString()),
   ]);
-
   const result = await runHook(projectDir, HOOK, { transcript_path: transcriptPath });
-
   assert.strictEqual(result.status, 0);
   const out = JSON.parse(result.stdout);
   assert.strictEqual(out.decision, 'block');
+});
+
+test('emits session-learnings advisories when not blocking', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  const rules = '# Learned Rules\n' + Array.from({ length: 12 }, (_, i) => `- rule ${i}`).join('\n') + '\n';
+  fs.writeFileSync(path.join(projectDir, '.claude', 'state', 'learned-rules.md'), rules);
+  const result = await runHook(projectDir, HOOK, { transcript_path: null });
+  assert.strictEqual(result.status, 0);
+  assert.ok(result.stdout.includes('learned-rules.md'), result.stdout);
 });

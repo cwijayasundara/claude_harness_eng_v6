@@ -86,7 +86,7 @@ Run the full test suite. All tests must pass.
 
 ### Step 6 — Spawn clean-code-reviewer
 
-Spawn the `clean-code-reviewer` agent (plugin-provided; recognized by the `require-review` Stop hook) on the full diff.
+Spawn the `clean-code-reviewer` agent (plugin-provided; recognized by the `review-on-stop` Stop hook) on the full diff.
 
 Findings:
 - **BLOCK** — must fix before this improvement is shippable.

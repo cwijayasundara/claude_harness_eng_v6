@@ -85,26 +85,19 @@ test('phase-evaluator.md contains all 6 phase-specific guidance sections', () =>
 
 // ── 4. Hook limit values ────────────────────────────────────────────────────
 
-const enforceLengthPre = fs.readFileSync(
-  path.join(ROOT, '.claude', 'hooks', 'enforce-length-pre.js'), 'utf8'
-);
-const checkFunctionLength = fs.readFileSync(
-  path.join(ROOT, '.claude', 'hooks', 'check-function-length.js'), 'utf8'
+const lengthLib = fs.readFileSync(
+  path.join(ROOT, '.claude', 'hooks', 'lib', 'length.js'), 'utf8'
 );
 const settingsJson = fs.readFileSync(
   path.join(ROOT, '.claude', 'settings.json'), 'utf8'
 );
 
-test('enforce-length-pre.js contains HARD_LIMIT = 500', () => {
-  assert.match(enforceLengthPre, /HARD_LIMIT\s*=\s*500/);
+test('length lib enforces the single 300-line file limit', () => {
+  assert.match(lengthLib, /FILE_HARD_LIMIT\s*=\s*300/);
 });
 
-test('check-function-length.js contains HARD_LIMIT = 30', () => {
-  assert.match(checkFunctionLength, /HARD_LIMIT\s*=\s*30/);
-});
-
-test('check-function-length.js contains WARN_LINES = 25', () => {
-  assert.match(checkFunctionLength, /WARN_LINES\s*=\s*25/);
+test('length lib enforces the 30-line function limit', () => {
+  assert.match(lengthLib, /FUNC_HARD_LIMIT\s*=\s*30/);
 });
 
 // ── 5. Settings.json consistency — lane-independent enforcement hooks ────────
@@ -112,52 +105,42 @@ test('check-function-length.js contains WARN_LINES = 25', () => {
 // (outside /build, /auto, /brownfield, /vibe) still enforce quality gates. See
 // commit "fix(hooks): make ad-hoc edits enforce quality gates".
 
-function postToolUseCommands() {
+function hookCommands(event) {
   const settings = JSON.parse(settingsJson);
-  return (settings.hooks.PostToolUse || []).flatMap((entry) =>
+  return (settings.hooks[event] || []).flatMap((entry) =>
     (entry.hooks || []).map((h) => h.command || '')
   );
 }
 
-function stopCommands() {
-  const settings = JSON.parse(settingsJson);
-  return (settings.hooks.Stop || []).flatMap((entry) =>
-    (entry.hooks || []).map((h) => h.command || '')
-  );
-}
-
-test('check-file-length.js is wired into PostToolUse hooks', () => {
+test('pre-write-gate.js is wired into PreToolUse hooks', () => {
   assert.ok(
-    postToolUseCommands().some((cmd) => cmd.includes('check-file-length.js')),
-    'check-file-length.js should be in PostToolUse hooks'
+    hookCommands('PreToolUse').some((cmd) => cmd.includes('pre-write-gate.js')),
+    'pre-write-gate.js should be in PreToolUse hooks'
   );
 });
 
-test('lint-on-save.js is wired into PostToolUse hooks', () => {
+test('verify-on-save.js is wired into PostToolUse hooks', () => {
   assert.ok(
-    postToolUseCommands().some((cmd) => cmd.includes('lint-on-save.js')),
-    'lint-on-save.js should be in PostToolUse hooks'
+    hookCommands('PostToolUse').some((cmd) => cmd.includes('verify-on-save.js')),
+    'verify-on-save.js should be in PostToolUse hooks'
   );
 });
 
-test('typecheck.js is wired into PostToolUse hooks', () => {
+test('review-on-stop.js is wired into Stop hooks', () => {
   assert.ok(
-    postToolUseCommands().some((cmd) => cmd.includes('typecheck.js')),
-    'typecheck.js should be in PostToolUse hooks'
+    hookCommands('Stop').some((cmd) => cmd.includes('review-on-stop.js')),
+    'review-on-stop.js should be in Stop hooks'
   );
 });
 
-test('track-writes.js is wired into PostToolUse hooks', () => {
+test('record-run.js stays off the per-edit hot path', () => {
   assert.ok(
-    postToolUseCommands().some((cmd) => cmd.includes('track-writes.js')),
-    'track-writes.js should be in PostToolUse hooks'
+    !hookCommands('PostToolUse').some((cmd) => cmd.includes('record-run.js')),
+    'record-run.js must not be in PostToolUse (telemetry is per-turn, not per-edit)'
   );
-});
-
-test('require-review.js is wired into Stop hooks', () => {
   assert.ok(
-    stopCommands().some((cmd) => cmd.includes('require-review.js')),
-    'require-review.js should be in Stop hooks'
+    hookCommands('Stop').some((cmd) => cmd.includes('record-run.js')),
+    'record-run.js should still run on Stop'
   );
 });
 
