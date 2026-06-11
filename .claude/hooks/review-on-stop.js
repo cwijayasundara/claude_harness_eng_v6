@@ -41,8 +41,12 @@ function verdictTs(projectDir) {
     let stat;
     try {
       stat = fs.statSync(p);
+      // mtime alone is forgeable with an empty touch; require an actual
+      // verdict payload before the file counts as review evidence.
+      const parsed = JSON.parse(fs.readFileSync(p, 'utf8'));
+      if (typeof parsed.verdict !== 'string') return 0;
     } catch (_) {
-      return 0; // a missing verdict means that reviewer has not run
+      return 0; // missing or unparseable verdict — that reviewer has not run
     }
     if (stat.mtimeMs < oldest) oldest = stat.mtimeMs;
   }

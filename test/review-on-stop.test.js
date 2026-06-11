@@ -185,3 +185,16 @@ test('emits session-learnings advisories when not blocking', async () => {
   assert.strictEqual(result.status, 0);
   assert.ok(result.stdout.includes('learned-rules.md'), result.stdout);
 });
+
+test('garbage verdict files do not satisfy the gate', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  writePending(projectDir, [{ file: 'src/api.ts', ts: 1000 }]);
+  const dir = path.join(projectDir, 'specs', 'reviews');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'clean-code-verdict.json'), '');
+  fs.writeFileSync(path.join(dir, 'security-verdict.json'), 'not json');
+  const result = await runHook(projectDir, HOOK, { transcript_path: null });
+  assert.strictEqual(result.status, 0);
+  const out = JSON.parse(result.stdout);
+  assert.strictEqual(out.decision, 'block');
+});
