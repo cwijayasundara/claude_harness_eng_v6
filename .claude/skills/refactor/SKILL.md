@@ -66,7 +66,7 @@ If `specs/brownfield/` exists, read `architecture-map.md`, `test-map.md`, `risk-
 For each file in the target path:
 
 - **Architecture compliance:** does the file import from a layer above it? (see layering rules in `code-gen/references/architecture.md`)
-- **Function lengths:** count lines in each function. Flag any over 50 lines.
+- **Function lengths:** count lines in each function. Flag any over 30 lines (the pre-write-gate hook limit).
 - **Type coverage:** identify any `any` (TypeScript) or missing type hints (Python). Count unannotated parameters and return types.
 - **Test coverage baseline:** run the test suite and record current pass/fail counts and coverage percentage.
 - **Dead code:** identify unused imports, unreachable branches, commented-out code.
@@ -79,7 +79,7 @@ Record findings in a structured list before proceeding.
 Map each finding from Step 2 to one of the core quality principles:
 1. Small Modules — file exceeds 300 lines (block) or 200 lines (warning).
 2. Static Typing — `any`, missing annotations, untyped domain concepts.
-3. Functions Under 50 Lines — function body exceeds 50 lines.
+3. Functions Under 30 Lines — function body exceeds 30 lines.
 4. Explicit Error Handling — bare `except`, untyped catches, swallowed errors.
 5. No Dead Code — unused imports, commented-out code, unreachable branches.
 6. Self-Documenting — comments that restate what the code does, not why.
@@ -128,7 +128,7 @@ When committing, follow **`keeping-refactors-pure`**: commit with `HARNESS_COMMI
 
 ### Step 6 — Spawn clean-code-reviewer
 
-After all changes are complete, spawn the `clean-code-reviewer` agent (plugin-provided; recognized by the `review-on-stop` Stop hook) on the full diff.
+After all changes are complete, spawn the `clean-code-reviewer` agent (harness-provided: `.claude/agents/clean-code-reviewer.md`; recognized by the `review-on-stop` Stop hook) on the full diff.
 
 The reviewer will return findings at three severity levels:
 - **BLOCK** — must fix before this refactor is considered complete.

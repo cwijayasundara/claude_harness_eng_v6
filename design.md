@@ -138,12 +138,12 @@ Neither runtime changes how `/auto` runs inside the workspace. The only differen
 | Component | Count | Location | Purpose |
 |---|---:|---|---|
 | Slash command (true) | 1 | `.claude/commands/scaffold.md` | Bootloader only |
-| Skills (virtual commands) | 28 | `.claude/skills/<name>/SKILL.md` | All other workflows |
+| Skills (virtual commands) | 24 | `.claude/skills/<name>/SKILL.md` | All other workflows |
 | Specialized agents | 7 | `.claude/agents/<name>.md` | Subagents with tool allowlists + model tier |
-| Lifecycle hooks | 15 | `.claude/hooks/*.js` | Pre/post tool, pre-commit, Stop, TeammateIdle |
+| Lifecycle hooks | 5 | `.claude/hooks/*.js` | PreToolUse, PostToolUse, UserPromptSubmit, Stop, SubagentStop |
 | Templates | 10 | `.claude/templates/*` | Sprint contract, story, init.sh, tracker config, etc. |
 | State files | 6+ | `.claude/state/`, project root | Append-only continuity + ratchet memory |
-| Official plugins (default-on) | 8 | `enabledPlugins` in `settings.json` | Superpowers, code-review, frontend-design, … |
+| Official plugins (default-on) | 9 | `enabledPlugins` in `settings.json` | Superpowers, code-review, frontend-design, … |
 | Framework skill packs | 2 (opt-in) | `.claude/skills/<pack-prefix>-*` (via `-a claude-code`) | LangChain (9 skills) · Google ADK (7 skills) |
 | Tracker orchestrator | 1 sibling project | `symphony_clone/` | Docker service for Linear-driven dispatch |
 | LSP servers | auto-detected | `project-manifest.json` `lsp.servers` | Symbol navigation for agents (go-to-definition, find-references) |

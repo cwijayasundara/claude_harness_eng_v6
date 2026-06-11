@@ -207,3 +207,73 @@ test('--files patches a single file record without touching others', () => {
   assert.strictEqual(afterUsers.hash, beforeUsers.hash, 'untouched records must be preserved');
   assert.ok(second.graph.meta.generated_at, 'meta must be restamped');
 });
+
+test('extracts flask routes and attribute-rooted cross-file calls', () => {
+  const dir = makeProject();
+  fs.appendFileSync(
+    path.join(dir, 'db', 'session.py'),
+    '\n\nengine = object()\n'
+  );
+  fs.writeFileSync(
+    path.join(dir, 'api', 'legacy.py'),
+    'from db.session import engine\n\n\n' +
+    '@app.route("/health", methods=["GET", "POST"])\n' +
+    'def health():\n' +
+    '    return engine.connect()\n'
+  );
+  const { graph } = runIndex(dir);
+  const rec = fileRecord(graph, 'api/legacy.py');
+  const handler = rec.symbols.find((s) => s.name === 'health');
+  assert.ok(handler, 'health symbol missing');
+  assert.deepStrictEqual(handler.route, { method: 'GET|POST', path: '/health' });
+  const call = graph.edges.find(
+    (e) => e.kind === 'calls' && e.source === 'py:api/legacy.py' &&
+      e.target === 'py:db/session.py' && e.symbol_to === 'engine'
+  );
+  assert.ok(call, 'attribute-rooted call edge missing');
+});
+
+test('--files prunes inbound call edges to symbols the patched file dropped', () => {
+  const dir = makeProject();
+  const first = runIndex(dir);
+  const before = first.graph.edges.find(
+    (e) => e.kind === 'calls' && e.target === 'py:db/session.py' && e.symbol_to === 'get_session'
+  );
+  assert.ok(before, 'precondition: inbound call edge must exist');
+  // get_session is removed; close_session survives.
+  fs.writeFileSync(
+    path.join(dir, 'db', 'session.py'),
+    'def close_session(session):\n    return session\n'
+  );
+  const second = runIndex(dir, ['--files', 'db/session.py']);
+  assert.ok(
+    !second.graph.edges.some(
+      (e) => e.kind === 'calls' && e.target === 'py:db/session.py' && e.symbol_to === 'get_session'
+    ),
+    'stale inbound edge to dropped symbol must be pruned'
+  );
+  assert.ok(
+    second.graph.edges.some(
+      (e) => e.kind === 'calls' && e.target === 'py:db/session.py' && e.symbol_to === 'close_session'
+    ),
+    'inbound edge to a surviving symbol must be kept'
+  );
+});
+
+test('--files resolves imports between files created in the same batch', () => {
+  const dir = makeProject();
+  runIndex(dir);
+  fs.writeFileSync(
+    path.join(dir, 'db', 'cache.py'),
+    'def warm():\n    return 1\n'
+  );
+  fs.writeFileSync(
+    path.join(dir, 'api', 'jobs.py'),
+    'from db.cache import warm\n\n\ndef run_jobs():\n    return warm()\n'
+  );
+  const second = runIndex(dir, ['--files', 'db/cache.py', 'api/jobs.py']);
+  const edge = second.graph.edges.find(
+    (e) => e.source === 'py:api/jobs.py' && e.target === 'py:db/cache.py'
+  );
+  assert.ok(edge, 'new-file import must resolve internally, not to ext:');
+});

@@ -29,19 +29,24 @@ def load_aliases(root):
     return pairs
 
 
+def register(maps, rel, lang):
+    """Add one file to the resolution maps (also used for incremental patching)."""
+    maps['languages'][rel] = lang
+    if lang == 'python':
+        mod = rel[:-3].replace('/', '.')
+        if mod.endswith('.__init__'):
+            mod = mod[: -len('.__init__')]
+        maps['py_modules'][mod] = rel
+    else:
+        maps['js_stems'][rel.rsplit('.', 1)[0]] = rel
+
+
 def build_maps(paths_by_language):
     """paths_by_language: iterable of (rel_path, language)."""
-    py_modules, js_stems, languages = {}, {}, {}
+    maps = {'py_modules': {}, 'js_stems': {}, 'languages': {}}
     for rel, lang in paths_by_language:
-        languages[rel] = lang
-        if lang == 'python':
-            mod = rel[:-3].replace('/', '.')
-            if mod.endswith('.__init__'):
-                mod = mod[: -len('.__init__')]
-            py_modules[mod] = rel
-        else:
-            js_stems[rel.rsplit('.', 1)[0]] = rel
-    return {'py_modules': py_modules, 'js_stems': js_stems, 'languages': languages}
+        register(maps, rel, lang)
+    return maps
 
 
 def _resolve_py(raw, src_rel, py_modules):

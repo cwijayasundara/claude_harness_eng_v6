@@ -75,6 +75,16 @@
             "timeout": 30000
           }
         ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/record-run.js\"",
+            "timeout": 5000
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [

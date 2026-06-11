@@ -89,7 +89,9 @@ The scorer:
    - `routes/`, `controllers/`, `api/`, `handlers/`, `views/` → HTTP boundary (1.0)
    - `queue/`, `events/`, `consumers/`, `producers/`, `webhooks/` → message boundary (0.9)
    - `db/`, `repository/`, `models/`, `migrations/` → data boundary (0.8)
-   - Public classes/exports in any module → module boundary (0.5)
+   - `adapters/`, `gateways/`, `clients/`, `integrations/`, `providers/` → integration boundary (0.7)
+   - `services/`, `domain/`, `usecases/`, `core/`, `workflows/` → service layer (0.6)
+   - Public classes/exports in any other module → module boundary (0.5)
    - Private helpers, deeply nested utils → internal (0.1)
 3. Scores read/write asymmetry from `imports` direction and (if present) `reads`/`writes` edges.
 4. Filters by goal keywords: nodes whose path or symbols match goal terms get a **goal-relevance bump** (multiplier 1.5).
@@ -104,7 +106,7 @@ For each top-N candidate, the skill labels a recommended action based on score p
 | High observable + high funnel | `extend` — add behaviour at the existing seam |
 | High observable + low funnel | `wrap` — adapter at the boundary |
 | Low observable + high funnel | `introduce-adapter` — extract a public seam first, then change |
-| High asymmetry (pure reader) | `split` — replicate writes via existing channel, rebuild reads |
+| High asymmetry AND pure reader/writer (one side's fan is 0) | `split` — replicate writes via existing channel, rebuild reads |
 | All scores low | `avoid` — not a seam; keep looking |
 
 ### Step 4 — Verify Goal Fit

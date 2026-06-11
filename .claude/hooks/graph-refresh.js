@@ -85,6 +85,12 @@ function main() {
     fs.writeFileSync(dirtyFile, '');
     return;
   }
+  // Meta can outlive a deleted graph — without the graph there is nothing to
+  // patch, and --files mode would fail forever while the dirty list grows.
+  if (!fs.existsSync(path.join(projectDir, 'specs', 'brownfield', 'code-graph.json'))) {
+    fs.writeFileSync(dirtyFile, '');
+    return;
+  }
   const lock = holdLock(stateDir);
   if (!lock) return;
   try {

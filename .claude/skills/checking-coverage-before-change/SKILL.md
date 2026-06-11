@@ -28,6 +28,7 @@ python3 .claude/skills/code-map/scripts/code_index/coverage_map.py \
 3. Route on the verdict:
    - **COVERED** → the listed tests are your **fast regression oracle**. Run exactly them before the change (must pass) and after every edit (must still pass).
    - **UNCOVERED** → STOP. `REQUIRED SUB-SKILL: pinning-down-behavior`. If the symbol is unpinnable (see that skill's threshold), `REQUIRED SUB-SKILL: sprouting-instead-of-editing`.
+   - **Exit code 3** (graph has no symbol records — regex-fallback producer, e.g. Java/C#/Go) → symbol verdicts are unavailable. Treat every symbol you plan to edit as UNCOVERED and route accordingly; do not interpret the absence of data as coverage.
 4. Record the verdicts in your impact assessment / plan before the first edit.
 
 ## Common Rationalizations

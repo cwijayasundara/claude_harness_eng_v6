@@ -104,19 +104,19 @@ The script must:
 
 Make `init.sh` executable (`chmod +x init.sh`).
 
-### Step 7 — If `--up` Flag
+### Step 7 — Phase Evaluation Gate
 
-Run:
+This gate runs BEFORE the stack is started — it exists to catch invalid compose syntax, port conflicts, and missing health checks before they become runtime failures.
+
+First, validate syntax deterministically:
 
 ```
-bash init.sh
+docker compose config
 ```
 
-Report the output. If any service fails its health check, print the service logs and stop.
+Fix any errors before spawning the evaluator.
 
-### Step 6.5 — Phase Evaluation Gate
-
-Spawn the `evaluator` agent (artifact mode) to validate deploy artifacts before verification.
+Then spawn the `evaluator` agent (artifact mode) to validate deploy artifacts.
 
 **Agent invocation:**
 
@@ -132,22 +132,20 @@ Spawn Agent with subagent_type="evaluator" and prompt:
 
 **Ratchet loop (max 2 iterations):**
 
-1. If verdict is **PASS** — proceed to Verification section.
+1. If verdict is **PASS** — proceed to Step 8.
 2. If verdict is **FAIL** — fix config issues based on findings. Re-run evaluator.
 3. **Ratchet rule:** weighted_average must be >= previous iteration. Revert on regression.
-4. After 2 iterations — proceed to Verification with findings attached as warnings.
+4. After 2 iterations — proceed to Step 8 with findings attached as warnings, but do NOT run `--up` on an unresolved FAIL — report the failure instead.
 
----
+### Step 8 — If `--up` Flag
 
-## Verification
-
-After file generation (regardless of `--up`):
+Only after the gate above has passed (or warnings were explicitly accepted), run:
 
 ```
-docker compose config
+bash init.sh
 ```
 
-This validates the compose file syntax and interpolated values. Fix any errors before reporting completion.
+Report the output. If any service fails its health check, print the service logs and stop.
 
 ---
 

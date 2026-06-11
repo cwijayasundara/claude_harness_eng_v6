@@ -134,21 +134,52 @@ def assemble(root, indexed, args, warnings):
     }
 
 
+def drop_stale_inbound(graph, nid, old_symbols, new_symbols):
+    """Drop call/render edges from other files that target symbols the patched
+    file no longer declares — without this, renames/removals leave the inbound
+    half of the graph stale. Only symbols present before and gone now are
+    dropped: edges to module-level bindings (engine, router, app) were never
+    in the symbol list and must survive."""
+    dropped = old_symbols - new_symbols
+    if not dropped:
+        return
+    graph['edges'] = [
+        e for e in graph['edges']
+        if not (e['target'] == nid and e['source'] != nid
+                and e.get('kind') in ('calls', 'renders')
+                and e.get('symbol_to') in dropped)
+    ]
+
+
+def splice(graph, record, data, maps, aliases):
+    """Replace one file's node and outbound edges; prune stale inbound edges."""
+    rel = record['path']
+    nid = resolve.node_id(record['language'], rel)
+    node = make_node(record)
+    old = next((n for n in graph['nodes'] if n['id'] == nid), None)
+    graph['nodes'] = [n for n in graph['nodes'] if n['id'] != nid] + [node]
+    graph['edges'] = ([e for e in graph['edges'] if e['source'] != nid]
+                      + resolve.edges_for(rel, record['language'], data, maps, aliases))
+    drop_stale_inbound(graph, nid, set(old['symbols']) if old else set(),
+                       set(node['symbols']))
+
+
 def patch(root, graph, rels, args, warnings):
     """Re-extract only `rels`, splice their records/edges into the existing graph."""
     by_path = {f['path']: f for f in graph.get('files', [])}
-    languages = ((f['path'], f['language']) for f in graph.get('files', []))
-    maps = resolve.build_maps(languages)
+    maps = resolve.build_maps((f['path'], f['language']) for f in graph.get('files', []))
     aliases = resolve.load_aliases(root)
+    # Extract and register every patched file BEFORE resolving edges, so files
+    # created in the same batch resolve to internal nodes instead of ext:.
+    extracted = []
     for rel in rels:
         record, data = index_file(root, rel, warnings)
         maybe_skeleton(record, args)
-        maps['languages'][rel] = record['language']
-        by_path[rel] = record
-        nid = resolve.node_id(record['language'], rel)
-        graph['nodes'] = [n for n in graph['nodes'] if n['id'] != nid] + [make_node(record)]
-        graph['edges'] = ([e for e in graph['edges'] if e['source'] != nid]
-                          + resolve.edges_for(rel, record['language'], data, maps, aliases))
+        resolve.register(maps, rel, record['language'])
+        extracted.append((record, data))
+    for record, data in extracted:
+        by_path[record['path']] = record
+        splice(graph, record, data, maps, aliases)
     graph['files'] = list(by_path.values())
     graph['metrics'] = graph_metrics.compute(graph['nodes'], graph['edges'])
     graph['meta']['warnings'] = warnings

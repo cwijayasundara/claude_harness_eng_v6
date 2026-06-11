@@ -22,6 +22,8 @@ A GAN-inspired harness combining Karpathy ratcheting + Anthropic/OpenAI harness 
 
 The full Commands table, the 6-agent team (roles + model assignments), and the Superpowers pipeline-stage integration table live in `README.md` (sections *Command reference*, *Agent team*, *Superpowers integration*). They are reference material, not always-on rules, so they are kept out of this always-loaded file to preserve the prompt-cache prefix. Read `README.md` when you need the command/agent inventory.
 
+If a `superpowers:*` skill invocation fails because the plugin is not installed, do not skip the step silently — apply the equivalent inline discipline (TDD red-green-refactor and quality rules from `.claude/skills/code-gen/SKILL.md`; for debugging, reproduce → isolate → root-cause before fixing) and note the degraded mode in the progress log.
+
 ## Coding Principles (Karpathy Guidelines)
 
 These behavioral rules apply to all code generation — in agents, skills, and direct responses.
@@ -89,7 +91,7 @@ Monitor cache hit rate like uptime. Telemetry is **off by default** (opt-in) —
 
 - `.claude/program.md` — Karpathy human-agent bridge (edit to steer /auto)
 - `.claude/settings.json` — Hook config, permissions, enabled plugins
-- `.claude/workflows/` — Dynamic workflows (each `.js` → a `/<name>` command; `/scaffold` copies these into target projects). See `.claude/workflows/README.md`
+- `.claude/workflows/` — Slot for dynamic workflows you author (each `.js` you add becomes a `/<name>` command). Ships empty; `/scaffold` copies the slot to target projects. See `.claude/workflows/README.md`
 - `design.md` — Full architecture reference (copied to target projects)
 - `README.md` — Installation and usage guide
 - `docs/prompting-standards.md` — How to author agent/skill prompts for the current models (read before editing any `.claude/agents/*` or `.claude/skills/*` prompt)

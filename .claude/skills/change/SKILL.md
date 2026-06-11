@@ -80,7 +80,7 @@ If `specs/test_artefacts/` exists, update `test-cases.md` and `test-data/` to re
 
 ### Step S6 — Review
 
-Spawn the `clean-code-reviewer` agent (plugin-provided; recognized by the `review-on-stop` Stop hook) on the full diff. **If the diff touches authentication, authorization, secrets, user input handling, or data persistence, also spawn the `security-reviewer` agent** (run both in parallel in a single message).
+Spawn the `clean-code-reviewer` agent (harness-provided: `.claude/agents/clean-code-reviewer.md`; recognized by the `review-on-stop` Stop hook) on the full diff. **If the diff touches authentication, authorization, secrets, user input handling, or data persistence, also spawn the `security-reviewer` agent** (run both in parallel in a single message).
 
 Findings: **BLOCK** must be fixed; **WARN** should be fixed (document if deferring); **INFO** optional. Maximum 3 retry cycles for BLOCK findings — if any remain after 3 cycles, stop and report.
 
@@ -142,7 +142,7 @@ Run the project's lint and type checks (`npm run lint`, `mypy`, `tsc --noEmit`, 
 
 ### Step I8 — Review
 
-Spawn the `clean-code-reviewer` agent (plugin-provided; recognized by the `review-on-stop` Stop hook) on the diff. **If the fix touches authentication, authorization, secrets, user input handling, or data persistence, also spawn the `security-reviewer` agent** (run both in parallel in a single message). Resolve BLOCK findings (max 3 cycles).
+Spawn the `clean-code-reviewer` agent (harness-provided: `.claude/agents/clean-code-reviewer.md`; recognized by the `review-on-stop` Stop hook) on the diff. **If the fix touches authentication, authorization, secrets, user input handling, or data persistence, also spawn the `security-reviewer` agent** (run both in parallel in a single message). Resolve BLOCK findings (max 3 cycles).
 
 ### Step I9 — Commit and Open a PR
 

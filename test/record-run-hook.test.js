@@ -275,10 +275,12 @@ test('telemetry is OFF by default — no OTEL/Pushgateway env vars, but record-r
   assert.match(settingsText, /record-run\.js/);
   assert.match(settingsText, /Write\|Edit\|MultiEdit/);
 
-  // record-run stays off the per-edit/per-Bash hot path — per-turn events only.
-  const perEditCommands = (settings.hooks.PostToolUse || []).flatMap((m) =>
-    (m.hooks || []).map((h) => h.command || '')
-  );
+  // record-run stays off the per-edit/per-Bash hot path. PostToolUse(Task) is
+  // allowed — it is the only event carrying subagent_type, which the
+  // agent-runs and phase-eval metrics need, and Task completions are rare.
+  const perEditCommands = (settings.hooks.PostToolUse || [])
+    .filter((m) => /Edit|Write|Bash/.test(m.matcher || ''))
+    .flatMap((m) => (m.hooks || []).map((h) => h.command || ''));
   assert.ok(!perEditCommands.some((c) => c.includes('record-run.js')));
   assert.ok(!(settings.hooks.PostToolUse || []).some((m) => m.matcher === 'Bash'));
 });

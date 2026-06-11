@@ -10,16 +10,28 @@ def _signature(lines, node):
     return lines[node.lineno - 1].strip()
 
 
+def _flask_methods(dec):
+    """Methods kwarg of @app.route(...) — defaults to GET, joined with |."""
+    for kw in dec.keywords:
+        if kw.arg == 'methods' and isinstance(kw.value, (ast.List, ast.Tuple)):
+            methods = [e.value.upper() for e in kw.value.elts
+                       if isinstance(e, ast.Constant) and isinstance(e.value, str)]
+            if methods:
+                return '|'.join(methods)
+    return 'GET'
+
+
 def _route(node):
     for dec in getattr(node, 'decorator_list', []):
         if not (isinstance(dec, ast.Call) and isinstance(dec.func, ast.Attribute)):
             continue
         attr = dec.func.attr.lower()
-        if attr not in HTTP_METHODS or not dec.args:
+        if (attr not in HTTP_METHODS and attr != 'route') or not dec.args:
             continue
         first = dec.args[0]
         if isinstance(first, ast.Constant) and isinstance(first.value, str):
-            return {'method': attr.upper(), 'path': first.value}
+            method = _flask_methods(dec) if attr == 'route' else attr.upper()
+            return {'method': method, 'path': first.value}
     return None
 
 
@@ -74,15 +86,31 @@ def _owned_functions(tree):
                     yield child, f'{node.name}.{child.name}'
 
 
+def _call_name(func):
+    """Name a call resolves through: bare name, or the root binding of an
+    attribute chain (`session.engine.connect()` -> `session`) — the root is
+    what an import binds, so it is what resolve.py can link cross-file."""
+    if isinstance(func, ast.Name):
+        return func.id
+    if isinstance(func, ast.Attribute):
+        root = func.value
+        while isinstance(root, ast.Attribute):
+            root = root.value
+        if isinstance(root, ast.Name) and root.id not in ('self', 'cls'):
+            return root.id
+    return None
+
+
 def _calls(tree, local_defs):
     out = []
     for owner, qual in _owned_functions(tree):
         for node in ast.walk(owner):
-            if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)):
+            if not isinstance(node, ast.Call):
                 continue
-            if node.func.id in local_defs:
+            name = _call_name(node.func)
+            if not name or name in local_defs:
                 continue
-            out.append({'symbol_from': qual, 'name': node.func.id, 'line': node.lineno})
+            out.append({'symbol_from': qual, 'name': name, 'line': node.lineno})
     return out
 
 

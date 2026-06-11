@@ -123,3 +123,20 @@ test('missing coverage data exits 2 with a clear message', () => {
   assert.strictEqual(res.status, 2);
   assert.ok(/no coverage data/i.test(res.stderr), res.stderr);
 });
+
+test('exits 3 with a loud error when the graph has no symbol records (regex fallback)', () => {
+  const { dir, covDb } = makeProject();
+  // A regex-fallback graph (build_graph.js) has nodes/edges but no `files`.
+  const fallbackGraph = path.join(dir, 'fallback-graph.json');
+  fs.writeFileSync(fallbackGraph, JSON.stringify({
+    nodes: [{ id: 'src/Main.java', type: 'module' }],
+    edges: [],
+    meta: { producer: 'regex-fallback', root: dir },
+  }));
+  const res = spawnSync('python3', [
+    coverageMap, '--graph', fallbackGraph, '--coverage', covDb,
+  ], { encoding: 'utf8' });
+  assert.strictEqual(res.status, 3, res.stdout + res.stderr);
+  assert.match(res.stderr, /no per-file symbol records/);
+  assert.match(res.stderr, /UNCOVERED/);
+});

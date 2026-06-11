@@ -7,7 +7,8 @@ from tree_sitter import Language, Parser
 HOOK_RE = re.compile(r'^use[A-Z]')
 JSX_TYPES = ('jsx_element', 'jsx_self_closing_element', 'jsx_fragment')
 ELEMENT_TYPES = ('jsx_self_closing_element', 'jsx_opening_element')
-FN_TYPES = ('function_declaration', 'generator_function_declaration', 'class_declaration')
+FN_TYPES = ('function_declaration', 'generator_function_declaration',
+            'class_declaration', 'abstract_class_declaration')
 
 _PARSERS = {}
 
@@ -160,7 +161,7 @@ def _symbol_record(name, node):
     has_jsx, hooks = _scan(node)
     if has_jsx and name[0].isupper():
         kind = 'component'
-    elif node.type == 'class_declaration':
+    elif node.type in ('class_declaration', 'abstract_class_declaration'):
         kind = 'class'
     else:
         kind = 'function'

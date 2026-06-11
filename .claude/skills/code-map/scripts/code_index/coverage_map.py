@@ -141,10 +141,30 @@ def load_coverage(cov_path, root):
     return read_sqlite(cov_path, root)
 
 
+def require_symbol_records(graph):
+    """Exit loudly when the graph has no per-file symbol records.
+
+    Only the vendored-ast producer (code_index.py) writes `files`; the regex
+    fallback (build_graph.js) does not. Without this guard a fallback graph
+    yields "0 symbols, 0 UNCOVERED" — a false all-clear that routes around the
+    entire characterization-test preflight.
+    """
+    if graph.get('files'):
+        return
+    producer = graph.get('meta', {}).get('producer', 'unknown')
+    sys.stderr.write(
+        f'code-graph.json has no per-file symbol records (producer={producer}) '
+        '— symbol coverage verdicts are unavailable. Rebuild the graph with '
+        'code_index.py, or treat every symbol you plan to edit as UNCOVERED.\n'
+    )
+    sys.exit(3)
+
+
 def main(argv):
     args = parse_args(argv)
     with open(args.graph, encoding='utf-8') as fh:
         graph = json.load(fh)
+    require_symbol_records(graph)
     root = args.root or graph['meta']['root']
     coverage, contexts_available = load_coverage(args.coverage, root)
     files_filter = set(args.files) if args.files else None

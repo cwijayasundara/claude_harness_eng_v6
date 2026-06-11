@@ -82,7 +82,7 @@ At the start of EVERY iteration — including the first — read these files in 
 
 1. **`.claude/program.md`** — Constraints may have changed mid-run. Re-read every iteration. Never cache.
 2. **`.claude/state/learned-rules.md`** — Accumulated project rules. Inject verbatim into ALL agent prompts spawned this iteration.
-3. **`claude-progress.txt`** — Read the LAST session block (the block after the final `=== Session` marker). Extract: `current_group`, `groups_completed`, `groups_remaining`, `last_commit`, `next_action`.
+3. **`claude-progress.txt`** — Read the LAST session block (the block after the final `=== Session` marker). Extract: `current_group`, `groups_completed`, `groups_remaining`, `last_commit`, `next_action`. If the file does not exist (`/auto` invoked standalone, without `/build`), create it now with a Session 0 block in the SECTION 10 format before reading.
 4. **`features.json`** — Current pass/fail state for all features. Determines what work remains.
 5. **`specs/stories/dependency-graph.md`** — Compute the current wave (Section 4B Wave Selection Algorithm). A group is "unfinished" if any of its stories' features are not passing in `features.json`. Respect dependency ordering: do not start a group whose upstream dependencies have failing features. With `--sequential` (or `--parallel-groups 1`), the wave is the single next unfinished group; with default `--parallel-groups 3`, the wave is up to 3 concurrently-ready groups.
 6. **Target group story files** — Verify every story in every selected group is marked `Readiness: ready`. If any story is `needs_breakdown`, stop and request a story decomposition pass before implementation.
@@ -107,10 +107,11 @@ The generator produces a draft contract based on the story acceptance criteria a
 
 Spawn evaluator as a subagent with this prompt:
 
-> Read the proposed sprint contract at `sprint-contracts/{group}.json`. Review each check against the story acceptance criteria and API contracts. Add any missing checks. Remove any checks that do not trace to an acceptance criterion. Write the final contract to the same path.
+> Read the proposed sprint contract at `sprint-contracts/{group}.json`. Review each check against the story acceptance criteria and API contracts. Add any missing checks. Remove any checks that do not trace to an acceptance criterion. Write the final contract to the same path. Also write an audit of your edits to `specs/reviews/contract-audit-{group}.json`: `{"group": "...", "added": [{"check": ..., "reason": ...}], "removed": [{"check": ..., "reason": ...}]}` — an empty `added`/`removed` means the proposal was accepted as-is.
 
 Rules:
 - **No back-and-forth.** The evaluator has final say. The generator does not get to dispute.
+- **The edit is not silent.** The orchestrator reads `contract-audit-{group}.json` after negotiation and surfaces it in the progress log (and to the user at the next escalation point). A removal whose `reason` contradicts a story acceptance criterion is grounds to re-run negotiation once with the audit attached — this is the only permitted second cycle.
 - **Contract is immutable after negotiation.** Once the evaluator writes the final version, no one edits it.
 
 ---
@@ -494,7 +495,7 @@ Do not immediately revert. Attempt targeted self-healing first.
 4. **Re-run the failed gate** (not all gates — just the one that failed).
 
 5. **3rd failure — hard stop for this group:**
-   - Revert changes: `git checkout -- .`
+   - Revert ONLY this group's files, scoped via the file ownership list in `specs/design/component-map.md`: `git checkout -- {file1} {file2} ...`. Never `git checkout -- .` — in parallel-group mode that discards other groups' in-flight work.
    - Log the failure to `.claude/state/failures.md` with group ID, failure category, all three attempt summaries.
    - Extract a learned rule (see SECTION 12).
    - Mark the group as BLOCKED in `claude-progress.txt`.

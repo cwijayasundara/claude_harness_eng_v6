@@ -24,7 +24,7 @@ Reference skill for generator teammates. Read this before writing any code.
 - Type aliases for domain concepts (`UserId = str`, `type OrderId = string`).
 
 ### 3. Functions Under 50 Lines
-- If a function body exceeds 50 lines, decompose it into named sub-functions.
+- If a function body exceeds 30 lines, decompose it into named sub-functions (the `pre-write-gate` hook enforces this limit deterministically).
 - Each sub-function should be testable in isolation.
 - Use descriptive names that read as a sentence: `validateOrderItems`, `buildPaymentPayload`.
 - Avoid deeply nested control flow — extract branches into named helpers.
@@ -564,7 +564,7 @@ Rules:
 ## Gotchas (Things That Cause Review Failures)
 
 - Importing upward across layers (UI importing from repository layer)
-- Functions exceeding 50 lines without decomposition
+- Functions exceeding 30 lines without decomposition
 - Untyped values — `any`, missing return types, unannotated parameters
 - Broad exception catches without re-raise or typed handling
 - Mocking business logic in unit tests

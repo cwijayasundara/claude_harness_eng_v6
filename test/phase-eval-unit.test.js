@@ -142,9 +142,18 @@ test('review-on-stop.js is wired into Stop hooks', () => {
 });
 
 test('record-run.js stays off the per-edit hot path', () => {
-  assert.ok(
-    !hookCommands('PostToolUse').some((cmd) => cmd.includes('record-run.js')),
-    'record-run.js must not be in PostToolUse (telemetry is per-turn, not per-edit)'
+  // PostToolUse(Task) is allowed — Task completions are infrequent and are the
+  // only event carrying subagent_type, which the agent-runs and phase-eval
+  // metrics need. Per-edit and per-Bash matchers stay forbidden.
+  const settings = JSON.parse(settingsJson);
+  const perEditMatchers = (settings.hooks.PostToolUse || []).filter(
+    (entry) =>
+      /Edit|Write|Bash/.test(entry.matcher || '') &&
+      (entry.hooks || []).some((h) => (h.command || '').includes('record-run.js'))
+  );
+  assert.equal(
+    perEditMatchers.length, 0,
+    'record-run.js must not run on Edit/Write/Bash (telemetry is per-turn, not per-edit)'
   );
   assert.ok(
     hookCommands('Stop').some((cmd) => cmd.includes('record-run.js')),
