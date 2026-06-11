@@ -52,6 +52,28 @@ function withGateway(handler) {
   });
 }
 
+// Like withGateway but the server replies with a configurable HTTP status code.
+// Resolves with { server, req, body, statusCode } once the request is received.
+function withGatewayStatus(statusCode, handler) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('timed out waiting for Pushgateway request')), 2000);
+    const server = http.createServer((req, res) => {
+      let body = '';
+      req.setEncoding('utf8');
+      req.on('data', (chunk) => { body += chunk; });
+      req.on('end', () => {
+        clearTimeout(timer);
+        res.statusCode = statusCode;
+        res.end('error');
+        resolve({ server, req, body, statusCode });
+      });
+    });
+    server.on('error', reject);
+    server.unref();
+    server.listen(0, '127.0.0.1', () => handler(server.address().port));
+  });
+}
+
 function withGatewayRequests(count, handler) {
   return new Promise((resolve, reject) => {
     const requests = [];
@@ -113,6 +135,10 @@ function copyHarnessFiles(dir) {
     path.join(REPO_ROOT, '.claude', 'hooks', 'lib', 'common.js'),
     path.join(hooksDir, 'lib', 'common.js')
   );
+  fs.copyFileSync(
+    path.join(REPO_ROOT, '.claude', 'hooks', 'lib', 'record-skills.js'),
+    path.join(hooksDir, 'lib', 'record-skills.js')
+  );
   for (const scriptName of HOOK_DEP_SCRIPTS) {
     const source = path.join(REPO_ROOT, '.claude', 'scripts', scriptName);
     if (fs.existsSync(source)) {
@@ -149,4 +175,4 @@ function makeProject() {
   return dir;
 }
 
-module.exports = { withGateway, withGatewayRequests, runHook, makeProject };
+module.exports = { withGateway, withGatewayRequests, withGatewayStatus, runHook, makeProject };

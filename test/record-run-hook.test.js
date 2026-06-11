@@ -9,6 +9,9 @@ const {
   runHook,
   makeProject,
 } = require('./helpers/record-run-fixture');
+const { stableProjectInstance } = require(
+  path.join(__dirname, '..', '.claude', 'scripts', 'telemetry-memory')
+);
 
 test('record-run pushes escaped custom metrics to a configured Pushgateway path', async () => {
   const projectDir = makeProject();
@@ -28,7 +31,7 @@ test('record-run pushes escaped custom metrics to a configured Pushgateway path'
   gateway.server.close();
 
   assert.equal(gateway.req.method, 'POST');
-  assert.equal(gateway.req.url, `/pushgateway/metrics/job/claude_harness_memory/instance/${encodeURIComponent(path.basename(projectDir))}`);
+  assert.equal(gateway.req.url, `/pushgateway/metrics/job/claude_harness_memory/instance/${encodeURIComponent(stableProjectInstance(projectDir))}`);
   assert.match(gateway.body, /harness_agent_runs_total\{/);
   assert.match(gateway.body, /user="dev \\"one\\""/);
   assert.match(gateway.body, /agent="test\\"agent"/);
@@ -147,27 +150,6 @@ test('record-run skips command telemetry for scaffold', async () => {
   );
 });
 
-test('record-run emits generic tool telemetry for non-Task PostToolUse events', async () => {
-  const projectDir = makeProject();
-  const gateway = await withGateway((port) => {
-    runHook(projectDir, {
-      hook_event_name: 'PostToolUse',
-      tool_name: 'Write',
-      session_id: 'tool-session',
-      tool_response: { is_error: false },
-    }, {
-      HARNESS_USER: 'dev',
-      HARNESS_PUSHGATEWAY_URL: `http://127.0.0.1:${port}`,
-    }).then((result) => assert.equal(result.status, 0, result.stderr));
-  });
-
-  gateway.server.close();
-
-  assert.match(gateway.body, /harness_tool_events_total\{[^}]*tool="Write"/);
-  assert.match(gateway.body, /harness_tool_events_total\{[^}]*exit="ok"/);
-  assert.match(gateway.body, /harness_tool_events_total\{[^}]*lane="improve"/);
-});
-
 test('replay-telemetry rebuilds cumulative memory from the local ledger', async () => {
   const projectDir = makeProject();
   const gateway = await withGatewayRequests(3, async (port) => {
@@ -195,7 +177,7 @@ test('replay-telemetry rebuilds cumulative memory from the local ledger', async 
   gateway.server.close();
 
   const last = gateway.requests[2];
-  assert.equal(last.req.url, `/metrics/job/claude_harness_memory/instance/${encodeURIComponent(path.basename(projectDir))}`);
+  assert.equal(last.req.url, `/metrics/job/claude_harness_memory/instance/${encodeURIComponent(stableProjectInstance(projectDir))}`);
   assert.match(last.body, /harness_command_invocations_total\{[^}]*command="spec"[^}]*\} 2/);
   assert.match(last.body, /harness_conversation_turns_total\{[^}]*kind="prompt"[^}]*\} 2/);
   assert.match(last.body, /harness_skill_usage_total\{[^}]*skill="spec"[^}]*\} 2/);
@@ -275,14 +257,16 @@ test('telemetry is OFF by default — no OTEL/Pushgateway env vars, but record-r
   assert.match(settingsText, /record-run\.js/);
   assert.match(settingsText, /Write\|Edit\|MultiEdit/);
 
-  // record-run stays off the per-edit/per-Bash hot path. PostToolUse(Task) is
-  // allowed — it is the only event carrying subagent_type, which the
-  // agent-runs and phase-eval metrics need, and Task completions are rare.
+  // record-run is back on the per-edit/per-Bash path, but receipt-append-only:
+  // tool events never rebuild the ledger or push (see
+  // record-run-tool-events.test.js) — the next prompt/Task/Stop push carries
+  // them. PostToolUse(Task) keeps the full push: it carries subagent_type,
+  // which the agent-runs and phase-eval metrics need, and Task completions
+  // are rare.
   const perEditCommands = (settings.hooks.PostToolUse || [])
     .filter((m) => /Edit|Write|Bash/.test(m.matcher || ''))
     .flatMap((m) => (m.hooks || []).map((h) => h.command || ''));
-  assert.ok(!perEditCommands.some((c) => c.includes('record-run.js')));
-  assert.ok(!(settings.hooks.PostToolUse || []).some((m) => m.matcher === 'Bash'));
+  assert.ok(perEditCommands.some((c) => c.includes('record-run.js')));
 });
 
 test('record-run does not push metrics when no Pushgateway URL is configured', async () => {

@@ -91,7 +91,25 @@ function readLedger(stateDir) {
 }
 
 function stableProjectInstance(projectDir) {
-  return path.basename(projectDir || process.cwd()) || os.hostname();
+  // basename alone collides across same-named projects (and hosts pushing to
+  // a shared gateway) — POST replaces the whole push group, so a collision
+  // silently wipes the other project's metrics. Suffix with a short hash of
+  // host + absolute path to keep groups disjoint yet human-readable.
+  const dir = projectDir || process.cwd();
+  // realpath: /var vs /private/var symlink spellings of one directory must
+  // not produce two push groups (macOS).
+  let canonical;
+  try {
+    canonical = fs.realpathSync(dir);
+  } catch (_) {
+    canonical = path.resolve(dir);
+  }
+  const hash = require('crypto')
+    .createHash('sha256')
+    .update(`${os.hostname()}:${canonical}`)
+    .digest('hex')
+    .slice(0, 8);
+  return `${path.basename(dir) || os.hostname()}-${hash}`;
 }
 
 function baseLabels(record) {
@@ -120,11 +138,11 @@ function setGauge(gauges, name, labels, value) {
 
 const metricHelpers = { labelPairs, setGauge, addCounter };
 
-function processRecordKind(record, labels, counters, gauges) {
+// Handles subagent, turn, and subagent_stop record kinds.
+function processAgentKinds(record, labels, counters, gauges) {
   if (record.kind === 'subagent') {
     addCounter(counters, 'harness_agent_runs_total', labelPairs([
-      ['kind', 'subagent'],
-      ['exit', record.exit || 'ok'],
+      ['kind', 'subagent'], ['exit', record.exit || 'ok'],
     ]).concat(labels));
   } else if (record.kind === 'turn') {
     addCounter(counters, 'harness_conversation_turns_total', labelPairs([['kind', 'turn']]).concat(labels));
@@ -135,36 +153,49 @@ function processRecordKind(record, labels, counters, gauges) {
     addCounter(counters, 'harness_conversation_turns_total', labelPairs([['kind', 'subagent_stop']]).concat(labels));
     if (record.agent && record.agent !== 'unknown') {
       addCounter(counters, 'harness_agent_runs_total', labelPairs([
-        ['kind', 'subagent_stop'],
-        ['exit', record.exit || 'ok'],
+        ['kind', 'subagent_stop'], ['exit', record.exit || 'ok'],
       ]).concat(labels));
     }
-  } else if (record.kind === 'prompt') {
-    addCounter(counters, 'harness_conversation_turns_total', labelPairs([['kind', 'prompt']]).concat(labels));
+  }
+}
+
+// Handles prompt and tool record kinds.
+function processCommandKinds(record, counters) {
+  if (record.kind === 'prompt') {
+    addCounter(counters, 'harness_conversation_turns_total', labelPairs([['kind', 'prompt']]).concat(baseLabels(record)));
     addCounter(counters, 'harness_command_invocations_total', labelPairs([
-      ['kind', 'prompt'],
-      ['command', record.command],
-      ['user', record.user],
-      ['lane', record.lane],
-      ['mode', record.mode],
-      ['group', record.group_id],
-      ['story', record.story_id],
-      ['iteration', record.iteration],
-      ['host', record.host],
+      ['kind', 'prompt'], ['command', record.command], ['user', record.user],
+      ['lane', record.lane], ['mode', record.mode], ['group', record.group_id],
+      ['story', record.story_id], ['iteration', record.iteration], ['host', record.host],
     ]));
   } else if (record.kind === 'tool') {
     addCounter(counters, 'harness_tool_events_total', labelPairs([
-      ['kind', 'tool'],
-      ['tool', record.tool],
-      ['exit', record.exit || 'ok'],
-      ['user', record.user],
-      ['lane', record.lane],
-      ['mode', record.mode],
-      ['group', record.group_id],
-      ['story', record.story_id],
-      ['iteration', record.iteration],
-      ['host', record.host],
+      ['kind', 'tool'], ['tool', record.tool], ['exit', record.exit || 'ok'],
+      ['user', record.user], ['lane', record.lane], ['mode', record.mode],
+      ['group', record.group_id], ['story', record.story_id],
+      ['iteration', record.iteration], ['host', record.host],
     ]));
+  }
+}
+
+function processRecordKind(record, labels, counters, gauges) {
+  processAgentKinds(record, labels, counters, gauges);
+  processCommandKinds(record, counters);
+}
+
+// Emits gauge metrics derived from a single record's iteration/story context.
+function processRecordGauges(record, gauges) {
+  if (record.iteration) {
+    setGauge(gauges, 'harness_iteration_current', labelPairs([
+      ['user', record.user], ['group', record.group_id],
+      ['lane', record.lane], ['mode', record.mode],
+    ]), parseInt(record.iteration, 10) || 0);
+  }
+  if (record.story_id) {
+    setGauge(gauges, 'harness_story_active', labelPairs([
+      ['user', record.user], ['group', record.group_id],
+      ['story', record.story_id], ['lane', record.lane],
+    ]), 1);
   }
 }
 
@@ -179,31 +210,44 @@ function buildSnapshot(records, skillInventory = []) {
     collectSkillInventory(record, skillInfo, metricHelpers);
     addSkillUsage(record, counters, skillInventory, metricHelpers);
     processRecordKind(record, baseLabels(record), counters, gauges);
-
-    if (record.iteration) {
-      setGauge(gauges, 'harness_iteration_current', labelPairs([
-        ['user', record.user],
-        ['group', record.group_id],
-        ['lane', record.lane],
-        ['mode', record.mode],
-      ]), parseInt(record.iteration, 10) || 0);
-    }
-
-    if (record.story_id) {
-      setGauge(gauges, 'harness_story_active', labelPairs([
-        ['user', record.user],
-        ['group', record.group_id],
-        ['story', record.story_id],
-        ['lane', record.lane],
-      ]), 1);
-    }
-
+    processRecordGauges(record, gauges);
     processPhaseEval(record, counters, gauges, metricHelpers);
   }
 
   return [...counters.values(), ...gauges.values(), ...skillInfo.values()]
     .map((entry) => metricLine(entry.name, entry.labels, entry.value))
     .join('\n') + '\n';
+}
+
+// Sends body to the Pushgateway URL and resolves with {pushed, body, statusCode}.
+// pushed is true only when the server responds with HTTP < 400.
+function sendMetrics(resolve, target, projectDir, body) {
+  try {
+    const url = new URL(target);
+    const basePath = url.pathname.replace(/\/$/, '');
+    const client = url.protocol === 'https:' ? https : http;
+    const instance = encodeURIComponent(stableProjectInstance(projectDir));
+    const req = client.request({
+      hostname: url.hostname,
+      port: url.port || (url.protocol === 'https:' ? 443 : 9091),
+      path: `${basePath}/metrics/job/${MEMORY_JOB}/instance/${instance}`,
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain; version=0.0.4', 'Content-Length': Buffer.byteLength(body) },
+      timeout: 2000,
+    });
+    req.on('error', () => resolve({ pushed: false, body }));
+    // Consume the response to read the HTTP status code.
+    // req 'close' without a 'response' event fires only on connection errors
+    // (already handled by 'error' above), so 'response' is the success path.
+    req.on('response', (res) => {
+      res.resume(); // drain so the socket is released
+      const statusCode = res.statusCode;
+      res.on('end', () => resolve({ pushed: statusCode < 400, body, statusCode }));
+    });
+    req.end(body);
+  } catch (_) {
+    resolve({ pushed: false, body });
+  }
 }
 
 function pushSnapshot({ projectDir, stateDir, gatewayUrl }) {
@@ -218,28 +262,7 @@ function pushSnapshot({ projectDir, stateDir, gatewayUrl }) {
     const body = buildSnapshot(readLedger(stateDir), readSkillCatalog(projectDir));
     if (body.trim() === '') return resolve({ pushed: false, body });
 
-    try {
-      const url = new URL(target);
-      const basePath = url.pathname.replace(/\/$/, '');
-      const client = url.protocol === 'https:' ? https : http;
-      const instance = encodeURIComponent(stableProjectInstance(projectDir));
-      const req = client.request({
-        hostname: url.hostname,
-        port: url.port || (url.protocol === 'https:' ? 443 : 9091),
-        path: `${basePath}/metrics/job/${MEMORY_JOB}/instance/${instance}`,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain; version=0.0.4',
-          'Content-Length': Buffer.byteLength(body),
-        },
-        timeout: 2000,
-      });
-      req.on('error', () => resolve({ pushed: false, body }));
-      req.on('close', () => resolve({ pushed: true, body }));
-      req.end(body);
-    } catch (_) {
-      resolve({ pushed: false, body });
-    }
+    sendMetrics(resolve, target, projectDir, body);
   });
 }
 

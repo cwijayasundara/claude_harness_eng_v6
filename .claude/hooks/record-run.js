@@ -7,12 +7,17 @@ const path = require('path');
 const os = require('os');
 const { execFileSync } = require('child_process');
 const { appendLedger, pushSnapshot, readSkillCatalog, seedLedgerFromRuns } = require('../scripts/telemetry-memory');
-const { readHookInput } = require('./lib/common');
+const { readHookInput, reportFailure } = require('./lib/common');
+const { inferSkills } = require('./lib/record-skills');
 
 function resolveUser() {
   if (process.env.HARNESS_USER) return process.env.HARNESS_USER;
   try {
-    return execFileSync('git', ['config', 'user.name'], { encoding: 'utf8', timeout: 2000 }).trim();
+    // Strip quote glyphs from misconfigured user.name (e.g. set with smart
+    // quotes) so they don't pollute the dashboard's $user label values.
+    const name = execFileSync('git', ['config', 'user.name'], { encoding: 'utf8', timeout: 2000 })
+      .replace(/["'“”‘’]/g, '').trim();
+    if (name) return name;
   } catch (_) {}
   return os.userInfo().username || 'unknown';
 }
@@ -57,48 +62,6 @@ function harnessSha(projectDir) {
     if (head) return head;
   } catch (_) {}
   return process.env.CLAUDE_HARNESS_SHA || null;
-}
-
-function collectSkillValues(value, output = new Set()) {
-  if (!value) return output;
-  if (Array.isArray(value)) {
-    for (const item of value) collectSkillValues(item, output);
-  } else if (typeof value === 'object') {
-    collectSkillValues(value.name || value.skill || value.skill_name || value.skillName, output);
-  } else {
-    output.add(String(value));
-  }
-  return output;
-}
-
-function inferSkills({ input, command, lane, catalog }) {
-  const byName = new Map();
-  for (const skill of catalog) {
-    byName.set(skill.name, skill);
-    byName.set(skill.directory, skill);
-  }
-
-  const candidates = new Set();
-  if (command) candidates.add(command);
-  if (lane) candidates.add(lane);
-  collectSkillValues(input.skill_name, candidates);
-  collectSkillValues(input.skillName, candidates);
-  collectSkillValues(input.skill, candidates);
-  collectSkillValues(input.skills, candidates);
-  collectSkillValues(input.active_skills, candidates);
-  collectSkillValues(input.tool_input && input.tool_input.skill_name, candidates);
-  collectSkillValues(input.tool_response && input.tool_response.skill_name, candidates);
-
-  const prompt = String(input.prompt || '');
-  for (const match of prompt.matchAll(/\.claude\/skills\/([A-Za-z0-9_-]+)/g)) {
-    candidates.add(match[1]);
-  }
-
-  return [...candidates]
-    .map((name) => byName.get(name))
-    .filter(Boolean)
-    .filter((skill, index, list) => list.findIndex((other) => other.name === skill.name) === index)
-    .map((skill) => ({ ...skill, source: command && (skill.name === command || skill.directory === command) ? 'command' : 'hook' }));
 }
 
 function append(receiptPath, obj) {
@@ -236,6 +199,7 @@ function shouldSkipCommandTelemetry(command) {
     }
 
     if (eventKind === 'PostToolUse') {
+      // Per-edit/Bash hot path: append-only, push deferred to prompt/Task/Stop.
       const tr = input.tool_response || {};
       const skills = inferSkills({ input, command: null, lane, catalog: skillInventory });
       const toolRecord = {
@@ -256,7 +220,9 @@ function shouldSkipCommandTelemetry(command) {
         skill_inventory: skillInventory,
         host: os.hostname(),
       };
-      await persistAndPush(receiptPath, stateDir, projectDir, toolRecord);
+      seedLedgerFromRuns(projectDir, stateDir);
+      append(receiptPath, toolRecord);
+      appendLedger(stateDir, toolRecord);
       process.exit(0);
     }
 
@@ -284,7 +250,12 @@ function shouldSkipCommandTelemetry(command) {
       await persistAndPush(receiptPath, stateDir, projectDir, turnRecord);
       process.exit(0);
     }
-  } catch (_) {}
+  } catch (err) {
+    // A hook crash must never block work. Write to hook-errors.log so a broken
+    // hook is discoverable instead of silently disabled (same pattern as
+    // verify-on-save.js and pre-write-gate.js).
+    reportFailure('record-run', err);
+  }
 
   process.exit(0);
 })();
