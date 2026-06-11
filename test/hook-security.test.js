@@ -75,6 +75,9 @@ test('pre-write-gate scans secrets in an app src/hooks/ directory', async () => 
 
 test('pre-write-gate still exempts the harness own .claude/hooks tree', async () => {
   const projectDir = makeHookProject(['pre-write-gate.js']);
+  // The trust boundary blocks .claude/hooks/ writes in target projects, so the
+  // secret-scan exemption is only reachable in the harness repo itself.
+  fs.writeFileSync(path.join(projectDir, 'package.json'), JSON.stringify({ name: 'claude-harness-eng-v5' }));
   const ssn = ['123', '45', '6789'].join('-');
   const result = await runHook(projectDir, 'pre-write-gate.js', {
     tool_name: 'Write',

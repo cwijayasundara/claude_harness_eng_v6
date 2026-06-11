@@ -218,3 +218,88 @@ test('HARNESS_TDD_GATE=off disables only the TDD layer, not the others', async (
   }, ENV);
   assert.strictEqual(stillBlocked.status, 2);
 });
+
+// --- trust boundary (harness machinery) ---
+
+const MACHINERY_TARGETS = [
+  '.claude/hooks/pre-write-gate.js',
+  '.claude/hooks/lib/tdd.js',
+  '.claude/git-hooks/pre-commit',
+  '.claude/settings.json',
+  '.claude/security-patterns.json',
+  '.claude/state/coverage-baseline.txt',
+  '.claude/state/coverage-baseline-js.txt',
+  '.claude/state/review-block-count',
+  '.claude/state/pending-reviews.jsonl',
+  '.claude/state/hook-errors.log',
+];
+
+test('blocks writes to harness machinery in a target project', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  for (const rel of MACHINERY_TARGETS) {
+    const result = await runHook(projectDir, HOOK, {
+      tool_name: 'Write',
+      tool_input: { file_path: path.join(projectDir, rel), content: 'tampered\n' },
+    }, ENV);
+    assert.strictEqual(result.status, 2, `${rel} was not blocked`);
+    assert.ok(result.stdout.includes('machinery'), `${rel}: ${result.stdout}`);
+  }
+});
+
+test('machinery protection does not block ordinary .claude content', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  for (const rel of ['.claude/state/learned-rules.md', '.claude/program.md', '.claude/skills/foo/SKILL.md']) {
+    const result = await runHook(projectDir, HOOK, {
+      tool_name: 'Write',
+      tool_input: { file_path: path.join(projectDir, rel), content: 'notes\n' },
+    }, ENV);
+    assert.strictEqual(result.status, 0, `${rel} was blocked: ${result.stdout}`);
+  }
+});
+
+test('machinery edits are allowed inside the harness repo itself', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  fs.writeFileSync(path.join(projectDir, 'package.json'), JSON.stringify({ name: 'claude-harness-eng-v5' }));
+  const result = await runHook(projectDir, HOOK, {
+    tool_name: 'Write',
+    tool_input: { file_path: path.join(projectDir, '.claude', 'hooks', 'new-hook.js'), content: 'ok\n' },
+  }, ENV);
+  assert.strictEqual(result.status, 0, result.stdout);
+});
+
+test('HARNESS_PROTECT=off bypasses the machinery gate deliberately', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  const result = await runHook(projectDir, HOOK, {
+    tool_name: 'Write',
+    tool_input: { file_path: path.join(projectDir, '.claude', 'settings.json'), content: '{}\n' },
+  }, { ...ENV, HARNESS_PROTECT: 'off' });
+  assert.strictEqual(result.status, 0, result.stdout);
+});
+
+// --- Claude Code per-project memory directory ---
+
+const os = require('os');
+
+function mungedProject(projectDir) {
+  return fs.realpathSync(projectDir).replace(/[^a-zA-Z0-9-]/g, '-');
+}
+
+test("allows writes to this project's Claude memory directory", async () => {
+  const projectDir = makeHookProject([HOOK]);
+  const memoryFile = path.join(os.homedir(), '.claude', 'projects', mungedProject(projectDir), 'memory', 'note.md');
+  const result = await runHook(projectDir, HOOK, {
+    tool_name: 'Write',
+    tool_input: { file_path: memoryFile, content: '# memory\n' },
+  }, ENV);
+  assert.strictEqual(result.status, 0, result.stdout);
+});
+
+test("still blocks writes to a DIFFERENT project's Claude memory directory", async () => {
+  const projectDir = makeHookProject([HOOK]);
+  const otherFile = path.join(os.homedir(), '.claude', 'projects', '-Users-someone-else-project', 'memory', 'note.md');
+  const result = await runHook(projectDir, HOOK, {
+    tool_name: 'Write',
+    tool_input: { file_path: otherFile, content: '# memory\n' },
+  }, ENV);
+  assert.strictEqual(result.status, 2, result.stdout);
+});

@@ -10,6 +10,7 @@
 // pre-existing on-disk strings can never block an unrelated edit.
 // Escape hatches: HARNESS_TDD_GATE=off, HARNESS_PATTERN_BLOCK=off.
 
+const os = require('os');
 const path = require('path');
 const { TRACKED_EXTS, resolveProjectDir, readHookInput, isSkippedPath, countLines, realResolve, reportFailure } =
   require('./lib/common');
@@ -18,11 +19,21 @@ const { scanSecrets, secretScanExempt, isProtectedEnvFile } = require('./lib/sec
 const { blockingHits } = require('./lib/security-patterns');
 const { FILE_HARD_LIMIT, FUNC_HARD_LIMIT, oversizedFunctions } = require('./lib/length');
 const { missingTest } = require('./lib/tdd');
+const { isHarnessRepo, machineryViolation } = require('./lib/trust-boundary');
 
 function block(message) {
   process.stdout.write(message);
   process.stderr.write(message); // exit-2 feedback channel for Claude Code
   process.exit(2);
+}
+
+// Claude Code's persistent memory for THIS project lives outside the project
+// tree (~/.claude/projects/<munged-path>/memory). The munge mirrors Claude
+// Code's: every non [a-zA-Z0-9-] character becomes '-'. If the rule ever
+// drifts, this fails safe — memory writes get blocked, not other dirs opened.
+function projectMemoryDir(project) {
+  const munged = project.replace(/[^a-zA-Z0-9-]/g, '-');
+  return path.join(os.homedir(), '.claude', 'projects', munged, 'memory');
 }
 
 function checkScope(projectDir, filePath) {
@@ -33,9 +44,23 @@ function checkScope(projectDir, filePath) {
   const tmp = realResolve('/tmp');
   if (resolved === tmp || resolved.startsWith(tmp + path.sep)) return;
   const project = realResolve(projectDir);
+  const memory = projectMemoryDir(project);
+  if (resolved === memory || resolved.startsWith(memory + path.sep)) return;
   if (!resolved.startsWith(project + path.sep) && resolved !== project) {
     block(`BLOCKED: Write outside project directory: ${resolved}\nFix: Move the file to a location within the project directory or use .claude/ for scaffold files.\n`);
   }
+}
+
+function checkTrustBoundary(projectDir, filePath) {
+  if ((process.env.HARNESS_PROTECT || '').toLowerCase() === 'off') return;
+  const rel = machineryViolation(projectDir, filePath);
+  if (!rel) return;
+  if (isHarnessRepo(projectDir)) return; // harness self-development edits its own hooks
+  block(
+    `BLOCKED: ${rel} is harness machinery — a quality gate, its wiring, or its state.\n` +
+    `Agents may not modify the gates that verify their own work.\n` +
+    `Fix: if this change is genuinely intended, a human applies it (HARNESS_PROTECT=off) or it lands in the harness repo and is re-scaffolded.\n`
+  );
 }
 
 function checkSecrets(filePath, inserted, projectDir) {
@@ -102,6 +127,7 @@ try {
   const inserted = insertedContent(toolName, ti);
 
   checkScope(projectDir, path.resolve(filePath));
+  checkTrustBoundary(realResolve(projectDir), realResolve(filePath));
   if (isProtectedEnvFile(filePath)) {
     block(`BLOCKED: Cannot modify ${path.basename(filePath)} — environment files contain real secrets. Edit manually.\nFix: Edit .env.example instead for documentation, or edit .env manually outside Claude.\n`);
   }
