@@ -16,8 +16,8 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { checkContentViolations } = require(path.join(__dirname, '..', 'hooks', 'lib', 'layers'));
-const { isTestFile } = require(path.join(__dirname, '..', 'hooks', 'lib', 'tdd'));
 const { run, output, shouldBlock, unavailable } = require(path.join(__dirname, '..', 'hooks', 'lib', 'toolchain'));
+const { findImpureFiles } = require(path.join(__dirname, 'lib', 'refactor-purity'));
 
 const SOURCE_EXTS = new Set(['.py', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
 const FLOOR = 80;
@@ -54,12 +54,12 @@ function checkLayers(stagedPy) {
 
 // keeping-refactors-pure: a refactor commit changes no behavior, so it may not
 // touch tests or snapshots. The skill sets HARNESS_COMMIT_KIND=refactor on the
-// commit command; without it this gate is inert.
-const SNAPSHOT_RE = /(^|\/)__snapshots__\/|\.(snap|ambr|approved\.txt|received\.txt)$/;
-
+// commit command; without it this gate is inert. The commit-msg hook covers the
+// case where the subject line starts with refactor:/cleanup:/etc. and the env
+// var was not set (bare `git commit -m "refactor: ..."`).
 function checkRefactorPurity(staged) {
   if (process.env.HARNESS_COMMIT_KIND !== 'refactor') return;
-  const impure = staged.filter((f) => SNAPSHOT_RE.test(f) || isTestFile(f));
+  const impure = findImpureFiles(staged);
   if (impure.length === 0) return;
   fail(
     'BLOCKED: refactor commit touches test/snapshot files:\n' +
@@ -102,12 +102,26 @@ function checkTypescript(projectDir, stagedTs) {
   }
 }
 
-function readBaseline(projectDir) {
+function readBaseline(projectDir, key) {
+  const file = key === 'js'
+    ? path.join(projectDir, '.claude', 'state', 'coverage-baseline-js.txt')
+    : path.join(projectDir, '.claude', 'state', 'coverage-baseline.txt');
   try {
-    const n = parseFloat(fs.readFileSync(path.join(projectDir, '.claude', 'state', 'coverage-baseline.txt'), 'utf8').trim());
+    const n = parseFloat(fs.readFileSync(file, 'utf8').trim());
     return Number.isFinite(n) ? n : null;
   } catch (_) {
     return null;
+  }
+}
+
+function writeBaseline(projectDir, key, pct) {
+  const file = key === 'js'
+    ? path.join(projectDir, '.claude', 'state', 'coverage-baseline-js.txt')
+    : path.join(projectDir, '.claude', 'state', 'coverage-baseline.txt');
+  try {
+    fs.writeFileSync(file, `${pct}\n`);
+  } catch (_) {
+    /* best effort */
   }
 }
 
@@ -124,18 +138,77 @@ function checkCoverage(projectDir, stagedPy) {
   if (!match) return; // could not parse coverage → do not block
   const pct = parseFloat(match[1]);
 
-  const baseline = readBaseline(projectDir);
+  const baseline = readBaseline(projectDir, 'py');
   const required = baseline !== null ? baseline : FLOOR;
   if (pct < required) {
     const label = baseline !== null ? `baseline ${baseline}%` : `floor ${FLOOR}%`;
     fail(`BLOCKED: coverage ${pct}% is below the ${label}.\nFix: add tests to restore coverage before committing. The ratchet only moves forward.\n`);
   }
   if (baseline === null || pct > baseline) {
-    try {
-      fs.writeFileSync(path.join(projectDir, '.claude', 'state', 'coverage-baseline.txt'), `${pct}\n`);
-    } catch (_) {
-      /* best effort */
-    }
+    writeBaseline(projectDir, 'py', pct);
+  }
+}
+
+// JS/TS coverage constants — vitest table format differs from jest.
+const VITEST_TOTAL_RE = /^All files\s*\|\s*[\d.]+\s*\|\s*[\d.]+\s*\|\s*[\d.]+\s*\|\s*([\d.]+)/m;
+const JEST_TOTAL_RE = /^All files\s*\|\s*([\d.]+)/m;
+
+function detectJsRunner(projectDir) {
+  const VITEST_CONFIGS = ['vitest.config.ts', 'vitest.config.js', 'vitest.config.mjs'];
+  const JEST_CONFIGS = ['jest.config.js', 'jest.config.ts', 'jest.config.mjs', 'jest.config.cjs'];
+  for (const f of VITEST_CONFIGS) {
+    if (fs.existsSync(path.join(projectDir, f))) return 'vitest';
+  }
+  // vitest can also be configured inside package.json
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(projectDir, 'package.json'), 'utf8'));
+    if (pkg.vitest || (pkg.scripts && JSON.stringify(pkg.scripts).includes('vitest'))) return 'vitest';
+  } catch (_) { /* ignore */ }
+  for (const f of JEST_CONFIGS) {
+    if (fs.existsSync(path.join(projectDir, f))) return 'jest';
+  }
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(projectDir, 'package.json'), 'utf8'));
+    if (pkg.jest || (pkg.scripts && JSON.stringify(pkg.scripts).includes('jest'))) return 'jest';
+  } catch (_) { /* ignore */ }
+  return null;
+}
+
+const JS_TEST_RE = /\.(test|spec)\.[cm]?[jt]sx?$/;
+const JS_TEST_DIR_RE = /(^|\/)__tests__\/|(^|\/)tests?\//;
+
+function checkCoverageJs(projectDir, stagedJs) {
+  if ((process.env.HARNESS_COVERAGE_GATE || '').toLowerCase() === 'off') return;
+  // Only staged production JS/TS files trigger the gate (not test files).
+  const prodJs = stagedJs.filter((f) => !JS_TEST_RE.test(f) && !JS_TEST_DIR_RE.test(f));
+  if (prodJs.length === 0) return;
+
+  const runner = detectJsRunner(projectDir);
+  if (!runner) return; // no JS test runner configured → skip
+
+  let res;
+  if (runner === 'vitest') {
+    res = run(['npx', '--no-install', 'vitest', 'run', '--coverage'], projectDir, 110000);
+  } else {
+    res = run(['npx', '--no-install', 'jest', '--coverage', '--passWithNoTests', '--silent'], projectDir, 110000);
+  }
+  if (!res || res.error || res.status === null) return; // spawn failed / timed out → skip
+  const out = output(res);
+  if (unavailable(out)) return; // unprovisioned toolchain → skip
+
+  const re = runner === 'vitest' ? VITEST_TOTAL_RE : JEST_TOTAL_RE;
+  const match = out.match(re);
+  if (!match) return; // could not parse coverage → do not block
+
+  const pct = parseFloat(match[1]);
+  const baseline = readBaseline(projectDir, 'js');
+  const required = baseline !== null ? baseline : FLOOR;
+  if (pct < required) {
+    const label = baseline !== null ? `baseline ${baseline}%` : `floor ${FLOOR}%`;
+    fail(`BLOCKED: JS/TS coverage ${pct}% is below the ${label}.\nFix: add tests to restore coverage before committing. The ratchet only moves forward.\n`);
+  }
+  if (baseline === null || pct > baseline) {
+    writeBaseline(projectDir, 'js', pct);
   }
 }
 
@@ -147,12 +220,17 @@ try {
 
   const stagedPy = stagedSource.filter((f) => f.endsWith('.py'));
   const stagedTs = stagedSource.filter((f) => f.endsWith('.ts') || f.endsWith('.tsx'));
+  const stagedJs = stagedSource.filter((f) => {
+    const e = path.extname(f).toLowerCase();
+    return e === '.js' || e === '.jsx' || e === '.mjs' || e === '.cjs' || e === '.ts' || e === '.tsx';
+  });
 
   checkRefactorPurity(staged);
   checkLayers(stagedPy);
   checkSprintContract(projectDir);
   checkTypescript(projectDir, stagedTs);
   checkCoverage(projectDir, stagedPy);
+  checkCoverageJs(projectDir, stagedJs);
 } catch (err) {
   // A broken gate must not brick committing; record it loudly instead.
   try {

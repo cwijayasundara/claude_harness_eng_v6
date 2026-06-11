@@ -38,10 +38,13 @@ function makeGitProject() {
   return dir;
 }
 
-function runGitHook(projectDir, hookName, env) {
+// args: optional array of positional arguments forwarded to the hook script
+// (e.g. the commit-message file path for commit-msg hooks).
+function runGitHook(projectDir, hookName, env, args) {
   const hookPath = path.join(projectDir, '.claude', 'git-hooks', hookName);
+  const hookArgs = Array.isArray(args) ? args : [];
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [hookPath], {
+    const child = spawn(process.execPath, [hookPath, ...hookArgs], {
       cwd: projectDir,
       env: { ...process.env, ...env },
       stdio: ['pipe', 'pipe', 'pipe'],

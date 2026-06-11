@@ -1,0 +1,87 @@
+#!/usr/bin/env node
+
+'use strict';
+
+// Git commit-msg hook — enforces refactor purity when the commit subject line
+// starts with a refactor-family prefix (refactor|cleanup|rename|move|extract)
+// and HARNESS_COMMIT_KIND was NOT already set to "refactor" (to avoid double-
+// running when the skill already set the env var and pre-commit already ran).
+//
+// The pre-commit hook can only gate when HARNESS_COMMIT_KIND=refactor is set
+// explicitly, because it runs before the commit message is written. This hook
+// closes the gap: a bare `git commit -m "refactor: ..."` no longer bypasses
+// the purity gate.
+//
+// Receives the path to the commit message file as argv[1] (git standard).
+// Reads the staged diff from `git diff --cached` to inspect touched files.
+
+const fs = require('fs');
+const path = require('path');
+const { execFileSync } = require('child_process');
+const { findImpureFiles } = require(path.join(__dirname, 'lib', 'refactor-purity'));
+
+// Subject prefixes that imply a behavior-preserving (refactor) commit.
+const REFACTOR_PREFIX_RE = /^(refactor|cleanup|rename|move|extract)(\(|:|!)/i;
+
+function fail(message) {
+  process.stdout.write(message);
+  process.stderr.write(message);
+  process.exit(1);
+}
+
+function stagedFiles() {
+  try {
+    const out = execFileSync('git', ['diff', '--cached', '--name-only', '--diff-filter=ACMR'], {
+      encoding: 'utf8',
+    });
+    return out.split('\n').filter(Boolean);
+  } catch (_) {
+    return [];
+  }
+}
+
+try {
+  const msgFile = process.argv[2];
+  if (!msgFile) process.exit(0);
+
+  let msgContent;
+  try {
+    msgContent = fs.readFileSync(msgFile, 'utf8');
+  } catch (_) {
+    process.exit(0); // cannot read message → fail open
+  }
+
+  // Extract the subject line (first non-comment, non-empty line).
+  const subject = msgContent.split('\n').find((l) => l.trim() && !l.startsWith('#')) || '';
+
+  // Only act on refactor-family subjects.
+  if (!REFACTOR_PREFIX_RE.test(subject.trim())) process.exit(0);
+
+  // If the skill already set HARNESS_COMMIT_KIND=refactor, pre-commit already
+  // ran the purity check — avoid double-running.
+  if ((process.env.HARNESS_COMMIT_KIND || '').toLowerCase() === 'refactor') process.exit(0);
+
+  const staged = stagedFiles();
+  const impure = findImpureFiles(staged);
+  if (impure.length === 0) process.exit(0);
+
+  fail(
+    'BLOCKED: refactor commit touches test/snapshot files:\n' +
+    impure.map((f) => `  ${f}`).join('\n') +
+    '\nFix: a refactor commit changes no behavior — tests and snapshots must stay ' +
+    'byte-identical. Split the behavioral work into its own commit ' +
+    '(see .claude/skills/keeping-refactors-pure/SKILL.md).\n'
+  );
+} catch (err) {
+  // A broken gate must not brick committing.
+  try {
+    fs.appendFileSync(
+      path.join(process.cwd(), '.claude', 'state', 'hook-errors.log'),
+      `${new Date().toISOString()} commit-msg: ${err && err.message ? err.message : err}\n`
+    );
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+process.exit(0);

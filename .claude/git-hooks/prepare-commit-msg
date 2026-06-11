@@ -12,9 +12,11 @@ set -e
 COMMIT_MSG_FILE="$1"
 COMMIT_SOURCE="${2:-}"
 
-# Skip for non-text commit sources (merge, squash, rebase commit msg edits, etc.)
+# Skip merge/squash messages. 'commit' (amend/-c/-C) is NOT skipped: amended
+# commits need trailers too, and the append_trailer idempotency guard already
+# prevents duplicates when the original message carried them.
 case "$COMMIT_SOURCE" in
-  merge|squash|commit) exit 0 ;;
+  merge|squash) exit 0 ;;
 esac
 
 repo_root="$(git rev-parse --show-toplevel 2>/dev/null || echo "")"
