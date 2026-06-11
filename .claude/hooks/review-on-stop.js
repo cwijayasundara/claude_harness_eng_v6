@@ -130,7 +130,7 @@ try {
   if (advisories.length > 0) {
     process.stdout.write(
       ['Session learnings review:', ...advisories.map((s) => `  - ${s}`),
-        'Run /claude-md-management:revise-claude-md to apply learnings.'].join('\n') + '\n'
+        'Apply learnings: run /claude-md-management:revise-claude-md if that plugin is installed, otherwise edit CLAUDE.md directly to promote these patterns.'].join('\n') + '\n'
     );
   }
 } catch (err) {
