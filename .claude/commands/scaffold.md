@@ -120,6 +120,7 @@ If the user picks D, the full harness is still installed (in case scope grows) b
    - B) Local dev servers
    - C) Stub / mock server
 5. "Install complementary official Claude Code plugins?"
+   (`playwright` is installed unconditionally — the evaluator's Layer 2 browser checks and the design-critic vision loop depend on its MCP browser tools. This question covers only the optional extras.)
    - `superpowers` — Structured developer workflows used by the harness pipeline
    - `code-review` — Automated PR review with confidence scoring
    - `commit-commands` — `/commit`, `/commit-push-pr` git workflows
@@ -262,15 +263,20 @@ Preset mappings:
 
 ## Step 3: Copy Scaffold Files
 
-First, locate the plugin source directory by finding the newest installed local-harness copy. Prefer the Claude plugin cache over broad filesystem search so stale clones do not shadow the active plugin.
+First, locate the plugin source directory. `${CLAUDE_PLUGIN_ROOT}` is the authoritative answer — Claude Code sets it to this plugin's own root for every session that loaded the plugin (marketplace install or `--plugin-dir` alike), so it never points at a stale clone or a renamed checkout. Only fall back to searching when it is unset.
 
 ```bash
-# Prefer the newest local marketplace cache for this plugin.
-PLUGIN_SOURCE=$(find ~/.claude/plugins/cache/local-harness/claude_harness_eng_v5 -maxdepth 3 -path "*/.claude-plugin/plugin.json" -print 2>/dev/null | sort -V | tail -1 | sed 's|/.claude-plugin/plugin.json||')
+# Authoritative: the running plugin's own root.
+PLUGIN_SOURCE="${CLAUDE_PLUGIN_ROOT}"
 
-# Fallback for --plugin-dir development sessions.
+# Fallback 1: newest local marketplace cache for this plugin.
+if [ -z "$PLUGIN_SOURCE" ] || [ ! -f "$PLUGIN_SOURCE/.claude-plugin/plugin.json" ]; then
+  PLUGIN_SOURCE=$(find ~/.claude/plugins/cache/local-harness -maxdepth 4 -path "*/.claude-plugin/plugin.json" -exec grep -l '"name": "claude_harness_eng_v5"' {} + 2>/dev/null | sort -V | tail -1 | sed 's|/.claude-plugin/plugin.json||')
+fi
+
+# Fallback 2: conventional clone location for --plugin-dir development sessions.
 if [ -z "$PLUGIN_SOURCE" ]; then
-  PLUGIN_SOURCE=$(find ~/claude_harness_eng_v5/.claude ~/Documents/rnd_2026/claude_scaffold_research/claude_harness_eng_v5/.claude -maxdepth 3 -path "*/.claude-plugin/plugin.json" -exec grep -l '"name": "claude_harness_eng_v5"' {} \; 2>/dev/null | head -1 | sed 's|/.claude-plugin/plugin.json||')
+  PLUGIN_SOURCE=$(find ~/claude_harness_eng_v5/.claude -maxdepth 3 -path "*/.claude-plugin/plugin.json" -exec grep -l '"name": "claude_harness_eng_v5"' {} \; 2>/dev/null | head -1 | sed 's|/.claude-plugin/plugin.json||')
 fi
 
 echo "Found plugin at: $PLUGIN_SOURCE"
@@ -372,7 +378,15 @@ cp "$HARNESS_ROOT/docs/telemetry.md" "$HARNESS_ROOT/docs/testing.md" "$HARNESS_R
 
 ### Add Official Plugins to settings.json (based on the plugins decision)
 
-After copying settings.json, add the `enabledPlugins` block based on the user's answer:
+After copying settings.json, add the `enabledPlugins` block based on the user's answer.
+
+**Always merge `playwright@claude-plugins-official` first, regardless of the answer.** It is not one of the optional eight: the `evaluator` agent's Layer 2 (browser verification) and the `design-critic` GAN loop (Layer 3) call its `mcp__plugin_playwright_playwright__browser_*` tools, and without the plugin those layers cannot run — `/evaluate` degrades to API-only checks. Only omit it if the user explicitly declines after being told this, and record the degradation in the Step 10 report.
+
+```json
+"enabledPlugins": {
+  "playwright@claude-plugins-official": true
+}
+```
 
 **If Yes (all eight) or selected plugins:**
 Merge the selected official plugins into the project's existing `.claude/settings.json` `enabledPlugins` object:
@@ -393,9 +407,10 @@ Do not replace the whole `enabledPlugins` object if it already exists. Preserve 
 
 If the user chose "Let me pick," only include the plugins they selected.
 
-**If No:** Do not add `enabledPlugins` to settings.json.
+**If No:** Add only the `playwright@claude-plugins-official` entry (see above) — skip the optional eight.
 
 These plugins are complementary to the harness and do not conflict:
+- `playwright` — **required, not optional**: provides the MCP browser tools (`mcp__plugin_playwright_playwright__browser_*`) that the `evaluator` agent uses for Layer 2 verification and the `design-critic` uses for screenshots. Without it, `/evaluate` runs API checks only.
 - `superpowers` — structured workflows used by the harness pipeline for brainstorming, planning, TDD, debugging, and verification
 - `code-review` — PR review (our harness does sprint evaluation, not PR review)
 - `commit-commands` — git workflows (our harness manages commits in `/auto`, but manual commits need this)
@@ -627,12 +642,13 @@ If `lsp.servers` is empty, replace `{{LSP_HEALTH_CHECKS}}` with `echo "  (no LSP
 git init
 ```
 
-Install the harness commit-trailer and pre-commit git hooks (always):
+Install the harness commit-trailer, pre-commit, and commit-msg git hooks (always):
 
 ```bash
 cp $PLUGIN_SOURCE/git-hooks/prepare-commit-msg .git/hooks/prepare-commit-msg
 cp $PLUGIN_SOURCE/git-hooks/pre-commit .git/hooks/pre-commit
-chmod +x .git/hooks/prepare-commit-msg .git/hooks/pre-commit
+cp $PLUGIN_SOURCE/git-hooks/commit-msg .git/hooks/commit-msg
+chmod +x .git/hooks/prepare-commit-msg .git/hooks/pre-commit .git/hooks/commit-msg
 mkdir -p .claude/runs
 ```
 
@@ -792,7 +808,7 @@ Installed:
   agents        → .claude/agents/
   skills        → .claude/skills/
   hooks         → .claude/hooks/ (one per event + lib/)
-  16 templates  → .claude/templates/
+  18 templates  → .claude/templates/ (+ state-seeds/)
   workflows/    → .claude/workflows/  (no built-ins; author your own)
   6 state seeds  → .claude/state/ (from templates/state-seeds/)
   1 manifest    → .claude/.claude-plugin/plugin.json
@@ -827,7 +843,7 @@ Installed:
   agents        → .claude/agents/
   skills        → .claude/skills/
   hooks         → .claude/hooks/ (one per event + lib/)
-  16 templates  → .claude/templates/
+  18 templates  → .claude/templates/ (+ state-seeds/)
   workflows/    → .claude/workflows/  (no built-ins; author your own)
   6 state seeds  → .claude/state/ (from templates/state-seeds/)
   1 manifest    → .claude/.claude-plugin/plugin.json

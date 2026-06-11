@@ -22,6 +22,15 @@ else
   echo "WARN: pip3 not found — JS/TS code-map falls back to regex indexing"
 fi
 
+# Playwright MCP plugin (evaluator Layer 2 + design-critic Layer 3).
+# The harness cannot verify browser behavior without it; warn loudly here so
+# the gap surfaces before the first /evaluate run instead of inside it.
+if ! grep -qs '"playwright@claude-plugins-official"' .claude/settings.json "$HOME/.claude/settings.json"; then
+  echo "WARN: playwright@claude-plugins-official is not enabled in .claude/settings.json or ~/.claude/settings.json."
+  echo "      /evaluate will degrade to API-only checks (no browser or design verification)."
+  echo "      Fix: add \"playwright@claude-plugins-official\": true to enabledPlugins and restart Claude Code."
+fi
+
 # Environment
 if [ -f ".env.example" ] && [ ! -f ".env" ]; then
   cp .env.example .env

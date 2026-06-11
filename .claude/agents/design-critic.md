@@ -178,9 +178,11 @@ Write scores and critique to `specs/reviews/eval-scores.json`:
 }
 ```
 
-Set `verdict` to `"PASS"` only when all four scores meet or exceed the threshold.
+Set `verdict` to `"PASS"` only when BOTH conditions are met: (1) the weighted average meets or exceeds `threshold`, AND (2) every individual criterion score meets or exceeds `per_criterion_minimum`. A high weighted average cannot mask a critically weak criterion — if any single score is below `per_criterion_minimum`, the verdict is `"FAIL"` regardless of the weighted average.
 
 ## Gotchas
+
+**Browser tools unavailable:** If the `mcp__plugin_playwright_playwright__browser_*` tools are not in your tool list, you cannot take screenshots and must not score from memory or skip silently. Return a failure verdict naming the missing tools and the fix: enable `"playwright@claude-plugins-official": true` in `.claude/settings.json` `enabledPlugins` and restart Claude Code.
 
 **Screenshot quality:** If the screenshot is blurry, cropped, or shows a loading state, request a new screenshot before scoring. Do not score an incomplete render.
 

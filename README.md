@@ -17,6 +17,8 @@ Everything else (telemetry, trackers, modes, framework packs) is optional tuning
 
 ## Quickstart
 
+**Prerequisite — Playwright plugin.** The evaluator's browser checks (Layer 2) and the design-critic vision loop (Layer 3) call the official Playwright plugin's MCP browser tools. `/scaffold` enables `playwright@claude-plugins-official` in the target project's `.claude/settings.json` automatically; if you skip scaffolding or trimmed `enabledPlugins`, add `"playwright@claude-plugins-official": true` yourself or `/evaluate` degrades to API-only checks (and says so with a `failure_layer: infrastructure` verdict).
+
 ```bash
 # 1. Clone the harness
 git clone https://github.com/cwijayasundara/claude_harness_eng_v5.git ~/claude_harness_eng_v5

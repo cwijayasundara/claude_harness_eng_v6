@@ -31,6 +31,7 @@ Before running `/evaluate`, verify:
 - `sprint-contracts/{group}.json` exists and is valid JSON.
 - `project-manifest.json` exists with `api_base_url`, `ui_base_url`, and `health_check` fields.
 - Docker stack is expected to be running. If it is not, the health check in Step 4 will catch this and produce a FAIL.
+- The Playwright MCP browser tools (`mcp__plugin_playwright_playwright__browser_*`) are available. If the contract has `playwright_checks` or `design_checks` and the tools are missing, do NOT silently skip those layers or improvise with curl: write `VERDICT: FAIL` with `failure_layer: infrastructure` and the fix `Enable "playwright@claude-plugins-official": true in .claude/settings.json enabledPlugins, restart Claude Code, then re-run /evaluate.`
 
 ---
 
@@ -153,6 +154,8 @@ In Full mode, delegate to the `design-critic` agent:
 - Pass the list of `design_checks` entries from the sprint contract.
 - Pass the `ui_base_url`.
 - The design-critic returns PASS/FAIL per check with visual evidence (screenshots or snapshots).
+
+The design-critic writes `specs/reviews/eval-scores.json` with keys `design_quality`, `originality`, `craft`, and `functionality`; these map 1:1 onto the contract's `design_checks` keys, and each criterion's score must meet or exceed its `min_score` in the contract for the check to pass.
 
 Record the design-critic's verdicts as-is. Do not override them.
 

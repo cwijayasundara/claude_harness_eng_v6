@@ -132,6 +132,8 @@ Do NOT modify feature identity/specification fields: `id`, `category`, `story`, 
 
 ## Gotchas
 
+**Browser tools unavailable:** If the `mcp__plugin_playwright_playwright__browser_*` tools are not in your tool list and the contract has `playwright_checks` or `design_checks`, that is an infrastructure failure, not a reason to improvise or skip. Write `VERDICT: FAIL` with `failure_layer: infrastructure` and the fix: enable `"playwright@claude-plugins-official": true` in `.claude/settings.json` `enabledPlugins` and restart Claude Code. Never report a layer as passed that you could not execute.
+
 **Application not running:** Run the health-check retry loop before any checks. If the app is not reachable after all retries, this is a FAIL. Do not attempt to start it yourself — report the failure with the verification mode and URL attempted, and return the sprint to the generator.
 
 **Stub mode limitations:** In `stub` mode, Layer 1 checks validate request/response shapes against the schema but cannot verify business logic (e.g., "does uploading a duplicate return 409?"). Note this limitation in the verdict. Layer 2 (Playwright) is skipped unless a frontend URL is configured separately.
