@@ -63,6 +63,8 @@ If `specs/brownfield/` exists, read `architecture-map.md`, `test-map.md`, `risk-
 
 **Coverage preflight — REQUIRED SUB-SKILL: `checking-coverage-before-change`** for every symbol in the target path before the first edit. COVERED symbols give you the regression oracle to run after each step; UNCOVERED symbols route to `pinning-down-behavior` (or `sprouting-instead-of-editing`) before any in-place edit.
 
+**Migration preflight — REQUIRED SUB-SKILL: `checking-migration-safety`** if the refactor touches ORM models or schema files (e.g. renaming a model field). A behavior-preserving refactor that requires a schema migration is two deployables, not one commit.
+
 For each file in the target path:
 
 - **Architecture compliance:** does the file import from a layer above it? (see layering rules in `code-gen/references/architecture.md`)

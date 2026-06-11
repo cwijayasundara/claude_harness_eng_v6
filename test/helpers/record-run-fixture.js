@@ -101,10 +101,17 @@ function copyHarnessFiles(dir) {
   const hooksDir = path.join(dir, '.claude', 'hooks');
   const scriptsDir = path.join(dir, '.claude', 'scripts');
   fs.mkdirSync(hooksDir, { recursive: true });
+  fs.mkdirSync(path.join(hooksDir, 'lib'), { recursive: true });
   fs.mkdirSync(scriptsDir, { recursive: true });
   fs.copyFileSync(
     path.join(REPO_ROOT, '.claude', 'hooks', 'record-run.js'),
     path.join(hooksDir, 'record-run.js')
+  );
+  // record-run.js shares readHookInput with the other hooks via lib/common —
+  // /scaffold copies the whole hooks/ dir, so production always has it.
+  fs.copyFileSync(
+    path.join(REPO_ROOT, '.claude', 'hooks', 'lib', 'common.js'),
+    path.join(hooksDir, 'lib', 'common.js')
   );
   for (const scriptName of HOOK_DEP_SCRIPTS) {
     const source = path.join(REPO_ROOT, '.claude', 'scripts', scriptName);

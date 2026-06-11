@@ -93,47 +93,46 @@ describe('Harness E2E — Brownfield + Telemetry', { timeout: 1200000 }, () => {
 
   // ── Stage 6b: Code graph ──────────────────────────────────────────────
 
-  test('Stage 6b - Code Graph: dependency analysis', { timeout: 180000 }, () => {
-    const prompt =
-      'Run: mkdir -p specs/brownfield\n' +
-      'Then read every .js file in this project (skip node_modules).\n' +
-      'For each file, find all require() calls to map dependencies.\n' +
-      'Write specs/brownfield/code-graph.json with exactly this structure:\n' +
-      '{"nodes": [{"id": "relative/path.js", "type": "module"}], "edges": [{"from": "source.js", "to": "target.js", "type": "import"}]}\n' +
-      'Also write specs/brownfield/dependency-graph.md with a Mermaid flowchart of the imports.';
-    const result = runClaude(prompt, {
-      cwd: PROJECT_DIR,
-      model: 'sonnet',
-      budgetUsd: '1.00',
-      timeoutMs: 170000,
-    });
+  test('Stage 6b - Code Graph: AST indexer produces the real schema', { timeout: 180000 }, () => {
+    // Run the actual production indexer (what /code-map invokes), not an
+    // LLM-synthesized approximation — this is the integration gate for the
+    // vendored-ast schema all downstream brownfield skills consume.
+    const indexer = path.join(
+      __dirname, '..', '..', '.claude', 'skills', 'code-map', 'scripts',
+      'code_index', 'code_index.py'
+    );
+    const graphPath = path.join(PROJECT_DIR, 'specs', 'brownfield', 'code-graph.json');
+    const { spawnSync } = require('child_process');
+    const run = spawnSync('python3', [
+      indexer, '--root', PROJECT_DIR, '--out', graphPath,
+    ], { encoding: 'utf8', timeout: 120000 });
+    assert.strictEqual(run.status, 0, run.stdout + run.stderr);
 
-    const graphExists = fileExists('specs/brownfield/code-graph.json');
-    let nodeCount = 0;
-    let edgeCount = 0;
-    if (graphExists) {
-      try {
-        const graph = JSON.parse(readArtifact('specs/brownfield/code-graph.json'));
-        nodeCount = (graph.nodes || []).length;
-        edgeCount = (graph.edges || []).length;
-      } catch (_) {}
-    }
-
-    const depGraphExists = fileExists('specs/brownfield/dependency-graph.md');
+    const graph = JSON.parse(readArtifact('specs/brownfield/code-graph.json'));
+    const nodeCount = (graph.nodes || []).length;
+    const edgeCount = (graph.edges || []).length;
 
     logResult('stage-6b-code-graph', {
-      exitCode: result.exitCode,
-      graphExists,
+      exitCode: run.status,
+      producer: graph.meta && graph.meta.producer,
       nodeCount,
       edgeCount,
-      depGraphExists,
+      filesRecords: (graph.files || []).length,
     });
+    console.log(`[e2e] Code graph: ${nodeCount} nodes, ${edgeCount} edges (producer=${graph.meta.producer})`);
 
-    console.log(`[e2e] Code graph: ${nodeCount} nodes, ${edgeCount} edges`);
-    console.log(`[e2e] Dependency graph markdown: ${depGraphExists}`);
-
-    assert.ok(graphExists, 'code-graph.json must exist');
+    assert.strictEqual(graph.meta.producer, 'vendored-ast', 'AST producer must run');
     assert.ok(nodeCount >= 1, `Code graph must have >= 1 node (found ${nodeCount})`);
+    assert.ok((graph.files || []).length >= 1, 'per-file symbol records must exist');
+    for (const n of graph.nodes) {
+      assert.match(n.id, /^(js|ts|py):/, `node id must carry a language prefix: ${n.id}`);
+      assert.strictEqual(n.kind, 'file');
+      assert.ok(n.language && n.path && Array.isArray(n.symbols), `node schema invalid: ${n.id}`);
+    }
+    assert.ok(
+      fs.existsSync(graphPath.replace(/\.json$/, '.meta.json')),
+      'code-graph.meta.json must be written for the graph-refresh hook'
+    );
   });
 
   // ── Stage 6c: Brownfield code change — add search ─────────────────────

@@ -1,4 +1,4 @@
-# Superpowers for Brownfield — Behavior-Preserving Change Skills
+# Behavior-Preserving Change Skills (Brownfield Superpowers)
 
 **Status:** Implemented + pressure-tested (2026-06-10) — M1–M3 landed with tests; M4 adversarial pressure-testing completed (see §7)
 **Date:** 2026-06-10

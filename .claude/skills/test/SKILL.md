@@ -46,7 +46,7 @@ Read `.claude/skills/code-gen/SKILL.md` for quality principles (typing, error ha
 
 Read `.claude/skills/evaluate/SKILL.md` for the contract verification approach used by the evaluator.
 
-Read `.claude/skills/code-gen/references/test-playwright.md` for project-specific Playwright patterns.
+Read `.claude/skills/evaluate/references/playwright-patterns.md` for all selector, assertion, and waiting rules — it is the single source of truth (shared with `/evaluate`). Read `.claude/skills/code-gen/references/test-playwright.md` secondarily, for config and file-structure patterns only.
 
 ### Step 2 — Read Acceptance Criteria
 
@@ -82,6 +82,7 @@ Create `specs/test_artefacts/` if it does not exist.
 - One fixture file per domain entity (e.g., `orders.json`, `users.json`).
 - Data must be domain-representative: real-looking emails, valid UUIDs, plausible amounts.
 - Never use `"foo"`, `123`, or `"test"` as stand-in values.
+- **In `--plan-only` mode, fixtures are schema-free:** `/design` runs in parallel, so `specs/design/api-contracts.md` may not exist yet. Derive field names from story acceptance criteria, and reconcile fixtures against `api-contracts.md` in Step 5 (or when `/build` Phase 4 begins) — field-name drift between fixtures and contracts is expected until then and must be resolved before any Playwright file uses them.
 
 **`specs/test_artefacts/test-traces.json`** — the trace spine: one entry per test case, each tracing to the acceptance-criterion id(s) it verifies:
 ```json

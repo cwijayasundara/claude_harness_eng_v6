@@ -7,6 +7,7 @@ const path = require('path');
 const os = require('os');
 const { execFileSync } = require('child_process');
 const { appendLedger, pushSnapshot, readSkillCatalog, seedLedgerFromRuns } = require('../scripts/telemetry-memory');
+const { readHookInput } = require('./lib/common');
 
 function resolveUser() {
   if (process.env.HARNESS_USER) return process.env.HARNESS_USER;
@@ -127,7 +128,7 @@ function shouldSkipCommandTelemetry(command) {
 
 (async () => {
   try {
-    const input = JSON.parse(fs.readFileSync('/dev/stdin', 'utf8'));
+    const input = readHookInput();
     const eventKind = (input.hook_event_name || '').toString();
     const toolName = input.tool_name || '';
 

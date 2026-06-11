@@ -335,8 +335,8 @@ cp -r $PLUGIN_SOURCE/agents/ .claude/agents/
 cp -r $PLUGIN_SOURCE/skills/ .claude/skills/
 cp -r $PLUGIN_SOURCE/hooks/ .claude/hooks/
 cp -r $PLUGIN_SOURCE/scripts/ .claude/scripts/
-cp -r $PLUGIN_SOURCE/state/ .claude/state/
 cp -r $PLUGIN_SOURCE/templates/ .claude/templates/
+mkdir -p .claude/state && cp $PLUGIN_SOURCE/templates/state-seeds/* .claude/state/
 cp -r $PLUGIN_SOURCE/workflows/ .claude/workflows/
 cp $PLUGIN_SOURCE/architecture.md .claude/architecture.md
 cp $PLUGIN_SOURCE/program.md .claude/program.md
@@ -794,7 +794,7 @@ Installed:
   hooks         → .claude/hooks/ (one per event + lib/)
   16 templates  → .claude/templates/
   workflows/    → .claude/workflows/  (no built-ins; author your own)
-  6 state files → .claude/state/
+  6 state seeds  → .claude/state/ (from templates/state-seeds/)
   1 manifest    → .claude/.claude-plugin/plugin.json
 
 Telemetry (OFF by default — opt-in):
@@ -829,7 +829,7 @@ Installed:
   hooks         → .claude/hooks/ (one per event + lib/)
   16 templates  → .claude/templates/
   workflows/    → .claude/workflows/  (no built-ins; author your own)
-  6 state files → .claude/state/
+  6 state seeds  → .claude/state/ (from templates/state-seeds/)
   1 manifest    → .claude/.claude-plugin/plugin.json
 
 Telemetry (OFF by default — opt-in):

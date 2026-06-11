@@ -32,7 +32,7 @@ Write these files:
 
 | File | Purpose |
 |---|---|
-| `specs/brownfield/codebase-map.md` | Languages, frameworks, package managers, entry points, services, commands |
+| `specs/brownfield/codebase-map.md` | Languages, frameworks, package managers, entry points, services, commands. **LLM-written inventory** — distinct from `symbol-map.md`, the script-generated navigation index from `/code-map` |
 | `specs/brownfield/code-graph.json` | Deterministic dependency graph produced by `/code-map` |
 | `specs/brownfield/code-graph.meta.json` | Producer, language counts, scan warnings, timestamp |
 | `specs/brownfield/dependency-graph.md` | Mermaid render of file/module-level edges |

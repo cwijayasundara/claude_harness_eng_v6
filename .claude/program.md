@@ -50,16 +50,18 @@ When an automated check fails, apply the fix strategy from the table below befor
 
 ## Pipeline Status
 
-| Phase | Name | Status | Notes |
-|-------|------|--------|-------|
-| 1 | BRD | pending | Business requirements not yet loaded |
-| 2 | Spec | pending | |
-| 3 | Design | pending | |
-| 4 | Implement | pending | |
-| 5 | Review | pending | |
-| 6 | Test | pending | |
-| 7 | Deploy | pending | |
-| 8 | Commit | pending | |
+Phase order is owned by `/build` (`.claude/skills/build/SKILL.md`): Brownfield discovery (existing codebases) → BRD → Spec → Design + Test-planning (parallel) → state init → deploy artifacts (docker mode) → autonomous execution via `/auto` (ratchet loop) → E2E test generation → README. Do not sequence phases from this file.
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| Brownfield discovery | pending | existing codebases only |
+| BRD | pending | Business requirements not yet loaded |
+| Spec | pending | |
+| Design + Test-plan | pending | run in parallel |
+| Deploy artifacts | pending | docker mode |
+| Autonomous execution (/auto) | pending | |
+| E2E test generation | pending | |
+| README | pending | |
 
 ## Current Focus
 

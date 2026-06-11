@@ -46,6 +46,7 @@ Escalate to `/change`, `/refactor`, `/spec`, or `/auto` when any are true:
 - The fix cannot be reproduced or verified locally.
 - Requirements are ambiguous after at most 3 clarification questions.
 - The requested work combines multiple independent changes.
+- The change bumps a dependency version — route through `upgrading-dependencies` (patch bumps may stay in `/vibe` if the suite proves them; minor/major escalate).
 
 ---
 

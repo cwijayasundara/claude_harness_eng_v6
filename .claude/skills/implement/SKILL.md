@@ -51,6 +51,7 @@ If `specs/brownfield/` exists, read `architecture-map.md`, `test-map.md`, `risk-
 - Escalate if the target path is marked high-risk or requires human approval.
 - Navigate via `symbol-map.md` and, for files flagged in `skeletons/`, read only the relevant symbol slice with `Read(offset, limit)` — never whole-file-read a skeleton-flagged file. Pass this instruction into teammate spawn prompts.
 - For stories that edit pre-existing symbols: run `checking-coverage-before-change` first; UNCOVERED routes through `pinning-down-behavior` / `sprouting-instead-of-editing`. Pass this into teammate spawn prompts too.
+- For stories that touch persisted data shape (models, migrations, message contracts): run `checking-migration-safety` and carry its expand-contract plan into the teammate spawn prompts.
 
 ### Step 0 — Write Implementation Plan with Superpowers
 

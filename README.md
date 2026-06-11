@@ -26,6 +26,8 @@ cd ~/my-project
 claude --plugin-dir ~/claude_harness_eng_v5/.claude
 ```
 
+> **Path matters:** command namespaces derive from `plugin.json`'s name (`claude_harness_eng_v5`), so commands are `/claude_harness_eng_v5:scaffold` regardless of the clone directory — but keep the clone path as shown so docs and `--plugin-dir` examples match. If the GitHub repo you cloned is still named `claude_harness_eng_v4`, the explicit target path in step 1 normalizes it.
+
 Then, inside Claude Code:
 
 ```
@@ -99,7 +101,7 @@ The commands you'll actually type are the lane entry points above. The full surf
 
 Execution modes for `/auto`: **Full** (all gates, the default) and **Lean** (same as Full but does not run the design-critic vision loop). Both run the security gate and the evaluator. For small or quick work use `/build --lite` or `/vibe` rather than a weaker `/auto` mode.
 
-**Behavior-preservation sub-skills** (invoked automatically by `/refactor`, `/change`, `/vibe`, `/implement`, and `/auto` teammates when editing existing code; see `docs/BROWNFIELD_SUPERPOWERS_PROPOSAL.md`): `checking-coverage-before-change` (symbol-level coverage verdicts via `coverage_map.py`), `pinning-down-behavior` (characterization tests that you watch bite), `sprouting-instead-of-editing` (Feathers' escape hatch for unpinnable code), `keeping-refactors-pure` (no tangled commits; enforced by the pre-commit hook via `HARNESS_COMMIT_KIND=refactor`).
+**Behavior-preservation sub-skills** (invoked automatically by `/refactor`, `/change`, `/vibe`, `/implement`, and `/auto` teammates when editing existing code; see `docs/behavior-preservation.md`): `checking-coverage-before-change` (symbol-level coverage verdicts via `coverage_map.py`), `pinning-down-behavior` (characterization tests that you watch bite), `sprouting-instead-of-editing` (Feathers' escape hatch for unpinnable code), `keeping-refactors-pure` (no tangled commits; enforced by the pre-commit hook via `HARNESS_COMMIT_KIND=refactor`), `checking-migration-safety` (expand-contract for schema changes, proven reversibility), `upgrading-dependencies` (one dependency bump per commit, changelog + blast-radius audit).
 
 ---
 

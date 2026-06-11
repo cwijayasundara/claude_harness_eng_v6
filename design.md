@@ -138,7 +138,7 @@ Neither runtime changes how `/auto` runs inside the workspace. The only differen
 | Component | Count | Location | Purpose |
 |---|---:|---|---|
 | Slash command (true) | 1 | `.claude/commands/scaffold.md` | Bootloader only |
-| Skills (virtual commands) | 24 | `.claude/skills/<name>/SKILL.md` | All other workflows |
+| Skills (virtual commands) | 26 | `.claude/skills/<name>/SKILL.md` | All other workflows |
 | Specialized agents | 7 | `.claude/agents/<name>.md` | Subagents with tool allowlists + model tier |
 | Lifecycle hooks | 5 | `.claude/hooks/*.js` | PreToolUse, PostToolUse, UserPromptSubmit, Stop, SubagentStop |
 | Templates | 10 | `.claude/templates/*` | Sprint contract, story, init.sh, tracker config, etc. |

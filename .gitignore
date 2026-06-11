@@ -1,8 +1,6 @@
-.claude/state/current-*
-.claude/state/telemetry-ledger.jsonl
-.claude/state/process-*.log
-.claude/state/lane-router-last.txt
-.claude/state/last-drift-scan.txt
+# All of .claude/state/ is live runtime state — seeds live (tracked) in
+# .claude/templates/state-seeds/ and are copied here by /scaffold.
+.claude/state/
 .claude/scheduled_tasks.lock
 .claude/tdd-guard/
 node_modules/
@@ -23,9 +21,8 @@ symphony_clone/.symphony/
 symphony_clone/workspaces/
 symphony_clone/logs/
 *.jsonl
-!.claude/state/pending-reviews.jsonl
+!.claude/templates/state-seeds/pending-reviews.jsonl
 test/e2e/results/*
 !test/e2e/results/.gitkeep
 test/e2e/output/
 .playwright-mcp/
-.claude/state/hook-errors.log
