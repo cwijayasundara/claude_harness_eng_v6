@@ -117,6 +117,13 @@ node .claude/scripts/ci-ingest.js --root .     # → specs/brownfield/ci-map.md
 node .claude/scripts/flag-scan.js --root .     # → specs/brownfield/flag-inventory.md
 ```
 
+If the app is runnable (manifest has `api_base_url` and the stack is up), also capture the performance baseline — a change that passes every functional test can still silently double latency:
+
+```bash
+node .claude/scripts/perf-baseline.js          # → specs/brownfield/perf-baseline.json
+# after a change: node .claude/scripts/perf-baseline.js --compare   (exit 1 on p95 regression)
+```
+
 - `ci-map.md` extracts the test/lint/coverage commands the project's CI *actually* enforces, with an alignment section against the harness gates. Where CI and harness disagree (different linter, different coverage bar), surface the discrepancy in `change-strategy.md` — the stricter gate should win, and the choice belongs to the user.
 - `flag-inventory.md` lists feature-flag usage (SDKs, `FEATURE_*` env gates, config flags) with references. Flags gate dark code paths: a change inside a flagged path needs the flag's production state known before the lane is chosen.
 
