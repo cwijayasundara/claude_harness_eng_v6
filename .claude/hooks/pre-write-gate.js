@@ -20,6 +20,7 @@ const { blockingHits } = require('./lib/security-patterns');
 const { FILE_HARD_LIMIT, FUNC_HARD_LIMIT, oversizedFunctions } = require('./lib/length');
 const { missingTest } = require('./lib/tdd');
 const { isHarnessRepo, machineryViolation } = require('./lib/trust-boundary');
+const { coveragePreflight } = require('./lib/coverage-preflight');
 
 function block(message) {
   process.stdout.write(message);
@@ -137,6 +138,11 @@ try {
   }
   checkLength(toolName, ti, filePath, ext);
   checkTdd(projectDir, filePath);
+  if (TRACKED_EXTS.has(ext) && !isSkippedPath(filePath)) {
+    const pf = coveragePreflight(projectDir, toolName, ti, path.resolve(filePath));
+    if (pf.decision === 'block') block(pf.message);
+    if (pf.decision === 'note') process.stdout.write(pf.message);
+  }
 } catch (err) {
   reportFailure('pre-write-gate', err);
 }
