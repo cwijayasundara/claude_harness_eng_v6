@@ -35,7 +35,14 @@ Run this check when the planned diff touches any of: ORM models/entities, `migra
    - **Contract:** only after the new path has held in production and no consumer reads the old shape, drop the old column/field in its own later migration.
    The contract step never ships in the same release as expand. If the lane is `/change` with a single deploy, deliver expand + migrate-reads only, and file the contract step as explicit follow-up work — do not "save a deploy" by contracting early.
 
-4. **Prove reversibility.** Run the migration **and its down-migration** against a seeded copy of the schema (local DB or test container) before marking the work done: up → verify shape + data, down → verify the original shape returns. A down-migration that exists but has never run is documentation, not a rollback path. If the operation is genuinely irreversible (dropped data), say so explicitly in the migration's docstring and in your report — never imply rollback that does not exist.
+4. **Prove reversibility.** Run the migration **and its down-migration** against a seeded copy of the schema before marking the work done — the harness ships the runner:
+
+   ```bash
+   .claude/scripts/migration-roundtrip.sh --ephemeral-postgres   # docker spins a disposable DB
+   # or: DATABASE_URL=<disposable-db-url> .claude/scripts/migration-roundtrip.sh
+   ```
+
+   It detects the tool (alembic/django/prisma/knex) and runs up → down → up. Exit 0 = proven; exit 1 = a step failed (a real finding — fix the migration); exit 2 = could not prove (prisma has no down migrations; django needs an explicit downgrade target; no DB available) — report exit 2 as "reversibility NOT proven", never as a pass. A down-migration that exists but has never run is documentation, not a rollback path. If the operation is genuinely irreversible (dropped data), say so explicitly in the migration's docstring and in your report — never imply rollback that does not exist.
 
 5. **Check old-code compatibility (N/N+1 rule).** During a rolling deploy, the previous code version runs against the migrated schema. Ask: "does yesterday's code still work on tomorrow's schema?" If no — the change is Destructive; return to step 3.
 
