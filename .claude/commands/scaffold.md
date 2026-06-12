@@ -151,7 +151,7 @@ Based on their answers, write `project-manifest.json` to the project root. Fill 
 - stack.database: primary, secondary
 - stack.deployment: method ("docker-compose"), services list
 - evaluation: api_base_url, ui_base_url, health_check, design_score_threshold (7), design_max_iterations (10), test_corpus_dir
-- execution: default_mode ("full"), max_self_heal_attempts (3), max_auto_iterations (50), coverage_threshold (80), session_chaining (true), agent_team_size ("auto"), teammate_model ("sonnet"), model_tier ("balanced")
+- execution: default_mode ("full"), max_self_heal_attempts (3), max_auto_iterations (50), coverage_threshold (80), session_chaining (true), agent_team_size ("auto"), teammate_model ("sonnet"), model_tier ("balanced"), ceremony ("full" — see docs/adaptive-ceremony.md; "trimmed" skips sprint decomposition for single-story groups and caps the design-critic loop, never the verification gates)
   - `model_tier` sets the cost posture by stamping each agent's `model:` pin (applied in Step 3). `cost` = zero Fable (Sonnet generation, Opus judgment); `balanced` (default, Profile B) = Fable only on the planner, everything else cost-conscious; `max-quality` = Fable on the judgment roles. The `security-reviewer` is **never** Fable in any tier (its cyber safety classifiers can refuse offensive-security reasoning). See `docs/model-allocation.md`.
 - lsp: detected language servers and install commands (see below)
 - verification: mode, health_check, and mode-specific config (see below)

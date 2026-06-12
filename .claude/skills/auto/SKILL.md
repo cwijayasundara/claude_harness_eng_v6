@@ -115,6 +115,16 @@ Rules:
 - **Contract is immutable after negotiation.** Once the evaluator writes the final version, no one edits it.
 - **Validate before it freezes.** After the evaluator writes the final contract, run `node .claude/scripts/validate-contract.js sprint-contracts/{group}.json`. A non-zero exit means the contract is structurally malformed — re-run Step 3 once with the validator output attached. Do not proceed to execution with an invalid contract: the pre-commit hook repeats this check deterministically and will block every commit until it is fixed.
 
+### Ceremony profile
+
+Read `project-manifest.json#execution.ceremony` (default `full`). At `trimmed`:
+
+- A group containing a **single story** skips sprint decomposition — negotiate the contract (Steps 2–3 above, unchanged) and go straight to implementation with one teammate. Multi-story groups keep the full decomposition regardless of profile.
+- The design-critic GAN loop (SECTION 9) caps at **3 iterations** instead of 10.
+- Nothing else changes. The evaluator, the security review, the diff review, and every deterministic gate run identically in both profiles — ceremony trims coordination overhead, never verification.
+
+When a new model generation lands, re-baseline the profile per `docs/adaptive-ceremony.md` instead of carrying forward last generation's settings.
+
 ---
 
 ## SECTION 4: Agent Team Execution (Step 4)
