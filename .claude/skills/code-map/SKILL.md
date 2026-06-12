@@ -215,7 +215,7 @@ Downstream skills should treat `code-graph.json` as the source of truth for stru
 - **Do not edit the JSON by hand.** Re-run the skill to refresh.
 - **Understand-Anything imports are source-of-truth preserving.** If its graph omits calls or symbol references, fix or re-run that producer instead of filling gaps manually.
 - **Stale graphs lie.** Re-run after large refactors. The skill is fast (under 30s for most repos under 5k files).
-- **Hook refresh scope.** The `graph-refresh.js` Stop/SubagentStop hook patches `code-graph.json` and re-renders `symbol-map.md` only — `dependency-graph.md` and `coupling-report.md` are **not** refreshed incrementally and go stale after per-session edits. Re-run `/code-map` (Steps 2–3) when you need those two current.
+- **Hook refresh scope.** The `graph-refresh.js` Stop/SubagentStop hook patches `code-graph.json` and re-renders `symbol-map.md` only — `dependency-graph.md` and `coupling-report.md` are **not** refreshed incrementally. The hook stamps both with a `> STALE since <timestamp>` banner the moment the graph is patched; if a file you are about to use for planning starts with that banner, re-run `/code-map` (Steps 2–3) first instead of trusting it.
 - **Vendor directories.** Skip `node_modules`, `.venv`, `venv`, `dist`, `build`, `target`, `vendor`, `.git`. The script does this by default but custom layouts may need `--exclude`.
 - **Generated code.** Treat generated files (`*.pb.go`, `*.generated.ts`, `migrations/`) as nodes, but flag them in the coupling report so refactors do not target them.
 - **Cycles are not always bugs.** Some frameworks expect circular package dependencies. Report them; do not auto-break them.

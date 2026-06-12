@@ -13,6 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const { resolveProjectDir, readHookInput, reportFailure } = require('./lib/common');
+const { stampDerived } = require('./lib/stale-stamp');
 
 const LOCK_TTL_MS = 60000;
 
@@ -94,7 +95,10 @@ function main() {
   const lock = holdLock(stateDir);
   if (!lock) return;
   try {
-    if (refresh(projectDir, rels)) fs.writeFileSync(dirtyFile, '');
+    if (refresh(projectDir, rels)) {
+      fs.writeFileSync(dirtyFile, '');
+      stampDerived(projectDir, rels);
+    }
   } finally {
     try { fs.unlinkSync(lock); } catch (_) { /* already gone */ }
   }
