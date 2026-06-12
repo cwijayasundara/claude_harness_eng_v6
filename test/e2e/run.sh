@@ -41,22 +41,38 @@ echo ""
 echo "Running E2E tests..."
 echo ""
 
+# Layers run independently: a failure is recorded but does not abort the
+# remaining layers (Layer 2+ does not depend on Layer 1's temp scaffold).
+FAILED_LAYERS=""
+
 # Layer 1: Framework validation (hooks, rubrics, agents, settings, dashboard)
-echo "── Layer 1: Framework Validation (~2 min) ──"
-node --test "$SCRIPT_DIR/harness-framework.test.js" --timeout 300000
+echo "── Layer 1: Framework Validation (~8 min) ──"
+node --test "$SCRIPT_DIR/harness-framework.test.js" --timeout 600000 || FAILED_LAYERS="$FAILED_LAYERS framework"
 
 echo ""
 
-# Layer 2: Greenfield pipeline (brd → spec → design → auto build → telemetry)
-echo "── Layer 2: Greenfield Pipeline (~8 min) ──"
-node --test "$SCRIPT_DIR/harness-pipeline.test.js" --timeout 900000
+# Layer 2: Greenfield pipeline (scaffold → brd → spec → design → phase eval)
+echo "── Layer 2: Greenfield Pipeline (~15 min) ──"
+node --test "$SCRIPT_DIR/harness-pipeline.test.js" --timeout 1500000 || FAILED_LAYERS="$FAILED_LAYERS pipeline"
+
+echo ""
+
+# Layer 2b: Auto build + telemetry/Grafana verification (stages 4-6)
+echo "── Layer 2b: Auto Build + Observability (~5 min) ──"
+node --test "$SCRIPT_DIR/harness-pipeline-build.test.js" --timeout 900000 || FAILED_LAYERS="$FAILED_LAYERS pipeline-build"
 
 echo ""
 
 # Layer 3: Brownfield + code-graph + code change + telemetry + Grafana
 echo "── Layer 3: Brownfield + Telemetry (~10 min) ──"
-node --test "$SCRIPT_DIR/harness-brownfield.test.js" --timeout 1200000
+node --test "$SCRIPT_DIR/harness-brownfield.test.js" --timeout 1200000 || FAILED_LAYERS="$FAILED_LAYERS brownfield"
 
 echo ""
 echo "Results saved to: $SCRIPT_DIR/results/"
 echo "Generated app: $SCRIPT_DIR/output/"
+
+if [ -n "$FAILED_LAYERS" ]; then
+  echo "FAILED LAYERS:$FAILED_LAYERS"
+  exit 1
+fi
+echo "ALL LAYERS PASSED"

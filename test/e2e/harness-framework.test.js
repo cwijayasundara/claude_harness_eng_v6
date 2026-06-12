@@ -7,6 +7,8 @@ const path = require('path');
 const { describe, test, before, after } = require('node:test');
 const { spawnSync, execFileSync } = require('child_process');
 
+const { runClaude } = require('./helpers/claude-runner');
+
 const HARNESS_ROOT = path.join(__dirname, '..', '..');
 const RESULTS_DIR = path.join(__dirname, 'results');
 
@@ -46,22 +48,21 @@ describe('Harness Framework Validation', { timeout: 600000 }, () => {
     console.log('[fw] Cleaned up temp project');
   });
 
-  // ── 1. Scaffold produces correct structure ──────────────────────────────
+  // ── 1. Scaffold: /scaffold mandates Q1, so two turns: invoke, then consent ──
 
-  test('Scaffold: /scaffold creates correct project structure', { timeout: 120000 }, () => {
+  test('Scaffold: /scaffold creates correct project structure', { timeout: 600000 }, () => {
     const pluginDir = path.join(HARNESS_ROOT, '.claude');
-    const result = spawnSync('claude', [
-      '-p', '--model', 'haiku',
-      '--no-session-persistence',
-      '--max-budget-usd', '1.00',
-      '--plugin-dir', pluginDir,
-      '--allowed-tools', 'Bash Read Write Edit Glob Grep Skill',
-    ], {
-      input: '/scaffold\n\nProject type: Node.js CLI\nProject name: test-app\nStack: Node.js\nAccept all defaults.',
-      cwd: PROJECT_DIR,
-      encoding: 'utf8',
-      timeout: 120000,
+    const sessionId = require('crypto').randomUUID();
+    runClaude('/scaffold', {
+      cwd: PROJECT_DIR, model: 'sonnet', budgetUsd: '1.00', timeoutMs: 90000, pluginDir, sessionId,
     });
+    const result = runClaude(
+      'A Node.js CLI todo application using only Node built-ins; project shape: ' +
+      'script/CLI; user surface: CLI; no team integrations, no tracker, no framework ' +
+      'packs. I will not answer further questions — accept the inferred profile ' +
+      '(option A) and proceed to scaffold everything now without asking anything else.',
+      { cwd: PROJECT_DIR, model: 'sonnet', budgetUsd: '3.00', timeoutMs: 480000, continueSession: true, pluginDir, sessionId }
+    );
 
     const hasClaudeDir = fs.existsSync(path.join(PROJECT_DIR, '.claude'));
     const hasClaudeMd = fs.existsSync(path.join(PROJECT_DIR, 'CLAUDE.md'));
@@ -79,6 +80,10 @@ describe('Harness Framework Validation', { timeout: 600000 }, () => {
     console.log('[fw] CLAUDE.md:', hasClaudeMd);
     console.log('[fw] settings.json:', hasSettings);
     console.log('[fw] Files:', fs.readdirSync(PROJECT_DIR).join(', '));
+
+    assert.ok(!result.error, 'claude CLI must spawn: ' + result.error); // artifacts are the gate; exit 143 at timeout is OK
+    assert.ok(hasClaudeDir, '.claude/ directory must exist after scaffold');
+    assert.ok(hasClaudeMd, 'CLAUDE.md must exist after scaffold');
   });
 
   // ── 2. pre-write-gate blocks oversized files ─────────────────────────────
@@ -176,21 +181,20 @@ describe('Harness Framework Validation', { timeout: 600000 }, () => {
     }
   });
 
-  // ── 5. Phase evaluator agent definition is valid ────────────────────────
-
-  test('Agent: phase-evaluator.md is properly configured', () => {
-    const agentPath = path.join(HARNESS_ROOT, '.claude', 'agents', 'phase-evaluator.md');
-    assert.ok(fs.existsSync(agentPath), 'phase-evaluator.md must exist');
-
+  // ── 5. Evaluator agent definition is valid (merged from phase-evaluator) ──
+  test('Agent: evaluator.md is properly configured', () => {
+    const agentPath = path.join(HARNESS_ROOT, '.claude', 'agents', 'evaluator.md');
+    assert.ok(fs.existsSync(agentPath), 'evaluator.md must exist');
     const content = fs.readFileSync(agentPath, 'utf8');
-    assert.ok(content.includes('model: opus'), 'Must use opus model');
+    assert.ok(content.includes('model: claude-opus'), 'Must use opus model');
+    assert.ok(/artifact mode/i.test(content), 'Must support artifact mode');
     assert.ok(content.includes('completeness'), 'Must define completeness criterion');
     assert.ok(content.includes('traceability'), 'Must define traceability criterion');
     assert.ok(content.includes('specificity'), 'Must define specificity criterion');
     assert.ok(content.includes('consistency'), 'Must define consistency criterion');
     assert.ok(content.includes('actionability'), 'Must define actionability criterion');
     assert.ok(content.includes('PASS') && content.includes('FAIL'), 'Must define PASS/FAIL verdicts');
-    console.log('[fw] phase-evaluator.md: all 5 criteria + verdicts present');
+    console.log('[fw] evaluator.md: artifact mode + 5 criteria + PASS/FAIL present');
   });
 
   // ── 6. Rubrics cover all 6 phases ──────────────────────────────────────
@@ -212,19 +216,18 @@ describe('Harness Framework Validation', { timeout: 600000 }, () => {
     console.log('[fw] Rubrics: 6 phases, 5 criteria each, threshold 7.0');
   });
 
-  // ── 7. Skills have phase-evaluator gates ───────────────────────────────
-
-  test('Skills: all 6 planning skills reference phase-evaluator', () => {
+  // ── 7. Skills invoke the evaluator agent (artifact mode) ──────────────
+  test('Skills: all 6 planning skills reference evaluator (artifact mode)', () => {
     const skills = ['brd', 'spec', 'design', 'brownfield', 'seam-finder', 'deploy'];
     const missing = [];
     for (const skill of skills) {
       const skillPath = path.join(HARNESS_ROOT, '.claude', 'skills', skill, 'SKILL.md');
       if (!fs.existsSync(skillPath)) { missing.push(skill + ' (file missing)'); continue; }
       const content = fs.readFileSync(skillPath, 'utf8');
-      if (!content.includes('phase-evaluator')) missing.push(skill);
+      if (!content.includes('evaluator')) missing.push(skill);
     }
-    assert.strictEqual(missing.length, 0, `Skills missing phase-evaluator: ${missing.join(', ')}`);
-    console.log('[fw] All 6 skills reference phase-evaluator');
+    assert.strictEqual(missing.length, 0, `Skills missing evaluator reference: ${missing.join(', ')}`);
+    console.log('[fw] All 6 skills reference the evaluator agent');
   });
 
   // ── 8. Telemetry memory produces phase eval metrics ────────────────────
@@ -260,18 +263,19 @@ describe('Harness Framework Validation', { timeout: 600000 }, () => {
     const settings = JSON.parse(
       fs.readFileSync(path.join(HARNESS_ROOT, '.claude', 'settings.json'), 'utf8')
     );
-    const names = (event) =>
+    // Only inspect hooks on the Edit|Write matcher; Task matcher legitimately carries record-run.
+    const hookNames = (event, matcherRe) =>
       (settings.hooks[event] || [])
+        .filter((m) => !matcherRe || matcherRe.test(m.matcher || ''))
         .flatMap((m) => m.hooks.map((h) => h.command.split('/').pop().replace(/"/g, '')));
-
-    const postEdit = names('PostToolUse');
-    const preEdit = names('PreToolUse');
-    const stop = names('Stop');
-
-    // Consolidated enforcement: one gate per event; telemetry off the per-edit hot path.
+    const preEdit = hookNames('PreToolUse', /Write|Edit/);
+    const postEditWrite = hookNames('PostToolUse', /Write|Edit/);
+    const stop = hookNames('Stop', null);
     assert.ok(preEdit.includes('pre-write-gate.js'), 'pre-write-gate must be wired in PreToolUse');
-    assert.ok(postEdit.includes('verify-on-save.js'), 'verify-on-save must be wired in PostToolUse');
-    assert.ok(stop.includes('review-on-stop.js') && !postEdit.includes('record-run.js'), 'Stop gate wired; record-run off PostToolUse');
+    assert.ok(postEditWrite.includes('verify-on-save.js'), 'verify-on-save must be in PostToolUse Edit/Write matcher');
+    assert.ok(stop.includes('review-on-stop.js'), 'review-on-stop must be wired in Stop');
+    assert.ok(postEditWrite.includes('record-run.js'),
+      'record-run (receipt-append-only) must be wired on the Write|Edit|MultiEdit|Bash matcher');
   });
 
   // ── 10. Grafana dashboard has all required sections ────────────────────
