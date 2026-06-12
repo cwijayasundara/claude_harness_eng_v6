@@ -101,3 +101,12 @@ test('errors clearly when the app is unreachable or baseline is missing', async 
   assert.strictEqual(unreachable.status, 2, unreachable.stdout + unreachable.stderr);
   assert.ok(/unreachable/.test(unreachable.stderr), unreachable.stderr);
 });
+
+test('an absolute endpoint URL is used as-is, not concatenated onto base', async () => {
+  await withServer({ value: 1 }, async (base) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'perf-abs-'));
+    const out = path.join(dir, 'perf-baseline.json');
+    const res = await runScript(['--base', 'http://127.0.0.1:1', '--endpoints', `${base}/health`, '--samples', '3', '--out', out]);
+    assert.strictEqual(res.status, 0, res.stdout + res.stderr);
+  });
+});

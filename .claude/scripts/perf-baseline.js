@@ -31,7 +31,9 @@ function percentile(sorted, p) {
 }
 
 async function sample(base, endpoint, samples) {
-  const url = base.replace(/\/$/, '') + endpoint;
+  // The manifest's health_check may be a full URL; treat absolute endpoints
+  // as-is instead of concatenating a doubled URL.
+  const url = /^https?:\/\//i.test(endpoint) ? endpoint : base.replace(/\/$/, '') + endpoint;
   for (let i = 0; i < 2; i++) await fetch(url).catch(() => {}); // warmup
   const times = [];
   for (let i = 0; i < samples; i++) {

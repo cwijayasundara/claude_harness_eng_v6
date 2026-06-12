@@ -336,7 +336,7 @@ Two pass conditions must BOTH be met: weighted average ≥ 7 AND every individua
 
 ### Concept: Monotonic Progress
 
-Every quality metric can only move forward, never backward. The ratchet has 7 sub-gates run in sequence:
+Every quality metric can only move forward, never backward. The ratchet has 8 sub-gates run in sequence:
 
 ```
 Gate 1: Unit tests pass          [all modes]     -- pytest / vitest exit 0
@@ -346,6 +346,7 @@ Gate 4: Architecture alignment   [full/lean]     -- one-way layer imports
 Gate 5: Evaluator verdict        [full/lean]     -- API + Playwright vs running app
 Gate 6: Design critic score      [full only]     -- vision scoring (4 criteria)
 Gate 7: Security gate            [full/lean]     -- security-reviewer, fail on critical/high
+Gate 8: Fresh-context diff review [full/lean]    -- diff-reviewer, fail on correctness BLOCKs
 ```
 
 **Coverage as verification, not just testing.** Steve Krenzel's framing: "100% coverage isn't a goal — it's verification that the agent double-checked every line it wrote." Floor 80%. Baseline ratchets upward. Below-baseline commits are rejected.

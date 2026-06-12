@@ -120,3 +120,10 @@ test('--files incremental patch re-resolves enterprise-language imports', { skip
   // The inbound using-edge from App.cs must survive the patch.
   assert.ok(edge(graph, 'cs:web/App.cs', 'cs:core/Service.cs'), 'inbound cs edge lost by patch');
 });
+
+test('a malformed go.mod (bare module line) degrades instead of aborting the run', { skip: !WHEELS && skipNote }, () => {
+  const dir = makeProject();
+  fs.writeFileSync(path.join(dir, 'go.mod'), 'module\n');
+  const { graph } = runIndex(dir); // must not crash
+  assert.ok(edge(graph, 'go:main.go', 'ext:example.com/acme/internal/auth'), 'unresolvable import becomes ext:');
+});

@@ -101,12 +101,16 @@ def build_maps(records):
 
 
 def load_go_module(root):
-    """Module path from go.mod, used to resolve module-relative Go imports."""
+    """Module path from go.mod, used to resolve module-relative Go imports.
+
+    Fail-soft: a malformed go.mod (e.g. a bare `module` line) degrades to None
+    instead of aborting the whole indexing run."""
     try:
         with open(os.path.join(root, 'go.mod'), encoding='utf-8') as fh:
             for line in fh:
                 if line.startswith('module '):
-                    return line.split(None, 1)[1].strip()
+                    parts = line.split(None, 1)
+                    return parts[1].strip() if len(parts) == 2 and parts[1].strip() else None
     except OSError:
         pass
     return None
