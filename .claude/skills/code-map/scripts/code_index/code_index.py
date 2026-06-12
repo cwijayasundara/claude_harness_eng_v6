@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import compiled_index
 import graph_metrics
 import map_render
 import py_index
@@ -27,7 +28,9 @@ LANG_BY_EXT = {
     '.py': 'python',
     '.js': 'node', '.jsx': 'node', '.mjs': 'node', '.cjs': 'node',
     '.ts': 'typescript', '.tsx': 'typescript',
+    '.java': 'java', '.cs': 'csharp', '.go': 'go',
 }
+COMPILED_LANGS = ('java', 'csharp', 'go')
 EXCLUDES = {
     'node_modules', '.venv', 'venv', 'env', 'dist', 'build', 'target',
     'vendor', '.git', '__pycache__', '.mypy_cache', '.ruff_cache',
@@ -64,6 +67,24 @@ def walk(root):
     return sorted(found)
 
 
+def _extract(lang, content, rel, ext, warnings):
+    empty = {'symbols': [], 'imports': [], 'calls': [], 'renders': [], 'routes': []}
+    try:
+        if lang == 'python':
+            return py_index.extract(content, rel)
+        if lang in COMPILED_LANGS:
+            return compiled_index.extract(content, rel, lang)
+        return ts_index.extract(content, rel, ext)
+    except (SyntaxError, ValueError) as err:
+        warnings.append(f'{rel}: parse failed — {err}')
+    except ImportError as err:
+        # Wheel for this grammar not installed — the file keeps its node but
+        # loses symbol records. init.sh installs the wheels; warn loudly here.
+        warnings.append(f'{rel}: tree-sitter wheel missing ({err}) — '
+                        f'pip install tree-sitter-java tree-sitter-c-sharp tree-sitter-go')
+    return empty
+
+
 def index_file(root, rel, warnings):
     ext = os.path.splitext(rel)[1].lower()
     lang = LANG_BY_EXT[ext]
@@ -77,16 +98,14 @@ def index_file(root, rel, warnings):
         'language': lang,
         'symbols': [],
     }
-    data = {'symbols': [], 'imports': [], 'calls': [], 'renders': [], 'routes': []}
     if len(raw) > MAX_BYTES:
         warnings.append(f'{rel}: skipped symbol extraction ({len(raw)} bytes > {MAX_BYTES})')
+        data = {'symbols': [], 'imports': [], 'calls': [], 'renders': [], 'routes': []}
         return record, data
-    try:
-        data = (py_index.extract(content, rel) if lang == 'python'
-                else ts_index.extract(content, rel, ext))
-    except (SyntaxError, ValueError) as err:
-        warnings.append(f'{rel}: parse failed — {err}')
+    data = _extract(lang, content, rel, ext, warnings)
     record['symbols'] = data['symbols']
+    if data.get('package'):
+        record['package'] = data['package']
     if data.get('routes'):
         record['routes'] = data['routes']
     return record, data
@@ -110,7 +129,8 @@ def maybe_skeleton(record, args):
 
 
 def assemble(root, indexed, args, warnings):
-    maps = resolve.build_maps((rec['path'], rec['language']) for rec, _ in indexed)
+    maps = resolve.build_maps(rec for rec, _ in indexed)
+    maps['go_module'] = resolve.load_go_module(root)
     aliases = resolve.load_aliases(root)
     nodes, files, edges, lang_counts = [], [], [], {}
     for record, data in indexed:
@@ -167,7 +187,8 @@ def splice(graph, record, data, maps, aliases):
 def patch(root, graph, rels, args, warnings):
     """Re-extract only `rels`, splice their records/edges into the existing graph."""
     by_path = {f['path']: f for f in graph.get('files', [])}
-    maps = resolve.build_maps((f['path'], f['language']) for f in graph.get('files', []))
+    maps = resolve.build_maps(graph.get('files', []))
+    maps['go_module'] = resolve.load_go_module(root)
     aliases = resolve.load_aliases(root)
     # Extract and register every patched file BEFORE resolving edges, so files
     # created in the same batch resolve to internal nodes instead of ext:.
@@ -175,7 +196,7 @@ def patch(root, graph, rels, args, warnings):
     for rel in rels:
         record, data = index_file(root, rel, warnings)
         maybe_skeleton(record, args)
-        resolve.register(maps, rel, record['language'])
+        resolve.register(maps, record)
         extracted.append((record, data))
     for record, data in extracted:
         by_path[record['path']] = record

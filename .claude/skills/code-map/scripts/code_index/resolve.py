@@ -5,8 +5,10 @@ import os
 import re
 import sys
 
-PREFIX = {'python': 'py', 'node': 'js', 'typescript': 'ts'}
+PREFIX = {'python': 'py', 'node': 'js', 'typescript': 'ts',
+          'java': 'java', 'csharp': 'cs', 'go': 'go'}
 JS_EXTS = ('.tsx', '.ts', '.jsx', '.js', '.mjs', '.cjs')
+COMPILED = ('java', 'csharp', 'go')
 
 
 def node_id(language, rel):
@@ -58,24 +60,56 @@ def load_aliases(root):
     return _parse_aliases(data, base)
 
 
-def register(maps, rel, lang):
-    """Add one file to the resolution maps (also used for incremental patching)."""
+def _symbol_names(record):
+    return [s if isinstance(s, str) else s['name'] for s in record.get('symbols', [])]
+
+
+def _register_compiled(maps, rel, lang, record):
+    package = record.get('package')
+    if lang == 'java' and package:
+        for name in _symbol_names(record):
+            maps['fq_types'][f'{package}.{name}'] = rel
+    elif lang == 'csharp' and package:
+        maps['namespaces'].setdefault(package, []).append(rel)
+    elif lang == 'go':
+        pkg_dir = os.path.dirname(rel).replace(os.sep, '/') or '.'
+        maps['go_pkgs'].setdefault(pkg_dir, []).append(rel)
+
+
+def register(maps, record):
+    """Add one file record (path/language[/package/symbols]) to the maps."""
+    rel, lang = record['path'], record['language']
     maps['languages'][rel] = lang
     if lang == 'python':
         mod = rel[:-3].replace('/', '.')
         if mod.endswith('.__init__'):
             mod = mod[: -len('.__init__')]
         maps['py_modules'][mod] = rel
+    elif lang in COMPILED:
+        _register_compiled(maps, rel, lang, record)
     else:
         maps['js_stems'][rel.rsplit('.', 1)[0]] = rel
 
 
-def build_maps(paths_by_language):
-    """paths_by_language: iterable of (rel_path, language)."""
-    maps = {'py_modules': {}, 'js_stems': {}, 'languages': {}}
-    for rel, lang in paths_by_language:
-        register(maps, rel, lang)
+def build_maps(records):
+    """records: iterable of file records (dicts with path/language[/package/symbols])."""
+    maps = {'py_modules': {}, 'js_stems': {}, 'languages': {},
+            'fq_types': {}, 'namespaces': {}, 'go_pkgs': {}, 'go_module': None}
+    for record in records:
+        register(maps, record)
     return maps
+
+
+def load_go_module(root):
+    """Module path from go.mod, used to resolve module-relative Go imports."""
+    try:
+        with open(os.path.join(root, 'go.mod'), encoding='utf-8') as fh:
+            for line in fh:
+                if line.startswith('module '):
+                    return line.split(None, 1)[1].strip()
+    except OSError:
+        pass
+    return None
 
 
 def _resolve_py(raw, src_rel, py_modules):
@@ -110,6 +144,40 @@ def _resolve_js(raw, src_rel, js_stems, aliases):
             if key in js_stems:
                 return js_stems[key]
     return None
+
+
+def _resolve_compiled(raw, lang, maps):
+    """Target rels for a Java/C#/Go import. May be several (namespace/package)."""
+    if lang == 'java':
+        target = maps['fq_types'].get(raw)
+        return [target] if target else []
+    if lang == 'csharp':
+        return list(maps['namespaces'].get(raw, []))
+    module = maps.get('go_module')
+    if module:
+        if raw == module:
+            return list(maps['go_pkgs'].get('.', []))
+        if raw.startswith(module + '/'):
+            return list(maps['go_pkgs'].get(raw[len(module) + 1:], []))
+    return []
+
+
+def _compiled_edges(rel, lang, data, maps):
+    src = node_id(lang, rel)
+    edges = []
+    for imp in data.get('imports', []):
+        targets = _resolve_compiled(imp['raw'], lang, maps)
+        for target_rel in targets:
+            if target_rel == rel:
+                continue
+            edges.append({
+                'source': src, 'target': node_id(maps['languages'][target_rel], target_rel),
+                'kind': 'imports', 'evidence': f"{rel}:{imp['line']} import {imp['raw']}",
+            })
+        if not targets:
+            edges.append({'source': src, 'target': f"ext:{imp['raw']}", 'kind': 'imports',
+                          'evidence': f"{rel}:{imp['line']} import {imp['raw']}"})
+    return edges
 
 
 def _import_edges(rel, lang, data, maps, aliases):
@@ -155,6 +223,8 @@ def _symbol_edges(rel, src, kind, items, name_targets):
 
 def edges_for(rel, lang, data, maps, aliases):
     """All graph edges originating from one file's extraction data."""
+    if lang in COMPILED:
+        return _compiled_edges(rel, lang, data, maps)
     src = node_id(lang, rel)
     edges, name_targets = _import_edges(rel, lang, data, maps, aliases)
     edges += _symbol_edges(rel, src, 'calls', data.get('calls', []), name_targets)

@@ -1,6 +1,6 @@
 ---
 name: code-map
-description: Build a deterministic dependency graph of an existing codebase. AST-first for Python and React/JS/TS (stdlib ast + tree-sitter wheels — symbols with line ranges, routes, components, hooks, call/render edges, god-file skeletons, incremental --files patching); regex fallback for C#, Java, Go. Outputs JSON + ranked symbol map + Mermaid + metrics for downstream brownfield, refactor, and seam-finder skills.
+description: Build a deterministic dependency graph of an existing codebase. AST-first for Python, React/JS/TS, and Java/C#/Go (stdlib ast + tree-sitter wheels — symbols with line ranges, routes, components, hooks, call/render edges, package-aware import resolution, god-file skeletons, incremental --files patching); regex fallback when python3 or the wheels are unavailable. Outputs JSON + ranked symbol map + Mermaid + metrics for downstream brownfield, refactor, and seam-finder skills.
 argument-hint: "[path]"
 context: fork
 ---
@@ -27,9 +27,9 @@ Defaults to the repository root.
 
 The skill picks the strongest available producer in this order. Stop at the first that succeeds.
 
-1. **Vendored AST indexer** (preferred for Python / React / JS / TS repos) — `scripts/code_index/code_index.py`. Python parses with stdlib `ast` (zero deps); JS/JSX/TS/TSX parse with the `tree-sitter` + `tree-sitter-typescript` + `tree-sitter-javascript` pip wheels (prebuilt, no compiler). Emits per-file symbol records with exact line ranges and signatures, FastAPI/Flask + React Router routes, React components and their hooks, confidence-tagged cross-file call edges, `renders` edges, tsconfig-alias-resolved imports with `import type` flagged, god-file skeletons, and supports `--files` incremental patching. If the wheels are missing, install them (`pip3 install tree-sitter tree-sitter-typescript tree-sitter-javascript`); Python-only repos index with no third-party packages at all.
+1. **Vendored AST indexer** (preferred for Python / React / JS / TS / Java / C# / Go repos) — `scripts/code_index/code_index.py`. Python parses with stdlib `ast` (zero deps); JS/JSX/TS/TSX parse with the `tree-sitter` + `tree-sitter-typescript` + `tree-sitter-javascript` pip wheels (prebuilt, no compiler). Emits per-file symbol records with exact line ranges and signatures, FastAPI/Flask + React Router routes, React components and their hooks, confidence-tagged cross-file call edges, `renders` edges, tsconfig-alias-resolved imports with `import type` flagged, god-file skeletons, and supports `--files` incremental patching. If the wheels are missing, install them (`pip3 install tree-sitter tree-sitter-typescript tree-sitter-javascript`); Python-only repos index with no third-party packages at all.
 2. **Understand-Anything knowledge graph** — only if `.understand-anything/knowledge-graph.json` already exists, import it with `scripts/import_understand_graph.js` (preserves call/inheritance/read-write edges that plugin emitted).
-3. **Vendored regex script** — `scripts/build_graph.js`, zero npm dependencies. Use it for C#, Java, and Go repos, or when no `python3` is available. Fidelity: imports + top-level symbols only (regex), no call graph, no JSX semantics.
+3. **Vendored regex script** — `scripts/build_graph.js`, zero npm dependencies. Use it only when no `python3` is available (the AST indexer covers C#, Java, and Go via tree-sitter wheels). Fidelity: imports + top-level symbols only (regex), no call graph, no JSX semantics.
 
 Report which producer ran in `code-graph.meta.json` (`vendored-ast`, `understand-anything`, or `vendored`).
 
@@ -99,11 +99,11 @@ All artifacts go under `specs/brownfield/`. Create the directory if missing.
 ```bash
 # Pseudocode — Claude evaluates these in order.
 if python3 -c "import ast" 2>/dev/null; then
-  PRODUCER=vendored-ast        # tree-sitter wheels needed only for JS/TS files
+  PRODUCER=vendored-ast        # tree-sitter wheels needed for non-Python files
 elif test -f .understand-anything/knowledge-graph.json; then
   PRODUCER=understand-anything
 else
-  PRODUCER=vendored            # regex fallback (also for C#/Java/Go repos)
+  PRODUCER=vendored            # regex fallback (no python3 at all)
 fi
 ```
 
@@ -116,7 +116,7 @@ python3 .claude/skills/code-map/scripts/code_index/code_index.py \
 ```
 
 If it fails on a JS/TS repo with `ModuleNotFoundError`, install the wheels and retry:
-`pip3 install tree-sitter tree-sitter-typescript tree-sitter-javascript`.
+`pip3 install tree-sitter tree-sitter-typescript tree-sitter-javascript tree-sitter-java tree-sitter-c-sharp tree-sitter-go`.
 
 To import an existing Understand-Anything graph instead:
 
@@ -126,7 +126,7 @@ node .claude/skills/code-map/scripts/import_understand_graph.js \
   --out specs/brownfield/code-graph.json
 ```
 
-Regex fallback (C#/Java/Go, or no `python3`):
+Regex fallback (no `python3`):
 
 ```bash
 node .claude/skills/code-map/scripts/build_graph.js \
@@ -187,7 +187,7 @@ If `nodes` is empty or all warnings, stop and report. Do not invent a graph from
 | Python | full: imports, classes/functions with line ranges + signatures + docstrings, FastAPI/Flask routes, confidence-tagged call edges (stdlib `ast`, zero deps) | imports + classes + functions |
 | JavaScript / JSX | full: imports (alias-resolved), components, hooks, `renders` edges, React Router routes (tree-sitter wheel) | imports + top-level symbols; no JSX semantics |
 | TypeScript / TSX | same as JSX, plus `import type` flagged and excluded from coupling metrics (tree-sitter wheel) | imports + top-level symbols; `import type` counted as coupling |
-| Java / C# / Go | not covered — use the regex fallback | imports + package/namespace + top-level types |
+| Java / C# / Go | types with method children + line ranges, package/namespace declarations, package-aware import edges (Java fq-type, C# namespace, Go module-path; tree-sitter wheels) | imports + package/namespace + top-level types |
 
 Understand-Anything imports (`.understand-anything/knowledge-graph.json`) preserve whatever call/inheritance/read-write edges that plugin emitted; the adapter does not invent missing edges.
 

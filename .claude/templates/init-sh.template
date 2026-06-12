@@ -14,7 +14,8 @@ echo "=== Bootstrapping dev environment ==="
 # Fail-open: missing pip only degrades JS/TS indexing to the regex fallback.
 if command -v pip3 >/dev/null 2>&1; then
   pip3 install --quiet tree-sitter tree-sitter-typescript tree-sitter-javascript \
-    || echo "WARN: tree-sitter wheels not installed — JS/TS code-map falls back to regex"
+    tree-sitter-java tree-sitter-c-sharp tree-sitter-go \
+    || echo "WARN: tree-sitter wheels not installed — non-Python code-map degrades (JS/TS to regex; Java/C#/Go to import-less nodes)"
   # Behavior-preservation toolkit (coverage preflight + pin-down snapshots).
   pip3 install --quiet pytest-cov syrupy diff-cover \
     || echo "WARN: behavior-preservation deps missing — coverage preflight degrades"
