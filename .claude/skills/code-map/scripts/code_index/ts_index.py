@@ -71,6 +71,53 @@ def _import_entry(stmt):
     }
 
 
+def _require_names(call):
+    """Binding names for a require() call from its enclosing declarator."""
+    node = call.parent
+    while node is not None and node.type != 'variable_declarator':
+        if node.type in ('program', 'statement_block'):
+            return []
+        node = node.parent
+    if node is None:
+        return []
+    name = node.child_by_field_name('name')
+    if name is None:
+        return []
+    if name.type == 'identifier':
+        return [_text(name)]
+    names = []
+    for n in _walk(name):
+        if n.type == 'shorthand_property_identifier_pattern':
+            names.append(_text(n))
+        elif n.type == 'pair_pattern':
+            value = n.child_by_field_name('value')
+            if value is not None and value.type == 'identifier':
+                names.append(_text(value))
+    return names
+
+
+def _require_entries(root):
+    """CommonJS require() calls as import entries (same shape as ESM)."""
+    for n in _walk(root):
+        if n.type != 'call_expression':
+            continue
+        fn = n.child_by_field_name('function')
+        if fn is None or fn.type != 'identifier' or _text(fn) != 'require':
+            continue
+        args = n.child_by_field_name('arguments')
+        if args is None:
+            continue
+        source = next((c for c in args.named_children if c.type == 'string'), None)
+        if source is None:
+            continue
+        yield {
+            'raw': _text(source).strip('\'"'),
+            'names': _require_names(n),
+            'kind': 'value',
+            'line': n.start_point[0] + 1,
+        }
+
+
 def _declared(node):
     if node.type != 'export_statement':
         return node
@@ -184,5 +231,6 @@ def extract(content, rel, ext):
         entry = _import_entry(stmt)
         if entry:
             imports.append(entry)
+    imports.extend(_require_entries(root))
     renders, routes = _renders_and_routes(root, symbols)
     return {'symbols': symbols, 'imports': imports, 'renders': renders, 'routes': routes}

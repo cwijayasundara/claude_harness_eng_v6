@@ -2,6 +2,8 @@
 
 import json
 import os
+import re
+import sys
 
 PREFIX = {'python': 'py', 'node': 'js', 'typescript': 'ts'}
 JS_EXTS = ('.tsx', '.ts', '.jsx', '.js', '.mjs', '.cjs')
@@ -11,22 +13,49 @@ def node_id(language, rel):
     return f'{PREFIX[language]}:{rel}'
 
 
-def load_aliases(root):
-    """Read tsconfig.json compilerOptions.paths into (prefix, target) pairs."""
-    try:
-        with open(os.path.join(root, 'tsconfig.json'), encoding='utf-8') as fh:
-            data = json.load(fh)
-    except (OSError, ValueError):
-        return []
-    opts = data.get('compilerOptions', {})
-    base = opts.get('baseUrl', '.')
+def _strip_jsonc(text):
+    """Remove JSONC comments and trailing commas so json.loads can parse the result.
+
+    Strips /* ... */ block comments, then // line comments outside strings
+    (conservative: only when preceded by whitespace or line start, so that
+    https:// inside string values is preserved).  Removes trailing commas
+    before ] or }.  Limitation: does not handle // inside multi-line strings.
+    """
+    text = re.sub(r'/\*.*?\*/', '', text, flags=re.DOTALL)
+    text = re.sub(r'(?m)(?:^|(?<=\s))//[^\n]*', '', text)
+    return re.sub(r',\s*([}\]])', r'\1', text)
+
+
+def _parse_aliases(data, base):
+    """Extract (prefix, target) pairs from compilerOptions.paths."""
     pairs = []
-    for pattern, targets in opts.get('paths', {}).items():
+    for pattern, targets in data.get('compilerOptions', {}).get('paths', {}).items():
         if not targets:
             continue
         target = os.path.normpath(os.path.join(base, targets[0].rstrip('*')))
         pairs.append((pattern.rstrip('*'), target.replace(os.sep, '/').lstrip('./')))
     return pairs
+
+
+def load_aliases(root):
+    """Read tsconfig.json compilerOptions.paths into (prefix, target) pairs.
+
+    Handles JSONC (comments + trailing commas) used by Next.js and Vite configs.
+    On parse failure, prints a warning to stderr so the failure is discoverable.
+    """
+    tsconfig_path = os.path.join(root, 'tsconfig.json')
+    try:
+        with open(tsconfig_path, encoding='utf-8') as fh:
+            raw = fh.read()
+    except OSError:
+        return []
+    try:
+        data = json.loads(_strip_jsonc(raw))
+    except ValueError as exc:
+        sys.stderr.write(f'resolve: tsconfig.json parse failed after JSONC strip: {exc}\n')
+        return []
+    base = data.get('compilerOptions', {}).get('baseUrl', '.')
+    return _parse_aliases(data, base)
 
 
 def register(maps, rel, lang):
