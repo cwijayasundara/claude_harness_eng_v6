@@ -91,3 +91,11 @@ test('default behavior is unchanged when no config is passed', () => {
   const violations = checkContentViolations('src/service/logic.py', content);
   assert.strictEqual(violations.length, 1);
 });
+
+test('regex metacharacters in layer roots are treated literally (no ReDoS, no throw)', () => {
+  const cfg = { layers: ['domain', 'handlers'], roots: ['app(a+)+$'] };
+  const started = Date.now();
+  const violations = checkContentViolations('app(a+)+$/domain/user.py', 'from app.handlers import x\n'.repeat(50), cfg);
+  assert.ok(Date.now() - started < 2000, 'pathological root must not wedge the gate');
+  assert.deepStrictEqual(violations, []); // escaped root cannot match 'app'
+});

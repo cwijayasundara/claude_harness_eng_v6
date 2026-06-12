@@ -19,7 +19,7 @@ const MACHINERY = [
   /^\.claude\/git-hooks\//,
   /^\.claude\/settings(\.local)?\.json$/,
   /^\.claude\/security-patterns\.(json|ya?ml)$/,
-  /^\.claude\/state\/(coverage-baseline[^/]*|review-block-count|hook-errors\.(log|offset)|pending-reviews\.jsonl)$/,
+  /^\.claude\/state\/(coverage-baseline[^/]*|coverage-preflight-cache\.json|review-block-count|hook-errors\.(log|offset)|pending-reviews\.jsonl)$/,
 ];
 
 const HARNESS_PKG_NAME = 'claude-harness-eng-v5';

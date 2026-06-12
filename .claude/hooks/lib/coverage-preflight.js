@@ -86,8 +86,10 @@ function storeResults(projectDir, rel, graphPath, coveragePath, results) {
 function runCoverageMap(projectDir, graphPath, coveragePath, rel) {
   const script = path.join(projectDir, SCRIPT_REL);
   if (!fs.existsSync(script)) return { status: 'no-script' };
+  // --files=<rel> (not "--files <rel>") so a path starting with '-' cannot be
+  // misread as a flag by argparse.
   const res = spawnSync('python3', [
-    script, '--graph', graphPath, '--coverage', coveragePath, '--files', rel, '--root', projectDir,
+    script, '--graph', graphPath, '--coverage', coveragePath, `--files=${rel}`, '--root', projectDir,
   ], { encoding: 'utf8', timeout: 8000 });
   if (res.error || res.status === null) return { status: 'no-python' };
   if (res.status === 2) return { status: 'no-coverage' };

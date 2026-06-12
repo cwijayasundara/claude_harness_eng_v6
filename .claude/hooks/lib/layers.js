@@ -51,7 +51,10 @@ function getHigherLayers(layer, config = DEFAULT_CONFIG) {
 // Python check: `from <pkg>.<layer>` / `import <pkg>.<layer>` upward imports,
 // where <pkg> is the last path segment of each layer root (src for backend/src).
 function checkPythonViolations(filePath, content, currentLayer, higherLayers, config) {
-  const pkgs = [...new Set(config.roots.map((r) => r.replace(/\\/g, '/').split('/').filter(Boolean).pop()))];
+  // Escape regex metacharacters: roots come from an agent-writable manifest,
+  // and a pathological pattern like (a+)+$ would wedge the gate (ReDoS).
+  const pkgs = [...new Set(config.roots.map((r) => r.replace(/\\/g, '/').split('/').filter(Boolean).pop()))]
+    .map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   const importRe = new RegExp(`^(?:from|import)\\s+(?:${pkgs.join('|')})\\.(\\w+)`);
   const violations = [];
   const lines = content.split('\n');

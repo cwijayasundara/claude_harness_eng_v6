@@ -229,6 +229,7 @@ const MACHINERY_TARGETS = [
   '.claude/security-patterns.json',
   '.claude/state/coverage-baseline.txt',
   '.claude/state/coverage-baseline-js.txt',
+  '.claude/state/coverage-preflight-cache.json',
   '.claude/state/review-block-count',
   '.claude/state/pending-reviews.jsonl',
   '.claude/state/hook-errors.log',

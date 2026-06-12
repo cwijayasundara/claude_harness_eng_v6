@@ -94,3 +94,14 @@ test('the shipped sprint-contract template validates against the shipped schema 
   ));
   assert.deepStrictEqual(validate(SCHEMA, template), []);
 });
+
+test('validation depth is bounded — deep nesting reports an error instead of crashing', () => {
+  let schema = { type: 'string' };
+  let value = 'leaf';
+  for (let i = 0; i < 300; i++) {
+    schema = { type: 'object', properties: { k: schema } };
+    value = { k: value };
+  }
+  const errors = validate(schema, value);
+  assert.ok(errors.some((e) => e.includes('maximum validation depth')), errors.slice(0, 2).join('\n'));
+});
