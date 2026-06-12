@@ -44,6 +44,7 @@ A REFACTOR COMMIT CHANGES NO BEHAVIOR; A BEHAVIOR COMMIT REFACTORS NOTHING
 ## Checklist
 
 - [ ] Every hunk classified; mixed work split (structural commit first)
+- [ ] Refactor commit made with `HARNESS_COMMIT_KIND=refactor git commit …` — this env var is what arms the pre-commit purity gate (staged test/snapshot edits get blocked); without it the gate is inert
 - [ ] Refactor commit: tests + snapshots byte-identical green
 - [ ] Renames: all graph-listed call sites verified, no dead code left
 - [ ] Behavior commit: test updates cite the authorizing story/issue

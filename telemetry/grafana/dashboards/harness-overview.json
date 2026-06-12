@@ -48,7 +48,7 @@
       "gridPos": { "h": 9, "w": 8, "x": 16, "y": 1 },
       "datasource": { "type": "prometheus" },
       "targets": [{
-        "expr": "sum by (exit) (max_over_time(harness_agent_runs_total{job=\"claude_harness_memory\",kind=~\"subagent|subagent_stop\", user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range])) or sum by (exit) (max_over_time(harness_tool_events_total{job=\"claude_harness_memory\",user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range]))",
+        "expr": "sum by (exit) (max_over_time(harness_agent_runs_total{job=\"claude_harness_memory\",kind=\"subagent\", user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range])) or sum by (exit) (max_over_time(harness_tool_events_total{job=\"claude_harness_memory\",user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range]))",
         "legendFormat": "{{exit}}"
       }],
       "options": {
@@ -77,7 +77,7 @@
       "gridPos": { "h": 9, "w": 16, "x": 0, "y": 11 },
       "datasource": { "type": "prometheus" },
       "targets": [{
-        "expr": "sum by (agent) (max_over_time(harness_agent_runs_total{job=\"claude_harness_memory\",kind=~\"subagent|subagent_stop\", user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range])) or sum by (agent) (label_replace(max_over_time(harness_tool_events_total{job=\"claude_harness_memory\",user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range]), \"agent\", \"tool:$1\", \"tool\", \"(.+)\"))",
+        "expr": "sum by (agent) (max_over_time(harness_agent_runs_total{job=\"claude_harness_memory\",kind=\"subagent\", user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range])) or sum by (agent) (label_replace(max_over_time(harness_tool_events_total{job=\"claude_harness_memory\",user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range]), \"agent\", \"tool:$1\", \"tool\", \"(.+)\"))",
         "legendFormat": "{{agent}}",
         "instant": true
       }],
@@ -212,7 +212,7 @@
       "datasource": { "type": "prometheus" },
       "targets": [
         {
-          "expr": "((100 * sum by (agent) (max_over_time(harness_agent_runs_total{job=\"claude_harness_memory\",agent!=\"unknown\", kind=~\"subagent|subagent_stop\", exit=\"ok\", user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range])) / clamp_min(sum by (agent) (max_over_time(harness_agent_runs_total{job=\"claude_harness_memory\",agent!=\"unknown\", kind=~\"subagent|subagent_stop\", user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range])), 1)) or on(agent) (0 * sum by (agent) (max_over_time(harness_agent_runs_total{job=\"claude_harness_memory\",agent!=\"unknown\", kind=~\"subagent|subagent_stop\", user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range])))) or (100 * sum by (agent) (label_replace(max_over_time(harness_tool_events_total{job=\"claude_harness_memory\",exit=\"ok\",user=~\"$user\",lane=~\"$lane\",group=~\"$group\"}[$__range]), \"agent\", \"tool:$1\", \"tool\", \"(.+)\")) / clamp_min(sum by (agent) (label_replace(max_over_time(harness_tool_events_total{job=\"claude_harness_memory\",user=~\"$user\",lane=~\"$lane\",group=~\"$group\"}[$__range]), \"agent\", \"tool:$1\", \"tool\", \"(.+)\")), 1))",
+          "expr": "((100 * sum by (agent) (max_over_time(harness_agent_runs_total{job=\"claude_harness_memory\",agent!=\"unknown\", kind=\"subagent\", exit=\"ok\", user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range])) / clamp_min(sum by (agent) (max_over_time(harness_agent_runs_total{job=\"claude_harness_memory\",agent!=\"unknown\", kind=\"subagent\", user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range])), 1)) or on(agent) (0 * sum by (agent) (max_over_time(harness_agent_runs_total{job=\"claude_harness_memory\",agent!=\"unknown\", kind=\"subagent\", user=~\"$user\", lane=~\"$lane\", group=~\"$group\"}[$__range])))) or (100 * sum by (agent) (label_replace(max_over_time(harness_tool_events_total{job=\"claude_harness_memory\",exit=\"ok\",user=~\"$user\",lane=~\"$lane\",group=~\"$group\"}[$__range]), \"agent\", \"tool:$1\", \"tool\", \"(.+)\")) / clamp_min(sum by (agent) (label_replace(max_over_time(harness_tool_events_total{job=\"claude_harness_memory\",user=~\"$user\",lane=~\"$lane\",group=~\"$group\"}[$__range]), \"agent\", \"tool:$1\", \"tool\", \"(.+)\")), 1))",
           "legendFormat": "{{agent}}",
           "instant": true
         }

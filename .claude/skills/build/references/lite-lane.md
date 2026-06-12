@@ -163,10 +163,22 @@ Do **not** generate:
 
 Write `features.json` at project root. One feature per story or per acceptance criterion — pick whichever maps more naturally. For lite projects, story-level features are usually right.
 
+Use the canonical schema (same shape as `/spec` output — required by `/auto` and `/evaluate`):
+
 ```json
 [
-  { "id": "E1-S1", "title": "...", "status": "pending", "story_id": "E1-S1" },
-  { "id": "E1-S2", "title": "...", "status": "pending", "story_id": "E1-S2" }
+  {
+    "id": "F001",
+    "category": "functional",
+    "story": "E1-S1",
+    "group": "A",
+    "description": "Observable behavior this feature verifies",
+    "steps": ["Step 1 to verify", "Step 2 to verify"],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  }
 ]
 ```
 

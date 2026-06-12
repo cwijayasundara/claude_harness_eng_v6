@@ -3,54 +3,56 @@
 Scores range from 1 to 10. Apply this rubric independently to each criterion.
 Each score must be accompanied by a specific observation — not a general impression.
 
----
-
-## Criterion 1: Visual Hierarchy
-
-Measures whether the UI communicates importance through size, weight, spacing, and color contrast.
-
-| Score | Exemplar |
-|-------|----------|
-| 1 | All elements appear at the same visual weight. No distinction between headings, body, and supporting text. Page reads as a flat wall of content. |
-| 4 | Primary headings are slightly larger than body text. Some sections have padding but margins are inconsistent. The most important action is not visually prominent. |
-| 7 | Clear H1/H2/body text scale. Primary CTA button is visually dominant. Grouping via whitespace is consistent. Minor issues: secondary actions compete slightly with primary. |
-| 10 | Purposeful typographic scale at every level. Primary actions are immediately obvious. Supporting content recedes appropriately. A user's eye follows a clear path from entry point to action. |
+These four criteria match the sprint contract's `design_checks` keys and the design-critic's `eval-scores.json` output exactly.
 
 ---
 
-## Criterion 2: Accessibility
+## Criterion 1: Design Quality (1–10)
 
-Measures WCAG 2.1 AA compliance for keyboard navigation, color contrast, ARIA labels, and focus management.
+Measures visual coherence, color palette, layout structure, and whether the UI has a cohesive identity.
 
 | Score | Exemplar |
 |-------|----------|
-| 1 | No keyboard navigation possible. Color-only error indicators. Interactive elements have no accessible names. Focus is not visible. |
-| 4 | Tab order exists but skips some interactive elements. Contrast ratio on body text is ≥ 4.5:1 but fails on placeholder text. Some form labels are present but icons have no aria-label. |
-| 7 | All interactive elements are keyboard reachable and have visible focus rings. Form inputs have associated labels. Contrast meets AA. One minor gap: modal does not trap focus correctly. |
-| 10 | Full keyboard navigation with logical tab order. All images have descriptive alt text. Focus traps work in modals/dialogs. Contrast meets AA at every element. Screen reader announces live region updates. |
+| 1 | Broken or unusable: clashing colors, broken layout, elements overflow or overlap, no legible structure. |
+| 4 | Functional but generic: the page works but looks like an unstyled template — inconsistent spacing, stock colors, no visual identity. |
+| 7 | Polished and cohesive: intentional design choices are evident, color palette is consistent, layout structure guides the eye. Minor issues remain (e.g., one section's spacing is off). |
+| 10 | Exceptional: could be a real product. Distinctive visual identity, every element reinforces the brand, nothing feels accidental. |
 
 ---
 
-## Criterion 3: Responsiveness
+## Criterion 2: Originality (1–10)
 
-Measures whether the layout adapts correctly across mobile (375px), tablet (768px), and desktop (1280px+) breakpoints.
+Measures the degree of customization relative to raw library defaults (Tailwind, MUI, Bootstrap, etc.).
 
 | Score | Exemplar |
 |-------|----------|
-| 1 | Fixed-width layout overflows on mobile. No viewport meta tag. Content is cut off or requires horizontal scrolling on any screen under 1024px. |
-| 4 | Layout reflows at mobile but navigation collapses to an unusable state. Images overflow their containers on tablet. Text is readable but tap targets are below 44px on mobile. |
-| 7 | Three-column desktop layout reduces to single column on mobile cleanly. Navigation collapses to a hamburger menu that functions correctly. Tap targets meet 44px minimum. Minor gap: table does not scroll horizontally on small screens. |
-| 10 | Fluid grid adapts at all breakpoints with no overflow. Images use responsive srcset. Navigation, forms, tables, and modals all handle every tested viewport. Touch targets meet 44px minimum everywhere. |
+| 1 | Zero customization: raw library defaults throughout, no brand color, no custom component design, looks like every other project using the same library. |
+| 4 | Minor customization: a custom primary color or font swap, but the layout and component shapes remain template-like. |
+| 7 | Distinctive identity: custom component design, unique color scheme, interactions that go beyond the library's out-of-the-box behavior. |
+| 10 | Genuinely creative: unique design language, memorable experience, design choices that would not appear in any default template. |
 
 ---
 
-## Criterion 4: Interaction Feedback
+## Criterion 3: Craft (1–10)
 
-Measures whether the UI gives users clear, timely feedback for actions (loading, success, error, disabled states).
+Measures typography hierarchy, spacing system, alignment, and color harmony — the execution quality of the design decisions.
 
 | Score | Exemplar |
 |-------|----------|
-| 1 | Buttons give no feedback when clicked. Form submissions produce no visible result. Errors are surfaced only in the browser console. |
-| 4 | Submit button disables on click but no loading indicator appears. Success is shown as a plain alert(). Errors appear as raw JSON or generic "Something went wrong" with no recovery path. |
-| 7 | Loading spinner appears within 200ms of submission. Success toast displays with a clear message. Validation errors are shown inline next to fields. Minor gap: error toast auto-dismisses before the user can read it on slow connections. |
-| 10 | Optimistic UI update with rollback on error. Loading state includes progress indication for long operations. Success and error messages are specific and actionable. Disabled states are visually distinct and carry aria-disabled. All feedback persists until user acknowledges or action resolves. |
+| 1 | No hierarchy: same font size and weight everywhere, random spacing, misaligned elements, colors clash. |
+| 4 | Basic: some typographic hierarchy exists, spacing is mostly consistent but not systematic, colors are compatible but not harmonious. |
+| 7 | Refined: clear typographic scale (H1/H2/body/caption), systematic spacing, intentional color use with good contrast. Minor gap: one element breaks the spacing rhythm or a secondary color is slightly off. |
+| 10 | Meticulous: pixel-perfect alignment, modular spacing scale applied everywhere, harmonious palette with purposeful accent use, every text element sits in the right place in the visual hierarchy. |
+
+---
+
+## Criterion 4: Functionality (1–10)
+
+Measures whether users can understand and complete tasks: clear affordances, obvious actions, timely feedback for loading/success/error/disabled states.
+
+| Score | Exemplar |
+|-------|----------|
+| 1 | Unusable: key actions are hidden or broken, form submissions produce no visible result, errors appear only in the browser console. |
+| 4 | Learnable but effortful: the page works but requires trial-and-error — submit button disables on click but no loading indicator appears, errors show as raw JSON. |
+| 7 | Intuitive: clear hierarchy, obvious primary action, loading spinner appears within 200ms, success/error messages are human-readable and specific. Minor gap: error toast auto-dismisses too quickly. |
+| 10 | Delightful: optimistic UI updates with rollback on error, progress indication for long operations, every disabled state is visually distinct and carries aria-disabled, feedback persists until resolved. |

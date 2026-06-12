@@ -43,7 +43,7 @@ services:
     environment:
       {{DB_ENV}}
     healthcheck:
-      test: {{DB_HEALTH_CMD}}
+      test: "{{DB_HEALTH_CMD}}"
       interval: 10s
       timeout: 5s
       retries: 5

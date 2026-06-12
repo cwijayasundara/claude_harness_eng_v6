@@ -86,6 +86,16 @@
             "timeout": 5000
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/record-run.js\"",
+            "timeout": 5000
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [

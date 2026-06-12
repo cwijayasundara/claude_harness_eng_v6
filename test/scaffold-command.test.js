@@ -125,7 +125,10 @@ test('Grafana dashboard panels use range-safe categorical queries', () => {
   assert.match(panelsByTitle['Success Rate per Agent / Tool'].targets[0].expr, /job="claude_harness_memory"/);
   assert.match(panelsByTitle['Success Rate per Agent / Tool'].targets[0].expr, /agent!="unknown"/);
   assert.match(panelsByTitle['Success Rate per Agent / Tool'].targets[0].expr, /or on\(agent\)/);
-  assert.match(panelsByTitle['Success Rate per Agent / Tool'].targets[0].expr, /kind=~"subagent\|subagent_stop"/);
+  // kind="subagent" only — PostToolUse(Task) and SubagentStop both record a
+  // run, so summing both kinds double-counts every task completion.
+  assert.match(panelsByTitle['Success Rate per Agent / Tool'].targets[0].expr, /kind="subagent"/);
+  assert.doesNotMatch(panelsByTitle['Success Rate per Agent / Tool'].targets[0].expr, /subagent_stop/);
 
   assert.equal(panelsByTitle['Execution Mode Distribution'].type, 'piechart');
   assert.match(panelsByTitle['Execution Mode Distribution'].targets[0].expr, /harness_conversation_turns_total/);

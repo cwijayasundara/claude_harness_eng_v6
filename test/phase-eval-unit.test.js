@@ -57,9 +57,11 @@ test('result schema has required fields', () => {
   }
 });
 
-test('phase enum contains exactly 6 values', () => {
+test('phase enum matches the rubric phases (incl. test)', () => {
   const phaseEnum = resultSchema.properties.phase.enum;
-  assert.deepStrictEqual(phaseEnum.sort(), ['brd', 'brownfield', 'deploy', 'design', 'seam', 'spec']);
+  // Must stay in lockstep with phase-eval-rubrics.json — a rubric phase the
+  // schema forbids makes that phase's evaluator output fail validation.
+  assert.deepStrictEqual(phaseEnum.sort(), Object.keys(rubrics.phases).sort());
 });
 
 // ── 3. Evaluator agent — artifact mode (merged from phase-evaluator) ─────────
@@ -141,10 +143,11 @@ test('review-on-stop.js is wired into Stop hooks', () => {
   );
 });
 
-test('record-run.js stays off the per-edit hot path', () => {
-  // PostToolUse(Task) is allowed — Task completions are infrequent and are the
-  // only event carrying subagent_type, which the agent-runs and phase-eval
-  // metrics need. Per-edit and per-Bash matchers stay forbidden.
+test('record-run.js is wired per-edit (receipt-append-only) and on Stop', () => {
+  // Per-edit/Bash matchers carry record-run for harness_tool_events_total
+  // (Tool Activity dashboard panels). The hot-path guarantee — tool events
+  // append a receipt but never rebuild the ledger or push — is pinned in
+  // record-run-tool-events.test.js.
   const settings = JSON.parse(settingsJson);
   const perEditMatchers = (settings.hooks.PostToolUse || []).filter(
     (entry) =>
@@ -152,8 +155,8 @@ test('record-run.js stays off the per-edit hot path', () => {
       (entry.hooks || []).some((h) => (h.command || '').includes('record-run.js'))
   );
   assert.equal(
-    perEditMatchers.length, 0,
-    'record-run.js must not run on Edit/Write/Bash (telemetry is per-turn, not per-edit)'
+    perEditMatchers.length, 1,
+    'record-run.js must run on the Write|Edit|MultiEdit|Bash matcher (tool-event telemetry)'
   );
   assert.ok(
     hookCommands('Stop').some((cmd) => cmd.includes('record-run.js')),
