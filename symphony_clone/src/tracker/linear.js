@@ -137,7 +137,10 @@ function normalizeLinearIssue(issue) {
     state: issue.state && issue.state.name,
     labels: ((issue.labels && issue.labels.nodes) || []).map((label) => label.name),
     blockedBy: ((issue.relations && issue.relations.nodes) || [])
-      .filter((relation) => relation.type === 'blocked_by' || relation.type === 'blocks')
+      // Only 'blocked_by': from this issue's perspective, 'blocks' means the
+      // RELATED issue is the blocked one — including it would hold this issue
+      // hostage to issues it blocks.
+      .filter((relation) => relation.type === 'blocked_by')
       .map((relation) => ({
         id: relation.relatedIssue && relation.relatedIssue.id,
         key: relation.relatedIssue && relation.relatedIssue.identifier,

@@ -375,7 +375,7 @@ node src/index.js
 Verify:
 
 ```bash
-npm test        # 28 tests (scheduler, prompt-builder, state-store, etc.)
+npm test        # unit tests (scheduler, prompt-builder, state-store, tracker, runner, etc.)
 npm run check   # node --check on every JS file
 ```
 

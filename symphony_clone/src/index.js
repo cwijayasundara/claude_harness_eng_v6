@@ -22,18 +22,47 @@ async function main() {
   logger.info('orchestrator_started', { provider: config.provider, workspaceRoot: config.workspaceRoot });
   if (config.statusPort > 0) await startStatusServer({ port: config.statusPort, stateStore, logger });
 
-  await runTick(scheduler);
-  setInterval(() => {
-    runTick(scheduler).catch((error) => {
-      console.error('scheduler tick failed:', error);
-    });
-  }, config.pollIntervalMs);
+  installSignalHandlers(scheduler, logger);
+  const tick = makeSerializedTick(scheduler);
+  await tick();
+  setInterval(tick, config.pollIntervalMs);
 }
 
 function createTracker(config) {
   if (config.provider === 'linear') return new LinearTracker(config);
   if (config.provider === 'jira') return new JiraTracker(config);
   throw new Error(`Unsupported provider: ${config.provider}`);
+}
+
+// Serialize ticks: a slow tick (slow tracker API) must not overlap the next
+// interval fire — overlapping ticks both read capacity before either claims
+// it and can exceed MAX_CONCURRENT_RUNS.
+function makeSerializedTick(scheduler) {
+  let inFlight = false;
+  return async () => {
+    if (inFlight) return;
+    inFlight = true;
+    try {
+      await runTick(scheduler);
+    } catch (error) {
+      scheduler.logger.error('scheduler_tick_failed', { error: error.message });
+    } finally {
+      inFlight = false;
+    }
+  };
+}
+
+// On docker stop, log which issues are still in flight before exiting so the
+// next start's self-heal is explainable — without this, every clean restart
+// silently abandons in-progress issues.
+function installSignalHandlers(scheduler, logger) {
+  const stop = (signal) => {
+    const running = scheduler.running ? [...scheduler.running] : [];
+    logger.info('orchestrator_stopping', { signal, in_flight: running });
+    process.exit(0);
+  };
+  process.on('SIGTERM', () => stop('SIGTERM'));
+  process.on('SIGINT', () => stop('SIGINT'));
 }
 
 async function runTick(scheduler) {
@@ -48,4 +77,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { main, createTracker, runTick };
+module.exports = { main, createTracker, runTick, makeSerializedTick, installSignalHandlers };
