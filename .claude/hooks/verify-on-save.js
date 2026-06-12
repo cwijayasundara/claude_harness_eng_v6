@@ -63,8 +63,10 @@ function markGraphDirty(projectDir, filePath, n, ext) {
   );
 }
 
+const LAYER_EXTS = new Set(['.py', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
+
 function checkLayers(filePath, n, ext) {
-  if (ext !== '.py') return;
+  if (!LAYER_EXTS.has(ext)) return;
   let content;
   try {
     content = fs.readFileSync(filePath, 'utf8');
@@ -107,7 +109,7 @@ function checkToolchain(projectDir, filePath, ext) {
         block(`BLOCKED: type errors in ${filePath}:\n${output(res)}\nFix: Add type annotations or fix the type mismatch shown above.\n`);
       }
     }
-  } else if (ext === '.ts' || ext === '.tsx') {
+  } else if (ext === '.ts' || ext === '.tsx' || ext === '.js' || ext === '.jsx' || ext === '.mjs' || ext === '.cjs') {
     const linter = (manifest && manifest.linter) || 'eslint';
     if (linter === 'eslint') {
       const res = run(['npx', '--no-install', 'eslint', filePath], cwd, 25000);
