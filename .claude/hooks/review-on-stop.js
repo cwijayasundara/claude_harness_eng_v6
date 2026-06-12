@@ -17,6 +17,7 @@ const { resolveProjectDir, readHookInput, reportFailure } = require('./lib/commo
 
 const REVIEWER_AGENTS = new Set([
   'clean-code-reviewer',
+  'diff-reviewer',
   'security-reviewer',
   'pr-review-toolkit:code-reviewer',
   'code-review:code-review',

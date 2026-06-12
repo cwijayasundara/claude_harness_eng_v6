@@ -61,7 +61,7 @@ Once planning is approved, `/auto` loops autonomously per dependency group:
 1. Recovers state from prior sessions
 2. Negotiates a sprint contract (generator + evaluator)
 3. Spawns an agent team (up to 5 parallel teammates)
-4. Runs 7 ratchet gates: tests → lint/types → coverage → architecture → evaluator → design-critic → security
+4. Runs 8 ratchet gates: tests → lint/types → coverage → architecture → evaluator → design-critic → security → fresh-context diff review
 5. Self-heals failed gates (max 3 attempts, different strategy each time)
 6. Commits, updates state, moves to next group
 
@@ -109,7 +109,7 @@ Execution modes for `/auto`: **Full** (all gates, the default) and **Lean** (sam
 
 ## Agent team
 
-Six agents (model pinned in each agent's frontmatter):
+Eight agents (model pinned in each agent's frontmatter):
 
 | Agent | Role | Model |
 |---|---|---|
@@ -118,6 +118,8 @@ Six agents (model pinned in each agent's frontmatter):
 | Evaluator | Runtime mode: runs app, API + Playwright verification. Artifact mode: rubric-scores planning docs (BRD/spec/design/brownfield/seam-finder/deploy) | Opus 4.8 |
 | Design Critic | GAN visual scoring loop (max 10 iterations) | Opus 4.8 |
 | Security Reviewer | OWASP audit, blocking `security-verdict.json` | Opus 4.8 |
+| Diff Reviewer | Fresh-context correctness review of the group diff (Gate 8), blocking `diff-review-verdict.json` | Opus 4.8 |
+| Clean Code Reviewer | Post-implementation structural review, `clean-code-verdict.json` | Opus 4.8 |
 | Codebase Explorer | Read-only discovery for brownfield work | Sonnet 4.6 |
 
 The Model column shows the **`balanced` default** (Profile B). **Opus 4.8 and Fable 5 are both the top-capability tier** and run those roles interchangeably — the prompts are written to serve both (see [docs/prompting-standards.md](docs/prompting-standards.md) → "Model-agnostic by construction"); under `balanced` the planner defaults to Fable 5, the rest of the top tier to Opus 4.8.

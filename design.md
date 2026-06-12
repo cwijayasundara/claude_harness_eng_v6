@@ -105,7 +105,7 @@ The harness is now an **agent factory**: one scaffold, optional framework skill 
 │   1. Recover state (program.md, learned-rules.md, features.json)          │
 │   2. Negotiate sprint contract (generator proposes → evaluator finalizes) │
 │   3. Spawn agent team (phased DAG, ≤5 parallel teammates)                  │
-│   4. Run 6 ratchet gates (tests → lint → coverage → arch → eval → critic) │
+│   4. Run 8 ratchet gates (tests→lint→coverage→arch→eval→critic→sec→diff)  │
 │   5. Self-heal failed gates (max 3 attempts; different strategy each)      │
 │   6. Update features.json, learned-rules.md, claude-progress.txt           │
 │   7. Commit. Hooks enforce length, secrets, layers, review.                │

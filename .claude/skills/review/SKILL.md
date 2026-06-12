@@ -20,14 +20,15 @@ On-demand, pre-merge entry point to the harness's **one** quality gate: it spawn
 
 ## Execution
 
-### Step 1 — Spawn Both Agents Concurrently
+### Step 1 — Spawn the Review Agents Concurrently
 
-Use the Agent tool to spawn both agents **in a single call** — concurrent execution is the point of this skill:
+Use the Agent tool to spawn all three agents **in a single call** — concurrent execution is the point of this skill:
 
 - **evaluator** — runs all sprint contract checks (API, Playwright, architecture); writes `specs/reviews/evaluator-report.md` and updates `features.json`.
 - **security-reviewer** — scans the changed files; writes `specs/reviews/security-review.md` and the canonical `specs/reviews/security-verdict.json`.
+- **diff-reviewer** — fresh-context correctness review of the diff only; writes `specs/reviews/diff-review-verdict.json`. Give it the commit range and acceptance criteria, nothing else — its value is the empty context.
 
-Both agents get the same changed-file set and group context. Every changed file in the group is in scope for both — never pass a subset to avoid findings.
+The evaluator and security-reviewer get the same changed-file set and group context; every changed file in the group is in scope — never pass a subset to avoid findings.
 
 ### Step 2 — Apply the Canonical Gate Semantics
 
