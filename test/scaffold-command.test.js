@@ -69,6 +69,32 @@ test('/scaffold does not attempt auto-mode-blocked framework pack installs', () 
   assert.doesNotMatch(scaffold, /install them via the open agent skills CLI/);
 });
 
+test('scaffold settings template starts with Playwright only, so plugin choices are honored', () => {
+  const settings = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '.claude', 'settings.json'), 'utf8'));
+
+  assert.deepStrictEqual(settings.enabledPlugins, {
+    'playwright@claude-plugins-official': true,
+  });
+});
+
+test('init.sh does not auto-start opt-in telemetry stack', () => {
+  const initTemplate = fs.readFileSync(path.join(__dirname, '..', '.claude', 'templates', 'init-sh.template'), 'utf8');
+
+  assert.doesNotMatch(initTemplate, /docker compose -f telemetry_docker_compose\.yml up -d/);
+  assert.match(initTemplate, /Telemetry stack copied but not started/);
+});
+
+test('public docs and scaffold instructions agree on agent count and scaffold command', () => {
+  const readme = fs.readFileSync(path.join(__dirname, '..', 'README.md'), 'utf8');
+  const claudeMd = fs.readFileSync(path.join(__dirname, '..', 'CLAUDE.md'), 'utf8');
+
+  assert.match(readme, /Run `\/scaffold`/);
+  assert.match(readme, /namespaced command, use `\/claude_harness_eng_v5:scaffold`/);
+  assert.match(claudeMd, /8-agent team/);
+  assert.match(scaffold, /Agent roles table \(8 agents\)/);
+  assert.doesNotMatch(scaffold, /full 8-question wizard/);
+});
+
 test('/install-framework-packs verifies and prints manual commands instead of running npx', () => {
   assert.match(installFrameworkPacks, /does not attempt to run `npx skills add`/);
   assert.match(installFrameworkPacks, /PENDING MANUAL INSTALL/);

@@ -59,7 +59,9 @@ Before running ANY Layer 1 or Layer 2 check, verify the app is reachable:
 ```bash
 RETRIES=5
 BACKOFF=2
-URL=$(jq -r '.verification.health_check.url' project-manifest.json)
+API_BASE=$(jq -r '.evaluation.api_base_url' project-manifest.json)
+HEALTH_PATH=$(jq -r '.evaluation.health_check' project-manifest.json)
+URL="${API_BASE}${HEALTH_PATH}"
 
 for i in $(seq 1 $RETRIES); do
   STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")

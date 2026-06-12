@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-06-12",
+  "summary": {
+    "overall_status": "partially_proven",
+    "position": "The harness has deterministic proof for scaffold, evaluation, and contract integrity, plus a real workflow E2E definition. It is not yet fully proven until the live real workflow E2E and multi-agent delegation proof are executed and gated."
+  },
+  "capabilities": {
+    "greenfield_scaffold": {
+      "status": "proven",
+      "evidence": [
+        ".claude/commands/scaffold.md",
+        "test/scaffold-command.test.js",
+        "test/project-manifest-contract.test.js",
+        "test/e2e/fixtures/adversarial/manifest.json",
+        "test/adversarial-fixtures-contract.test.js"
+      ],
+      "required_tests": [
+        "test/scaffold-command.test.js",
+        "test/project-manifest-contract.test.js",
+        "test/adversarial-fixtures-contract.test.js"
+      ],
+      "rationale": "The scaffold command has fast contract tests for generated harness structure, manifest field alignment, and adversarial greenfield prompts."
+    },
+    "brownfield_adaptation": {
+      "status": "partially_proven",
+      "evidence": [
+        ".claude/skills/brownfield/SKILL.md",
+        "test/e2e/harness-brownfield.test.js",
+        "test/perf-baseline.test.js",
+        "test/e2e/harness-adversarial-fixtures.test.js",
+        "test/e2e/harness-adversarial-live.test.js",
+        "test/e2e/fixtures/adversarial/manifest.json"
+      ],
+      "required_tests": [
+        "test/perf-baseline.test.js",
+        "test/e2e/harness-brownfield.test.js",
+        "test/adversarial-fixtures-contract.test.js",
+        "test/e2e/harness-adversarial-fixtures.test.js",
+        "test/adversarial-live-e2e-contract.test.js",
+        "test/e2e/harness-adversarial-live.test.js"
+      ],
+      "rationale": "Brownfield guidance, fixture coverage, adversarial preservation contracts, and a live mutation E2E are defined, but the live adversarial mutation run has not yet been executed in this session."
+    },
+    "real_workflow_e2e": {
+      "status": "partially_proven",
+      "evidence": [
+        "test/e2e/harness-real-workflow.test.js",
+        "test/real-workflow-e2e-contract.test.js",
+        "test/e2e/run.sh"
+      ],
+      "required_tests": [
+        "test/real-workflow-e2e-contract.test.js",
+        "test/e2e/harness-real-workflow.test.js"
+      ],
+      "rationale": "The real workflow E2E is defined and guarded against bypass prompts, but the live E2E must be executed before this can be marked proven."
+    },
+    "phase_evaluation": {
+      "status": "proven",
+      "evidence": [
+        ".claude/skills/evaluate/SKILL.md",
+        ".claude/agents/evaluator.md",
+        "test/phase-eval-unit.test.js",
+        "test/phase-eval-integration.test.js"
+      ],
+      "required_tests": [
+        "test/phase-eval-unit.test.js",
+        "test/phase-eval-integration.test.js",
+        "test/project-manifest-contract.test.js"
+      ],
+      "rationale": "Phase evaluation has unit, telemetry integration, and manifest contract coverage."
+    },
+    "end_user_usability": {
+      "status": "partially_proven",
+      "evidence": [
+        "README.md",
+        "CLAUDE.md",
+        "test/e2e/harness-framework.test.js",
+        "test/e2e/run.sh"
+      ],
+      "required_tests": [
+        "test/e2e/harness-framework.test.js",
+        "test/e2e/run.sh"
+      ],
+      "rationale": "The harness has install and framework smoke coverage, but it still needs a fresh-user usability script that proves setup from a clean checkout."
+    },
+    "multi_agent_claims": {
+      "status": "unproven",
+      "evidence": [
+        ".claude/agents/planner.md",
+        ".claude/agents/generator.md",
+        ".claude/agents/evaluator.md"
+      ],
+      "required_tests": [
+        "test/certification-status.test.js"
+      ],
+      "rationale": "Agent roles exist, but there is no deterministic test proving delegated multi-agent execution, review handoff, or failure recovery."
+    }
+  }
+}

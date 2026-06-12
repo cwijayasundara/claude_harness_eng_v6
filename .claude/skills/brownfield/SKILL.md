@@ -117,7 +117,7 @@ node .claude/scripts/ci-ingest.js --root .     # → specs/brownfield/ci-map.md
 node .claude/scripts/flag-scan.js --root .     # → specs/brownfield/flag-inventory.md
 ```
 
-If the app is runnable (manifest has `api_base_url` and the stack is up), also capture the performance baseline — a change that passes every functional test can still silently double latency:
+If the app is runnable (manifest has `evaluation.api_base_url` and `evaluation.health_check`, and the stack is up), also capture the performance baseline — a change that passes every functional test can still silently double latency:
 
 ```bash
 node .claude/scripts/perf-baseline.js          # → specs/brownfield/perf-baseline.json

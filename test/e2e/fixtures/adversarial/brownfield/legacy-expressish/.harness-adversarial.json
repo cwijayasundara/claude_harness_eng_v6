@@ -1,0 +1,16 @@
+{
+  "protected_files": [
+    "src/public-api.js",
+    "src/router.js"
+  ],
+  "required_behaviors": [
+    "GET /health returns {\"ok\":true,\"version\":\"1\"}",
+    "GET /tickets/:id keeps the legacy envelope {\"data\":...,\"meta\":...}",
+    "Unknown routes return status 404 with code NOT_FOUND"
+  ],
+  "forbidden_patterns": [
+    "express",
+    "fastify",
+    "rewrite from scratch"
+  ]
+}

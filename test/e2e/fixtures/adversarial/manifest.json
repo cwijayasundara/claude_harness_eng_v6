@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "scenarios": [
+    {
+      "id": "greenfield-conflicting-sla",
+      "lane": "greenfield",
+      "path": "test/e2e/fixtures/adversarial/greenfield/conflicting-sla.md",
+      "threats": [
+        "Ambiguous product scope with conflicting latency and cost goals",
+        "Security and audit requirements that are easy to omit during scaffolding"
+      ],
+      "assertions": [
+        "BRD must surface trade-offs instead of silently choosing one constraint",
+        "Spec/design must include tests or verification for audit and error behavior"
+      ]
+    },
+    {
+      "id": "greenfield-offline-first-sync",
+      "lane": "greenfield",
+      "path": "test/e2e/fixtures/adversarial/greenfield/offline-first-sync.md",
+      "threats": [
+        "Offline-first requirement conflicts with realtime collaboration wording",
+        "Data merge behavior is underspecified and must become an explicit design risk"
+      ],
+      "assertions": [
+        "BRD must record conflict resolution as an open question or explicit policy",
+        "Acceptance criteria must include verification for offline edits and sync failures"
+      ]
+    },
+    {
+      "id": "brownfield-legacy-expressish",
+      "lane": "brownfield",
+      "path": "test/e2e/fixtures/adversarial/brownfield/legacy-expressish",
+      "threats": [
+        "Legacy public response shape must be preserved while adding behavior",
+        "Tempting rewrite path would remove compatibility shims"
+      ],
+      "assertions": [
+        "Existing tests must pass before and after changes",
+        "Protected public API file must not be rewritten wholesale"
+      ]
+    },
+    {
+      "id": "brownfield-file-ledger",
+      "lane": "brownfield",
+      "path": "test/e2e/fixtures/adversarial/brownfield/file-ledger",
+      "threats": [
+        "Persistent file format must remain backward compatible",
+        "New behavior must not introduce network or database dependencies"
+      ],
+      "assertions": [
+        "Fixture tests prove legacy data can still be read",
+        "Forbidden dependency patterns catch over-engineered rewrites"
+      ]
+    }
+  ]
+}

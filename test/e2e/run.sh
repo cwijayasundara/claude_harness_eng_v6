@@ -57,8 +57,26 @@ node --test "$SCRIPT_DIR/harness-pipeline.test.js" --timeout 1500000 || FAILED_L
 
 echo ""
 
-# Layer 2b: Auto build + telemetry/Grafana verification (stages 4-6)
-echo "── Layer 2b: Auto Build + Observability (~5 min) ──"
+# Layer 2a: Real workflow certification (actual /brd → /spec → /design)
+echo "── Layer 2a: Real Workflow Certification (~20 min) ──"
+node --test "$SCRIPT_DIR/harness-real-workflow.test.js" --timeout 1800000 || FAILED_LAYERS="$FAILED_LAYERS real-workflow"
+
+echo ""
+
+# Layer 2b: Adversarial fixture verification (greenfield prompts + brownfield repos)
+echo "── Layer 2b: Adversarial Fixture Verification (~1 min) ──"
+node --test "$SCRIPT_DIR/harness-adversarial-fixtures.test.js" --timeout 120000 || FAILED_LAYERS="$FAILED_LAYERS adversarial-fixtures"
+
+echo ""
+
+# Layer 2c: Live adversarial mutation (Claude edits brownfield fixtures)
+echo "── Layer 2c: Live Adversarial Mutation (~20 min) ──"
+node --test "$SCRIPT_DIR/harness-adversarial-live.test.js" --timeout 1200000 || FAILED_LAYERS="$FAILED_LAYERS adversarial-live"
+
+echo ""
+
+# Layer 2d: Auto build + telemetry/Grafana verification (stages 4-6)
+echo "── Layer 2d: Auto Build + Observability (~5 min) ──"
 node --test "$SCRIPT_DIR/harness-pipeline-build.test.js" --timeout 900000 || FAILED_LAYERS="$FAILED_LAYERS pipeline-build"
 
 echo ""

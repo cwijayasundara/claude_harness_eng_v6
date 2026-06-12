@@ -20,7 +20,7 @@ A GAN-inspired harness combining Karpathy ratcheting + Anthropic/OpenAI harness 
 
 ## Commands, Agents & Superpowers Integration
 
-The full Commands table, the 6-agent team (roles + model assignments), and the Superpowers pipeline-stage integration table live in `README.md` (sections *Command reference*, *Agent team*, *Superpowers integration*). They are reference material, not always-on rules, so they are kept out of this always-loaded file to preserve the prompt-cache prefix. Read `README.md` when you need the command/agent inventory.
+The full Commands table, the 8-agent team (roles + model assignments), and the Superpowers pipeline-stage integration table live in `README.md` (sections *Command reference*, *Agent team*, *Superpowers integration*). They are reference material, not always-on rules, so they are kept out of this always-loaded file to preserve the prompt-cache prefix. Read `README.md` when you need the command/agent inventory.
 
 If a `superpowers:*` skill invocation fails because the plugin is not installed, do not skip the step silently — apply the equivalent inline discipline (TDD red-green-refactor and quality rules from `.claude/skills/code-gen/SKILL.md`; for debugging, reproduce → isolate → root-cause before fixing) and note the degraded mode in the progress log.
 

@@ -12,13 +12,22 @@ const { modelsForTier, sessionFor, applyTier, PRESETS } = require(SCRIPT);
 const FABLE = 'claude-fable-5';
 const OPUS = 'claude-opus-4-8';
 const SONNET = 'claude-sonnet-4-6';
-const ROLES = ['planner', 'generator', 'evaluator', 'design-critic', 'security-reviewer', 'codebase-explorer'];
+const ROLES = [
+  'planner',
+  'generator',
+  'evaluator',
+  'design-critic',
+  'security-reviewer',
+  'diff-reviewer',
+  'clean-code-reviewer',
+  'codebase-explorer',
+];
 
 test('three presets exist: cost, balanced, max-quality', () => {
   assert.deepStrictEqual(Object.keys(PRESETS).sort(), ['balanced', 'cost', 'max-quality']);
 });
 
-test('every preset assigns a model to all six agent roles', () => {
+test('every preset assigns a model to all eight agent roles', () => {
   for (const preset of Object.keys(PRESETS)) {
     const m = modelsForTier(preset);
     assert.deepStrictEqual(Object.keys(m).sort(), ROLES.slice().sort(), `preset ${preset}`);
@@ -48,6 +57,8 @@ test('balanced (Profile B): Fable only on the planner; generation + gate stay ch
   assert.strictEqual(m.planner, FABLE); // high-leverage, low-volume, cascade-preventing
   assert.strictEqual(m.generator, SONNET); // volume bucket stays cheapest capable tier
   assert.strictEqual(m.evaluator, OPUS); // gate precision, not 2x recall
+  assert.strictEqual(m['diff-reviewer'], OPUS);
+  assert.strictEqual(m['clean-code-reviewer'], OPUS);
   assert.strictEqual(m['codebase-explorer'], SONNET);
 });
 
@@ -56,6 +67,8 @@ test('max-quality: Fable on judgment roles, generator bumped to Opus (never Fabl
   assert.strictEqual(m.planner, FABLE);
   assert.strictEqual(m.evaluator, FABLE);
   assert.strictEqual(m['design-critic'], FABLE);
+  assert.strictEqual(m['diff-reviewer'], FABLE);
+  assert.strictEqual(m['clean-code-reviewer'], FABLE);
   assert.strictEqual(m.generator, OPUS); // not Fable — volume cost guard
 });
 

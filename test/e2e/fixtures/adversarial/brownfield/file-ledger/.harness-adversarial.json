@@ -1,0 +1,17 @@
+{
+  "protected_files": [
+    "src/ledger.js",
+    "test/ledger.test.js"
+  ],
+  "required_behaviors": [
+    "Legacy pipe-delimited entries are parsed without migration",
+    "Append preserves the pipe-delimited v1 storage format",
+    "No network or database dependency is introduced"
+  ],
+  "forbidden_patterns": [
+    "sqlite",
+    "postgres",
+    "mongodb",
+    "fetch("
+  ]
+}

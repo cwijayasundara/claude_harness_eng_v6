@@ -30,15 +30,18 @@ const SONNET = 'claude-sonnet-4-6';
 const PRESETS = {
   cost: {
     planner: OPUS, generator: SONNET, evaluator: OPUS,
-    'design-critic': OPUS, 'security-reviewer': OPUS, 'codebase-explorer': SONNET,
+    'design-critic': OPUS, 'security-reviewer': OPUS, 'diff-reviewer': OPUS,
+    'clean-code-reviewer': OPUS, 'codebase-explorer': SONNET,
   },
   balanced: {
     planner: FABLE, generator: SONNET, evaluator: OPUS,
-    'design-critic': OPUS, 'security-reviewer': OPUS, 'codebase-explorer': SONNET,
+    'design-critic': OPUS, 'security-reviewer': OPUS, 'diff-reviewer': OPUS,
+    'clean-code-reviewer': OPUS, 'codebase-explorer': SONNET,
   },
   'max-quality': {
     planner: FABLE, generator: OPUS, evaluator: FABLE,
-    'design-critic': FABLE, 'security-reviewer': OPUS, 'codebase-explorer': SONNET,
+    'design-critic': FABLE, 'security-reviewer': OPUS, 'diff-reviewer': FABLE,
+    'clean-code-reviewer': FABLE, 'codebase-explorer': SONNET,
   },
 };
 

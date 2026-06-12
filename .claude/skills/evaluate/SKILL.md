@@ -29,7 +29,7 @@ Evaluates group C's sprint contract. The group ID matches a node in `specs/stori
 Before running `/evaluate`, verify:
 
 - `sprint-contracts/{group}.json` exists and is valid JSON.
-- `project-manifest.json` exists with `api_base_url`, `ui_base_url`, and `health_check` fields.
+- `project-manifest.json` exists with `evaluation.api_base_url`, `evaluation.ui_base_url`, and `evaluation.health_check` fields.
 - Docker stack is expected to be running. If it is not, the health check in Step 4 will catch this and produce a FAIL.
 - The Playwright MCP browser tools (`mcp__plugin_playwright_playwright__browser_*`) are available. If the contract has `playwright_checks` or `design_checks` and the tools are missing, do NOT silently skip those layers or improvise with curl: write `VERDICT: FAIL` with `failure_layer: infrastructure` and the fix `Enable "playwright@claude-plugins-official": true in .claude/settings.json enabledPlugins, restart Claude Code, then re-run /evaluate.`
 
@@ -53,16 +53,16 @@ Read `sprint-contracts/{group}.json`. The contract contains:
 ### Step 3 — Load Project Manifest
 
 Read `project-manifest.json`. Extract:
-- `api_base_url` — base URL for all API checks (e.g., `http://localhost:8000`).
-- `ui_base_url` — base URL for Playwright navigation (e.g., `http://localhost:3000`).
-- `health_check` — path to the health endpoint (e.g., `/health`).
+- `evaluation.api_base_url` — base URL for all API checks (e.g., `http://localhost:8000`).
+- `evaluation.ui_base_url` — base URL for Playwright navigation (e.g., `http://localhost:3000`).
+- `evaluation.health_check` — path to the health endpoint (e.g., `/health`).
 
 ### Step 4 — Verify Docker Stack
 
 Run a health check to confirm the application is live:
 
 ```
-curl --retry 5 --retry-delay 3 -sf {api_base_url}{health_check}
+curl --retry 5 --retry-delay 3 -sf {evaluation.api_base_url}{evaluation.health_check}
 ```
 
 If the health check fails after 5 retries, immediately record a FAIL with `failure_layer: "docker"` and stop. Do not proceed to API or Playwright checks. A broken stack is not a partial pass.
@@ -75,7 +75,7 @@ For each entry in `api_checks`:
 
 1. Execute the request via Bash:
    ```
-   curl -s -w '\n%{http_code}' -X {method} {api_base_url}{path}
+   curl -s -w '\n%{http_code}' -X {method} {evaluation.api_base_url}{path}
    ```
    Include `-H` headers and `-d` body as specified in the check entry.
 
@@ -115,7 +115,7 @@ Include the relevant error from the logs in the failure report. This gives the g
 For each `performance_checks` entry in the contract:
 ```bash
 # Measure response time
-time_ms=$(curl -s -o /dev/null -w "%{time_total}" -X {method} {api_base_url}{endpoint} | awk '{printf "%.0f", $1 * 1000}')
+time_ms=$(curl -s -o /dev/null -w "%{time_total}" -X {method} {evaluation.api_base_url}{endpoint} | awk '{printf "%.0f", $1 * 1000}')
 ```
 If `time_ms > max_response_time_ms`, report as WARN (not BLOCK — performance is advisory unless critical).
 
@@ -152,7 +152,7 @@ Skip this layer entirely in **Lean** mode (the design-critic runs once at group 
 
 In Full mode, delegate to the `design-critic` agent:
 - Pass the list of `design_checks` entries from the sprint contract.
-- Pass the `ui_base_url`.
+- Pass `evaluation.ui_base_url`.
 - The design-critic returns PASS/FAIL per check with visual evidence (screenshots or snapshots).
 
 The design-critic writes `specs/reviews/eval-scores.json` with keys `design_quality`, `originality`, `craft`, and `functionality`; these map 1:1 onto the contract's `design_checks` keys, and each criterion's score must meet or exceed its `min_score` in the contract for the check to pass.

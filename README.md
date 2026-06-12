@@ -28,7 +28,7 @@ cd ~/my-project
 claude --plugin-dir ~/claude_harness_eng_v5/.claude
 ```
 
-> **Path matters:** command namespaces derive from `plugin.json`'s name (`claude_harness_eng_v5`), so commands are `/claude_harness_eng_v5:scaffold` regardless of the clone directory — but keep the clone path as shown so docs and `--plugin-dir` examples match. If the GitHub repo you cloned is still named `claude_harness_eng_v4`, the explicit target path in step 1 normalizes it.
+> **Path matters:** keep the clone path as shown so docs and `--plugin-dir` examples match. If your Claude Code UI shows a namespaced command, use `/claude_harness_eng_v5:scaffold`.
 
 Then, inside Claude Code:
 
@@ -36,7 +36,7 @@ Then, inside Claude Code:
 /scaffold
 ```
 
-This asks a few questions about your stack and project type, then generates the `.claude/` directory (agents, skills, hooks, templates), `project-manifest.json`, `CLAUDE.md`, `design.md`, `init.sh`, `features.json`, and initializes git with the harness commit hooks.
+Run `/scaffold`. This asks a few questions about your stack and project type, then generates the `.claude/` directory (agents, skills, hooks, templates), `project-manifest.json`, `CLAUDE.md`, `design.md`, `init.sh`, `features.json`, and initializes git with the harness commit hooks.
 
 ## One decision: new code or existing code?
 
