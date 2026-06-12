@@ -73,30 +73,30 @@
         },
         "design_checks": {
           "type": "object",
-          "description": "Visual/UX criteria evaluated against the scoring rubric",
+          "description": "Visual/UX criteria evaluated against the scoring rubric. Keys map 1:1 onto the design-critic's eval-scores.json output; each key's min_score is the per-criterion floor the critic's score must meet.",
           "properties": {
-            "visual_hierarchy": {
+            "design_quality": {
               "type": "object",
               "properties": {
                 "required": { "type": "boolean" },
                 "min_score": { "type": "integer", "minimum": 1, "maximum": 10 }
               }
             },
-            "accessibility": {
+            "originality": {
               "type": "object",
               "properties": {
                 "required": { "type": "boolean" },
                 "min_score": { "type": "integer", "minimum": 1, "maximum": 10 }
               }
             },
-            "responsiveness": {
+            "craft": {
               "type": "object",
               "properties": {
                 "required": { "type": "boolean" },
                 "min_score": { "type": "integer", "minimum": 1, "maximum": 10 }
               }
             },
-            "interaction_feedback": {
+            "functionality": {
               "type": "object",
               "properties": {
                 "required": { "type": "boolean" },
@@ -120,6 +120,11 @@
           "type": "object",
           "description": "Structural code quality checks",
           "properties": {
+            "files_must_exist": {
+              "type": "array",
+              "description": "File paths (relative to project root) that must be present on disk. The evaluator FAILs the architecture gate if any listed path is absent. Populate from the story's component-map entries when proposing the sprint contract.",
+              "items": { "type": "string" }
+            },
             "layering": {
               "type": "object",
               "properties": {
@@ -155,6 +160,15 @@
                 "description": { "type": "string" }
               }
             }
+          }
+        },
+        "productivity_budget": {
+          "type": "object",
+          "description": "Harness-specific effort caps for the group. Token/cost budgets live in native OTEL metrics, not here.",
+          "properties": {
+            "max_iterations": { "type": "integer", "minimum": 1 },
+            "max_files_changed": { "type": "integer", "minimum": 1 },
+            "_note": { "type": "string" }
           }
         },
         "security_checks": {

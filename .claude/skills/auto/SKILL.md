@@ -99,7 +99,7 @@ Sprint contracts define the verifiable done-criteria for a group. Two-step propo
 
 Spawn generator as a subagent with this prompt:
 
-> Read stories [list IDs for this group], `specs/design/api-contracts.md`, `specs/design/component-map.md`. Propose a sprint contract for group {ID}. Include: api_checks, playwright_checks, design_checks, architecture_checks, features list. Write the contract to `sprint-contracts/{group}.json`.
+> Read stories [list IDs for this group], `specs/design/api-contracts.md`, `specs/design/component-map.md`. Propose a sprint contract for group {ID}. Include: api_checks, playwright_checks, design_checks, architecture_checks, features list. Populate `architecture_checks.files_must_exist` with the file paths listed for this group's stories in `specs/design/component-map.md`. Write the contract to `sprint-contracts/{group}.json`.
 
 The generator produces a draft contract based on the story acceptance criteria and the architecture design.
 
@@ -113,6 +113,7 @@ Rules:
 - **No back-and-forth.** The evaluator has final say. The generator does not get to dispute.
 - **The edit is not silent.** The orchestrator reads `contract-audit-{group}.json` after negotiation and surfaces it in the progress log (and to the user at the next escalation point). A removal whose `reason` contradicts a story acceptance criterion is grounds to re-run negotiation once with the audit attached — this is the only permitted second cycle.
 - **Contract is immutable after negotiation.** Once the evaluator writes the final version, no one edits it.
+- **Validate before it freezes.** After the evaluator writes the final contract, run `node .claude/scripts/validate-contract.js sprint-contracts/{group}.json`. A non-zero exit means the contract is structurally malformed — re-run Step 3 once with the validator output attached. Do not proceed to execution with an invalid contract: the pre-commit hook repeats this check deterministically and will block every commit until it is fixed.
 
 ---
 

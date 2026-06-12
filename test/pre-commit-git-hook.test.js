@@ -44,16 +44,70 @@ test('blocks when a sprint contract exists without a PASS verdict', async () => 
   assert.ok((result.stdout + result.stderr).includes('Sprint contract'), result.stdout + result.stderr);
 });
 
-test('passes when the sprint contract has a PASS verdict', async () => {
-  const projectDir = makeGitProject();
-  stage(projectDir, 'src/types/models.py', 'X = 1\n');
+const VALID_CONTRACT = JSON.stringify({
+  group: 'group-01',
+  stories: ['S1'],
+  features: ['F1'],
+  contract: { api_checks: [{ id: 'a1', method: 'GET', path: '/health', expected_status: 200 }] },
+});
+
+function installContractSchema(projectDir) {
+  const dir = path.join(projectDir, '.claude', 'skills', 'evaluate', 'references');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.copyFileSync(
+    path.join(__dirname, '..', '.claude', 'skills', 'evaluate', 'references', 'contract-schema.json'),
+    path.join(dir, 'contract-schema.json')
+  );
+}
+
+function armContractGate(projectDir, contractJson) {
   fs.writeFileSync(path.join(projectDir, 'claude-progress.txt'), 'current_group: group-01\n');
   fs.mkdirSync(path.join(projectDir, 'sprint-contracts'), { recursive: true });
-  fs.writeFileSync(path.join(projectDir, 'sprint-contracts', 'group-01.json'), '{}');
+  fs.writeFileSync(path.join(projectDir, 'sprint-contracts', 'group-01.json'), contractJson);
   fs.mkdirSync(path.join(projectDir, 'specs', 'reviews'), { recursive: true });
   fs.writeFileSync(path.join(projectDir, 'specs', 'reviews', 'evaluator-report.md'), 'VERDICT: PASS\n');
+}
+
+test('passes when the contract is valid, evaluator PASSed, and the security verdict PASSed', async () => {
+  const projectDir = makeGitProject();
+  stage(projectDir, 'src/types/models.py', 'X = 1\n');
+  installContractSchema(projectDir);
+  armContractGate(projectDir, VALID_CONTRACT);
+  fs.writeFileSync(path.join(projectDir, 'specs', 'reviews', 'security-verdict.json'), '{"verdict":"PASS"}');
   const result = await runGitHook(projectDir, HOOK, { HARNESS_COVERAGE_GATE: 'off' });
   assert.strictEqual(result.status, 0, result.stdout + result.stderr);
+});
+
+test('blocks when the sprint contract fails schema validation', async () => {
+  const projectDir = makeGitProject();
+  stage(projectDir, 'src/types/models.py', 'X = 1\n');
+  installContractSchema(projectDir);
+  armContractGate(projectDir, '{"group": "group-01"}'); // missing stories/features/contract
+  const result = await runGitHook(projectDir, HOOK, { HARNESS_COVERAGE_GATE: 'off' });
+  assert.notStrictEqual(result.status, 0);
+  assert.ok(result.stdout.includes('schema validation'), result.stdout);
+  assert.ok(result.stdout.includes('stories'), result.stdout);
+});
+
+test('blocks when the security verdict is missing even though the evaluator report PASSed', async () => {
+  const projectDir = makeGitProject();
+  stage(projectDir, 'src/types/models.py', 'X = 1\n');
+  installContractSchema(projectDir);
+  armContractGate(projectDir, VALID_CONTRACT); // no security-verdict.json written
+  const result = await runGitHook(projectDir, HOOK, { HARNESS_COVERAGE_GATE: 'off' });
+  assert.notStrictEqual(result.status, 0);
+  assert.ok(result.stdout.includes('security gate'), result.stdout);
+});
+
+test('a FAIL security verdict does not clear the gate', async () => {
+  const projectDir = makeGitProject();
+  stage(projectDir, 'src/types/models.py', 'X = 1\n');
+  installContractSchema(projectDir);
+  armContractGate(projectDir, VALID_CONTRACT);
+  fs.writeFileSync(path.join(projectDir, 'specs', 'reviews', 'security-verdict.json'), '{"verdict":"FAIL","pass":false}');
+  const result = await runGitHook(projectDir, HOOK, { HARNESS_COVERAGE_GATE: 'off' });
+  assert.notStrictEqual(result.status, 0);
+  assert.ok(result.stdout.includes('security gate'), result.stdout);
 });
 
 test('coverage gate fails open when the toolchain is unprovisioned', async () => {

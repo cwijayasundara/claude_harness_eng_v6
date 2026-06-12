@@ -22,24 +22,22 @@
         "steps": [
           {
             "action": "navigate",
-            "selector": null,
             "value": "/",
             "assertion": "page loaded"
           },
           {
             "action": "assert_visible",
             "selector": "getByRole('heading', { name: 'Welcome' })",
-            "value": null,
             "assertion": "heading visible"
           }
         ]
       }
     ],
     "design_checks": {
-      "visual_hierarchy": { "required": true, "min_score": 7 },
-      "accessibility": { "required": true, "min_score": 5 },
-      "responsiveness": { "required": true, "min_score": 7 },
-      "interaction_feedback": { "required": true, "min_score": 5 }
+      "design_quality": { "required": true, "min_score": 7 },
+      "originality": { "required": true, "min_score": 5 },
+      "craft": { "required": true, "min_score": 7 },
+      "functionality": { "required": true, "min_score": 5 }
     },
     "performance_checks": [
       {
@@ -49,6 +47,7 @@
       }
     ],
     "architecture_checks": {
+      "files_must_exist": [],
       "layering": { "required": true, "description": "No upward imports across layers" },
       "typing": { "required": true, "description": "All functions have type annotations" },
       "folder_structure": { "required": true, "description": "Files match component-map.md" },
@@ -59,6 +58,10 @@
       "max_iterations": 5,
       "max_files_changed": 25,
       "_note": "Harness-specific caps (no native OTEL equivalent). Token and cost budgets are monitored via native claude_code.cost.usage and claude_code.token.usage metrics — set alerts in your Grafana/Prometheus dashboard instead of duplicating here."
+    },
+    "security_checks": {
+      "required": true,
+      "block_severities": ["critical", "high"]
     }
   }
 }

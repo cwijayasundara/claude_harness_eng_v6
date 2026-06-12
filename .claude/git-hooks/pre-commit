@@ -18,6 +18,7 @@ const { execFileSync } = require('child_process');
 const { checkContentViolations, loadLayerConfig, getLayer } = require(path.join(__dirname, '..', 'hooks', 'lib', 'layers'));
 const { run, output, shouldBlock, unavailable } = require(path.join(__dirname, '..', 'hooks', 'lib', 'toolchain'));
 const { findImpureFiles } = require(path.join(__dirname, 'lib', 'refactor-purity'));
+const { validate: validateSchema } = require(path.join(__dirname, '..', 'hooks', 'lib', 'contract-schema'));
 
 const SOURCE_EXTS = new Set(['.py', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
 const FLOOR = 80;
@@ -82,6 +83,43 @@ function checkRefactorPurity(staged) {
   );
 }
 
+// The contract file must BE a contract: a malformed one would make /evaluate
+// fail confusingly later (or vacuously pass). Validation is skipped without
+// noise only when the schema file itself is absent (unscaffolded project).
+function validateContractShape(projectDir, group) {
+  const schemaPath = path.join(projectDir, '.claude', 'skills', 'evaluate', 'references', 'contract-schema.json');
+  if (!fs.existsSync(schemaPath)) return;
+  let contract;
+  try {
+    contract = JSON.parse(fs.readFileSync(path.join(projectDir, 'sprint-contracts', `${group}.json`), 'utf8'));
+  } catch (_) {
+    fail(`BLOCKED: sprint-contracts/${group}.json is not valid JSON.\nFix: re-negotiate the contract (node .claude/scripts/validate-contract.js sprint-contracts/${group}.json to check).\n`);
+  }
+  const errors = validateSchema(JSON.parse(fs.readFileSync(schemaPath, 'utf8')), contract);
+  if (errors.length > 0) {
+    fail(
+      `BLOCKED: sprint-contracts/${group}.json fails schema validation:\n` +
+      errors.map((e) => `  - ${e}`).join('\n') +
+      `\nFix: correct the contract (node .claude/scripts/validate-contract.js sprint-contracts/${group}.json).\n`
+    );
+  }
+}
+
+// The evaluator-report regex alone is forgeable prose; the security verdict is
+// a structured artifact the security-reviewer writes. Require both.
+function checkSecurityVerdict(projectDir, group) {
+  let verdict = null;
+  try {
+    verdict = JSON.parse(fs.readFileSync(path.join(projectDir, 'specs', 'reviews', 'security-verdict.json'), 'utf8'));
+  } catch (_) {
+    /* missing or unparseable = not PASS */
+  }
+  const passed = verdict && (verdict.pass === true || verdict.verdict === 'PASS');
+  if (!passed) {
+    fail(`BLOCKED: security gate for group ${group} not satisfied — specs/reviews/security-verdict.json is missing or not PASS.\nFix: run /evaluate (its security layer writes the verdict), address findings, then retry the commit.\n`);
+  }
+}
+
 function checkSprintContract(projectDir) {
   let progress;
   try {
@@ -94,6 +132,8 @@ function checkSprintContract(projectDir) {
   const group = groupMatch[1].trim();
   if (!fs.existsSync(path.join(projectDir, 'sprint-contracts', `${group}.json`))) return;
 
+  validateContractShape(projectDir, group);
+
   let report = '';
   try {
     report = fs.readFileSync(path.join(projectDir, 'specs', 'reviews', 'evaluator-report.md'), 'utf8');
@@ -103,6 +143,7 @@ function checkSprintContract(projectDir) {
   if (!/^VERDICT:\s*PASS\s*$/m.test(report)) {
     fail(`BLOCKED: Sprint contract for group ${group} not satisfied. Run /evaluate first.\nFix: Run /evaluate to verify the sprint contract, then retry the commit.\n`);
   }
+  checkSecurityVerdict(projectDir, group);
 }
 
 function checkTypescript(projectDir, stagedTs) {
