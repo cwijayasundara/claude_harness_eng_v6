@@ -129,3 +129,54 @@ test('commit-msg: blocks for "move!: ..." breaking-change refactor subject', asy
   const result = await runGitHook(projectDir, HOOK, {}, [msgFile]);
   assert.notStrictEqual(result.status, 0, result.stdout + result.stderr);
 });
+
+// --- claimsRefactor: widened subject detection ---
+
+const { claimsRefactor } = require(
+  path.join(__dirname, '..', '.claude', 'git-hooks', 'lib', 'refactor-purity')
+);
+
+test('claimsRefactor: existing prefix forms still match', () => {
+  assert.ok(claimsRefactor('refactor: split god module'));
+  assert.ok(claimsRefactor('rename(auth): UserService -> AccountService'));
+  assert.ok(claimsRefactor('extract!: pull validation into lib'));
+});
+
+test('claimsRefactor: chore/style subjects with structural verbs match', () => {
+  assert.ok(claimsRefactor('chore: rename UserService to AccountService'));
+  assert.ok(claimsRefactor('style(api): tidy up imports and restructure handlers'));
+  assert.ok(claimsRefactor('chore: move helpers into utils'));
+});
+
+test('claimsRefactor: bare structural verbs match without a prefix', () => {
+  assert.ok(claimsRefactor('restructure auth module'));
+  assert.ok(claimsRefactor('refactor the billing adapter'));
+  assert.ok(claimsRefactor('reorganize folder layout'));
+});
+
+test('claimsRefactor: behavior-fix and feature subjects do NOT match', () => {
+  assert.ok(!claimsRefactor('fix: rename variable that caused shadowing bug'));
+  assert.ok(!claimsRefactor('feat: add move-to-folder action'));
+  assert.ok(!claimsRefactor('chore: bump dependencies'));
+  assert.ok(!claimsRefactor('docs: explain extract pipeline'));
+  assert.ok(!claimsRefactor('move button to header on mobile'));
+});
+
+test('hook blocks a chore-prefixed rename that stages test files', async () => {
+  const projectDir = makeGitProject();
+  stage(projectDir, 'src/svc.js', 'module.exports = 1;\n');
+  stage(projectDir, 'src/svc.test.js', 'test("x", () => {});\n');
+  const msgFile = writeMsgFile(projectDir, 'chore: rename svc helpers\n');
+  const result = await runGitHook(projectDir, HOOK, {}, [msgFile]);
+  assert.notStrictEqual(result.status, 0, result.stdout + result.stderr);
+  assert.ok(/refactor commit/i.test(result.stdout), result.stdout);
+});
+
+test('hook allows a plain chore commit that stages test files', async () => {
+  const projectDir = makeGitProject();
+  stage(projectDir, 'src/svc.js', 'module.exports = 1;\n');
+  stage(projectDir, 'src/svc.test.js', 'test("x", () => {});\n');
+  const msgFile = writeMsgFile(projectDir, 'chore: update dev tooling\n');
+  const result = await runGitHook(projectDir, HOOK, {}, [msgFile]);
+  assert.strictEqual(result.status, 0, result.stdout + result.stderr);
+});

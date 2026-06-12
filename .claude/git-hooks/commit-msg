@@ -18,10 +18,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { findImpureFiles } = require(path.join(__dirname, 'lib', 'refactor-purity'));
-
-// Subject prefixes that imply a behavior-preserving (refactor) commit.
-const REFACTOR_PREFIX_RE = /^(refactor|cleanup|rename|move|extract)(\(|:|!)/i;
+const { findImpureFiles, claimsRefactor } = require(path.join(__dirname, 'lib', 'refactor-purity'));
 
 function fail(message) {
   process.stdout.write(message);
@@ -54,8 +51,9 @@ try {
   // Extract the subject line (first non-comment, non-empty line).
   const subject = msgContent.split('\n').find((l) => l.trim() && !l.startsWith('#')) || '';
 
-  // Only act on refactor-family subjects.
-  if (!REFACTOR_PREFIX_RE.test(subject.trim())) process.exit(0);
+  // Only act on subjects that claim a behavior-preserving commit (refactor
+  // prefixes, bare structural verbs, or chore/style + structural verb).
+  if (!claimsRefactor(subject)) process.exit(0);
 
   // If the skill already set HARNESS_COMMIT_KIND=refactor, pre-commit already
   // ran the purity check — avoid double-running.
