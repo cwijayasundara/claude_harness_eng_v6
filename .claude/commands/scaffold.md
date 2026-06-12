@@ -155,6 +155,14 @@ Based on their answers, write `project-manifest.json` to the project root. Fill 
   - `model_tier` sets the cost posture by stamping each agent's `model:` pin (applied in Step 3). `cost` = zero Fable (Sonnet generation, Opus judgment); `balanced` (default, Profile B) = Fable only on the planner, everything else cost-conscious; `max-quality` = Fable on the judgment roles. The `security-reviewer` is **never** Fable in any tier (its cyber safety classifiers can refuse offensive-security reasoning). See `docs/model-allocation.md`.
 - lsp: detected language servers and install commands (see below)
 - verification: mode, health_check, and mode-specific config (see below)
+- architecture (optional): only when the project deviates from the default `src/<layer>/` layout. `layers` is the import hierarchy low→high; `layer_roots` lists the directory prefixes that contain layer dirs. Read by the layer gates (verify-on-save + pre-commit), which otherwise default to `{"layers": ["types","config","repository","service","api","ui"], "layer_roots": ["src"]}`:
+
+```json
+"architecture": {
+  "layers": ["domain", "application", "adapters", "handlers"],
+  "layer_roots": ["app", "internal"]
+}
+```
 
 ### LSP Config (auto-detected from stack)
 

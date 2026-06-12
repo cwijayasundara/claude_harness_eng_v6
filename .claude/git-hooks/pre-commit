@@ -15,7 +15,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { checkContentViolations } = require(path.join(__dirname, '..', 'hooks', 'lib', 'layers'));
+const { checkContentViolations, loadLayerConfig, getLayer } = require(path.join(__dirname, '..', 'hooks', 'lib', 'layers'));
 const { run, output, shouldBlock, unavailable } = require(path.join(__dirname, '..', 'hooks', 'lib', 'toolchain'));
 const { findImpureFiles } = require(path.join(__dirname, 'lib', 'refactor-purity'));
 
@@ -35,20 +35,32 @@ function stagedFiles() {
   return out.split('\n').filter(Boolean);
 }
 
-function checkLayers(stagedPy) {
+function checkLayers(projectDir, stagedSource) {
+  const layerCfg = loadLayerConfig(projectDir);
   const violations = [];
-  for (const file of stagedPy) {
+  let mapped = 0;
+  for (const file of stagedSource) {
+    if (getLayer(file, layerCfg) !== null) mapped++;
     let content;
     try {
       content = fs.readFileSync(file, 'utf8');
     } catch (_) {
       continue;
     }
-    violations.push(...checkContentViolations(file, content));
+    violations.push(...checkContentViolations(file, content, layerCfg));
   }
   if (violations.length > 0) {
     const lines = violations.map((v) => `  ${v.filePath}:${v.line} — ${v.layer} cannot import from ${v.imported}`);
     fail(`BLOCKED: Architecture violations found — fix before committing:\n${lines.join('\n')}\nFix: Move imports to the correct layer or extract shared types to src/types/.\n`);
+  }
+  // No silent no-op: if the layer gate matched nothing it is not protecting
+  // this project — say so (advisory, never blocks).
+  if (mapped === 0 && stagedSource.length > 0) {
+    process.stdout.write(
+      `note: layer gate matched no staged file — this project's layout does not follow ` +
+      `${layerCfg.roots.join('|')}/<layer>/. Configure "architecture": {"layers": [...], "layer_roots": [...]} ` +
+      `in project-manifest.json if it should be layer-checked.\n`
+    );
   }
 }
 
@@ -226,7 +238,7 @@ try {
   });
 
   checkRefactorPurity(staged);
-  checkLayers(stagedPy);
+  checkLayers(projectDir, stagedSource);
   checkSprintContract(projectDir);
   checkTypescript(projectDir, stagedTs);
   checkCoverage(projectDir, stagedPy);

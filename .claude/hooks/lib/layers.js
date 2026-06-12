@@ -1,36 +1,64 @@
 'use strict';
 
-// Layer order from lowest to highest — one-way imports only.
-// Applied to both Python (src.<layer>) and JS/TS (path segments) imports.
-const LAYERS = ['types', 'config', 'repository', 'service', 'api', 'ui'];
+const fs = require('fs');
+const path = require('path');
 
-function getLayer(filePath) {
+// Layer order from lowest to highest — one-way imports only.
+// Applied to both Python (<pkg>.<layer>) and JS/TS (path segments) imports.
+// The topology is configurable per project via project-manifest.json:
+//   "architecture": { "layers": [low..high], "layer_roots": ["src", "backend/src"] }
+// Defaults preserve the original src/<layer>/ convention.
+const DEFAULT_LAYERS = ['types', 'config', 'repository', 'service', 'api', 'ui'];
+const DEFAULT_ROOTS = ['src'];
+const DEFAULT_CONFIG = { layers: DEFAULT_LAYERS, roots: DEFAULT_ROOTS };
+
+function isStringArray(a) {
+  return Array.isArray(a) && a.length > 0 && a.every((s) => typeof s === 'string' && s.length > 0);
+}
+
+function loadLayerConfig(projectDir) {
+  try {
+    const manifest = JSON.parse(fs.readFileSync(path.join(projectDir, 'project-manifest.json'), 'utf8'));
+    const arch = manifest.architecture || {};
+    return {
+      layers: isStringArray(arch.layers) ? arch.layers : DEFAULT_LAYERS,
+      roots: isStringArray(arch.layer_roots) ? arch.layer_roots : DEFAULT_ROOTS,
+    };
+  } catch (_) {
+    return DEFAULT_CONFIG;
+  }
+}
+
+function getLayer(filePath, config = DEFAULT_CONFIG) {
   const normalized = filePath.replace(/\\/g, '/');
-  for (const layer of LAYERS) {
-    if (normalized.includes(`/src/${layer}/`) || normalized.startsWith(`src/${layer}/`)) {
-      return layer;
+  for (const root of config.roots) {
+    for (const layer of config.layers) {
+      const seg = `${root}/${layer}/`;
+      if (normalized.includes(`/${seg}`) || normalized.startsWith(seg)) {
+        return layer;
+      }
     }
   }
   return null;
 }
 
-function getHigherLayers(layer) {
-  const idx = LAYERS.indexOf(layer);
+function getHigherLayers(layer, config = DEFAULT_CONFIG) {
+  const idx = config.layers.indexOf(layer);
   if (idx === -1) return [];
-  return LAYERS.slice(idx + 1);
+  return config.layers.slice(idx + 1);
 }
 
-// Python check: `from src.<layer>` / `import src.<layer>` upward imports.
-function checkPythonViolations(filePath, content, currentLayer, higherLayers) {
+// Python check: `from <pkg>.<layer>` / `import <pkg>.<layer>` upward imports,
+// where <pkg> is the last path segment of each layer root (src for backend/src).
+function checkPythonViolations(filePath, content, currentLayer, higherLayers, config) {
+  const pkgs = [...new Set(config.roots.map((r) => r.replace(/\\/g, '/').split('/').filter(Boolean).pop()))];
+  const importRe = new RegExp(`^(?:from|import)\\s+(?:${pkgs.join('|')})\\.(\\w+)`);
   const violations = [];
   const lines = content.split('\n');
   for (let i = 0; i < lines.length; i++) {
-    const trimmed = lines[i].trim();
-    const fromMatch = trimmed.match(/^from\s+src\.(\w+)/);
-    const importMatch = trimmed.match(/^import\s+src\.(\w+)/);
-    const imported = (fromMatch && fromMatch[1]) || (importMatch && importMatch[1]);
-    if (imported && higherLayers.includes(imported)) {
-      violations.push({ filePath, line: i + 1, layer: currentLayer, imported });
+    const match = lines[i].trim().match(importRe);
+    if (match && higherLayers.includes(match[1])) {
+      violations.push({ filePath, line: i + 1, layer: currentLayer, imported: match[1] });
     }
   }
   return violations;
@@ -68,15 +96,15 @@ function checkJsViolations(filePath, content, currentLayer, higherLayers) {
 }
 
 // Unified check: dispatches to the Python or JS/TS checker based on extension.
-function checkContentViolations(filePath, content) {
-  const currentLayer = getLayer(filePath);
+function checkContentViolations(filePath, content, config = DEFAULT_CONFIG) {
+  const currentLayer = getLayer(filePath, config);
   if (!currentLayer) return [];
-  const higherLayers = getHigherLayers(currentLayer);
+  const higherLayers = getHigherLayers(currentLayer, config);
   if (higherLayers.length === 0) return [];
 
   const ext = filePath.replace(/\\/g, '/').split('.').pop().toLowerCase();
   if (ext === 'py') {
-    return checkPythonViolations(filePath, content, currentLayer, higherLayers);
+    return checkPythonViolations(filePath, content, currentLayer, higherLayers, config);
   }
   if (['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs'].includes(ext)) {
     return checkJsViolations(filePath, content, currentLayer, higherLayers);
@@ -84,4 +112,4 @@ function checkContentViolations(filePath, content) {
   return [];
 }
 
-module.exports = { getLayer, getHigherLayers, checkContentViolations };
+module.exports = { loadLayerConfig, getLayer, getHigherLayers, checkContentViolations };

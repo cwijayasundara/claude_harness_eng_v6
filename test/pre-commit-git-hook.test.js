@@ -116,3 +116,29 @@ test('a crashed gate fails open with a loud stderr warning, not silently', async
   const log = fs.readFileSync(path.join(projectDir, '.claude', 'state', 'hook-errors.log'), 'utf8');
   assert.ok(log.includes('pre-commit:'), log);
 });
+
+test('layer gate honors a manifest-configured topology', async () => {
+  const projectDir = makeGitProject();
+  fs.writeFileSync(path.join(projectDir, 'project-manifest.json'),
+    JSON.stringify({ architecture: { layers: ['domain', 'handlers'], layer_roots: ['app'] } }));
+  stage(projectDir, 'app/domain/user.py', 'from app.handlers import router\n');
+  const result = await runGitHook(projectDir, HOOK, { HARNESS_COVERAGE_GATE: 'off' });
+  assert.notStrictEqual(result.status, 0);
+  assert.ok(result.stdout.includes('domain cannot import from handlers'), result.stdout);
+});
+
+test('layer gate now also checks staged JS/TS files', async () => {
+  const projectDir = makeGitProject();
+  stage(projectDir, 'src/repository/userRepo.js', "const { svc } = require('../service/logic');\n");
+  const result = await runGitHook(projectDir, HOOK, { HARNESS_COVERAGE_GATE: 'off' });
+  assert.notStrictEqual(result.status, 0);
+  assert.ok(result.stdout.includes('repository cannot import from service'), result.stdout);
+});
+
+test('advisory (non-blocking) when the layer gate matches no staged source', async () => {
+  const projectDir = makeGitProject();
+  stage(projectDir, 'lib/util/strings.js', 'module.exports = (s) => s.trim();\n');
+  const result = await runGitHook(projectDir, HOOK, { HARNESS_COVERAGE_GATE: 'off' });
+  assert.strictEqual(result.status, 0, result.stdout + result.stderr);
+  assert.ok(result.stdout.includes('layer gate matched no staged file'), result.stdout);
+});

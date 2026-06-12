@@ -15,7 +15,7 @@ const fs = require('fs');
 const path = require('path');
 const { TRACKED_EXTS, resolveProjectDir, readHookInput, reportFailure } = require('./lib/common');
 const { isTestFile } = require('./lib/tdd');
-const { checkContentViolations } = require('./lib/layers');
+const { checkContentViolations, loadLayerConfig } = require('./lib/layers');
 const { run, output, shouldBlock, detectCwd } = require('./lib/toolchain');
 
 const QUEUE_SKIP_DIRS = new Set([
@@ -65,7 +65,7 @@ function markGraphDirty(projectDir, filePath, n, ext) {
 
 const LAYER_EXTS = new Set(['.py', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
 
-function checkLayers(filePath, n, ext) {
+function checkLayers(projectDir, filePath, n, ext) {
   if (!LAYER_EXTS.has(ext)) return;
   let content;
   try {
@@ -73,7 +73,7 @@ function checkLayers(filePath, n, ext) {
   } catch (_) {
     return;
   }
-  const violations = checkContentViolations(n, content);
+  const violations = checkContentViolations(n, content, loadLayerConfig(projectDir));
   if (violations.length === 0) return;
   const lines = violations.map((v) =>
     `BLOCKED: Architecture violation in ${filePath}:${v.line} — ${v.layer} cannot import from ${v.imported}`
@@ -133,7 +133,7 @@ try {
   queueForReview(projectDir, filePath, n, ext);
   markGraphDirty(projectDir, filePath, n, ext);
   if (!inSkippedDir(n)) {
-    checkLayers(filePath, n, ext);
+    checkLayers(projectDir, filePath, n, ext);
     checkToolchain(projectDir, filePath, ext);
   }
 } catch (err) {
