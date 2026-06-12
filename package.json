@@ -6,6 +6,7 @@
   "scripts": {
     "test": "node --test \"test/*.test.js\"",
     "test:e2e": "node --test \"test/e2e/*.test.js\"",
-    "test:all": "node --test \"test/*.test.js\" \"test/e2e/*.test.js\""
+    "test:all": "node --test \"test/*.test.js\" \"test/e2e/*.test.js\"",
+    "test:symphony": "cd symphony_clone && npm ci --silent && npm test"
   }
 }

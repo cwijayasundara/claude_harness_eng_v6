@@ -206,7 +206,7 @@ Point `OTEL_EXPORTER_OTLP_ENDPOINT` / `HARNESS_PUSHGATEWAY_URL` at a shared host
 
 ## Testing the harness
 
-Unit suite (fast, no API calls): `node --test test/*.test.js`. Full E2E pipeline build: `./test/e2e/run.sh` (~15-20 min, ~$5-10). Details: [docs/testing.md](docs/testing.md).
+Unit suite (fast, no API calls): `node --test test/*.test.js`. Full E2E pipeline build: `./test/e2e/run.sh` (~15-20 min, ~$5-10). Symphony orchestrator suite: `npm run test:symphony` (installs its deps on first run). Details: [docs/testing.md](docs/testing.md).
 
 ---
 

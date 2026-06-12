@@ -26,3 +26,6 @@ test/e2e/results/*
 !test/e2e/results/.gitkeep
 test/e2e/output/
 .playwright-mcp/
+# Generated artifacts — build_matrices_deck.py output and runtime review verdicts
+matrices.pptx
+specs/reviews/
