@@ -108,6 +108,22 @@ If commands are obvious and safe, run lightweight discovery commands such as `np
 
 ---
 
+## Step 3.5 — Ingest CI Gates and Inventory Feature Flags (deterministic)
+
+Two scripts, both safe to run on any repo:
+
+```bash
+node .claude/scripts/ci-ingest.js --root .     # → specs/brownfield/ci-map.md
+node .claude/scripts/flag-scan.js --root .     # → specs/brownfield/flag-inventory.md
+```
+
+- `ci-map.md` extracts the test/lint/coverage commands the project's CI *actually* enforces, with an alignment section against the harness gates. Where CI and harness disagree (different linter, different coverage bar), surface the discrepancy in `change-strategy.md` — the stricter gate should win, and the choice belongs to the user.
+- `flag-inventory.md` lists feature-flag usage (SDKs, `FEATURE_*` env gates, config flags) with references. Flags gate dark code paths: a change inside a flagged path needs the flag's production state known before the lane is chosen.
+
+Both are heuristic extractions — spot-check anything load-bearing against the source files. If a script reports nothing (no CI config, no flags), note that in the relevant map; absence is itself a finding.
+
+---
+
 ## Step 4 — Map Risks
 
 Write `risk-map.md` with:
@@ -119,6 +135,7 @@ Write `risk-map.md` with:
 - External APIs and side-effecting integrations
 - Generated code or vendored code that should not be edited manually
 - Areas where tests are weak or missing
+- Code paths gated by feature flags (`flag-inventory.md`) — the inactive branch may be the production one
 
 ### Structural risks
 
