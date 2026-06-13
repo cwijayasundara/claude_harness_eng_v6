@@ -69,6 +69,19 @@ Reference skill for generator teammates. Read this before writing any code.
 - If a helper is complex enough to need direct tests, consider making it a named domain module with a clear public interface.
 - A good test should survive internal refactors when behavior is unchanged.
 
+### 10. Performance & Latency — Don't Ship the Slow Pattern
+Readability comes first, but readable code is not allowed to be needlessly slow. The evaluator runs a runtime **latency ratchet** on read endpoints (p95 regression vs a baseline) plus an advisory budget check from `project-manifest.json` → `execution.latency_budget_ms` (default read 300ms / write 800ms, override per-endpoint in the sprint contract). Code to that budget. These are *criteria*, not "make it fast" — each is a specific pattern to avoid unless you can name why it's unavoidable here:
+
+- **No N+1 queries.** Loading a list and then querying per-row inside a loop is the single most common latency killer. Fetch the set in one query — use a join, an `IN (...)`/`WHERE id = ANY(...)`, or the ORM's eager-load (`selectinload`/`joinedload`). If you write a query inside a `for` loop over rows, stop and batch it.
+- **Bound every result set.** Any endpoint or query that returns a collection must paginate or `LIMIT`. Never `SELECT *` an unbounded table into memory. Default to a capped page size; accept `limit`/`offset` (or cursor) params.
+- **Index the columns you filter, sort, or join on.** If a query has a `WHERE`/`ORDER BY`/`JOIN` on a column, that column needs an index (declare it in the model/migration). A full table scan that passes tests at 10 rows is a timeout at 10⁶.
+- **Run independent awaits concurrently.** Two `await`s with no data dependency are a sequential stall — gather them (`asyncio.gather`, `Promise.all`). Sequential awaits are only correct when the second genuinely needs the first's result.
+- **Never block the event loop on a hot path.** No synchronous CPU-bound work, blocking SDK call, or sync DB driver inside an async request handler — it stalls every concurrent request. Use async clients, or push blocking work to `asyncio.to_thread`/a worker (see the async-bridging rule and the thread-pool gotcha below). Sync `postgresql://` in an async app is both a correctness *and* a latency bug.
+- **Don't re-compute or re-fetch what doesn't change per request.** Hoist constant work (compiled regexes, loaded config, opened clients, expensive lookups) out of the request path to startup/module scope. Cache genuinely expensive, repeated, read-mostly results — but only with an explicit invalidation story; a cache without invalidation is a correctness bug, so don't add one speculatively.
+- **Stream or page large payloads.** Don't build a giant string/list in memory to return it; stream, or return a bounded page.
+
+When clarity and speed genuinely conflict on a hot path, keep the readable version and leave a one-line comment naming the trade-off — that signals to the evaluator and reviewer it was a deliberate choice, not an oversight.
+
 ---
 
 ## Code Patterns
@@ -594,3 +607,8 @@ Rules:
 - **No request ID tracing** — Add middleware that generates a UUID per request, injects into logs and response headers. Without it, errors can't be traced to requests.
 - **Deprecated startup/shutdown events** — Use `@asynccontextmanager` lifespan, not `@app.on_event("startup")`. The event-based API is deprecated in FastAPI.
 - **Thread pool exhaustion** — `asyncio.to_thread()` uses a default pool of ~5 workers. Under concurrent load, blocking SDK calls exhaust the pool. Set `loop.set_default_executor(ThreadPoolExecutor(max_workers=20))` or use async clients.
+- **N+1 queries** — Loading rows then querying per-row in a loop. Batch into one query (join / `IN` / eager-load). This is the most common cause of an endpoint that passes tests but fails the evaluator's latency ratchet.
+- **Unbounded result set** — Returning a whole table/collection with no `LIMIT`/pagination. Always cap and paginate list responses; never load an unbounded table into memory.
+- **Missing index on a filtered column** — A `WHERE`/`ORDER BY`/`JOIN` column with no index is a full scan; fine at 10 rows, a timeout at scale. Declare the index in the model/migration.
+- **Sequential independent awaits** — Two `await`s with no data dependency run back-to-back instead of via `asyncio.gather`/`Promise.all`. Gather independent I/O.
+- **Per-request re-computation** — Recompiling regexes, reloading config, or re-opening clients inside the handler instead of hoisting to startup/module scope.

@@ -39,8 +39,9 @@ If the inputs include a `phase` and `artifact_paths`, you are in artifact mode. 
 - Do not read the source code to decide whether something "looks right." Run it.
 - Do not infer that a feature works because related features work.
 - Do not accept a partial pass. Every acceptance criterion must be independently verified.
-- A PASS verdict requires all three layers to pass for each story under evaluation **and** the security gate to pass.
+- A PASS verdict requires all three layers to pass for each story under evaluation, the security gate to pass, **and** the performance ratchet to not report a regression.
 - **Security gate:** the overall validator verdict is FAIL if `specs/reviews/security-verdict.json` reports `pass: false` (any BLOCK / critical-high finding). `/evaluate` runs the `security-reviewer` alongside you and folds its verdict into the final result; treat an unresolved BLOCK finding exactly like a failed acceptance criterion. A green functional pass with an open critical/high vulnerability is still a FAIL.
+- **Performance ratchet:** measure read-endpoint latency and FAIL on a p95 **regression** beyond threshold versus the recorded baseline (`perf-baseline.js --compare`). When no baseline exists yet (first/greenfield build) or an endpoint only overruns its absolute budget without regressing, that is a WARN, not a FAIL — record it, don't block. Full procedure in `.claude/skills/evaluate/SKILL.md` → "Performance Checks." Do not read source to judge speed; the running app produces the latency evidence.
 
 ## Inputs
 
@@ -101,7 +102,7 @@ In addition to the prose verdict, write a structured failure JSON to `specs/revi
 ```json
 {
   "failure": {
-    "layer": "api | playwright | design",
+    "layer": "api | playwright | design | performance",
     "gate": "evaluator",
     "check": "POST /api/users -> 201",
     "actual": {
@@ -128,7 +129,7 @@ After evaluation, update `features.json`. You may ONLY modify these fields:
 - `passes` — set to `true` only if all three layers pass
 - `last_evaluated` — set to current ISO timestamp
 - `failure_reason` — human-readable description of the first failure
-- `failure_layer` — one of: `"api"`, `"browser"`, `"design"`, `null`
+- `failure_layer` — one of: `"api"`, `"browser"`, `"design"`, `"performance"`, `null`
 
 Do NOT modify feature identity/specification fields: `id`, `category`, `story`, `group`, `description`, or `steps`. If older projects still contain `title`, `layer`, or `estimate`, preserve those fields unchanged too.
 

@@ -112,12 +112,55 @@ Include the relevant error from the logs in the failure report. This gives the g
 
 ## Performance Checks
 
-For each `performance_checks` entry in the contract:
+Performance is a **regression ratchet**, not an absolute-budget gate: a build FAILs only when a read endpoint gets measurably *slower* than its recorded baseline. Absolute-budget overruns and first-time measurements are WARN — they inform, they don't block. This catches "the change doubled latency" without flaking greenfield builds that have no baseline yet.
+
+### Step P1 — Resolve the endpoints and budgets
+
+- **Endpoints to measure:** every endpoint in the contract's `api_checks` plus any `performance_checks` entry. Split them by method:
+  - **Read (GET):** safe to sample repeatedly → eligible for the regression ratchet.
+  - **Write (non-GET):** sampling a POST/PUT/DELETE 20× would create 20 records → single-shot budget WARN only, never sampled or ratcheted.
+- **Budget per endpoint (advisory):** the contract's `performance_checks[].max_response_time_ms` if present, else `project-manifest.json` → `execution.latency_budget_ms.read` for GET / `.write` for non-GET (defaults 300 / 800 ms). If neither exists, skip the budget WARN for that endpoint (the ratchet still applies to reads).
+- **Regression threshold:** `execution.latency_budget_ms.regression_pct` if set, else the `perf-baseline.js` default of 50(%).
+
+### Step P2 — Read endpoints: regression ratchet
+
+Run the existing baseline tool against the read endpoints, keeping the loop's baseline separate from the brownfield "measure-first" baseline:
+
 ```bash
-# Measure response time
-time_ms=$(curl -s -o /dev/null -w "%{time_total}" -X {method} {evaluation.api_base_url}{endpoint} | awk '{printf "%.0f", $1 * 1000}')
+READS="/items,/items/1,/health"   # comma-joined GET paths from the contract
+BASELINE=specs/reviews/perf-baseline.json
+
+if [ -f "$BASELINE" ]; then
+  # compare current latency to the recorded baseline; exit 1 = p95 regression
+  node .claude/scripts/perf-baseline.js --compare --endpoints "$READS" --out "$BASELINE"
+  PERF_STATUS=$?
+else
+  # first evaluation: establish the baseline, do not fail on it
+  node .claude/scripts/perf-baseline.js --endpoints "$READS" --out "$BASELINE"
+  PERF_STATUS=2   # treat "baseline just created" as WARN, not FAIL
+fi
 ```
-If `time_ms > max_response_time_ms`, report as WARN (not BLOCK — performance is advisory unless critical).
+
+Interpret `PERF_STATUS`:
+- **1 (REGRESSION)** → performance **FAIL**. Record `failure_layer: "performance"` with the endpoint and the `p95 before -> after (+N%)` line from the tool's stdout. This flips the overall verdict to FAIL.
+- **2 (no baseline / just captured)** → **WARN** only. Note "performance baseline established — ratchet active next evaluation." Do not fail.
+- **0 (OK)** → pass. Still emit a WARN for any read endpoint whose measured p95 exceeds its resolved budget (slow, but not a regression).
+
+After a **PASS** verdict for the whole group, refresh the baseline so the ratchet tracks the accepted state:
+```bash
+node .claude/scripts/perf-baseline.js --endpoints "$READS" --out "$BASELINE"   # only on overall PASS
+```
+Never refresh the baseline on a FAIL — that would launder a regression into the new normal.
+
+### Step P3 — Write endpoints: single-shot budget WARN
+
+For each non-GET endpoint with a resolved budget, take **one** measurement with `--measure` (no baseline write, no ratchet) and `--samples 1` — the tool skips warmup for non-GET, so this fires exactly one request and won't create extra records:
+```bash
+node .claude/scripts/perf-baseline.js --measure \
+  --endpoints "/items" --method POST --body '{...}' --samples 1
+# stdout: MEASURE: POST /items p50=910ms p95=910ms p99=910ms (1 samples)
+```
+Parse the `p95` from the `MEASURE:` line. If it exceeds the endpoint's resolved budget, record a **WARN** — never a FAIL. Writes are not ratcheted because a single sample has no meaningful p95 distribution and repeated sampling would mutate state. (A plain `curl -s -o /dev/null -w "%{time_total}"` is an acceptable fallback if invoking the script per write endpoint is awkward.)
 
 ---
 
@@ -193,7 +236,7 @@ After all checks complete, update `features.json` for every feature ID listed in
 - `passes`: `true` if all checks for that feature passed, `false` otherwise.
 - `last_evaluated`: current timestamp in ISO 8601 format.
 - `failure_reason`: `null` if passing; otherwise a human-readable description of the first failure (e.g., `"GET /users/1 returned 404, expected 200"`).
-- `failure_layer`: `null` if passing; otherwise one of `"api"`, `"playwright"`, `"design"`, `"unit_test"`, `"docker"`, `"security"`.
+- `failure_layer`: `null` if passing; otherwise one of `"api"`, `"playwright"`, `"design"`, `"unit_test"`, `"docker"`, `"security"`, `"performance"`.
 
 Do not remove existing fields from `features.json`. Merge the updates into the existing structure.
 Only update evaluation state fields: `passes`, `last_evaluated`, `failure_reason`, and `failure_layer`. Preserve immutable feature identity/specification fields such as `id`, `category`, `story`, `group`, `description`, and `steps`.
@@ -237,6 +280,13 @@ VERDICT: PASS | FAIL
 - [FAIL] VULN-001 (high): SQL injection in src/api/users.ts:47
 - block: 1, warn: 2, info: 0 → gate FAIL
 
+## Performance
+
+- [PASS] GET /items p95 41ms -> 44ms (+7%) — within ratchet
+- [FAIL] GET /items/1 p95 38ms -> 210ms (+452%) — regression
+- [WARN] POST /items 910ms > 800ms write budget (single-shot, not ratcheted)
+- [WARN] No baseline existed — established; ratchet active next evaluation
+
 ## Features Updated
 
 - F001: PASS
@@ -244,16 +294,16 @@ VERDICT: PASS | FAIL
 - F003: PASS
 ```
 
-The overall VERDICT is PASS only if every check across all layers passes **and** the security gate passes (`security-verdict.json#pass === true`). A single FAIL in any layer — including an open BLOCK (critical/high) security finding — produces a FAIL verdict.
+The overall VERDICT is PASS only if every check across all layers passes, the security gate passes (`security-verdict.json#pass === true`), **and** the performance ratchet reports no read-endpoint regression. A single FAIL in any layer — an open BLOCK (critical/high) security finding, or a p95 latency regression beyond threshold — produces a FAIL verdict. Performance WARNs (over budget, or first-build baseline established) do not affect the verdict.
 
 ---
 
 ## Mode Behavior
 
-| Mode  | Layer 1 (API) | Layer 2 (Playwright) | Layer 3 (Design) | Layer 4 (Security) |
-|-------|--------------|---------------------|-----------------|--------------------|
-| Full  | Run          | Run                 | Run             | Run                |
-| Lean  | Run          | Run                 | Skip            | Run                |
+| Mode  | Layer 1 (API) | Layer 2 (Playwright) | Layer 3 (Design) | Layer 4 (Security) | Performance ratchet |
+|-------|--------------|---------------------|-----------------|--------------------|---------------------|
+| Full  | Run          | Run                 | Run             | Run                | Run                 |
+| Lean  | Run          | Run                 | Skip            | Run                | Run                 |
 
 Determine the current execution mode from `project-manifest.json` field `execution.default_mode` (`full`/`lean`), or the `--mode` override when invoked under `/auto` or `/build`. Default to Full if absent. Note: this is distinct from `verification.mode` (`docker`/`local`/`stub`), which controls how the app is reached — do not confuse the two.
 
@@ -293,6 +343,6 @@ These rules are non-negotiable. Deviation invalidates the evaluation.
 4. **No partial credit on binary checks.** API and Playwright checks are pass/fail.
 5. **Design scores are evidence-based.** Cite what you observed, not what you assumed.
 6. **Do not infer intent.** If the contract says check X and X is absent, the check fails.
-7. **Run checks in order.** Layer 1 before Layer 2 before Layer 3, then the Layer 4 security gate.
+7. **Run checks in order.** Layer 1 before Layer 2 before Layer 3, then the Layer 4 security gate, then the performance ratchet (it needs the app warm and the functional checks already exercised).
 8. **Document every check result,** even passing ones.
 9. **Security is a gate, not advice.** The overall verdict is FAIL if `specs/reviews/security-verdict.json#pass` is false (any critical/high finding). A functional pass with an open BLOCK vulnerability is still a FAIL. The `security-guidance` plugin is advisory and does not satisfy this gate — the `security-reviewer` agent does.

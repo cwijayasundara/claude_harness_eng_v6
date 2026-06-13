@@ -1,0 +1,8 @@
+{
+  "name": "claude_harness_lite",
+  "version": "1.0.0",
+  "description": "Artifact-only loadout: UI mockups, architecture/ARB documents, and research. No SDLC pipeline, no generator/evaluator, no quality-gate hooks.",
+  "author": {
+    "name": "Claude Harness Engine"
+  }
+}

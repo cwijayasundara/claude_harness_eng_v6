@@ -75,4 +75,4 @@ usually announced by the upstream-watch workflow flagging a new
 
 | Date | Models | Decision | Evidence |
 |---|---|---|---|
-| 2026-06 | Opus 4.8 / Fable 5 orchestrators, Sonnet 4.6 teammates | `full` remains default; `trimmed` available per-project | Knob introduced; no measured run yet — first re-baseline owed at next model-generation change |
+| 2026-06 | Opus 4.8 orchestrator, Sonnet 4.6 teammates | `full` remains default; `trimmed` available per-project | Knob introduced; no measured run yet — first re-baseline owed at next model-generation change |
