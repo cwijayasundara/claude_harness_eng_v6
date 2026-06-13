@@ -42,6 +42,35 @@ patch releases):
 Do not trim from memory of an older model's failures, and do not add ceremony
 to compensate for a weakness the current model no longer has.
 
+## The model-generation migration ritual
+
+The re-baselining ritual above measures *ceremony*. This wider ritual covers
+everything else a model-generation change touches. A new generation is
+usually announced by the upstream-watch workflow flagging a new
+`*-migration` plugin in `anthropics/claude-code/plugins`.
+
+1. **Run Anthropic's migration plugin first, if one shipped** (e.g.
+   `claude-opus-4-5-migration`). Apply the model-string changes only; defer
+   its prompt adjustments until step 3 shows they're needed.
+2. **Re-pin model tiers.** Update `.claude/scripts/model-tier.js` presets to
+   the new exact model IDs and re-run `test/model-tier.test.js` — the
+   security-reviewer invariant and "exact IDs, never aliases" rules must hold.
+3. **Run the eval before flipping anything on `main`.** On a branch with the
+   new IDs, run the unit suite plus one representative e2e story group, and
+   read the transcripts — Anthropic's migration guides list the axes that
+   shift (literalism, tool-trigger thresholds, verbosity, effort calibration).
+4. **Prune in both directions.** Audit `.claude/agents/*` and
+   `.claude/skills/*/SKILL.md` against `docs/prompting-standards.md`: delete
+   emphasis and workarounds the new generation no longer needs (the
+   anti-laziness `CRITICAL/MUST` class), and only then add new rules for
+   failures actually observed in step 3.
+5. **Treat the upgrade as a security event.** Re-run the hook-security tests
+   and spot-check that permission gates and destructive-command denials still
+   trigger — injection resistance and tool-trigger thresholds regress
+   non-monotonically across generations.
+6. **Re-baseline ceremony** (ritual above) and record the outcome in the
+   changelog below.
+
 ## Changelog
 
 | Date | Models | Decision | Evidence |

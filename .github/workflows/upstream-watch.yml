@@ -1,0 +1,54 @@
+name: Upstream watch
+
+# Weekly diff of anthropics/claude-code (CHANGELOG + plugins dir, including
+# per-model migration plugins). On change: opens an issue with the diff and
+# commits the refreshed snapshots under .github/upstream/.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Diff upstream against snapshots
+        id: diff
+        run: |
+          set +e
+          node .claude/scripts/upstream-watch.js > report.md
+          code=$?
+          set -e
+          if [ "$code" -ne 0 ] && [ "$code" -ne 10 ]; then
+            cat report.md
+            exit "$code"
+          fi
+          echo "changed=$([ "$code" -eq 10 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Open issue with the report
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Upstream claude-code changes — $(date -u +%Y-%m-%d)"
+          gh issue create --title "$title" --body-file report.md --label upstream-watch || \
+            gh issue create --title "$title" --body-file report.md
+
+      - name: Commit refreshed snapshots
+        run: |
+          if git diff --quiet .github/upstream; then exit 0; fi
+          git config user.name 'upstream-watch[bot]'
+          git config user.email 'noreply@github.com'
+          git add .github/upstream
+          git commit -m 'chore(upstream-watch): refresh claude-code snapshots'
+          git push

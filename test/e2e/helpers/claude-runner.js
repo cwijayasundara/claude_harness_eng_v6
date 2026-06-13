@@ -6,7 +6,7 @@ const path = require('path');
 const HARNESS_ROOT = path.join(__dirname, '..', '..');
 const E2E_SETTINGS = path.join(__dirname, '..', 'fixtures', 'e2e-settings.json');
 
-function buildClaudeArgs(model, budgetUsd, continueSession, pluginDir, sessionId) {
+function buildClaudeArgs(model, budgetUsd, continueSession, pluginDir, sessionId, outputFormat) {
   const args = [
     '-p',
     '--model', model,
@@ -20,6 +20,8 @@ function buildClaudeArgs(model, budgetUsd, continueSession, pluginDir, sessionId
   else if (sessionId) args.push('--session-id', sessionId);
   else if (continueSession) args.push('--continue');
   if (pluginDir) args.push('--plugin-dir', pluginDir);
+  // stream-json exposes intermediate assistant turns (print mode requires --verbose with it)
+  if (outputFormat) args.push('--output-format', outputFormat, '--verbose');
   return args;
 }
 
@@ -43,9 +45,10 @@ function runClaude(prompt, options = {}) {
     continueSession = false,
     pluginDir = null,
     sessionId = null,
+    outputFormat = null,
   } = options;
 
-  const args = buildClaudeArgs(model, budgetUsd, continueSession, pluginDir, sessionId);
+  const args = buildClaudeArgs(model, budgetUsd, continueSession, pluginDir, sessionId, outputFormat);
   const result = spawnSync('claude', args, {
     input: prompt,
     cwd,

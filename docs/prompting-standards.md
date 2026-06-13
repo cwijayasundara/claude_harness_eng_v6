@@ -68,3 +68,5 @@ The *only* legitimate per-model knobs are **`model:` (frontmatter / session mode
 - [ ] Distinct blocks in XML tags; examples where behavior is subtle.
 - [ ] Effort expectation noted for agentic/coding skills (high/xhigh).
 - [ ] No model named in the prompt body, and no behavior phrased as a directional nudge that assumes one model's default (criterion, not nudge) — top-capability prompts must run unchanged on Opus 4.8 *and* Fable 5.
+
+When a new model *generation* ships (not a patch release), don't edit prompts ad hoc — run the model-generation migration ritual in `docs/adaptive-ceremony.md`, which includes auditing every prompt against this checklist and deleting rules the new generation has made redundant.
