@@ -23,7 +23,7 @@ Reference skill for generator teammates. Read this before writing any code.
 - **Python:** Full type hints on all functions. Use `TypeVar`, `Generic`, `Protocol` where appropriate.
 - Type aliases for domain concepts (`UserId = str`, `type OrderId = string`).
 
-### 3. Functions Under 50 Lines
+### 3. Functions Under 30 Lines
 - If a function body exceeds 30 lines, decompose it into named sub-functions (the `pre-write-gate` hook enforces this limit deterministically).
 - Each sub-function should be testable in isolation.
 - Use descriptive names that read as a sentence: `validateOrderItems`, `buildPaymentPayload`.

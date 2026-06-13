@@ -139,10 +139,12 @@ Neither runtime changes how `/auto` runs inside the workspace. The only differen
 |---|---:|---|---|
 | Slash command (true) | 1 | `.claude/commands/scaffold.md` | Bootloader only |
 | Skills (virtual commands) | 26 | `.claude/skills/<name>/SKILL.md` | All other workflows |
-| Specialized agents | 7 | `.claude/agents/<name>.md` | Subagents with tool allowlists + model tier |
+| Specialized agents | 8 | `.claude/agents/<name>.md` | Subagents with tool allowlists + model tier |
 | Lifecycle hooks | 5 | `.claude/hooks/*.js` | PreToolUse, PostToolUse, UserPromptSubmit, Stop, SubagentStop |
-| Templates | 10 | `.claude/templates/*` | Sprint contract, story, init.sh, tracker config, etc. |
-| State files | 6+ | `.claude/state/`, project root | Append-only continuity + ratchet memory |
+| Templates | 18 | `.claude/templates/*` | Sprint contract, story, init.sh, tracker config, state seeds, etc. |
+| State files | 12 tracked in this repo; 6 scaffold seeds | `.claude/state/`, `.claude/templates/state-seeds/` | Runtime snapshot + initial scaffold continuity files |
+| Utility scripts | 14 | `.claude/scripts/*.js`, `.claude/scripts/*.sh` | Model tiering, telemetry, validation, archive, certification, upstream watch |
+| GitHub automation | 2 workflows | `.github/workflows/`, `.github/upstream/` | CI and upstream Claude Code drift watch |
 | Official plugins (default-on) | 9 | `enabledPlugins` in `settings.json` | Superpowers, code-review, frontend-design, … |
 | Framework skill packs | 2 (opt-in) | `.claude/skills/<pack-prefix>-*` (via `-a claude-code`) | LangChain (9 skills) · Google ADK (7 skills) |
 | Tracker orchestrator | 1 sibling project | `symphony_clone/` | Docker service for Linear-driven dispatch |
@@ -163,18 +165,19 @@ Neither runtime changes how `/auto` runs inside the workspace. The only differen
 
 The `codebase-explorer` agent has `LSP` in its tool grants and uses it for symbol-level navigation when available. All other agents benefit implicitly — Claude Code routes go-to-definition and find-references through whichever LSP server is running.
 
-### The 28 skills, grouped by lane
+### The 26 skills, grouped by lane
 
 | Lane | Skills |
 |---|---|
 | Greenfield pipeline | `brd`, `spec`, `design`, `implement`, `evaluate`, `review`, `test`, `deploy`, `build`, `auto` |
-| Lite/brownfield/vibe | `lite`, `brownfield`, `code-map`, `seam-finder`, `vibe` |
+| Lite/brownfield/vibe | `brownfield`, `code-map`, `seam-finder`, `vibe` |
 | Behavior change | `change` (incl. `--issue N`), `refactor` (incl. `--sweep`) |
-| Reference (loaded on intent) | `architecture`, `code-gen`, `testing`, `evaluation`, `clarify` |
-| Tracker add-on | `tracker`, `tracker-publish` |
+| Behavior-preservation sub-skills | `checking-coverage-before-change`, `pinning-down-behavior`, `sprouting-instead-of-editing`, `keeping-refactors-pure`, `checking-migration-safety`, `upgrading-dependencies` |
+| Reference and guardrails | `code-gen`, `clarify` |
+| Tracker add-on | `tracker-publish` |
 | Framework packs | `install-framework-packs` |
 
-### The 7 agents
+### The 8 agents
 
 | Agent | Model | Tool grants | Responsibility |
 |---|---|---|---|
@@ -182,9 +185,10 @@ The `codebase-explorer` agent has `LSP` in its tool grants and uses it for symbo
 | generator | Sonnet 4.6 | + Edit · Agent (spawns teammates) | Code + tests, spawns agent team, TDD |
 | evaluator | Opus 4.8 | + Playwright MCP (navigate, click, fill, snap) | Runs app, 3-layer verification, structured failures |
 | design-critic | Opus 4.8 | + Playwright MCP (resize, hover, screenshot) | GAN scoring (DQ/O/C/F), plateau pivot |
-| generator | Sonnet 4.6 | Read · Write · Glob · Grep · Bash | React + Tailwind HTML mockups |
-| generator | Sonnet 4.6 | Read · Write · Edit · Glob · Grep · Bash | Test plan, Playwright E2E, fixtures |
 | security-reviewer | Opus 4.8 | Read · Write · Grep · Glob · Bash | OWASP scan + adversarial find-then-refute; enforced gate (BLOCK on critical/high) |
+| diff-reviewer | Opus 4.8 | Read · Grep · Glob · Bash | Fresh-context correctness review of the group diff |
+| clean-code-reviewer | Opus 4.8 | Read · Grep · Glob · Bash | Structural maintainability review after implementation |
+| codebase-explorer | Sonnet 4.6 | Read · Glob · Grep · Bash · LSP | Read-only brownfield discovery and symbol navigation |
 
 The Model column shows the **`balanced` default**. **Opus 4.8 and Fable 5 are both the top-capability tier** and run those roles interchangeably (prompts are model-agnostic by construction; see `docs/prompting-standards.md`) — `balanced` defaults the planner to Fable 5 and the rest of the top tier to Opus 4.8. The cost posture is set by `execution.model_tier` (`cost`/`balanced`/`max-quality`) and stamped as exact model ids into each `.claude/agents/<name>.md` `model:` line; see `docs/model-allocation.md`.
 
@@ -454,7 +458,7 @@ Escalation contract: if the work outgrows the chosen lane (lite turns into 7 sto
 
 ## 10. Optional Framework Skill Packs
 
-`/scaffold` asks whether to install framework-specific skill packs alongside the harness. These are **opt-in** and ship through the open `skills` CLI; with `-a claude-code` they land inside `.claude/skills/<pack-prefix>-*` directly alongside the 27 harness skills. If the install is blocked (auto-mode classifier), `/scaffold` records the intent in `project-manifest.json#framework_skill_packs` and `/install-framework-packs` can re-run installs idempotently.
+`/scaffold` asks whether to install framework-specific skill packs alongside the harness. These are **opt-in** and ship through the open `skills` CLI; with `-a claude-code` they land inside `.claude/skills/<pack-prefix>-*` directly alongside the 26 harness skills. If the install is blocked (auto-mode classifier), `/scaffold` records the intent in `project-manifest.json#framework_skill_packs` and `/install-framework-packs` can re-run installs idempotently.
 
 | Pack | Source | Skill count | Trigger phrases |
 |---|---|---:|---|
@@ -674,7 +678,6 @@ Agent contract: in brownfield mode, "module X depends on Y" claims must cite `co
 | `/seam-finder` | Ranked cut-points for a concrete goal | No | — |
 | `/change` | Behavior change (story or --issue N) | No | systematic-debugging (issue mode) |
 | `/refactor` | Quality-driven refactoring | No | writing-plans |
-| `/tracker` | Optional Linear/Jira orchestration overview | Yes | — |
 | `/tracker-publish` | Publish approved dependency groups to tracker issues | Yes | — |
 | `/install-framework-packs` | Re-attempt installs for framework packs declared in `project-manifest.json` (idempotent) | No | — |
 
@@ -688,7 +691,7 @@ Detailed rules in `.claude/skills/code-gen/SKILL.md`. Summary:
 2. **100% meaningful coverage** — Every line verified by a test. 80% hard floor.
 3. **Small modules** — One file = one responsibility. Warn 200, block 300 lines.
 4. **Static typing** — Zero `any` in TypeScript. Full annotations in Python.
-5. **Functions under 50 lines** — Decompose into named, testable subfunctions.
+5. **Functions under 30 lines** — Decompose into named, testable subfunctions.
 6. **Explicit error handling** — Typed error classes, no bare exceptions.
 7. **No dead code** — Every line traces to a story.
 8. **Self-documenting** — Good names over comments, types as documentation.

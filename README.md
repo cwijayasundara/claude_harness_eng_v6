@@ -158,6 +158,7 @@ Hooks enforce these in real time; ratchet gates enforce them at commit time.
 | `.claude/program.md` | Human-agent bridge — edit mid-run to steer `/auto` |
 | `.claude/settings.json` | Hook config, permissions, enabled plugins |
 | `.claude/state/learned-rules.md` | Accumulated rules from past failures (never deleted) |
+| `.claude/state/` | Tracked harness runtime snapshot for this repo; scaffolded projects receive initial seeds from `.claude/templates/state-seeds/` |
 | `project-manifest.json` | Stack, evaluation config, execution mode, framework packs |
 | `features.json` | Granular pass/fail registry |
 | `claude-progress.txt` | Session chaining recovery context |
@@ -208,7 +209,9 @@ Point `OTEL_EXPORTER_OTLP_ENDPOINT` / `HARNESS_PUSHGATEWAY_URL` at a shared host
 
 ## Testing the harness
 
-Unit suite (fast, no API calls): `node --test test/*.test.js`. Full E2E pipeline build: `./test/e2e/run.sh` (~15-20 min, ~$5-10). Symphony orchestrator suite: `npm run test:symphony` (installs its deps on first run). Details: [docs/testing.md](docs/testing.md).
+Unit suite (fast, no API calls): `npm test` or `node --test "test/*.test.js"`. Full E2E pipeline build: `npm run test:e2e` or `./test/e2e/run.sh` (~15-20 min, live Claude required). Symphony orchestrator suite: `npm run test:symphony` (installs its deps on first run). Golden assertion and upstream-watch guards live in `test/evals/`, `test/golden-assertions.test.js`, `test/plugin-schema.test.js`, and `test/upstream-watch.test.js`. Details: [docs/testing.md](docs/testing.md).
+
+GitHub CI runs the fast harness suite from `.github/workflows/ci.yml`. `.github/workflows/upstream-watch.yml` periodically compares the checked-in upstream snapshots in `.github/upstream/` against Anthropic Claude Code changes and opens a report when scaffold/plugin assumptions may need review.
 
 ---
 
