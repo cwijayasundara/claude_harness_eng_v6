@@ -131,7 +131,7 @@ Execute teammates in phases from the micro-DAG:
 - Story acceptance criteria
 - File ownership (which files this teammate may edit)
 - Learned rules (from `.claude/state/learned-rules.md`)
-- Quality principles (from `.claude/skills/code-gen/SKILL.md`)
+- Quality principles (from `.claude/skills/code-gen/SKILL.md`), **including the "Performance & Latency" section** — the evaluator runs a runtime latency ratchet on read endpoints, so a teammate that ships an N+1 query or an unbounded scan will fail the group, not just the review. Tell the teammate the project's latency budget from `project-manifest.json` → `execution.latency_budget_ms` (read/write) so it codes against the target it will be measured against.
 - The stack reference for the story's files per the Stack Expertise table (e.g. `code-gen/references/stack-python-fastapi.md` for backend Python, `stack-react-typescript.md` for React/TS frontend)
 - Brownfield constraints from `specs/brownfield/` when present
 - Interface contracts from upstream teammates (Phase 2+ only)
@@ -159,7 +159,7 @@ Max 5 concurrent teammates per phase. If a phase has >5 stories, batch in groups
 
 ## Quality Principles (from SKILL.md)
 
-- Write code that is readable first, performant second
+- Write readable code that stays inside its latency budget. Readability comes first, but "readable" is not a license to ship a known-slow pattern (N+1 queries, sequential awaits that could be concurrent, unbounded result sets — see `code-gen/SKILL.md` → "Performance & Latency"). When clarity and speed genuinely conflict on a hot path, prefer clarity and leave a one-line comment naming the trade-off so the evaluator and reviewer can see it was deliberate.
 - Use the project's established patterns — do not introduce new frameworks mid-sprint
 - Every public function/endpoint must have a corresponding behavior test through its public interface
 - No hardcoded secrets, no `console.log` left in production paths

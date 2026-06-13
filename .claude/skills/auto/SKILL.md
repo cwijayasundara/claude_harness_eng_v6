@@ -207,14 +207,14 @@ Roles are assigned by **capability tier**, not a specific model — no prompt in
 | Generator teammates | cost-efficient | Mechanical implementation |
 | Security reviewer | top-capability | Contextual vuln reasoning + adversarial find-then-refute |
 
-- **top-capability** = Opus 4.8 *or* Fable 5 — interchangeable; these roles run the same prompts unchanged on either.
+- **top-capability** = Opus 4.8.
 - **cost-efficient** = Sonnet 4.6.
 
-The orchestrator runs on the **session model** (whatever `/model` is set to — Opus 4.8 or Fable 5 both work). Subagent models are pinned per agent in `.claude/agents/<name>.md` frontmatter (`model:`), stamped from the cost-posture preset in `project-manifest.json` → `execution.model_tier` (default `balanced`):
+The orchestrator runs on the **session model** (whatever `/model` is set to — Opus 4.8). Subagent models are pinned per agent in `.claude/agents/<name>.md` frontmatter (`model:`), stamped from the cost-posture preset in `project-manifest.json` → `execution.model_tier` (default `balanced`):
 
-- **cost** — zero Fable (Sonnet generation, Opus judgment).
-- **balanced** (default) — Fable 5 only on the planner (the cascade-preventing, low-volume phase); cost-conscious elsewhere. For long unattended runs, the operator may set the *session* model to Fable 5 — its long-horizon coherence can reduce total iterations and net cheaper.
-- **max-quality** — Fable on the judgment roles; generator bumped to Opus; **security-reviewer stays Opus in every tier** (Fable's cyber classifiers can refuse vuln reasoning).
+- **cost** — Sonnet generation, Opus judgment.
+- **balanced** (default) — identical pins to `cost` today (top tier is a single model, Opus 4.8); kept as a distinct posture name for per-project re-tuning.
+- **max-quality** — generation bumped to Opus 4.8; everything else already Opus, codebase-explorer stays Sonnet.
 
 Re-stamp after editing the manifest: `node .claude/scripts/model-tier.js <preset> --apply .claude/agents`. Full rationale + decision rule: `docs/model-allocation.md`.
 

@@ -36,6 +36,18 @@ Use `/vibe` for small, low-risk changes where the full SDLC pipeline would be di
 
 Use `/brownfield` before broad planning, refactoring, or feature work in existing codebases. It creates factual architecture, test, risk, and change-strategy maps under `specs/brownfield/` so agents preserve existing contracts and choose the right lane. `/vibe` may still be used for tiny low-risk fixes, but it must respect any brownfield risk map already present.
 
+### Disposable Artifacts (Non-Product Work)
+
+UI mockups, architecture / ARB (Architecture Review Board) narrative documents, and research or analysis reports are **disposable artifacts**, not product code. They explain, explore, or persuade — they do not ship. They must **not** go through the generator/evaluator (GAN) loop, the ratchet gates, security review, or TDD, and you must **not** invoke `/build`, `/auto`, `/implement`, `/change`, `/refactor`, or `/scaffold` to produce them. Use the lightweight lane instead:
+
+| Artifact | Lane |
+|----------|------|
+| UI mockup / component / page | `frontend-design` skill |
+| Architecture / ARB / design narrative | `/design --doc-only` (single authored document; no planner/generator/evaluator, no `specs/design/` schema set) |
+| Research / deep dive / analysis | `deep-research` skill |
+
+These lanes skip contracts, ratcheting, and reviewer enforcement **by design** — abstaining from the pipeline is correct behavior here, not a shortcut, and it overrides the default impulse to brainstorm/escalate/TDD before acting. Only escalate to the SDLC pipeline if the artifact is being turned into shipped product code (e.g., a mockup becoming a real component). When in doubt about whether something is product code, ask. For a fully insulated workspace where the SDLC machinery is absent entirely, load the **harness-lite** plugin (`harness-lite/`) instead of this one.
+
 ### 1. Think Before Coding
 - State assumptions explicitly. If uncertain, ask — don't guess.
 - When a request is ambiguous, present multiple interpretations and let the user choose.

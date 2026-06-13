@@ -107,12 +107,14 @@
         },
         "performance_checks": {
           "type": "array",
+          "description": "Per-endpoint latency overrides. GET endpoints are ratcheted against a recorded p95 baseline (regression = FAIL); non-GET endpoints get a single-shot budget WARN. Omitted budgets fall back to project-manifest.json execution.latency_budget_ms (read/write).",
           "items": {
             "type": "object",
             "properties": {
               "endpoint": { "type": "string" },
-              "max_response_time_ms": { "type": "number" },
-              "method": { "type": "string", "default": "GET" }
+              "max_response_time_ms": { "type": "number", "description": "Absolute budget (advisory WARN) for this endpoint, overriding the manifest default." },
+              "method": { "type": "string", "default": "GET" },
+              "regression_threshold_pct": { "type": "number", "description": "Per-endpoint p95 regression threshold for the ratchet, overriding execution.latency_budget_ms.regression_pct (default 50)." }
             }
           }
         },

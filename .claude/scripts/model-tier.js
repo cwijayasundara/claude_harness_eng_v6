@@ -4,26 +4,22 @@
 
 // Model-tier presets — map a cost posture to the per-agent model pins.
 //
-// The harness runs a GAN: generation is the high-volume output bucket (cheapest
-// capable tier), judgment is lower-volume but quality-sensitive. Fable 5 is ~2x
-// Opus 4.8, so it is spent only where first-shot quality has high downstream
-// leverage and low token volume (planning, which cascades), never on the volume
-// bucket (generation) or on the security reviewer (Fable 5's cyber safety
-// classifiers can refuse offensive-security reasoning and fall back anyway).
+// The harness runs a GAN: generation is the high-volume output bucket, judgment
+// is lower-volume but quality-sensitive. The top-capability model is Opus 4.8;
+// the real cost lever is whether *generation* (the big bucket) runs on the
+// cheaper Sonnet 4.6 or on Opus 4.8.
 //
-//   cost        (Profile A) — zero Fable. Sonnet generation, Opus judgment.
-//   balanced    (Profile B) — Fable only on the planner; everything else cost-
-//                             conscious. The shipped default.
-//   max-quality              — Fable on the judgment roles, generator bumped to
-//                             Opus (never Fable on volume), security stays Opus.
-//
-// HARD INVARIANT: security-reviewer is never Fable in any preset.
+//   cost        (Profile A) — Sonnet generation, Opus judgment.
+//   balanced    (Profile B) — the shipped default. Same pins as `cost` today
+//                             (kept as a distinct posture name for forward
+//                             compatibility / per-project re-tuning).
+//   max-quality              — Opus across the board, generation included;
+//                             codebase-explorer stays Sonnet.
 
 const fs = require('fs');
 const path = require('path');
 
 // Exact model IDs (not bare aliases) — version-pinned and unambiguous.
-const FABLE = 'claude-fable-5';
 const OPUS = 'claude-opus-4-8';
 const SONNET = 'claude-sonnet-4-6';
 
@@ -34,26 +30,23 @@ const PRESETS = {
     'clean-code-reviewer': OPUS, 'codebase-explorer': SONNET,
   },
   balanced: {
-    planner: FABLE, generator: SONNET, evaluator: OPUS,
+    planner: OPUS, generator: SONNET, evaluator: OPUS,
     'design-critic': OPUS, 'security-reviewer': OPUS, 'diff-reviewer': OPUS,
     'clean-code-reviewer': OPUS, 'codebase-explorer': SONNET,
   },
   'max-quality': {
-    planner: FABLE, generator: OPUS, evaluator: FABLE,
-    'design-critic': FABLE, 'security-reviewer': OPUS, 'diff-reviewer': FABLE,
-    'clean-code-reviewer': FABLE, 'codebase-explorer': SONNET,
+    planner: OPUS, generator: OPUS, evaluator: OPUS,
+    'design-critic': OPUS, 'security-reviewer': OPUS, 'diff-reviewer': OPUS,
+    'clean-code-reviewer': OPUS, 'codebase-explorer': SONNET,
   },
 };
 
 // Recommended session/orchestrator model per tier (guidance, not an agent pin).
-const SESSION = { cost: OPUS, balanced: OPUS, 'max-quality': FABLE };
+const SESSION = { cost: OPUS, balanced: OPUS, 'max-quality': OPUS };
 
 function modelsForTier(preset) {
   const pins = PRESETS[preset];
   if (!pins) throw new Error(`unknown model tier preset: ${preset}`);
-  if (pins['security-reviewer'] === FABLE) {
-    throw new Error('invariant violated: security-reviewer must never be Fable 5');
-  }
   return { ...pins };
 }
 

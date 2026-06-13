@@ -13,7 +13,7 @@ const { spawn } = require('child_process');
 const { test } = require('node:test');
 
 const script = path.join(__dirname, '..', '.claude', 'scripts', 'perf-baseline.js');
-const { percentile, compareEndpoint } = require(script);
+const { percentile, compareEndpoint, endpointKey } = require(script);
 
 // IMPORTANT: async spawn, never spawnSync — the test server lives in THIS
 // process, and spawnSync blocks the event loop, deadlocking the child CLI
@@ -108,5 +108,77 @@ test('an absolute endpoint URL is used as-is, not concatenated onto base', async
     const out = path.join(dir, 'perf-baseline.json');
     const res = await runScript(['--base', 'http://127.0.0.1:1', '--endpoints', `${base}/health`, '--samples', '3', '--out', out]);
     assert.strictEqual(res.status, 0, res.stdout + res.stderr);
+  });
+});
+
+// --- method-aware sampling (writes) ------------------------------------------
+
+// Server variant that records every request it receives, so a test can assert
+// exactly how many requests (and which methods) the sampler issued.
+function withRecordingServer(delayMsRef, fn) {
+  const requests = [];
+  return new Promise((resolve, reject) => {
+    const server = http.createServer((req, res) => {
+      const chunks = [];
+      req.on('data', (c) => chunks.push(c));
+      req.on('end', () => {
+        requests.push({ method: req.method, url: req.url, body: Buffer.concat(chunks).toString() });
+        setTimeout(() => {
+          res.writeHead(200, { 'content-type': 'application/json' });
+          res.end('{"ok":true}');
+        }, delayMsRef.value);
+      });
+    });
+    server.listen(0, '127.0.0.1', async () => {
+      const base = `http://127.0.0.1:${server.address().port}`;
+      try {
+        resolve(await fn(base, requests));
+      } catch (err) {
+        reject(err);
+      } finally {
+        server.close();
+      }
+    });
+  });
+}
+
+test('endpointKey keeps GET bare and prefixes other methods', () => {
+  assert.strictEqual(endpointKey('GET', '/items'), '/items');
+  assert.strictEqual(endpointKey('POST', '/items'), 'POST /items');
+});
+
+test('non-GET requests skip warmup, send the body, and sample exactly --samples times', async () => {
+  await withRecordingServer({ value: 1 }, async (base, requests) => {
+    const res = await runScript([
+      '--base', base, '--endpoints', '/items',
+      '--method', 'POST', '--body', '{"a":1}', '--samples', '3', '--measure',
+    ]);
+    assert.strictEqual(res.status, 0, res.stdout + res.stderr);
+    const posts = requests.filter((r) => r.method === 'POST');
+    // No warmup for a mutating method: exactly --samples requests, not samples+2.
+    assert.strictEqual(posts.length, 3, `expected exactly 3 POSTs (no warmup), saw ${posts.length}`);
+    assert.strictEqual(posts[0].body, '{"a":1}', 'body must be sent on non-GET requests');
+  });
+});
+
+test('--measure prints p50/p95/p99 and writes no baseline file', async () => {
+  await withServer({ value: 1 }, async (base) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'perf-measure-'));
+    const out = path.join(dir, 'perf-baseline.json');
+    const res = await runScript(['--base', base, '--endpoints', '/health', '--samples', '3', '--measure', '--out', out]);
+    assert.strictEqual(res.status, 0, res.stdout + res.stderr);
+    assert.ok(/MEASURE: \/health p50=/.test(res.stdout), res.stdout);
+    assert.ok(!fs.existsSync(out), 'measure mode must not write a baseline file');
+  });
+});
+
+test('non-GET measurements are keyed by "METHOD path" in the baseline', async () => {
+  await withServer({ value: 1 }, async (base) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'perf-key-'));
+    const out = path.join(dir, 'perf-baseline.json');
+    const res = await runScript(['--base', base, '--endpoints', '/items', '--method', 'POST', '--body', '{}', '--samples', '2', '--out', out]);
+    assert.strictEqual(res.status, 0, res.stdout + res.stderr);
+    const baseline = JSON.parse(fs.readFileSync(out, 'utf8'));
+    assert.ok(baseline.endpoints['POST /items'], `expected key "POST /items", got ${Object.keys(baseline.endpoints)}`);
   });
 });

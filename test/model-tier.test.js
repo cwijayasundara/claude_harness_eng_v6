@@ -9,7 +9,6 @@ const { test } = require('node:test');
 const SCRIPT = path.join(__dirname, '..', '.claude', 'scripts', 'model-tier.js');
 const { modelsForTier, sessionFor, applyTier, PRESETS } = require(SCRIPT);
 
-const FABLE = 'claude-fable-5';
 const OPUS = 'claude-opus-4-8';
 const SONNET = 'claude-sonnet-4-6';
 const ROLES = [
@@ -35,7 +34,7 @@ test('every preset assigns a model to all eight agent roles', () => {
 });
 
 test('pins are exact model IDs, never bare aliases', () => {
-  const valid = new Set([FABLE, OPUS, SONNET]);
+  const valid = new Set([OPUS, SONNET]);
   for (const preset of Object.keys(PRESETS)) {
     for (const [role, model] of Object.entries(modelsForTier(preset))) {
       assert.ok(valid.has(model), `${preset}/${role} = "${model}" must be an exact model id`);
@@ -43,50 +42,38 @@ test('pins are exact model IDs, never bare aliases', () => {
   }
 });
 
-test('cost (Profile A): zero Fable — Sonnet generation, Opus judgment', () => {
+test('cost (Profile A): Sonnet generation, Opus judgment', () => {
   const m = modelsForTier('cost');
   assert.strictEqual(m.generator, SONNET);
   assert.strictEqual(m['codebase-explorer'], SONNET);
   assert.strictEqual(m.planner, OPUS);
   assert.strictEqual(m.evaluator, OPUS);
-  assert.ok(!Object.values(m).includes(FABLE), 'cost preset must use no Fable 5');
 });
 
-test('balanced (Profile B): Fable only on the planner; generation + gate stay cheap', () => {
-  const m = modelsForTier('balanced');
-  assert.strictEqual(m.planner, FABLE); // high-leverage, low-volume, cascade-preventing
-  assert.strictEqual(m.generator, SONNET); // volume bucket stays cheapest capable tier
-  assert.strictEqual(m.evaluator, OPUS); // gate precision, not 2x recall
+test('balanced (Profile B, default): same pins as cost today', () => {
+  assert.deepStrictEqual(modelsForTier('balanced'), modelsForTier('cost'));
+});
+
+test('max-quality: Opus across the board; only codebase-explorer stays Sonnet', () => {
+  const m = modelsForTier('max-quality');
+  assert.strictEqual(m.planner, OPUS);
+  assert.strictEqual(m.generator, OPUS); // generation bumped off Sonnet
+  assert.strictEqual(m.evaluator, OPUS);
+  assert.strictEqual(m['design-critic'], OPUS);
   assert.strictEqual(m['diff-reviewer'], OPUS);
   assert.strictEqual(m['clean-code-reviewer'], OPUS);
+  assert.strictEqual(m['security-reviewer'], OPUS);
   assert.strictEqual(m['codebase-explorer'], SONNET);
-});
-
-test('max-quality: Fable on judgment roles, generator bumped to Opus (never Fable on volume)', () => {
-  const m = modelsForTier('max-quality');
-  assert.strictEqual(m.planner, FABLE);
-  assert.strictEqual(m.evaluator, FABLE);
-  assert.strictEqual(m['design-critic'], FABLE);
-  assert.strictEqual(m['diff-reviewer'], FABLE);
-  assert.strictEqual(m['clean-code-reviewer'], FABLE);
-  assert.strictEqual(m.generator, OPUS); // not Fable — volume cost guard
-});
-
-test('HARD INVARIANT: security-reviewer is never Fable in any preset (cyber-classifier refusal risk)', () => {
-  for (const preset of Object.keys(PRESETS)) {
-    assert.notStrictEqual(modelsForTier(preset)['security-reviewer'], FABLE,
-      `security-reviewer must never be Fable 5 (preset ${preset})`);
-  }
 });
 
 test('unknown preset throws', () => {
   assert.throws(() => modelsForTier('cheapest'), /unknown.*tier|preset/i);
 });
 
-test('session model guidance escalates with tier', () => {
+test('session model guidance is Opus 4.8 in every tier', () => {
   assert.strictEqual(sessionFor('cost'), OPUS);
-  assert.strictEqual(sessionFor('balanced'), OPUS); // Fable only for long unattended /auto (operator's call)
-  assert.strictEqual(sessionFor('max-quality'), FABLE);
+  assert.strictEqual(sessionFor('balanced'), OPUS);
+  assert.strictEqual(sessionFor('max-quality'), OPUS);
 });
 
 // --- applyTier: stamps the model: frontmatter line in each agent file ----------
@@ -101,10 +88,11 @@ test('applyTier rewrites each agent model: line to the exact id for the preset',
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agents-'));
   for (const role of ROLES) fakeAgent(dir, role, OPUS);
   const changed = applyTier(dir, 'balanced');
-  assert.match(fs.readFileSync(path.join(dir, 'planner.md'), 'utf8'), /^model: claude-fable-5$/m);
+  assert.match(fs.readFileSync(path.join(dir, 'planner.md'), 'utf8'), /^model: claude-opus-4-8$/m);
   assert.match(fs.readFileSync(path.join(dir, 'generator.md'), 'utf8'), /^model: claude-sonnet-4-6$/m);
-  assert.ok(changed.includes('planner'));
-  assert.ok(changed.includes('generator'));
+  assert.ok(changed.includes('generator')); // OPUS -> SONNET
+  assert.ok(changed.includes('codebase-explorer')); // OPUS -> SONNET
+  assert.ok(!changed.includes('planner')); // already OPUS, unchanged
   assert.ok(!changed.includes('evaluator')); // already OPUS, unchanged
 });
 
@@ -124,7 +112,7 @@ test('applyTier preserves the rest of the frontmatter and body', () => {
 test('repo agents are stamped with exact model ids (default tier = balanced)', () => {
   const dir = path.join(__dirname, '..', '.claude', 'agents');
   const expected = modelsForTier('balanced');
-  const valid = new Set([FABLE, OPUS, SONNET]);
+  const valid = new Set([OPUS, SONNET]);
   for (const role of ROLES) {
     const txt = fs.readFileSync(path.join(dir, `${role}.md`), 'utf8');
     const m = txt.match(/^model: (.+)$/m);

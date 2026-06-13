@@ -92,6 +92,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/artifact-guard.js\"",
+            "timeout": 5000
+          },
+          {
+            "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/record-run.js\"",
             "timeout": 5000
           }
