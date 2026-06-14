@@ -44,7 +44,7 @@ Sweep workflow:
 1. Refresh `code-graph.json` (`/code-map`) if missing or stale.
 2. Scan files changed since the last sweep (marker `.claude/state/last-drift-scan.txt`, a commit SHA); full scan if no marker.
 3. Write `specs/reviews/drift-report.md` — category, `file:line`, suggested fix, severity (CLEANUP / REFACTOR / DEBT).
-4. Route REFACTOR-class items through Steps 1–7 below (the ratchet-gated fix). With `--auto-fix`, CLEANUP-class items may be auto-committed — they must pass the full ratchet gate.
+4. Route REFACTOR-class items through Steps 1–8 below (the ratchet-gated fix). With `--auto-fix`, CLEANUP-class items may be auto-committed — they must pass the full ratchet gate.
 5. Record the new scan SHA to `.claude/state/last-drift-scan.txt`.
 
 When to sweep: after every ~5 `/auto` iterations, before a release, or when `learned-rules.md` grows past ~10 rules (pattern-accumulation signal). Do not refactor code outside the current change's scope without recording it as drift first.
@@ -128,16 +128,29 @@ After each principle: run tests, run lint, run type checks. If anything breaks, 
 
 When committing, follow **`keeping-refactors-pure`**: commit with `HARNESS_COMMIT_KIND=refactor git commit …` — the pre-commit hook then blocks any staged test/snapshot edits (a pure refactor leaves them byte-identical). Any behavioral fix discovered en route goes in a separate behavior commit.
 
-### Step 6 — Spawn clean-code-reviewer
+### Step 6 — Mechanical Cleanup Pass (native `/simplify`)
 
-After all changes are complete, spawn the `clean-code-reviewer` agent (harness-provided: `.claude/agents/clean-code-reviewer.md`; recognized by the `review-on-stop` Stop hook) on the full diff.
+After the principle-driven refactor is complete and the suite is green (Step 5), run Claude Code's native **`/simplify`** over the refactor's changed files to catch mechanical cleanups the manual pass missed — duplicate logic that should reuse a helper, redundant branches, needless intermediate variables, altitude/efficiency tweaks. Native `/simplify` *applies* the kind of fix the harness reviewers only *report*, so it is genuinely additive — not a duplicate of `clean-code-reviewer`, which owns the structural / SOLID / module-depth judgment `/simplify` does not do.
+
+Fence it with the same behavior-preservation discipline as the rest of this skill:
+
+1. **Green precondition.** Only run with a passing suite — `/simplify` is quality-only (it does not hunt bugs) and assumes already-correct code.
+2. **Scope to the diff.** `/simplify` operates on the changed code; do not let it wander outside the refactor's target path. Reject any edit to a file the refactor did not already touch.
+3. **Re-verify.** Re-run tests, lint, and type checks after. If `/simplify` turns a test red, that edit was not behavior-preserving — revert that specific change, never the test.
+4. **Pure-refactor commit.** Commit under **`keeping-refactors-pure`** (`HARNESS_COMMIT_KIND=refactor`). The pre-commit hook blocks staged test edits, so a cleanup that quietly rewrites a test is caught automatically.
+
+Skip this step when the refactor's entire purpose *was* a single mechanical change `/simplify` would itself propose — there is nothing left to clean.
+
+### Step 7 — Spawn clean-code-reviewer
+
+After all changes are complete, spawn the `clean-code-reviewer` agent (harness-provided: `.claude/agents/clean-code-reviewer.md`; recognized by the `review-on-stop` Stop hook) on the full diff. Native `/simplify` (Step 6) already absorbed the mechanical cleanups; the reviewer now judges **structure** — SOLID, module depth, abstraction quality, public-interface testing — which `/simplify` does not touch.
 
 The reviewer will return findings at three severity levels:
 - **BLOCK** — must fix before this refactor is considered complete.
 - **WARN** — should fix; document if deferring.
 - **INFO** — optional improvement.
 
-### Step 7 — Fix BLOCK Findings
+### Step 8 — Fix BLOCK Findings
 
 Address every BLOCK finding. Re-run the reviewer after each fix cycle. Maximum 3 retry cycles.
 
