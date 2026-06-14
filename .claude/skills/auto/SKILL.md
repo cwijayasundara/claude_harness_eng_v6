@@ -401,8 +401,21 @@ uv run pytest --cov=src --cov-report=term-missing -q | grep "^TOTAL" | awk '{pri
 
 Compare the result with `.claude/state/coverage-baseline.txt`. The new coverage percentage must be **greater than or equal to the baseline AND >= 80% (hard floor)**. If it drops below either threshold, the gate FAILS — even if all tests pass.
 
+**Per-diff coverage (catches dark code the repo-wide average hides).** The repo-wide number can rise while this group ships a large untested surface, as long as other files carry the average. So in addition to the ratchet, measure coverage over **only the files this group changed**. Emit a machine-readable coverage summary (`pytest --cov --cov-report=json:coverage.json`, or Istanbul/vitest `--coverage --coverage-reporter=json-summary`), then:
+
+```bash
+node .claude/scripts/coverage-diff.js \
+  --coverage coverage.json \
+  --diff-base "$(git merge-base HEAD main)" \
+  --floor "${HARNESS_DIFF_COVERAGE_FLOOR:-80}" \
+  --history .claude/state/coverage-history.jsonl \
+  --label "$GROUP_ID"
+```
+
+Exit 1 (per-diff coverage below the floor) **FAILS the gate** even when the repo-wide ratchet passes; a group with no measurable changed files passes (nothing to measure). The per-diff floor defaults to 80% and is overridable via `project-manifest.json#execution.diff_coverage_floor` (or the `HARNESS_DIFF_COVERAGE_FLOOR` env). Each run appends a record to `coverage-history.jsonl` for trend visibility.
+
 **Coverage policy (ref: "AI is forcing us to write good code" by Steve Krenzel):**
-- **Floor: 80%.** No commit may drop below this. The ratchet gate BLOCKS.
+- **Floor: 80%.** No commit may drop below this — repo-wide AND on the group's diff. The ratchet gate BLOCKS.
 - **Target: 100%.** Every line the agent wrote must be verified by a test. At 100%, any uncovered line is an unambiguous signal of missing verification.
 - **TDD enforced:** Tests are written BEFORE implementation. The generator and teammates must follow the red-green-refactor cycle: write failing test → implement → verify pass → commit.
 
