@@ -105,6 +105,24 @@
             }
           }
         },
+        "accessibility_checks": {
+          "type": "object",
+          "description": "Accessibility (axe-core) gate for Playwright-rendered pages. In Full mode any violation at or above a blocking impact FAILs the evaluation; in Lean mode violations are WARN. Omitted urls default to evaluation.ui_base_url.",
+          "properties": {
+            "required": { "type": "boolean", "default": false },
+            "block_impacts": {
+              "type": "array",
+              "description": "axe impact levels that fail the gate. Default: serious and critical.",
+              "items": { "type": "string", "enum": ["minor", "moderate", "serious", "critical"] },
+              "default": ["serious", "critical"]
+            },
+            "urls": {
+              "type": "array",
+              "description": "Page URLs to scan. Defaults to evaluation.ui_base_url when omitted.",
+              "items": { "type": "string" }
+            }
+          }
+        },
         "performance_checks": {
           "type": "array",
           "description": "Per-endpoint latency overrides. GET endpoints are ratcheted against a recorded p95 baseline (regression = FAIL); non-GET endpoints get a single-shot budget WARN. Omitted budgets fall back to project-manifest.json execution.latency_budget_ms (read/write).",

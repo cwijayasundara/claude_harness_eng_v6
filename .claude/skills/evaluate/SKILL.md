@@ -187,6 +187,17 @@ For each entry in `playwright_checks`:
 
 5. Record each check as PASS or FAIL with a description of what was asserted and what was found.
 
+### Accessibility (axe-core) — when the contract has `accessibility_checks`
+
+Semantic selectors prove an element is *reachable*; they do not prove the page is *accessible*. When the contract carries an `accessibility_checks` block, run an axe-core audit on each page (default: `evaluation.ui_base_url`; or the block's `urls`):
+
+1. `browser_navigate` to the page.
+2. Inject and run axe with `browser_evaluate` — load axe-core (e.g. from the `axe-core` package or CDN) and `return await axe.run()`.
+3. Collect `violations`; group them by `impact` (`minor` / `moderate` / `serious` / `critical`).
+4. **Verdict:** any violation whose `impact` is in `block_impacts` (default `["serious", "critical"]`) is a failure. In **Full** mode this FAILs the evaluation (`failure_layer: "accessibility"`); in **Lean** mode record it as a WARN. Always list the rule id, impact, and the offending selector(s) in the report.
+
+A missing axe run when `accessibility_checks.required` is true is a FAIL, not a pass — mirror the security-gate rule (a missing scan is never a pass).
+
 ---
 
 ## Layer 3 — Design Checks (Full Mode Only)
@@ -236,7 +247,7 @@ After all checks complete, update `features.json` for every feature ID listed in
 - `passes`: `true` if all checks for that feature passed, `false` otherwise.
 - `last_evaluated`: current timestamp in ISO 8601 format.
 - `failure_reason`: `null` if passing; otherwise a human-readable description of the first failure (e.g., `"GET /users/1 returned 404, expected 200"`).
-- `failure_layer`: `null` if passing; otherwise one of `"api"`, `"playwright"`, `"design"`, `"unit_test"`, `"docker"`, `"security"`, `"performance"`.
+- `failure_layer`: `null` if passing; otherwise one of `"api"`, `"playwright"`, `"design"`, `"accessibility"`, `"unit_test"`, `"docker"`, `"security"`, `"performance"`.
 
 Do not remove existing fields from `features.json`. Merge the updates into the existing structure.
 Only update evaluation state fields: `passes`, `last_evaluated`, `failure_reason`, and `failure_layer`. Preserve immutable feature identity/specification fields such as `id`, `category`, `story`, `group`, `description`, and `steps`.
@@ -300,10 +311,12 @@ The overall VERDICT is PASS only if every check across all layers passes, the se
 
 ## Mode Behavior
 
-| Mode  | Layer 1 (API) | Layer 2 (Playwright) | Layer 3 (Design) | Layer 4 (Security) | Performance ratchet |
-|-------|--------------|---------------------|-----------------|--------------------|---------------------|
-| Full  | Run          | Run                 | Run             | Run                | Run                 |
-| Lean  | Run          | Run                 | Skip            | Run                | Run                 |
+| Mode  | Layer 1 (API) | Layer 2 (Playwright) | Accessibility (axe) | Layer 3 (Design) | Layer 4 (Security) | Performance ratchet |
+|-------|--------------|---------------------|---------------------|-----------------|--------------------|---------------------|
+| Full  | Run          | Run                 | Gate (FAIL)         | Run             | Run                | Run                 |
+| Lean  | Run          | Run                 | WARN                | Skip            | Run                | Run                 |
+
+(Accessibility runs only when the contract carries an `accessibility_checks` block; in Lean mode its violations are WARN, in Full mode blocking impacts FAIL.)
 
 Determine the current execution mode from `project-manifest.json` field `execution.default_mode` (`full`/`lean`), or the `--mode` override when invoked under `/auto` or `/build`. Default to Full if absent. Note: this is distinct from `verification.mode` (`docker`/`local`/`stub`), which controls how the app is reached — do not confuse the two.
 

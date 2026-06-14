@@ -118,3 +118,25 @@ await page.getByLabel('Email').fill('jane.smith@example.com');
 await page.getByRole('button', { name: 'Create Account' }).click();
 await expect(page.getByRole('heading', { name: 'Welcome, Jane' })).toBeVisible();
 ```
+
+---
+
+## Accessibility (axe-core)
+
+Semantic selectors prove an element is *reachable*; an axe-core audit proves the page is *accessible*. Run it when the sprint contract carries an `accessibility_checks` block. Under the Playwright MCP the audit runs through `browser_evaluate`; in a spec file use `@axe-core/playwright`.
+
+```typescript
+// In a Playwright spec
+import AxeBuilder from '@axe-core/playwright';
+
+const results = await new AxeBuilder({ page }).analyze();
+const blocking = results.violations.filter((v) => ['serious', 'critical'].includes(v.impact));
+expect(blocking, blocking.map((v) => `${v.id} (${v.impact})`).join(', ')).toEqual([]);
+```
+
+```js
+// Via the evaluator's browser_evaluate (axe-core already injected on the page)
+return await axe.run();   // → { violations: [ { id, impact, nodes: [{ target }] } ], ... }
+```
+
+Group `violations` by `impact` (`minor` / `moderate` / `serious` / `critical`). A violation whose impact is in the contract's `block_impacts` (default `serious`/`critical`) fails the gate in Full mode and is a WARN in Lean mode. Report the rule id, impact, and offending selector — never just a count.

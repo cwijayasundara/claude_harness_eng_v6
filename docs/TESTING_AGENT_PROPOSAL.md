@@ -138,7 +138,7 @@ Add an optional axe-core pass to the Playwright layer: after a page renders, run
 
 Each phase is an independent PR. W1 → W4 ordering matters (W4 reuses W1's constraint plumbing); W2 and W3 are independent of the others.
 
-**Delivered so far:** W1 (PR #3); **mutation-smoke** (PR #4, promoted out of §6 — the obligation gate proves a negative test *exists*, mutation-smoke proves the tests *bite*); **W2** (PR #5) — eval runner (`test/evals/run-evals.js`, injectable invoker) + guarded CI `evals` job + structural task-spec validator + `validate-contract.js`/`telemetry-skill-helpers.js` backfill + a security-reviewer behavioral task. The deterministic parts (runner orchestration, task-spec validation, script units) run in plain `npm test`; the model-driven golden run is gated on `ANTHROPIC_API_KEY`.
+**Delivered so far:** W1 (PR #3); **mutation-smoke** (PR #4, promoted out of §6 — the obligation gate proves a negative test *exists*, mutation-smoke proves the tests *bite*); **W2** (PR #5) — eval runner (`test/evals/run-evals.js`, injectable invoker) + guarded CI `evals` job + structural task-spec validator + `validate-contract.js`/`telemetry-skill-helpers.js` backfill + a security-reviewer behavioral task; **W4** (PR #6) — per-diff coverage gate (`coverage-diff.js`, Istanbul + Python, `coverage-history.jsonl` trend) wired into `/auto` Gate 3, and an axe-core `accessibility_checks` gate in the evaluator's Playwright layer (Full=FAIL / Lean=WARN). The deterministic parts (runner orchestration, task-spec validation, script units, coverage-diff, schema) run in plain `npm test`; the model-driven golden run is gated on `ANTHROPIC_API_KEY`.
 
 ## 6. Out of Scope (deferred to a later P2 roadmap)
 
