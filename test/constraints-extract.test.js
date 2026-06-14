@@ -39,6 +39,14 @@ test('extracts a required obligation for each required property', () => {
   const { obligations } = extractObligations([{ label: 'data-models.schema.json', schema: dataModels }]);
   assert.ok(byRule(obligations, 'User.email', 'required'), 'email required obligation');
   assert.ok(byRule(obligations, 'User.username', 'required'), 'username required obligation');
+  assert.strictEqual(byRule(obligations, 'User.email', 'required').value, true, 'required obligation value is true');
+});
+
+test('a null property value is skipped, not treated as an object', () => {
+  const schema = { $defs: { M: { type: 'object', properties: { x: null, y: { type: 'string', minLength: 1 } } } } };
+  const { obligations } = extractObligations([{ label: 'd', schema }]);
+  assert.ok(byRule(obligations, 'M.y', 'minLength'), 'sibling constraint still found');
+  assert.ok(!obligations.some((o) => o.field === 'M.x'), 'null child yields no obligation');
 });
 
 test('extracts length, pattern, range, enum and format obligations', () => {
