@@ -1,0 +1,6 @@
+{
+  "name": "vuln-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Eval fixture with a deliberately seeded SQL injection for the security-reviewer behavioral eval."
+}
