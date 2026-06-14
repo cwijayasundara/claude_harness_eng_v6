@@ -92,7 +92,7 @@ The commands you'll actually type are the lane entry points above. The full surf
 | `/seam-finder` | Rank safe cut-points for a goal |
 | `/implement` | Code generation with agent teams |
 | `/evaluate` | Run app, verify sprint contract |
-| `/review` | Evaluator + security review |
+| `/gate` | Evaluator + security review (on-demand pre-merge quality gate) |
 | `/test` | Test plan + Playwright E2E |
 | `/deploy` | Docker Compose + init.sh |
 | `/change` | Behavior change on existing code (test-first); `--issue N` for a GitHub bug fix |
@@ -102,6 +102,27 @@ The commands you'll actually type are the lane entry points above. The full surf
 | `/install-framework-packs` | Verify configured framework packs (optional) |
 
 Execution modes for `/auto`: **Full** (all gates, the default) and **Lean** (same as Full but does not run the design-critic vision loop). Both run the security gate and the evaluator. For small or quick work use `/build --lite` or `/vibe` rather than a weaker `/auto` mode.
+
+### Harness vs native Claude Code commands
+
+The harness commands above are loaded via `--plugin-dir`. Claude Code also ships **native** built-in
+commands with similar-sounding names. They are not interchangeable — reach for the right one:
+
+| If you want to… | Native command | Harness command |
+|---|---|---|
+| Review a GitHub **PR** | `/review` | — |
+| Run the harness pre-merge **quality gate** (evaluator + security, blocking verdicts) | — | `/gate` (renamed from `/review` to end the collision) |
+| Review the current **diff** for bugs/cleanups (advisory, one-shot) | `/code-review`, `/simplify`, `/security-review` | the GAN reviewers inside `/gate` / `/auto` Gate 7–8 (blocking + ratcheted) |
+| **Run / drive the app** to eyeball a change | `/run`, `/verify` | `/evaluate` (three-layer weighted scoring on top) |
+| **Recurring/interval** execution | `/loop`, `/schedule` | — (use these to *pace or schedule* `/auto`; `/auto` is the build loop, not a scheduler) |
+| Generate just a **CLAUDE.md** | `/init` | `/scaffold` (full bootstrap; CLAUDE.md is one step of it) |
+
+Rule of thumb: **the harness owns orchestration, ratcheting, and the GAN writer/grader separation;
+native commands own the atomic operations** (review a diff, run the app, schedule a job). Where a
+native command is a strictly better engine for an atomic step, the harness *delegates* to it rather
+than re-implementing it — e.g. `/refactor` runs native **`/simplify`** as its mechanical-cleanup
+engine (Step 6), fenced by the behavior-preservation gates, then `clean-code-reviewer` judges
+structure. Full analysis and the integration roadmap: [docs/native-command-integration.md](docs/native-command-integration.md).
 
 **Behavior-preservation sub-skills** (invoked automatically by `/refactor`, `/change`, `/vibe`, `/implement`, and `/auto` teammates when editing existing code; see `docs/behavior-preservation.md`): `checking-coverage-before-change` (symbol-level coverage verdicts via `coverage_map.py`), `pinning-down-behavior` (characterization tests that you watch bite), `sprouting-instead-of-editing` (Feathers' escape hatch for unpinnable code), `keeping-refactors-pure` (no tangled commits; enforced by the pre-commit hook via `HARNESS_COMMIT_KIND=refactor`), `checking-migration-safety` (expand-contract for schema changes, proven reversibility), `upgrading-dependencies` (one dependency bump per commit, changelog + blast-radius audit).
 

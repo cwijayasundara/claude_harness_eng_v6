@@ -86,7 +86,7 @@ Commit-time gates are real **git hooks** (installed in Step 8), not Claude Code 
 | `pre-commit` | Staged-file layer scan → sprint-contract `VERDICT: PASS` check → project-wide `tsc --noEmit` (TS) → pytest coverage ratchet vs baseline / 80% floor (Python; `HARNESS_COVERAGE_GATE=off` to bypass). Skips entirely when no source files are staged |
 | `prepare-commit-msg` | Harness-Lane/Mode/Iteration/Group trailers from `.claude/state/current-*` markers |
 
-> **Note:** The deterministic hooks above are the *only* always-on enforcement. The generator, evaluator, design-critic, and reviewer **agents** run solely when a slash command (`/build`, `/implement`, `/evaluate`, `/review`, `/vibe`, …) invokes them or when the model chooses to — a raw ad-hoc edit is guarded by hooks alone. Do not add `disableWorkflows` and do not assume agent-level validation fires without a command.
+> **Note:** The deterministic hooks above are the *only* always-on enforcement. The generator, evaluator, design-critic, and reviewer **agents** run solely when a slash command (`/build`, `/implement`, `/evaluate`, `/gate`, `/vibe`, …) invokes them or when the model chooses to — a raw ad-hoc edit is guarded by hooks alone. Do not add `disableWorkflows` and do not assume agent-level validation fires without a command.
 
 ## TDD Enforcement (two complementary layers)
 

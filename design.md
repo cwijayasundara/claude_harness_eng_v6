@@ -667,7 +667,7 @@ Agent contract: in brownfield mode, "module X depends on Y" claims must cite `co
 | `/test` | Test plan + cases + fixtures (`--plan-only`) or Playwright E2E (`--e2e-only`) | No | — |
 | `/implement` | Code generation with agent teams | No | writing-plans, TDD |
 | `/evaluate` | Run app, verify sprint contract | No | verification |
-| `/review` | Evaluator + security review | No | — |
+| `/gate` | Evaluator + security review (renamed from `/review`) | No | — |
 | `/deploy` | Docker Compose + init.sh | No | — |
 | `/build` | Full 10-phase pipeline | Phases 1–3 | verification |
 | `/auto` | Autonomous ratcheting loop | No (reads program.md) | debugging, verification |

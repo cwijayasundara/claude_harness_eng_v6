@@ -64,9 +64,9 @@ The validator gate fails on any BLOCK (critical/high) finding. This is the thres
 
 | Stack signal | Read this reference |
 |---|---|
-| `stack.backend.language` is python | `.claude/skills/review/references/security-python.md` |
-| `stack.frontend` React/TS or a Node backend | `.claude/skills/review/references/security-react-typescript.md` |
-| any other stack | no reference yet — apply the generic categories; add `review/references/security-<stack>.md` following the same pattern |
+| `stack.backend.language` is python | `.claude/skills/gate/references/security-python.md` |
+| `stack.frontend` React/TS or a Node backend | `.claude/skills/gate/references/security-react-typescript.md` |
+| any other stack | no reference yet — apply the generic categories; add `gate/references/security-<stack>.md` following the same pattern |
 
 1. **Grep for patterns** — Use Grep to find common vulnerability patterns across all source files:
    - Hardcoded credential patterns: assignment of string literals to variables named `password`, `api_key`, `secret`, `token`

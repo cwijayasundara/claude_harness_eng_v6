@@ -1,11 +1,11 @@
 ---
-name: review
-description: Run evaluator and security reviewer concurrently for comprehensive quality gate.
+name: gate
+description: Run evaluator and security reviewer concurrently for the comprehensive pre-merge quality gate. (Renamed from /review to avoid colliding with Claude Code's native /review PR-review command.)
 argument-hint: "[story-id]"
 context: fork
 ---
 
-# Review Skill
+# Gate Skill
 
 On-demand, pre-merge entry point to the harness's **one** quality gate: it spawns the same `evaluator` + `security-reviewer` agents that `/evaluate` (Layer 4) and `/auto` (Gate 7) run in-pipeline, with identical verdict semantics. This skill owns only the on-demand orchestration; the gate's definitions live in `/evaluate`.
 
@@ -14,9 +14,12 @@ On-demand, pre-merge entry point to the harness's **one** quality gate: it spawn
 ## Usage
 
 ```
-/review            # reviews the current group in context
-/review E3-S1      # reviews a specific story and its group
+/gate            # reviews the current group in context
+/gate E3-S1      # reviews a specific story and its group
 ```
+
+> **Not** Claude Code's native `/review` (which reviews a GitHub PR). This is the harness's
+> local pre-merge quality gate. See the command-boundary notes in `README.md`.
 
 ## Execution
 
@@ -47,6 +50,6 @@ All three must exist before the review is complete; a missing output is itself a
 There are two entry points to the same gate, not two gates:
 
 - **`/evaluate` Layer 4 / `/auto` Gate 7** — the authoritative in-pipeline owner.
-- **`/review`** — the on-demand pre-merge entry point (this skill).
+- **`/gate`** — the on-demand pre-merge entry point (this skill).
 
-In `/auto`, Gate 7 already covers it — a separate `/review` is only needed for manual gating before a merge.
+In `/auto`, Gate 7 already covers it — a separate `/gate` is only needed for manual gating before a merge.

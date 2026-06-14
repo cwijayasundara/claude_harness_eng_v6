@@ -56,8 +56,8 @@ BROWNFIELD   /brownfield      absorbs /seam-finder as --seams "<goal>"; runs cod
              /change          MERGE of /improve + /fix-issue; --issue N adds gh intake/branch/PR
              /refactor        behavior-preserving cleanup (unchanged, keeps --sweep)
 
-GATE         /review          the single on-demand quality+security gate
-                              (absorbs /evaluate's manual role)
+GATE         /gate            the single on-demand quality+security gate
+                              (absorbs /evaluate's manual role; renamed from /review)
 
 OPTIONAL     /tracker-publish ideally a separate plugin; absorbs the tracker overview skill
 ```
@@ -133,7 +133,7 @@ Full/Lean/Solo/Turbo is a 4×7 mode-by-gate matrix that leaks into `evaluate` an
 - **full** (today's Full): all gates per iteration.
 - **fast** (today's Lean): skips design-critic per-iteration, keeps it at group end.
 
-**Delete Turbo** (defers gates 4–7 to the end — the failure mode is "discover everything is broken at the finish line"). **Delete Solo** or make it safe: today Solo skips Gate 7, `/evaluate` is a no-op in Solo, and nothing triggers the `/review` that docs call "the Solo security gate" — i.e., Solo mode ships unreviewed code with only hooks standing guard. If a cheap mode is kept, it must still hard-require `/review` before commit.
+**Delete Turbo** (defers gates 4–7 to the end — the failure mode is "discover everything is broken at the finish line"). **Delete Solo** or make it safe: today Solo skips Gate 7, `/evaluate` is a no-op in Solo, and nothing triggers the `/gate` that docs call "the Solo security gate" — i.e., Solo mode ships unreviewed code with only hooks standing guard. If a cheap mode is kept, it must still hard-require `/gate` before commit.
 
 ---
 

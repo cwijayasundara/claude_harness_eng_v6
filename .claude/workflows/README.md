@@ -10,7 +10,7 @@ git, so everyone on the project inherits them, exactly like the bundled
 The harness ships **no** built-in workflows: earlier versions bundled
 `/harness-eval`, `/harness-review`, `/harness-brownfield-map`, and
 `/harness-implement-group`, but each merely duplicated an existing skill
-(`/evaluate`, `/review`, `/brownfield`, `/implement`) — and the weaker
+(`/evaluate`, `/gate`, `/brownfield`, `/implement`) — and the weaker
 duplicate at that (no security gate, no `security-verdict.json`, no quality
 gate). They were removed to avoid two confusing lanes for the same task. Use
 the skill forms; author your own workflow below when you have a genuinely new

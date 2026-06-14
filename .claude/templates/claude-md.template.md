@@ -53,12 +53,12 @@ One-way dependencies only. See `.claude/architecture.md` for full rules.
 | `/auto` | Autonomous ratcheting loop |
 | `/implement` | Code gen with agent teams |
 | `/evaluate` | Run app, verify contract |
-| `/review` | Evaluator + security review |
+| `/gate` | Evaluator + security review (pre-merge quality gate; not Claude Code's native `/review` PR review) |
 | `/deploy` | Docker Compose + init.sh |
 
 ## Dynamic Workflows
 
-`.claude/workflows/*.js` files auto-register as `/<name>` slash commands — deterministic multi-agent orchestration (fan-out → verify → synthesize), shared via git. The harness ships **no** built-in workflows: earlier `/harness-eval`, `/harness-review`, `/harness-brownfield-map`, and `/harness-implement-group` each merely duplicated an existing skill (`/evaluate`, `/review`, `/brownfield`, `/implement`) — the weaker duplicate at that — so they were removed to avoid two confusing lanes for one task. Use the skill forms; author your own workflow when you have a genuinely new fan-out.
+`.claude/workflows/*.js` files auto-register as `/<name>` slash commands — deterministic multi-agent orchestration (fan-out → verify → synthesize), shared via git. The harness ships **no** built-in workflows: earlier `/harness-eval`, `/harness-review`, `/harness-brownfield-map`, and `/harness-implement-group` each merely duplicated an existing skill (`/evaluate`, `/gate`, `/brownfield`, `/implement`) — the weaker duplicate at that — so they were removed to avoid two confusing lanes for one task. Use the skill forms; author your own workflow when you have a genuinely new fan-out.
 
 Enablement is plan/runtime-gated, not a project setting: requires Pro+ (toggle in `/config` on Pro; default-on for Max/Team/Enterprise), and is triggered by the word `workflow` in a prompt, a saved `/<name>` command, or `/effort ultracode` (auto-orchestration). Workflows use substantially more tokens than a normal turn. Do **not** add `disableWorkflows` to `.claude/settings.json` — that turns the feature off. See `.claude/workflows/README.md` to add your own.
 

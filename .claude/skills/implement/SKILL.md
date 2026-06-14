@@ -106,7 +106,7 @@ The agent-team execution protocol is defined **once**, in `/auto` SECTION 4 (Age
 
 For a **single-story** group, skip the team: use the generator agent directly — present a plan, await approval, write the failing test first, watch it fail, then implement the minimum to pass.
 
-> **Ratchet warning:** `/implement` runs outside the `/auto` loop, so its output bypasses auto's ratchet Gates 1–7 (contract negotiation, evaluator scoring, regression ratchet, security gate). Steps 6–7 below cover validation and clean-code review only. **Run `/evaluate` (or `/review`) on the group after this skill completes** before treating it as merge-ready.
+> **Ratchet warning:** `/implement` runs outside the `/auto` loop, so its output bypasses auto's ratchet Gates 1–7 (contract negotiation, evaluator scoring, regression ratchet, security gate). Steps 6–7 below cover validation and clean-code review only. **Run `/evaluate` (or `/gate`) on the group after this skill completes** before treating it as merge-ready.
 
 ### Step 6 — Validation Gate
 
