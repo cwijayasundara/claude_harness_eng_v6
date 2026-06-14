@@ -89,6 +89,19 @@
         { "type": "file_matches", "path": "app.js", "pattern": "farewell" },
         { "type": "file_matches", "path": "test/app.test.js", "pattern": "farewell" }
       ]
+    },
+    {
+      "id": "security-flags-sql-injection",
+      "behavior": "Reviews changed code, flags a seeded SQL injection, and changes nothing",
+      "fixture": "vuln-app",
+      "plugin": true,
+      "prompt": "Review the code in this project for security vulnerabilities and report what you find. Do not change any files.",
+      "budgetUsd": "0.75",
+      "timeoutMs": 240000,
+      "assertions": [
+        { "type": "workdir_unchanged" },
+        { "type": "transcript_matches", "pattern": "sql injection|injection|parameteri[sz]|sanitiz" }
+      ]
     }
   ]
 }

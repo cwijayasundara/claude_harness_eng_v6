@@ -13,5 +13,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Unit tests (includes plugin/skill/hook schema validation)
+      - name: Unit tests (plugin/skill/hook schema, eval task specs + runner orchestration)
         run: npm test
+
+  evals:
+    # Behavioral evals drive a real model and so are gated on the ANTHROPIC_API_KEY
+    # secret. The runner skips cleanly (exit 0) when the key is absent, so this job
+    # is a no-op on forks and PRs without the secret — it never blocks a merge. The
+    # deterministic parts (task-spec validation + runner orchestration) always run
+    # in the `test` job above.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Behavioral golden evals (model-gated)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: npm run test:evals
