@@ -197,6 +197,29 @@ Hooks enforce these in real time; ratchet gates enforce them at commit time.
 | Framework skill packs | LangChain / Google ADK aware codegen | [docs/extras.md](docs/extras.md) |
 | Understand-Anything | AST-backed graphs for brownfield work | [docs/extras.md](docs/extras.md) |
 | Dynamic workflows | Author your own multi-agent orchestration | [docs/extras.md](docs/extras.md) |
+| Scheduled quality runs | Native `/schedule` cron for nightly `/gate` / `/evaluate` on `main` | see below |
+
+### Scheduled quality runs (off by default)
+
+This applies to **projects you scaffold with the harness**, not the harness repo itself (which
+already runs CI on push/PR and a weekly upstream-watch via GitHub Actions).
+
+CI catches regressions at merge time, but a built app still drifts *after* merge — a transitive
+dependency rots, an external API contract shifts, a runtime flake appears. Claude Code's native
+**`/schedule`** command runs a routine on a cron, so you can re-prove the ratchet on `main` without
+standing up extra infrastructure. It composes the commands the scaffold already gives you:
+
+```
+/schedule create --cron "0 6 * * *" \
+  --prompt "On main: run /gate on the latest group, then /evaluate against features.json. \
+            If any feature regresses or a BLOCK finding appears, open a GitHub issue with the verdict."
+```
+
+Because `/gate` and `/evaluate` write the same blocking verdicts (`security-verdict.json`,
+`evaluator-report.md`) and update `features.json`, a scheduled run produces the same proof a manual
+gate does — just unattended. Keep it off until the project has a green `main` to protect; a nightly
+routine on a red tree is noise. This is a thin convenience over commands you already have, not new
+harness machinery.
 
 ### Enable telemetry (off by default)
 

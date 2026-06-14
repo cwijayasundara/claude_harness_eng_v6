@@ -104,11 +104,33 @@ because upstream moves).
    the GAN wrapper (blocking `security-verdict.json` + ratchet). Same for `diff-reviewer` ↔
    `/code-review`. The blocking-verdict + ratchet behavior stays bespoke; the scanning is delegated.
 
-### Phase 4 — Fill gaps
-6. `harness:nightly` **`/schedule`** routine: re-run ratchet gates on `main`, re-eval features,
-   run upstream-watch.
-7. **Plan mode** (`ExitPlanMode`) as the real phase 1–3 approval gates.
-8. **Worktree isolation** for parallel `/auto` teammates.
+### Phase 4 — Fill gaps — **REVISED after investigation 2026-06-14**
+
+On inspection, two of the three proposed "gaps" turned out to be forced fits or duplicates of
+deliberate existing mechanisms. Only one shipped, reframed.
+
+6. **Shipped, reframed as a documented optional power-up (not wired in).** A Claude-native
+   `/schedule` cron on the *harness repo* would only duplicate its GitHub Actions (CI on push/PR +
+   weekly upstream-watch). The real gap is for **projects scaffolded with the harness**: post-merge
+   drift on `main` (dependency rot, external-API shift, runtime flake) that merge-time CI can't see.
+   README "Scheduled quality runs" documents a `/schedule` routine that re-runs `/gate` + `/evaluate`
+   on `main` — composing commands the scaffold already provides, no new harness machinery.
+7. ~~Plan mode (`ExitPlanMode`) as the phase 1–3 gates.~~ **Rejected.** Plan mode *blocks file
+   writes*, but `/brd`, `/spec`, and `/design` all write artifacts — they cannot run inside it.
+   `/build` already has working `[HUMAN APPROVAL]` gates. The only correct native primitive here is
+   `AskUserQuestion` for a structured gate, a marginal UX upgrade not worth churning the central
+   `/build` skill for. Left as a possible future polish.
+8. ~~Worktree isolation for parallel `/auto` teammates.~~ **Rejected.** The harness already solves
+   parallel-write safety deliberately: teammates spawn with disjoint **owned files** (logged to
+   `iteration-log.md`), partitioned by a component-map micro-DAG, and Phase-1 teammates commit
+   **shared typed interface contracts** that Phase-2 teammates depend on. Separate worktrees would
+   hide those committed contracts from sibling teammates — breaking the mechanism that makes the
+   teams work. Worktrees fight this design rather than helping it.
+
+**Net outcome of the whole effort:** the genuine duplication (the `/review` name) and the genuine
+leverage opportunity (`/simplify` in `/refactor`) are resolved. The remaining "gaps" were already
+covered by deliberate harness mechanisms. The harness's identity holds: **it owns orchestration,
+ratcheting, and the GAN writer/grader separation; native commands own the atomic operations.**
 
 ---
 
