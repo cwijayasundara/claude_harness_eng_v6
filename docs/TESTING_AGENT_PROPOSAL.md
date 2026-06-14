@@ -138,9 +138,11 @@ Add an optional axe-core pass to the Playwright layer: after a page renders, run
 
 Each phase is an independent PR. W1 → W4 ordering matters (W4 reuses W1's constraint plumbing); W2 and W3 are independent of the others.
 
+**Delivered so far:** W1 (PR #3). **Mutation-smoke** (`.claude/scripts/mutation-smoke.js` + `mutation-smoke.md`) — promoted out of §6 and shipped as the direct complement to W1: the obligation gate proves a negative test *exists*; mutation-smoke proves the tests *bite*.
+
 ## 6. Out of Scope (deferred to a later P2 roadmap)
 
-Mutation-testing gate (generalize the pinning "mutation-smoke"), load/concurrency testing (k6/Artillery in perf layer), API contract-drift detection (baseline-diff on `api-contracts.schema.json`), and systematic flake detection (N× E2E re-run). These are real (Gap C) but lower-leverage than the four approved workstreams and add tool dependencies; they belong in a follow-up once W1–W4 land.
+~~Mutation-testing gate (generalize the pinning "mutation-smoke")~~ — **done** (dependency-free runner, relational/equality/logical/boolean operators, JS + Python, string/comment-safe so false survivors are impossible). Still deferred: load/concurrency testing (k6/Artillery in perf layer), API contract-drift detection (baseline-diff on `api-contracts.schema.json`), and systematic flake detection (N× E2E re-run). These add tool dependencies and belong in a follow-up once W2–W4 land.
 
 ## 7. Risks & Mitigations
 

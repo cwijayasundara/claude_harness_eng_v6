@@ -155,6 +155,10 @@ Generate **one representative negative test per obligation** (the equivalence-cl
 
 ---
 
+## 8. Proving the Tests Bite
+
+Steps 1–7 ensure the right tests *exist*. They do not prove the tests would *fail* if the code broke — a test can run a line, trace an obligation, and assert nothing that matters. Close that gap with `.claude/scripts/mutation-smoke.js`: it flips one operator at a time and confirms a test goes red. A **survivor** (a mutation no test killed) is a real coverage gap — fix it by adding the boundary/negative case from §2/§4, never by weakening the gate. See `mutation-smoke.md`. Run it on the files a change touches, after the obligation grounding gate (which is cheaper) passes.
+
 ## Derivation Checklist
 
 For each AC, before writing tests:
