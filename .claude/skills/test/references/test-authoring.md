@@ -2,6 +2,8 @@
 
 Read by the `generator` agent during `/test` and `/build` Phase 9. Produce a complete test suite — plans, cases, Playwright E2E tests, and fixtures — that maps directly to acceptance criteria. Tests must be executable, not aspirational.
 
+This file covers the *artifacts* (plan, cases, fixtures, E2E structure). For the *method* of deriving comprehensive positive/negative/boundary cases from each AC and from the design schemas — equivalence partitioning, boundary-value analysis, state-transition matrices, error-path enumeration, concurrency/idempotency, and the constraint-obligation gate — read `test-design.md` alongside this file.
+
 ## Inputs
 
 - Ready user stories in `specs/stories/E{n}-S{n}.md` (acceptance criteria are your spec)
