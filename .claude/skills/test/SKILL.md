@@ -44,6 +44,8 @@ If required prerequisites are missing, stop and report what is absent.
 
 Read `.claude/skills/code-gen/SKILL.md` for quality principles (typing, error handling, test structure), plus `.claude/skills/code-gen/references/test-strategy.md` for the test-layer model and boundary checklist.
 
+Read `.claude/skills/test/references/test-design.md` for the case-derivation method — equivalence partitioning, boundary-value analysis, state-transition testing, error-path enumeration, and concurrency/idempotency. This is how Step 4's test cases reach positive/negative/boundary completeness instead of happy-path-only. Its adversarial/malformed fixtures come from `.claude/skills/code-gen/references/test-data.md`.
+
 Read `.claude/skills/evaluate/SKILL.md` for the contract verification approach used by the evaluator.
 
 Read `.claude/skills/evaluate/references/playwright-patterns.md` for all selector, assertion, and waiting rules — it is the single source of truth (shared with `/evaluate`). Read `.claude/skills/code-gen/references/test-playwright.md` secondarily, for config and file-structure patterns only.
@@ -59,7 +61,7 @@ Every test case generated must trace to a specific AC. Record the mapping explic
 
 ### Step 3 — Spawn the generator (test-authoring)
 
-Spawn the `generator` agent with the full context: story files, source code structure, and the patterns read in Step 1. Point it at `.claude/skills/test/references/test-authoring.md` for the test-plan / test-case / Playwright-E2E / fixture authoring guidance.
+Spawn the `generator` agent with the full context: story files, source code structure, and the patterns read in Step 1. Point it at `.claude/skills/test/references/test-authoring.md` for the test-plan / test-case / Playwright-E2E / fixture authoring guidance, and at `.claude/skills/test/references/test-design.md` for deriving the positive/negative/boundary cases each AC requires.
 
 The agent operates in the forked context. It must not modify source code.
 
@@ -76,7 +78,7 @@ Create `specs/test_artefacts/` if it does not exist.
 **`specs/test_artefacts/test-cases.md`**
 - One section per story.
 - Each test case: ID, AC reference, preconditions, steps, expected result.
-- Cover success paths, error paths, and boundary conditions.
+- Cover success paths, error paths, and boundary conditions. Apply the derivation checklist in `test-design.md` to each AC: partition every input, add boundary triples (`N-1`, `N`, `N+1`) for every bound, enumerate the error-status checklist, and add adversarial/concurrency cases where the AC mutates shared state or crosses a trust boundary. Happy-path-only is incomplete.
 
 **`specs/test_artefacts/test-data/`**
 - One fixture file per domain entity (e.g., `orders.json`, `users.json`).
@@ -91,24 +93,45 @@ Create `specs/test_artefacts/` if it does not exist.
   { "id": "TC-2", "text": "register rejects duplicate email with 409", "traces": ["E1-S1-AC2"] }
 ]
 ```
-Every test case must trace to at least one `{story}-AC{n}` id from `specs/stories/story-traces.json`. A test case tracing to no AC tests behavior nobody asked for; an AC with no test case is an untested requirement.
+Every test case must trace to at least one `{story}-AC{n}` id from `specs/stories/story-traces.json`. A test case tracing to no AC tests behavior nobody asked for; an AC with no test case is an untested requirement. A negative test may *also* trace a constraint-obligation id (`OBL-…`, see Step 4.4):
+```json
+{ "id": "TC-3", "text": "username under 3 chars rejected with 422", "traces": ["E1-S1-AC2", "OBL-User.username-minLength"] }
+```
+
+### Step 4.4 — Constraint Obligation Extraction [when design schemas exist]
+
+The design schemas encode validation rules (`required`, `minLength`, `pattern`, `enum`, `minimum`, …) the test author may forget. Mine them into machine-checkable obligations — one negative-test obligation per constraint:
+
+```bash
+# Only when /design has produced the schemas (skip silently in --plan-only, where
+# they do not exist yet — missing schema paths are skipped, yielding zero obligations).
+node .claude/scripts/constraints-extract.js \
+  --schemas specs/design/data-models.schema.json \
+  --schemas specs/design/api-contracts.schema.json \
+  --out specs/test_artefacts/constraint-obligations.json \
+  --index-out specs/test_artefacts/obligation-index.json
+```
+
+`constraint-obligations.json` lists each obligation with a stable `OBL-<field>-<rule>` id and `suggested_cases`. Every obligation must be covered by a negative test case (trace the `OBL-` id from `test-traces.json`). Generate **one representative case per obligation** using the boundary points in `test-design.md` §2 — not one per value. `obligation-index.json` is the upstream index the grounding gate folds in at Step 4.5.
 
 ### Step 4.5 — Grounding Gate [HARD BLOCK — when `specs/stories/story-traces.json` exists]
 
-Build the AC index (the acceptance criteria are the upstream this layer must cover) and run the deterministic check:
+Build the AC index (the acceptance criteria are the upstream this layer must cover) and run the deterministic check. When Step 4.4 produced `obligation-index.json`, pass it as a second `--required` index so an un-covered constraint is a `dropped` upstream id — the same hard block as an un-covered AC:
 
 ```bash
 # Flatten every story's acceptance-criterion ids into the upstream index
 node -e "const fs=require('fs');const s=JSON.parse(fs.readFileSync('specs/stories/story-traces.json'));fs.writeFileSync('specs/test_artefacts/ac-index.json',JSON.stringify(s.flatMap(x=>(x.acs||[]).map(id=>({id})))))"
 
+# Include --required specs/test_artefacts/obligation-index.json only when Step 4.4 ran.
 node .claude/scripts/trace-check.js \
   --required specs/test_artefacts/ac-index.json \
+  --required specs/test_artefacts/obligation-index.json \
   --downstream specs/test_artefacts/test-traces.json \
   --layer test \
   --out specs/reviews/test-grounding.json
 ```
 
-`specs/reviews/test-grounding.json` is a **hard gate**: any `net_new` (test case tracing to no AC) or `dropped` (AC with no test case — an untested requirement) blocks. Resolve before reporting the plan. (Skip when `story-traces.json` does not exist.)
+`specs/reviews/test-grounding.json` is a **hard gate**: any `net_new` (test case tracing to no AC or obligation) or `dropped` (an AC or constraint obligation with no test case) blocks. Resolve before reporting the plan. (Skip when `story-traces.json` does not exist; omit the obligation index when Step 4.4 did not run.)
 
 **If `--plan-only`: STOP HERE.** Steps 4–4.5 (plan + cases + fixtures + trace spine + grounding gate) are the complete deliverable for the planning phase. Do not proceed to Playwright generation — source code does not exist yet. Report the generated artifacts and exit.
 
@@ -160,8 +183,10 @@ All tests must pass on the first run against the target environment. A failing t
 | `specs/test_artefacts/test-plan.md` | Sprint test plan |
 | `specs/test_artefacts/test-cases.md` | Full test case inventory mapped to ACs |
 | `specs/test_artefacts/test-data/` | JSON fixture files per domain entity |
-| `specs/test_artefacts/test-traces.json` | Trace spine: each test case → AC id(s) |
-| `specs/reviews/test-grounding.json` | (when story-traces exists) deterministic AC-coverage verdict |
+| `specs/test_artefacts/test-traces.json` | Trace spine: each test case → AC id(s) and/or `OBL-` id(s) |
+| `specs/test_artefacts/constraint-obligations.json` | (when design schemas exist) one negative-test obligation per schema constraint |
+| `specs/test_artefacts/obligation-index.json` | (when design schemas exist) obligation upstream index for the grounding gate |
+| `specs/reviews/test-grounding.json` | (when story-traces exists) deterministic AC + obligation coverage verdict |
 | `e2e/{story-id}.spec.ts` | Playwright tests per story |
 | `playwright.config.ts` | Playwright configuration |
 
@@ -175,3 +200,4 @@ All tests must pass on the first run against the target environment. A failing t
 - **Missing test data fixtures.** Tests that generate random data inline produce unrepeatable results. Always use fixture files.
 - **Testing implementation details.** Test behavior through the public interface, not internal state.
 - **Skipping error paths.** Every documented error path in the AC must have a test.
+- **Leaving schema constraints untested.** When design schemas exist, every `OBL-` obligation from Step 4.4 must be covered by a negative test — the grounding gate blocks otherwise. Generate one representative case per obligation, not one per value.

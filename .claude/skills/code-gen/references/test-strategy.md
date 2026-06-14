@@ -53,6 +53,10 @@ For every function under test, generate test cases for:
 4. **Error paths** — every documented exception/error case must have a test.
 5. **Concurrency** — if the function is called concurrently, test for race conditions.
 
+This checklist is the quick reference. For the full derivation method — equivalence
+partitioning, boundary-value triples, state-transition matrices, error-status
+enumeration, and idempotency — see `.claude/skills/test/references/test-design.md`.
+
 Name boundary tests descriptively:
 - `"returns empty list when no items match filter"`
 - `"raises OrderNotFoundError when order_id does not exist"`
