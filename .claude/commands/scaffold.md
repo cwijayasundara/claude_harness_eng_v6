@@ -383,7 +383,13 @@ cp "$HARNESS_ROOT/docs/telemetry.md" "$HARNESS_ROOT/docs/testing.md" "$HARNESS_R
 
 ### Add Official Plugins to settings.json (based on the plugins decision)
 
-After copying settings.json, add the `enabledPlugins` block based on the user's answer.
+The `settings.json` you just copied is the **harness's own** config — its `enabledPlugins` lists the plugins the *harness pipeline itself* depends on (`superpowers` for brainstorming/TDD/debugging/verification, `playwright`, `frontend-design`, and complementary reviewers). **Do not inherit that set into the target verbatim** — a user who declined optional plugins must not receive them anyway. **Rebuild** the target's `enabledPlugins` authoritatively from the user's answer:
+
+- always include `playwright@claude-plugins-official` (unless explicitly declined — see below),
+- plus exactly the complementary plugins the user selected (all / picked / none),
+- plus any project-scoped entries already present in the **target's** pre-scaffold settings (e.g. `claude_harness_eng_v5@local-harness`).
+
+Replace the copied `enabledPlugins` object with this rebuilt set.
 
 **Always merge `playwright@claude-plugins-official` first, regardless of the answer.** It is not one of the optional eight: the `evaluator` agent's Layer 2 (browser verification) and the `design-critic` GAN loop (Layer 3) call its `mcp__plugin_playwright_playwright__browser_*` tools, and without the plugin those layers cannot run — `/evaluate` degrades to API-only checks. Only omit it if the user explicitly declines after being told this, and record the degradation in the Step 10 report.
 
@@ -394,7 +400,7 @@ After copying settings.json, add the `enabledPlugins` block based on the user's 
 ```
 
 **If Yes (all eight) or selected plugins:**
-Merge the selected official plugins into the project's existing `.claude/settings.json` `enabledPlugins` object:
+Set the target's `enabledPlugins` to `playwright` plus the selected official plugins:
 ```json
 "enabledPlugins": {
   "superpowers@claude-plugins-official": true,
@@ -408,7 +414,7 @@ Merge the selected official plugins into the project's existing `.claude/setting
 }
 ```
 
-Do not replace the whole `enabledPlugins` object if it already exists. Preserve existing project/plugin entries such as `claude_harness_eng_v5@local-harness`; otherwise a project-scoped plugin install can be disabled by the scaffold copy.
+When rebuilding the object, preserve any project-scoped entries already present in the **target's** pre-scaffold settings (such as `claude_harness_eng_v5@local-harness`); otherwise a project-scoped plugin install can be disabled by the scaffold copy. Discard the complementary plugins inherited from the harness seed unless the user actually selected them.
 
 If the user chose "Let me pick," only include the plugins they selected.
 

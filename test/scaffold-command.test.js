@@ -69,12 +69,29 @@ test('/scaffold does not attempt auto-mode-blocked framework pack installs', () 
   assert.doesNotMatch(scaffold, /install them via the open agent skills CLI/);
 });
 
-test('scaffold settings template starts with Playwright only, so plugin choices are honored', () => {
+test('harness settings.json declares the plugin dependencies its pipeline invokes', () => {
   const settings = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '.claude', 'settings.json'), 'utf8'));
+  const enabled = settings.enabledPlugins || {};
 
-  assert.deepStrictEqual(settings.enabledPlugins, {
-    'playwright@claude-plugins-official': true,
-  });
+  // superpowers is a hard dependency: 14 superpowers:* invocations across the
+  // core skills/agents (TDD, brainstorming, writing-plans, debugging,
+  // verification). playwright drives evaluator Layer 2 + design-critic Layer 3.
+  assert.strictEqual(enabled['superpowers@claude-plugins-official'], true, 'declares superpowers');
+  assert.strictEqual(enabled['playwright@claude-plugins-official'], true, 'declares playwright');
+  // Every declared entry must use the official marketplace identifier that
+  // resolves in the user environment (no stray marketplaces).
+  for (const key of Object.keys(enabled)) {
+    assert.match(key, /@claude-plugins-official$/, `${key} uses the official marketplace`);
+  }
+});
+
+test('scaffold rebuilds target enabledPlugins from the user choice, not the harness seed', () => {
+  const scaffold = fs.readFileSync(path.join(__dirname, '..', '.claude', 'commands', 'scaffold.md'), 'utf8');
+  // The seed carries the harness's own plugin set; the scaffold must NOT inherit
+  // it verbatim, or a user who declines optional plugins still gets them.
+  assert.match(scaffold, /[Dd]o not inherit that set into the target verbatim/, 'warns against inheriting the seed set');
+  assert.match(scaffold, /authoritatively from the user's answer/, 'rebuilds authoritatively from the answer');
+  assert.match(scaffold, /Replace the copied `enabledPlugins` object/, 'replaces rather than merges the seed set');
 });
 
 test('init.sh does not auto-start opt-in telemetry stack', () => {
