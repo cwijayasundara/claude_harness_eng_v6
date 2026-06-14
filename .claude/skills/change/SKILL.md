@@ -22,6 +22,8 @@ One lane for changing what existing code *does*: adding to or altering observabl
 
 Both modes are **test-first**: no production code changes until a test that captures the desired behavior (or reproduces the bug) has been written and observed failing.
 
+> **CR-driven brownfield tests:** when the change is described by a change-request document or a GitHub issue, run `/test --from-cr <file.md>` (or `--from-cr --issue N`) first. It produces a regression-pin set (existing behavior to hold) plus a CR-grounded delta test plan (new behavior to prove), so the test-first step below has its oracle and its targets ready.
+
 > **/goal tip (optional unattended iteration):** On Claude Code v2.1.139+ you can let `/goal` drive this single bounded session toward a verifiable condition — e.g. `/goal pytest exits 0 and lint is clean, or stop after N turns` (issue mode: `/goal the failing repro test now passes and lint is clean, or stop after N turns`). Always include the "or stop after N turns" safety clause, and phrase conditions so each turn must produce *fresh* evidence (re-run the tests, show the exit code) to avoid false-positive completion. `/goal`'s evaluator (Haiku) only judges what is in the transcript — it does **not** run tools or read files — so the proof (test output, exit codes) must be printed in the conversation, not routed through subagents. That makes `/goal` suitable for this small lane only. Do **not** use `/goal` inside `/auto`: it is single-session and would conflict with session chaining, the GAN evaluator, and sprint contracts. `/goal` does not replace the evaluator/sprint-contract gate.
 
 ---
