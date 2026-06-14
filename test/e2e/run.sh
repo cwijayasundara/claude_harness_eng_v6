@@ -86,6 +86,12 @@ echo "── Layer 3: Brownfield + Telemetry (~10 min) ──"
 node --test "$SCRIPT_DIR/harness-brownfield.test.js" --timeout 1200000 || FAILED_LAYERS="$FAILED_LAYERS brownfield"
 
 echo ""
+
+# Layer 3a: Native command integration (/refactor→/simplify, /gate rename)
+echo "── Layer 3a: Native Command Integration (~10 min) ──"
+node --test "$SCRIPT_DIR/harness-native-commands.test.js" --timeout 1200000 || FAILED_LAYERS="$FAILED_LAYERS native-commands"
+
+echo ""
 echo "Results saved to: $SCRIPT_DIR/results/"
 echo "Generated app: $SCRIPT_DIR/output/"
 
