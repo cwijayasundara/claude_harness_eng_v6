@@ -14,11 +14,14 @@ agent: generator
 /test
 /test --plan-only
 /test --e2e-only
+/test --from-cr <file.md>
+/test --from-cr --issue N
 ```
 
 - `/test` — generate all test artefacts: plan, cases, fixtures, and E2E tests.
 - `/test --plan-only` — generate test plan, test cases, and test data fixtures (everything in `specs/test_artefacts/`). Stop before writing Playwright files. Does NOT require source code — only needs stories from `/spec`.
 - `/test --e2e-only` — skip plan/cases, go straight to Playwright E2E generation. Use when plan already exists and source code has been built.
+- `/test --from-cr <file.md>` / `--from-cr --issue N` — **brownfield CR lane.** Turn a change request (a markdown file, or a GitHub issue) against existing code into a **regression-pin set** (behavior that must stay identical) plus a **delta test plan** (new behavior the CR introduces), grounded against the CR. See "Brownfield CR Lane" below. Run this *before* `/change` when a CR document exists.
 
 ---
 
@@ -176,10 +179,55 @@ All tests must pass on the first run against the target environment. A failing t
 
 ---
 
+## Brownfield CR Lane (`--from-cr`)
+
+The greenfield lane grounds tests against story acceptance criteria. The brownfield lane grounds them against a **change request** over existing code, and splits the work in two: pin the behavior that must *not* change, and prove the behavior that *must*. Composes existing skills — it does not re-implement them.
+
+**Prerequisites:** existing source; `specs/brownfield/code-graph.json` (run `/code-map` or `/brownfield` if absent). The CR is a markdown file, or a GitHub issue fetched first: `gh issue view N --json title,body -q '.title + "\n\n" + .body' > specs/changes/cr-N.md`.
+
+Let `<id>` be the issue number or a slug of the CR title. Work under `specs/test_artefacts/cr-<id>/`.
+
+### CR1 — Build the CR acceptance index [HARD BLOCK if empty]
+```bash
+node .claude/scripts/cr-index.js --cr specs/changes/cr-<id>.md --out specs/test_artefacts/cr-<id>/cr-acceptance.json
+```
+This is the upstream the delta tests must trace to (the brownfield analogue of `ac-index.json`). **If it is empty, STOP** — the CR has no extractable acceptance lines; route to `/clarify` to get testable criteria before writing any tests.
+
+### CR2 — Locate the blast radius
+Run `/seam-finder "<cr goal>"` to rank the safest cut-points, and `checking-coverage-before-change` on the symbols the CR touches to classify each **COVERED** or **UNCOVERED** (reads `code-graph.json` + coverage). This decides how each symbol gets pinned in CR3.
+
+### CR3 — Regression-pin set (behavior that must stay identical)
+Write to `specs/test_artefacts/cr-<id>/regression-pins.md`:
+- **UNCOVERED symbols at a usable seam:** `REQUIRED SUB-SKILL: pinning-down-behavior` — write characterization tests at the seam, then confirm they bite with `node .claude/scripts/mutation-smoke.js --files <seam-file> --test-cmd "<pin test cmd>"`. A pin you never watched fail proves nothing.
+- **COVERED symbols:** list the existing oracle tests that must stay byte-identical green across the change.
+- **UNCOVERED with no usable seam** (seam score < 0.5 / god file): `REQUIRED SUB-SKILL: sprouting-instead-of-editing` — the CR's new behavior lands in a new tested unit instead of editing legacy in place.
+
+### CR4 — Delta test plan (new behavior the CR introduces)
+Apply the full derivation method in `references/test-design.md` (equivalence partitioning, boundary triples, state transitions, error-path enumeration) to each CR acceptance line. If the CR changes a schema, run `constraints-extract.js` (Step 4.4) and cover every new obligation. Write `delta-test-cases.md` and the trace spine `delta-traces.json` — each delta case tracing to a `CR-AC{n}` id (and any `OBL-` id it covers).
+
+### CR5 — Delta grounding gate [HARD BLOCK]
+```bash
+node .claude/scripts/trace-check.js \
+  --required specs/test_artefacts/cr-<id>/cr-acceptance.json \
+  --downstream specs/test_artefacts/cr-<id>/delta-traces.json \
+  --layer cr \
+  --out specs/reviews/cr-grounding.json
+```
+Any `net_new` (a delta test tracing to no CR line — scope creep) or `dropped` (a CR line with no delta test — an unverified requirement) blocks. Resolve before handing off.
+
+`/change` then implements the CR test-first against this set: the regression pins are the oracle that must stay green, the delta tests are the new behavior to make pass.
+
+---
+
 ## Output
 
 | Path | Purpose |
 |------|---------|
+| `specs/test_artefacts/cr-<id>/cr-acceptance.json` | (`--from-cr`) CR acceptance index — upstream for delta grounding |
+| `specs/test_artefacts/cr-<id>/regression-pins.md` | (`--from-cr`) behavior that must stay identical (pins / existing oracles) |
+| `specs/test_artefacts/cr-<id>/delta-test-cases.md` | (`--from-cr`) new positive/negative/boundary cases for the CR |
+| `specs/test_artefacts/cr-<id>/delta-traces.json` | (`--from-cr`) delta case → `CR-AC` id(s) trace spine |
+| `specs/reviews/cr-grounding.json` | (`--from-cr`) deterministic CR-coverage verdict |
 | `specs/test_artefacts/test-plan.md` | Sprint test plan |
 | `specs/test_artefacts/test-cases.md` | Full test case inventory mapped to ACs |
 | `specs/test_artefacts/test-data/` | JSON fixture files per domain entity |
