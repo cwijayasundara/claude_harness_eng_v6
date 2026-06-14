@@ -13,6 +13,12 @@ function buildClaudeArgs(model, budgetUsd, continueSession, pluginDir, sessionId
     '--max-budget-usd', budgetUsd,
     '--settings', E2E_SETTINGS,
     '--exclude-dynamic-system-prompt-sections',
+    // Isolate from the host's global MCP config. Without this, the nested
+    // `claude` inherits the developer's global MCP servers (playwright-mcp,
+    // aws-serverless-mcp, context7-mcp, …) and can hang for an hour on their
+    // startup — and because those grandchildren hold the stdio pipes open,
+    // spawnSync's timeout cannot reap the tree. No --mcp-config => zero MCP servers.
+    '--strict-mcp-config',
   ];
   // Explicit session ids beat --continue: --continue grabs the most recent
   // session for the cwd, which can be a stale one from an earlier run.

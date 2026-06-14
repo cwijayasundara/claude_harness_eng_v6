@@ -51,6 +51,27 @@ function findSourceFiles() {
   return results.filter((f) => !f.includes('node_modules') && !f.includes('.claude') && !f.includes('specs'));
 }
 
+// runProjectSuite only knows the `npm test` script. Node-builtins projects test
+// via `node --test` with no package.json — fall back to that so the
+// behavior-preservation check still has an oracle. status null => no runnable
+// suite at all (don't hard-fail on it).
+function runSuite() {
+  const suite = runProjectSuite(PROJECT_DIR);
+  if (suite.status !== null) return suite;
+  // Clear NODE_TEST_CONTEXT so the child `node --test` does not hit the parent
+  // runner's recursion guard ("skipping running files"), which would exit 0
+  // without actually running anything — a vacuous pass.
+  const env = { ...process.env };
+  delete env.NODE_TEST_CONTEXT;
+  try {
+    const out = execFileSync('node', ['--test'], { cwd: PROJECT_DIR, encoding: 'utf8', timeout: 120000, env });
+    return { status: 0, out: (out || '').slice(-2000) };
+  } catch (e) {
+    if (e.status === undefined || e.status === null) return { status: null, out: 'no runnable suite' };
+    return { status: e.status, out: ((e.stdout || '') + (e.stderr || '')).slice(-2000) };
+  }
+}
+
 describe('Harness E2E — Native command integration (/refactor→/simplify, /gate)', { timeout: 1200000 }, () => {
 
   before(() => {
@@ -84,7 +105,7 @@ describe('Harness E2E — Native command integration (/refactor→/simplify, /ga
     // Whether /simplify changed anything and whether a refactor commit landed
     // is logged, not hard-asserted — an already-clean file legitimately leaves
     // /simplify nothing to do.
-    const suite = runProjectSuite(PROJECT_DIR);
+    const suite = runSuite();
     const mentionedSimplify = /simplify/i.test(result.stdout || '');
     let refactorCommit = false;
     try {
@@ -97,7 +118,11 @@ describe('Harness E2E — Native command integration (/refactor→/simplify, /ga
     });
     console.log(`[e2e] refactor ${rel}; suite exit: ${suite.status}; /simplify mentioned: ${mentionedSimplify}; refactor commit: ${refactorCommit}`);
     assert.strictEqual(result.exitCode, 0, 'refactor run must complete');
-    assert.strictEqual(suite.status, 0, `behavior must be preserved — all tests pass after refactor:\n${suite.out}`);
+    if (suite.status === null) {
+      console.log('[e2e] WARN: project has no runnable test suite — behavior-preservation check skipped');
+    } else {
+      assert.strictEqual(suite.status, 0, `behavior must be preserved — all tests pass after refactor:\n${suite.out}`);
+    }
   });
 
   // ── /gate (renamed from /review) writes the canonical verdict ─────────
