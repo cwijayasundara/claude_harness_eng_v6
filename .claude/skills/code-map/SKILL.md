@@ -1,6 +1,6 @@
 ---
 name: code-map
-description: Build a deterministic dependency graph of an existing codebase. AST-first for Python, React/JS/TS, and Java/C#/Go (stdlib ast + tree-sitter wheels — symbols with line ranges, routes, components, hooks, call/render edges, package-aware import resolution, god-file skeletons, incremental --files patching); regex fallback when python3 or the wheels are unavailable. Outputs JSON + ranked symbol map + Mermaid + metrics for downstream brownfield, refactor, and seam-finder skills.
+description: "[Internal pipeline stage — run by /brownfield and /seam-finder; invoke directly only as a power user.] Build a deterministic dependency graph of an existing codebase. AST-first for Python, React/JS/TS, and Java/C#/Go (stdlib ast + tree-sitter wheels — symbols with line ranges, routes, components, hooks, call/render edges, package-aware import resolution, god-file skeletons, incremental --files patching); regex fallback when python3 or the wheels are unavailable. Outputs JSON + ranked symbol map + Mermaid + metrics for downstream brownfield, refactor, and seam-finder skills."
 argument-hint: "[path]"
 context: fork
 ---

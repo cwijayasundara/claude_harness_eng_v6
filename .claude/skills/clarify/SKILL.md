@@ -1,6 +1,6 @@
 ---
 name: clarify
-description: Bounded clarification gate for resolving product, domain, API, security, or architecture uncertainty without exhausting the user.
+description: "[Internal pipeline stage — run by the planning stages; invoke directly only as a power user.] Bounded clarification gate for resolving product, domain, API, security, or architecture uncertainty without exhausting the user."
 ---
 
 # Clarify Skill

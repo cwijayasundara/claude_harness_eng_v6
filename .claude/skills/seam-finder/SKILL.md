@@ -1,6 +1,6 @@
 ---
 name: seam-finder
-description: Identify the safest cut-points in an existing codebase for a planned change. Reads code-graph.json + a goal, ranks candidate seams by observability + funnel + read/write asymmetry, and outputs a prioritized list with evidence.
+description: "[Internal pipeline stage — run by /brownfield --seams; invoke directly only as a power user.] Identify the safest cut-points in an existing codebase for a planned change. Reads code-graph.json + a goal, ranks candidate seams by observability + funnel + read/write asymmetry, and outputs a prioritized list with evidence."
 argument-hint: "<goal-description>"
 context: fork
 ---

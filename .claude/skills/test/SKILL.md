@@ -1,6 +1,6 @@
 ---
 name: test
-description: Generate test plan, test cases, test data fixtures, and Playwright E2E tests mapped to acceptance criteria.
+description: "[Internal pipeline stage — run by /build and /auto; invoke directly only as a power user.] Generate test plan, test cases, test data fixtures, and Playwright E2E tests mapped to acceptance criteria."
 argument-hint: "[--plan-only | --e2e-only]"
 context: fork
 agent: generator

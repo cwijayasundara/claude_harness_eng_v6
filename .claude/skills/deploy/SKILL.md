@@ -1,6 +1,6 @@
 ---
 name: deploy
-description: Generate Docker Compose stack, Dockerfiles, environment config, and init.sh bootstrap script.
+description: "[Internal pipeline stage — run by /build; invoke directly only as a power user.] Generate Docker Compose stack, Dockerfiles, environment config, and init.sh bootstrap script."
 argument-hint: "[--up]"
 context: fork
 agent: planner

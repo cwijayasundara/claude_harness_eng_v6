@@ -1,6 +1,6 @@
 ---
 name: spec
-description: Decompose BRD into epics, stories, dependency graph, and feature list for agent team execution.
+description: "[Internal pipeline stage — run by /build; invoke directly only as a power user.] Decompose BRD into epics, stories, dependency graph, and feature list for agent team execution."
 argument-hint: "[path-to-BRD]"
 context: fork
 agent: planner

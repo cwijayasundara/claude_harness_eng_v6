@@ -1,6 +1,6 @@
 ---
 name: brd
-description: Create a Business Requirements Document — from a Socratic interview, or grounded in a Functional Requirements Document via --frd (with a deterministic net-new/dropped gate). First step in the SDLC pipeline.
+description: "[Internal pipeline stage — run by /build; invoke directly only as a power user.] Create a Business Requirements Document — from a Socratic interview, or grounded in a Functional Requirements Document via --frd (with a deterministic net-new/dropped gate). First step in the SDLC pipeline."
 context: fork
 agent: planner
 ---

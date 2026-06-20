@@ -1,6 +1,6 @@
 ---
 name: install-framework-packs
-description: Verify agent-framework skill packs declared in project-manifest.json#framework_skill_packs and print normal-terminal install commands for missing packs. Use after /scaffold reports PENDING MANUAL INSTALL, after manually adding a pack to the manifest, or to verify all configured packs are present.
+description: "[Internal pipeline stage — run by /scaffold; invoke directly only as a power user.] Verify agent-framework skill packs declared in project-manifest.json#framework_skill_packs and print normal-terminal install commands for missing packs. Use after /scaffold reports PENDING MANUAL INSTALL, after manually adding a pack to the manifest, or to verify all configured packs are present."
 argument-hint: "[--list]"
 context: fork
 ---

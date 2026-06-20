@@ -1,7 +1,7 @@
 ---
 name: brownfield
-description: Discover and map an existing codebase before planning or changing it.
-argument-hint: "[optional-focus-path-or-goal]"
+description: Discover and map an existing codebase before planning or changing it. Add --seams "<goal>" to also rank the safest cut-points for that goal.
+argument-hint: "[optional-focus-path-or-goal] [--seams \"<goal>\"]"
 context: fork
 agent: planner
 ---
@@ -22,7 +22,10 @@ This skill does not change production code.
 /brownfield
 /brownfield backend/src
 /brownfield "map auth and billing before adding team invites"
+/brownfield --seams "add team invites"        # map, then rank the safest cut-points for this goal
 ```
+
+`--seams "<goal>"` is the single entry point for seam analysis: it runs the normal discovery, then runs the `/seam-finder` stage for `<goal>` and writes `specs/brownfield/seams-<goal>.md`. (`/seam-finder` remains directly invokable as a power-user stage, but you don't need to call it separately.)
 
 ---
 
@@ -175,7 +178,7 @@ When recommending `/spec → /design → /auto` for any cluster of work, note in
 
 This shapes how you cluster stories AND how you shape the dependency graph: clusters with truly independent stories get within-group parallelism, and independent dependency groups (backend vs frontend vs ingest, for example) get cross-group parallelism. Prefer designs that surface independence at both levels — group by integration boundary internally, and minimize cross-group `Consumes:` edges in the dependency graph.
 
-If the requested work has a concrete goal, recommend running `/seam-finder "<goal>"` after `/brownfield`. Use `seams-<goal>.md` to choose whether the next lane should extend an existing seam, wrap a boundary, introduce an adapter, split a read/write path, or avoid a poor seam.
+If the requested work has a concrete goal, run seam analysis via `/brownfield --seams "<goal>"` (which runs the `/seam-finder` stage for you). Use `seams-<goal>.md` to choose whether the next lane should extend an existing seam, wrap a boundary, introduce an adapter, split a read/write path, or avoid a poor seam.
 
 ---
 
