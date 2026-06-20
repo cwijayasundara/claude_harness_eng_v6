@@ -7,13 +7,15 @@ const { spawn } = require('child_process');
 const REPO_ROOT = path.join(__dirname, '..', '..');
 
 // record-run.js requires telemetry-memory, which in turn requires
-// telemetry-skill-helpers and telemetry-phase-eval — all must be present in the
-// temp project or the hook child crashes with MODULE_NOT_FOUND.
+// telemetry-skill-helpers, telemetry-phase-eval, and telemetry-ledger-rotate —
+// all must be present in the temp project or the hook child crashes with
+// MODULE_NOT_FOUND.
 const HOOK_DEP_SCRIPTS = [
   'telemetry-memory.js',
   'replay-telemetry.js',
   'telemetry-skill-helpers.js',
   'telemetry-phase-eval.js',
+  'telemetry-ledger-rotate.js',
 ];
 
 const STATE_FILES = {

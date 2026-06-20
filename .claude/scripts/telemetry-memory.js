@@ -10,6 +10,8 @@ const https = require('https');
 const { readSkillCatalog, collectSkillInventory, inferRecordSkills, addSkillUsage } = require('./telemetry-skill-helpers');
 const { processPhaseEval } = require('./telemetry-phase-eval');
 
+const { rotateLedgerIfNeeded } = require('./telemetry-ledger-rotate');
+
 const MEMORY_JOB = 'claude_harness_memory';
 const LEDGER_FILE = 'telemetry-ledger.jsonl';
 
@@ -84,6 +86,7 @@ function seedLedgerFromRuns(projectDir, stateDir) {
 function appendLedger(stateDir, record) {
   fs.mkdirSync(stateDir, { recursive: true });
   fs.appendFileSync(ledgerPath(stateDir), JSON.stringify(record) + '\n');
+  rotateLedgerIfNeeded(ledgerPath(stateDir));
 }
 
 function readLedger(stateDir) {

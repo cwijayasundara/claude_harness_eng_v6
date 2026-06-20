@@ -155,7 +155,10 @@ Based on their answers, write `project-manifest.json` to the project root. Fill 
   - `model_tier` sets the cost posture by stamping each agent's `model:` pin (applied in Step 3). `cost` = Sonnet generation, Opus judgment; `balanced` (default, Profile B) = identical pins to `cost` today (top tier is a single model, Opus 4.8), kept as a distinct posture name for per-project re-tuning; `max-quality` = generation bumped to Opus 4.8. See `docs/model-allocation.md`.
 - lsp: detected language servers and install commands (see below)
 - verification: mode, and mode-specific config (see below)
-- architecture (optional): only when the project deviates from the default `src/<layer>/` layout. `layers` is the import hierarchy low→high; `layer_roots` lists the directory prefixes that contain layer dirs. Read by the layer gates (verify-on-save + pre-commit), which otherwise default to `{"layers": ["types","config","repository","service","api","ui"], "layer_roots": ["src"]}`:
+- architecture (optional): controls the one-way layer-import gate. Read by the layer gates (verify-on-save + pre-commit), which otherwise default to the web-app `{"layers": ["types","config","repository","service","api","ui"], "layer_roots": ["src"]}`. Set it in three cases:
+  - **Custom layered layout** — give `layers` (the import hierarchy low→high) and `layer_roots` (directory prefixes containing layer dirs).
+  - **Non-layered project shape** — for a library, CLI, data pipeline, ML project, or the minimal preset (D), write `"architecture": {"enabled": false}` so the layer gate does not impose a web-app hierarchy on code that has none. **Default to this for project type D and any non-web stack.**
+  - **Standard web app** — omit the block entirely to take the 6-layer default.
 
 ```json
 "architecture": {
