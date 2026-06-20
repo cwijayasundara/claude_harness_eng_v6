@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const TRACKED_EXTS = new Set([
@@ -70,6 +71,28 @@ function realResolve(p) {
   return suffix ? path.join(cur, suffix) : cur;
 }
 
+// Claude Code's persistent memory for THIS project lives outside the project
+// tree (~/.claude/projects/<munged-path>/memory). The munge mirrors Claude
+// Code's: every non [a-zA-Z0-9-] character becomes '-'. If the rule ever drifts
+// this fails safe — memory writes get blocked, not other directories opened.
+function projectMemoryDir(project) {
+  const munged = project.replace(/[^a-zA-Z0-9-]/g, '-');
+  return path.join(os.homedir(), '.claude', 'projects', munged, 'memory');
+}
+
+// True when a (symlink-resolved) path is a legitimate write location for this
+// project: inside the project tree, under /tmp, or in the project's Claude
+// memory dir. Shared by the Write/Edit gate and the Bash gate so both honor the
+// exact same scope rule.
+function isWriteInScope(projectDir, resolvedPath) {
+  const tmp = realResolve('/tmp');
+  if (resolvedPath === tmp || resolvedPath.startsWith(tmp + path.sep)) return true;
+  const project = realResolve(projectDir);
+  const memory = projectMemoryDir(project);
+  if (resolvedPath === memory || resolvedPath.startsWith(memory + path.sep)) return true;
+  return resolvedPath === project || resolvedPath.startsWith(project + path.sep);
+}
+
 // A hook crash must never block work, but it must not be invisible either:
 // record it so a broken gate is discoverable instead of silently disabled.
 function reportFailure(hookName, err) {
@@ -89,4 +112,5 @@ function reportFailure(hookName, err) {
 module.exports = {
   TRACKED_EXTS, SKIP_DIRS, findProjectDir, resolveProjectDir,
   readHookInput, isSkippedPath, countLines, realResolve, reportFailure,
+  projectMemoryDir, isWriteInScope,
 };

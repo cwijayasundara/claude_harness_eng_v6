@@ -10,9 +10,8 @@
 // pre-existing on-disk strings can never block an unrelated edit.
 // Escape hatches: HARNESS_TDD_GATE=off, HARNESS_PATTERN_BLOCK=off.
 
-const os = require('os');
 const path = require('path');
-const { TRACKED_EXTS, resolveProjectDir, readHookInput, isSkippedPath, countLines, realResolve, reportFailure } =
+const { TRACKED_EXTS, resolveProjectDir, readHookInput, isSkippedPath, countLines, realResolve, reportFailure, isWriteInScope } =
   require('./lib/common');
 const { finalContent, insertedContent } = require('./lib/simulate');
 const { scanSecrets, secretScanExempt, isProtectedEnvFile } = require('./lib/secrets');
@@ -28,28 +27,13 @@ function block(message) {
   process.exit(2);
 }
 
-// Claude Code's persistent memory for THIS project lives outside the project
-// tree (~/.claude/projects/<munged-path>/memory). The munge mirrors Claude
-// Code's: every non [a-zA-Z0-9-] character becomes '-'. If the rule ever
-// drifts, this fails safe — memory writes get blocked, not other dirs opened.
-function projectMemoryDir(project) {
-  const munged = project.replace(/[^a-zA-Z0-9-]/g, '-');
-  return path.join(os.homedir(), '.claude', 'projects', munged, 'memory');
-}
-
 function checkScope(projectDir, filePath) {
-  // Resolve symlinks on BOTH sides before comparing, and on the /tmp allowance
-  // too — a bare startsWith('/tmp') would (a) treat siblings like /tmpevil as
-  // inside and (b) skip symlink resolution, letting /tmp/link -> /etc escape.
+  // Symlinks are resolved on both sides (and on /tmp) inside isWriteInScope —
+  // a bare startsWith('/tmp') would treat siblings like /tmpevil as inside and
+  // would let /tmp/link -> /etc escape. The same rule guards the Bash gate.
   const resolved = realResolve(filePath);
-  const tmp = realResolve('/tmp');
-  if (resolved === tmp || resolved.startsWith(tmp + path.sep)) return;
-  const project = realResolve(projectDir);
-  const memory = projectMemoryDir(project);
-  if (resolved === memory || resolved.startsWith(memory + path.sep)) return;
-  if (!resolved.startsWith(project + path.sep) && resolved !== project) {
-    block(`BLOCKED: Write outside project directory: ${resolved}\nFix: Move the file to a location within the project directory or use .claude/ for scaffold files.\n`);
-  }
+  if (isWriteInScope(projectDir, resolved)) return;
+  block(`BLOCKED: Write outside project directory: ${resolved}\nFix: Move the file to a location within the project directory or use .claude/ for scaffold files.\n`);
 }
 
 function checkTrustBoundary(projectDir, filePath) {
