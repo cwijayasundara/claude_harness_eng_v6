@@ -3,6 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { computeMetrics } = require('./graph_metrics');
 
 const EDGE_KIND_MAP = {
   imports: 'imports',
@@ -23,17 +24,6 @@ const EDGE_KIND_MAP = {
   configures: 'imports',
   related: 'related',
   similar_to: 'related',
-};
-
-const EXT_BY_LANGUAGE = {
-  python: '.py',
-  javascript: '.js',
-  typescript: '.ts',
-  tsx: '.tsx',
-  jsx: '.jsx',
-  java: '.java',
-  csharp: '.cs',
-  go: '.go',
 };
 
 const LANGUAGE_BY_EXT = {
@@ -135,203 +125,94 @@ function makeEvidence(edge, sourcePath, targetPath) {
   return `${sourcePath || edge.source} -> ${targetPath || edge.target} ${label}${desc}`.trim();
 }
 
-function buildHarnessGraph(understandGraph, inputPath) {
-  if (!understandGraph || !Array.isArray(understandGraph.nodes)) {
-    throw new Error('Understand-Anything graph must contain nodes[]');
-  }
+function ensureFileNode(filePath, sourceNode, fileNodes) {
+  const normalized = normalizePath(filePath);
+  if (!normalized) return null;
+  if (fileNodes.has(normalized)) return fileNodes.get(normalized);
+  const language = inferLanguage(normalized, sourceNode || {});
+  const n = { id: nodeId(language, normalized), kind: 'file', language, path: normalized, symbols: [] };
+  fileNodes.set(normalized, n);
+  return n;
+}
 
-  const fileNodes = new Map();
-  const understandToHarness = new Map();
-  const warnings = [];
-
-  function ensureFileNode(filePath, sourceNode = {}) {
-    const normalized = normalizePath(filePath);
-    if (!normalized) return null;
-    if (fileNodes.has(normalized)) return fileNodes.get(normalized);
-    const language = inferLanguage(normalized, sourceNode);
-    const n = {
-      id: nodeId(language, normalized),
-      kind: 'file',
-      language,
-      path: normalized,
-      symbols: [],
-    };
-    fileNodes.set(normalized, n);
-    return n;
-  }
-
-  for (const node of understandGraph.nodes) {
+function collectFileNodes(graph, ctx) {
+  for (const node of graph.nodes) {
     const filePath = inferPath(node);
     if (!filePath) {
-      warnings.push(`node ${node.id || node.name || '<unknown>'}: missing filePath`);
+      ctx.warnings.push(`node ${node.id || node.name || '<unknown>'}: missing filePath`);
       continue;
     }
-    const fileNode = ensureFileNode(filePath, node);
+    const fileNode = ensureFileNode(filePath, node, ctx.fileNodes);
     if (!fileNode) continue;
-    understandToHarness.set(node.id, fileNode.id);
-    if (isSymbolNode(node) && node.name) {
-      fileNode.symbols.push(node.name);
-    }
+    ctx.understandToHarness.set(node.id, fileNode.id);
+    if (isSymbolNode(node) && node.name) fileNode.symbols.push(node.name);
   }
+  for (const n of ctx.fileNodes.values()) n.symbols = [...new Set(n.symbols)].sort();
+}
 
-  for (const n of fileNodes.values()) {
-    n.symbols = [...new Set(n.symbols)].sort();
-  }
+function resolveTarget(edge, understandToHarness) {
+  const target = understandToHarness.get(edge.target);
+  if (target) return target;
+  return typeof edge.target === 'string' && edge.target.startsWith('ext:')
+    ? edge.target
+    : `ext:${edge.target || 'unknown'}`;
+}
 
+function buildEdges(graph, understandToHarness, fileNodes, warnings) {
   const edges = [];
-  const seenEdges = new Set();
-  // O(1) node lookup by id — avoids an O(n) scan per edge (was O(n·e) on big graphs).
+  const seen = new Set();
   const nodeById = new Map();
   for (const n of fileNodes.values()) nodeById.set(n.id, n);
-
-  for (const edge of understandGraph.edges || []) {
+  for (const edge of graph.edges || []) {
     const source = understandToHarness.get(edge.source);
-    let target = understandToHarness.get(edge.target);
     if (!source) {
       warnings.push(`edge ${edge.source} -> ${edge.target}: source not mapped`);
       continue;
     }
-    if (!target) {
-      target = typeof edge.target === 'string' && edge.target.startsWith('ext:')
-        ? edge.target
-        : `ext:${edge.target || 'unknown'}`;
-    }
+    const target = resolveTarget(edge, understandToHarness);
     if (source === target) continue;
-
-    const sourceNode = nodeById.get(source);
-    const targetNode = nodeById.get(target);
     const kind = EDGE_KIND_MAP[edge.type] || edge.type || 'related';
     const key = `${source}|${target}|${kind}`;
-    if (seenEdges.has(key)) continue;
-    seenEdges.add(key);
-    edges.push({
-      source,
-      target,
-      kind,
-      evidence: makeEvidence(edge, sourceNode && sourceNode.path, targetNode && targetNode.path),
-    });
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const evidence = makeEvidence(edge, (nodeById.get(source) || {}).path, (nodeById.get(target) || {}).path);
+    edges.push({ source, target, kind, evidence });
   }
+  return edges;
+}
 
-  const nodes = [...fileNodes.values()].sort((a, b) => a.path.localeCompare(b.path));
-  const metrics = computeMetrics(nodes, edges);
+function buildMeta(graph, nodes, warnings, inputPath) {
   const languages = {};
-  for (const n of nodes) {
-    languages[n.language] = (languages[n.language] || 0) + 1;
-  }
-
+  for (const n of nodes) languages[n.language] = (languages[n.language] || 0) + 1;
   return {
-    nodes,
-    edges,
-    metrics,
-    meta: {
-      producer: 'understand-anything',
-      languages,
-      warnings,
-      generated_at: new Date().toISOString(),
-      source: path.resolve(inputPath),
-      understand_anything: {
-        version: understandGraph.version || null,
-        project: understandGraph.project && understandGraph.project.name || null,
-        node_count: understandGraph.nodes.length,
-        edge_count: Array.isArray(understandGraph.edges) ? understandGraph.edges.length : 0,
-      },
+    producer: 'understand-anything',
+    languages,
+    warnings,
+    generated_at: new Date().toISOString(),
+    source: path.resolve(inputPath),
+    understand_anything: {
+      version: graph.version || null,
+      project: (graph.project && graph.project.name) || null,
+      node_count: graph.nodes.length,
+      edge_count: Array.isArray(graph.edges) ? graph.edges.length : 0,
     },
   };
 }
 
-function instability(fanIn, fanOut) {
-  const total = fanIn + fanOut;
-  return total === 0 ? 0 : Math.round((fanOut / total) * 1000) / 1000;
-}
-
-function computeMetrics(nodes, edges) {
-  const byId = new Set(nodes.map((n) => n.id));
-  const fanIn = new Map();
-  const fanOut = new Map();
-  const adj = new Map();
-  let internalEdges = 0;
-  let externalImports = 0;
-
-  for (const e of edges) {
-    if (String(e.target).startsWith('ext:')) {
-      externalImports++;
-      continue;
-    }
-    if (!byId.has(e.source) || !byId.has(e.target)) continue;
-    internalEdges++;
-    fanIn.set(e.target, (fanIn.get(e.target) || 0) + 1);
-    fanOut.set(e.source, (fanOut.get(e.source) || 0) + 1);
-    if (!adj.has(e.source)) adj.set(e.source, new Set());
-    adj.get(e.source).add(e.target);
+function buildHarnessGraph(understandGraph, inputPath) {
+  if (!understandGraph || !Array.isArray(understandGraph.nodes)) {
+    throw new Error('Understand-Anything graph must contain nodes[]');
   }
-
-  const hubs = [];
-  for (const id of byId) {
-    const fi = fanIn.get(id) || 0;
-    const fo = fanOut.get(id) || 0;
-    if (fi + fo === 0) continue;
-    hubs.push({ id, fan_in: fi, fan_out: fo, instability: instability(fi, fo) });
-  }
-  hubs.sort((a, b) => (b.fan_in - a.fan_in) || (b.fan_out - a.fan_out));
-
+  const ctx = { fileNodes: new Map(), understandToHarness: new Map(), warnings: [] };
+  collectFileNodes(understandGraph, ctx);
+  const nodes = [...ctx.fileNodes.values()].sort((a, b) => a.path.localeCompare(b.path));
+  const edges = buildEdges(understandGraph, ctx.understandToHarness, ctx.fileNodes, ctx.warnings);
   return {
-    files: nodes.length,
-    edges: internalEdges,
-    external_imports: externalImports,
-    cycles: findCycles(adj),
-    hubs: hubs.slice(0, 25),
+    nodes,
+    edges,
+    metrics: computeMetrics(nodes, edges),
+    meta: buildMeta(understandGraph, nodes, ctx.warnings, inputPath),
   };
-}
-
-// Iterative Tarjan SCC (explicit work-stack) — stack-safe on large graphs,
-// unlike a recursive strongconnect which can overflow Node's call stack.
-function tarjanPush(v, st) {
-  st.indexOf.set(v, st.index);
-  st.lowlink.set(v, st.index);
-  st.index++;
-  st.tstack.push(v);
-  st.onStack.add(v);
-}
-
-function tarjanEmitScc(v, st, cycles) {
-  const comp = [];
-  let w;
-  do {
-    w = st.tstack.pop();
-    st.onStack.delete(w);
-    comp.push(w);
-  } while (w !== v);
-  if (comp.length > 1) cycles.push(comp.sort());
-}
-
-function findCycles(adj) {
-  const st = { indexOf: new Map(), lowlink: new Map(), onStack: new Set(), tstack: [], index: 0 };
-  const cycles = [];
-  for (const root of adj.keys()) {
-    if (st.indexOf.has(root)) continue;
-    tarjanPush(root, st);
-    const work = [{ v: root, nbrs: adj.get(root) || [], i: 0 }];
-    while (work.length) {
-      const f = work[work.length - 1];
-      if (f.i < f.nbrs.length) {
-        const w = f.nbrs[f.i++];
-        if (!st.indexOf.has(w)) {
-          tarjanPush(w, st);
-          work.push({ v: w, nbrs: adj.get(w) || [], i: 0 });
-        } else if (st.onStack.has(w)) {
-          st.lowlink.set(f.v, Math.min(st.lowlink.get(f.v), st.indexOf.get(w)));
-        }
-      } else {
-        if (st.lowlink.get(f.v) === st.indexOf.get(f.v)) tarjanEmitScc(f.v, st, cycles);
-        work.pop();
-        if (work.length) {
-          const p = work[work.length - 1].v;
-          st.lowlink.set(p, Math.min(st.lowlink.get(p), st.lowlink.get(f.v)));
-        }
-      }
-    }
-  }
-  return cycles;
 }
 
 function ensureDir(filePath) {

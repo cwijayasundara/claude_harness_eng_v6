@@ -28,10 +28,11 @@ Defaults to the repository root.
 The skill picks the strongest available producer in this order. Stop at the first that succeeds.
 
 1. **Vendored AST indexer** (preferred for Python / React / JS / TS / Java / C# / Go repos) — `scripts/code_index/code_index.py`. Python parses with stdlib `ast` (zero deps); JS/JSX/TS/TSX parse with the `tree-sitter` + `tree-sitter-typescript` + `tree-sitter-javascript` pip wheels (prebuilt, no compiler). Emits per-file symbol records with exact line ranges and signatures, FastAPI/Flask + React Router routes, React components and their hooks, confidence-tagged cross-file call edges, `renders` edges, tsconfig-alias-resolved imports with `import type` flagged, god-file skeletons, and supports `--files` incremental patching. If the wheels are missing, install them (`pip3 install tree-sitter tree-sitter-typescript tree-sitter-javascript`); Python-only repos index with no third-party packages at all.
-2. **Understand-Anything knowledge graph** — only if `.understand-anything/knowledge-graph.json` already exists, import it with `scripts/import_understand_graph.js` (preserves call/inheritance/read-write edges that plugin emitted).
-3. **Vendored regex script** — `scripts/build_graph.js`, zero npm dependencies. Use it only when no `python3` is available (the AST indexer covers C#, Java, and Go via tree-sitter wheels). Fidelity: imports + top-level symbols only (regex), no call graph, no JSX semantics.
+2. **SCIP index** — preferred for **large or polyglot repos** where the vendored AST is weak, *if* the team already produces a SCIP index with the sourcegraph `scip-*` indexers (scip-python / scip-typescript / scip-java / scip-go / …). Convert it to JSON once (`scip print --json index.scip > index.scip.json`) and import with `scripts/import_scip_graph.js --in index.scip.json`. This consumes the JSON, **not** the protobuf or a live sourcegraph backend, so the producer stays deterministic and offline. Precise cross-file import/call/inherit edges; external (other-package) and function-local symbols are intentionally dropped to keep the internal graph clean.
+3. **Understand-Anything knowledge graph** — only if `.understand-anything/knowledge-graph.json` already exists, import it with `scripts/import_understand_graph.js` (preserves call/inheritance/read-write edges that plugin emitted).
+4. **Vendored regex script** — `scripts/build_graph.js`, zero npm dependencies. Use it only when no `python3` is available (the AST indexer covers C#, Java, and Go via tree-sitter wheels). Fidelity: imports + top-level symbols only (regex), no call graph, no JSX semantics.
 
-Report which producer ran in `code-graph.meta.json` (`vendored-ast`, `understand-anything`, or `vendored`).
+Report which producer ran in `code-graph.meta.json` (`vendored-ast`, `scip`, `understand-anything`, or `vendored`).
 
 ---
 
@@ -78,7 +79,7 @@ All artifacts go under `specs/brownfield/`. Create the directory if missing.
     "hubs": [{"id": "py:backend/src/services/auth.py", "fan_in": 18, "fan_out": 4}]
   },
   "meta": {
-    "producer": "vendored-ast | understand-anything | vendored",
+    "producer": "vendored-ast | scip | understand-anything | vendored",
     "languages": {"python": 88, "typescript": 54},
     "warnings": [],
     "generated_at": "2026-05-02T12:00:00Z"
