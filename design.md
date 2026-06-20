@@ -141,7 +141,7 @@ Neither runtime changes how `/auto` runs inside the workspace. The only differen
 | Skills (virtual commands) | 26 | `.claude/skills/<name>/SKILL.md` | All other workflows |
 | Specialized agents | 8 | `.claude/agents/<name>.md` | Subagents with tool allowlists + model tier |
 | Lifecycle hooks | 7 | `.claude/hooks/*.js` | SessionStart, PreToolUse (Write/Edit + Bash), PostToolUse, UserPromptSubmit, Stop, SubagentStop |
-| Templates | 18 | `.claude/templates/*` | Sprint contract, story, init.sh, tracker config, state seeds, etc. |
+| Templates | — | `.claude/templates/*` | Sprint contract, story, init.sh, .gitignore, tracker config, state seeds, etc. (count omitted — it rots on every template add) |
 | State files | 12 tracked in this repo; 6 scaffold seeds | `.claude/state/`, `.claude/templates/state-seeds/` | Runtime snapshot + initial scaffold continuity files |
 | Utility scripts | 14 | `.claude/scripts/*.js`, `.claude/scripts/*.sh` | Model tiering, telemetry, validation, archive, certification, upstream watch |
 | GitHub automation | 2 workflows | `.github/workflows/`, `.github/upstream/` | CI and upstream Claude Code drift watch |

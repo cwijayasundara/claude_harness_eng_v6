@@ -26,7 +26,7 @@ function allDocFiles() {
 
 // A reference-only skill that exists solely to say "use the other name instead"
 // is the clearest complexity smell — its content belongs in references/, not in
-// the skill surface. (docs/SIMPLIFICATION_PROPOSAL.md §3.3)
+// the skill surface. (docs/internal/SIMPLIFICATION_PROPOSAL.md §3.3)
 test('no SKILL.md is a reference-only tombstone', () => {
   const offenders = [];
   for (const skill of listSkills()) {
@@ -78,7 +78,7 @@ test('no doc references a removed skill directory', () => {
 // Pipeline-step skills are run by an entry point (/build, /auto, /brownfield,
 // /scaffold), not typed by users. Their description must mark them internal so
 // the model surfaces only the ~9 entry points — keeps the advertised surface
-// from silently re-expanding. (docs/SIMPLIFICATION_PROPOSAL.md §3.1)
+// from silently re-expanding. (docs/internal/SIMPLIFICATION_PROPOSAL.md §3.1)
 test('internal pipeline-stage skills are marked internal in their description', () => {
   const internal = [
     'brd', 'spec', 'design', 'test', 'implement', 'evaluate',

@@ -682,10 +682,10 @@ Tailor the "Next steps" ordering based on the project-type decision:
 Installed:
   agents        → .claude/agents/
   skills        → .claude/skills/
-  hooks         → .claude/hooks/ (one per event + lib/)
-  18 templates  → .claude/templates/ (+ state-seeds/)
+  hooks         → .claude/hooks/ (per-event gates + lib/)
+  templates     → .claude/templates/ (+ state-seeds/)
   workflows/    → .claude/workflows/  (no built-ins; author your own)
-  6 state seeds  → .claude/state/ (from templates/state-seeds/)
+  state seeds   → .claude/state/ (from templates/state-seeds/)
   1 manifest    → .claude/.claude-plugin/plugin.json
 
 Telemetry (OFF by default — opt-in):
@@ -717,10 +717,10 @@ Next steps:
 Installed:
   agents        → .claude/agents/
   skills        → .claude/skills/
-  hooks         → .claude/hooks/ (one per event + lib/)
-  18 templates  → .claude/templates/ (+ state-seeds/)
+  hooks         → .claude/hooks/ (per-event gates + lib/)
+  templates     → .claude/templates/ (+ state-seeds/)
   workflows/    → .claude/workflows/  (no built-ins; author your own)
-  6 state seeds  → .claude/state/ (from templates/state-seeds/)
+  state seeds   → .claude/state/ (from templates/state-seeds/)
   1 manifest    → .claude/.claude-plugin/plugin.json
 
 Telemetry (OFF by default — opt-in):

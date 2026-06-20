@@ -13,6 +13,8 @@ You need to hold exactly four ideas to use this:
 
 Everything else (telemetry, trackers, modes, framework packs) is optional tuning.
 
+> **Building docs, not shippable code?** UI mockups, architecture/ARB narratives, and research reports are disposable artifacts — they should *not* go through the GAN/ratchet/TDD pipeline. Load the lighter **harness-lite** plugin instead (`claude --plugin-dir ~/claude_harness_eng_v5/harness-lite/.claude`); it ships only `/mockup`, `/arch-doc`, and `/research` and makes the heavyweight machinery structurally unreachable. Switch to the full harness the moment an artifact becomes shipped product code. See `harness-lite/README.md`.
+
 ---
 
 ## Quickstart
@@ -287,7 +289,8 @@ GitHub CI runs the fast harness suite from `.github/workflows/ci.yml`. `.github/
 | Document | Where |
 |---|---|
 | Architecture reference | `design.md` in your project |
-| Simplification roadmap | `docs/SIMPLIFICATION_PROPOSAL.md` |
+| Artifact-only loadout (mockups / ARB / research) | `harness-lite/README.md` |
+| Design history & internal proposals | `docs/internal/` |
 | Orchestrator operator guide | `symphony_clone/README.md` in the harness repo |
 | Any skill's full instructions | `.claude/skills/<name>/SKILL.md` |
 | Any agent's definition | `.claude/agents/<name>.md` |
