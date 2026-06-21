@@ -11,20 +11,29 @@ const { test } = require('node:test');
 const ROOT = path.join(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
-test('auto-run harness drives full-auto (/build --auto, zero gates) and checks the suite', () => {
+test('auto-run harness: full-auto (zero gates) -> verify -> alter via code-map', () => {
   const h = read('test/e2e/harness-auto-run.test.js');
   assert.match(h, /require\(['"]\.\/helpers\/claude-runner['"]\)/);
   assert.match(h, /runClaude\('\/scaffold'/);
   assert.match(h, /runClaude\([`'"]\/build --auto /);
   assert.match(h, /runProjectSuite\(/); // generated app's own suite is the oracle
+  assert.match(h, /alterAndVerify\(/); // post-build alteration exercising code-map/brownfield
   assert.doesNotMatch(h, /runClaude\([`'"]\/build --autonomous/); // full-auto, not semi
 });
 
-test('semi-auto-run harness drives /build --autonomous and asserts it pauses at the gate', () => {
+test('semi-auto-run harness: /build --autonomous build -> alter via code-map', () => {
   const h = read('test/e2e/harness-semi-auto-run.test.js');
-  assert.match(h, /runClaude\('\/build --autonomous /);
-  assert.match(h, /\/approv\/i/); // asserts the approval gate is reached
-  assert.doesNotMatch(h, /runProjectSuite/); // semi-auto must NOT silently build a passing app
+  assert.match(h, /runClaude\([`'"]\/build --autonomous /);
+  assert.match(h, /runProjectSuite\(/); // builds and verifies (headless --autonomous proceeds; the pause is human-only)
+  assert.match(h, /alterAndVerify\(/); // then alters, exercising code-map/brownfield
+});
+
+test('alter-and-verify helper maps the codebase (/brownfield) then changes it (/change)', () => {
+  const a = read('test/e2e/helpers/alter-and-verify.js');
+  assert.match(a, /\/brownfield/);
+  assert.match(a, /\/change/);
+  assert.match(a, /code-graph\.json/);
+  assert.match(a, /runProjectSuite/);
 });
 
 test('the counter PRD fixture follows the canonical PRD format', () => {

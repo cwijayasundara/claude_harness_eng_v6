@@ -18,6 +18,7 @@ const { test } = require('node:test');
 const { runClaude } = require('./helpers/claude-runner');
 const { runProjectSuite } = require('./helpers/project-suite');
 const { freshProject } = require('./helpers/fresh-project');
+const { alterAndVerify } = require('./helpers/alter-and-verify');
 
 const PROJECT_DIR = path.join(__dirname, 'auto-output');
 const PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
@@ -41,4 +42,14 @@ test('full-auto (lite/lean): trivial CLI -> autonomous build, zero gates, suite 
   const suite = runProjectSuite(PROJECT_DIR);
   console.log('[auto] generated project suite status:', suite.status);
   assert.strictEqual(suite.status, 0, `generated project suite must pass:\n${suite.out}`);
+
+  // Then ALTER the generated functionality — exercises /code-map + /brownfield on
+  // the just-generated code (the extend-existing-code path) before going green.
+  const alter = alterAndVerify(runClaude, opts, {
+    projectDir: PROJECT_DIR,
+    changeDesc: 'extend the CLI: accept an optional third argument "op" of "add" or "sub"; "sub" prints a minus b, default stays add; update the tests to cover both',
+  });
+  console.log('[auto] code-graph:', alter.codeGraphExists, 'suite-after-alter:', alter.suite.status);
+  assert.ok(alter.codeGraphExists, 'code-map must produce specs/brownfield/code-graph.json for the generated code');
+  assert.strictEqual(alter.suite.status, 0, `suite must stay green after altering the functionality:\n${alter.suite.out}`);
 });
