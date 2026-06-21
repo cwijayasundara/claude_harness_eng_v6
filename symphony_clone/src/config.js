@@ -69,68 +69,106 @@ function parseEnvFile(raw) {
 }
 
 function loadConfig(env = process.env, options = {}) {
-  const shouldLoadDotEnv = Object.prototype.hasOwnProperty.call(options, 'loadDotEnv')
-    ? options.loadDotEnv
-    : env === process.env;
-  if (shouldLoadDotEnv) loadEnvFile(env);
-  const provider = env.TRACKER_PROVIDER || 'linear';
+  maybeLoadDotEnv(env, options);
   const workspaceRoot = env.WORKSPACE_ROOT || '/workspaces';
-  const repoUrl = env.TARGET_REPO_URL || '';
-  const workspaceRetention = (env.WORKSPACE_RETENTION || 'delete').trim().toLowerCase();
-  if (!VALID_WORKSPACE_RETENTION.includes(workspaceRetention)) {
-    throw new Error(`WORKSPACE_RETENTION must be one of: ${VALID_WORKSPACE_RETENTION.join(', ')}`);
-  }
-  const maxWallclockMs = resolveMaxWallclockMs(env);
-
   const config = {
-    provider,
-    repoUrl,
+    provider: env.TRACKER_PROVIDER || 'linear',
+    repoUrl: env.TARGET_REPO_URL || '',
     workspaceRoot,
-    workspaceRetention,
+    workspaceRetention: resolveRetention(env),
     stateDir: env.STATE_DIR || path.join(workspaceRoot, '.symphony'),
     logRoot: env.LOG_ROOT || path.join(workspaceRoot, '.symphony', 'logs'),
     pollIntervalMs: intFromEnvWithEnv(env, 'POLL_INTERVAL_MS', 60000),
     maxConcurrentRuns: intFromEnvWithEnv(env, 'MAX_CONCURRENT_RUNS', 1),
     claudeCommand: env.CLAUDE_COMMAND || 'claude --print --permission-mode bypassPermissions',
     statusPort: intFromEnvWithEnv(env, 'STATUS_PORT', 0, { allowZero: true }),
-    run: {
-      maxWallclockMs
-    },
-    retry: {
-      maxAttempts: intFromEnvWithEnv(env, 'MAX_RETRY_ATTEMPTS', 3),
-      baseDelayMs: intFromEnvWithEnv(env, 'RETRY_BASE_DELAY_MS', 60000),
-      maxDelayMs: intFromEnvWithEnv(env, 'RETRY_MAX_DELAY_MS', 900000)
-    },
-    github: {
-      baseBranch: env.GITHUB_BASE_BRANCH || 'main',
-      branchPrefix: env.BRANCH_PREFIX || 'agent',
-      createPr: env.CREATE_PR !== 'false'
-    },
-    tracker: {
-      readyState: env.READY_STATE || 'Ready for Agent',
-      runningState: env.RUNNING_STATE || 'In Progress',
-      reviewState: env.REVIEW_STATE || 'Human Review',
-      blockedState: env.BLOCKED_STATE || 'Blocked',
-      reviewStateCandidates: splitList(env.REVIEW_STATE_CANDIDATES, ['Human Review', 'In Review', 'Review']),
-      blockedStateCandidates: splitList(env.BLOCKED_STATE_CANDIDATES, ['Blocked', 'Canceled', 'Cancelled']),
-      readyLabel: env.READY_LABEL || 'agent-ready',
-      terminalStates: splitList(env.TERMINAL_STATES, DEFAULT_TERMINAL_STATES)
-    },
-    linear: {
-      apiKey: env.LINEAR_API_KEY || '',
-      projectSlug: env.LINEAR_PROJECT_SLUG || '',
-      apiUrl: env.LINEAR_API_URL || 'https://api.linear.app/graphql'
-    },
-    jira: {
-      baseUrl: env.JIRA_BASE_URL || '',
-      email: env.JIRA_EMAIL || '',
-      apiToken: env.JIRA_API_TOKEN || '',
-      projectKey: env.JIRA_PROJECT_KEY || ''
-    }
+    run: { maxWallclockMs: resolveMaxWallclockMs(env) },
+    retry: buildRetry(env),
+    github: buildGithub(env),
+    autoMerge: buildAutoMerge(env),
+    tracker: buildTracker(env),
+    linear: buildLinear(env),
+    jira: buildJira(env)
   };
-
   validateConfig(config);
   return config;
+}
+
+function maybeLoadDotEnv(env, options) {
+  const shouldLoad = Object.prototype.hasOwnProperty.call(options, 'loadDotEnv') ? options.loadDotEnv : env === process.env;
+  if (shouldLoad) loadEnvFile(env);
+}
+
+function resolveRetention(env) {
+  const retention = (env.WORKSPACE_RETENTION || 'delete').trim().toLowerCase();
+  if (!VALID_WORKSPACE_RETENTION.includes(retention)) {
+    throw new Error(`WORKSPACE_RETENTION must be one of: ${VALID_WORKSPACE_RETENTION.join(', ')}`);
+  }
+  return retention;
+}
+
+function buildRetry(env) {
+  return {
+    maxAttempts: intFromEnvWithEnv(env, 'MAX_RETRY_ATTEMPTS', 3),
+    baseDelayMs: intFromEnvWithEnv(env, 'RETRY_BASE_DELAY_MS', 60000),
+    maxDelayMs: intFromEnvWithEnv(env, 'RETRY_MAX_DELAY_MS', 900000)
+  };
+}
+
+function buildGithub(env) {
+  return {
+    baseBranch: env.GITHUB_BASE_BRANCH || 'main',
+    branchPrefix: env.BRANCH_PREFIX || 'agent',
+    createPr: env.CREATE_PR !== 'false'
+  };
+}
+
+const VALID_MERGE_METHODS = ['merge', 'squash', 'rebase'];
+function normalizeMergeMethod(raw) {
+  const method = (raw || 'merge').trim().toLowerCase();
+  if (!VALID_MERGE_METHODS.includes(method)) {
+    throw new Error(`MERGE_METHOD must be one of: ${VALID_MERGE_METHODS.join(', ')}`);
+  }
+  return method;
+}
+
+function buildAutoMerge(env) {
+  return {
+    enabled: env.AUTO_MERGE === 'true',
+    method: normalizeMergeMethod(env.MERGE_METHOD),
+    doneState: env.DONE_STATE || 'Done',
+    doneStateCandidates: splitList(env.DONE_STATE_CANDIDATES, ['Done', 'Merged', 'Closed'])
+  };
+}
+
+function buildTracker(env) {
+  return {
+    readyState: env.READY_STATE || 'Ready for Agent',
+    runningState: env.RUNNING_STATE || 'In Progress',
+    reviewState: env.REVIEW_STATE || 'Human Review',
+    blockedState: env.BLOCKED_STATE || 'Blocked',
+    reviewStateCandidates: splitList(env.REVIEW_STATE_CANDIDATES, ['Human Review', 'In Review', 'Review']),
+    blockedStateCandidates: splitList(env.BLOCKED_STATE_CANDIDATES, ['Blocked', 'Canceled', 'Cancelled']),
+    readyLabel: env.READY_LABEL || 'agent-ready',
+    terminalStates: splitList(env.TERMINAL_STATES, DEFAULT_TERMINAL_STATES)
+  };
+}
+
+function buildLinear(env) {
+  return {
+    apiKey: env.LINEAR_API_KEY || '',
+    projectSlug: env.LINEAR_PROJECT_SLUG || '',
+    apiUrl: env.LINEAR_API_URL || 'https://api.linear.app/graphql'
+  };
+}
+
+function buildJira(env) {
+  return {
+    baseUrl: env.JIRA_BASE_URL || '',
+    email: env.JIRA_EMAIL || '',
+    apiToken: env.JIRA_API_TOKEN || '',
+    projectKey: env.JIRA_PROJECT_KEY || ''
+  };
 }
 
 function resolveMaxWallclockMs(env) {

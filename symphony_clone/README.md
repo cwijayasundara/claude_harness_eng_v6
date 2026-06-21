@@ -31,7 +31,7 @@ Linear issue (Todo + label)
 - Records run state in `STATE_DIR/state.json` and structured logs in `LOG_ROOT/orchestrator.jsonl`.
 - Retries failed runs with exponential backoff before moving work to the blocked state.
 
-It does not mark tracker work `Done`. Human review and merge remain explicit.
+By default it does not mark tracker work `Done` — human review and merge remain explicit. Set `AUTO_MERGE=true` for the fully autonomous path: a run that reaches `human_review` (harness gates already passed) enables GitHub native auto-merge on its PR — GitHub merges only once required checks pass, so a red build never lands — and advances the issue to `DONE_STATE`. See `.env.example`.
 
 ## Prerequisites
 
