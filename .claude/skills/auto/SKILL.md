@@ -24,12 +24,14 @@ Autonomous build loop implementing Karpathy's ratcheting pattern with GAN-style 
 /auto --group D
 /auto --parallel-groups 3
 /auto --sequential
+/auto --pod 3
 ```
 
 - `--mode` controls which ratchet gates are enforced. Default: `full`. Options: `full`, `lean` (`lean` skips only the per-iteration design-critic).
 - `--group` resumes or targets a specific dependency group. If omitted, picks the next unfinished group from the dependency graph.
 - `--parallel-groups N` enables cross-group parallelism: up to N independent dependency groups run concurrently as separate group-orchestrator subagents. Default: `3`. Set `1` (or pass `--sequential`) to force one-group-at-a-time behavior.
 - `--sequential` shorthand for `--parallel-groups 1`. Use when you need deterministic group ordering for debugging.
+- `--pod N` — **pod mode**: cross-group parallelism (implies `--parallel-groups N`, default `3`) where each cluster (dependency group) is an "engineer" that raises its **own draft PR** instead of rolling its branch up to the trunk. Each independent cluster in a wave is verified per-cluster (the Phase 9.5 deploy→API→E2E→fix ladder, scoped to that cluster) and opens one PR. Dependent clusters wait for their predecessor PRs to merge, then the next wave rebases on the updated base. See Section 4B → *Pod mode*. This is the multi-engineer pod surfaced by `/build --autonomous --pod N`.
 
 ### Prerequisites
 
@@ -337,6 +339,31 @@ The parent dispatches all group-orchestrators in the wave in a single message (m
 | Peak total subagents | 15 (3 × 5) | Safety ceiling; raise only after observing actual usage |
 
 If `--parallel-groups N > 3`, accept it but emit a warning to the iteration log. The 3-default is conservative; teams with higher API throughput can raise it.
+
+### Pod mode (`--pod N`) — per-cluster PRs
+
+Pod mode keeps everything above (wave selection, branch isolation, state coordination, concurrency caps) and changes **only the wave's terminal step**: instead of the parent merging group branches into `WAVE_BASE`, **each cluster raises its own draft PR**. The architect (planning + parent) hands each independent cluster to an "engineer" (group-orchestrator) that delivers a reviewable PR — matching how a real pod assigns clusters to developers.
+
+**What changes vs default cross-group:**
+
+1. **Per-cluster verification before the PR.** After a group's ratchet gate passes, the group-orchestrator runs the **Phase 9.5 pre-PR ladder scoped to its cluster** — deploy locally → API tests (if the cluster touches an API) → Playwright E2E (if it touches UI) → bounded defect-repair loop. A cluster that can't go green within the repair budget does **not** open a PR; it returns failed, exactly like a ratchet failure.
+2. **Each engineer opens its own draft PR.** A green group-orchestrator pushes `auto/group-{G}` and runs `gh pr create --draft` for its cluster, body = the cluster's stories + the Phase 9.5 proof + Forbidden-Actions check, base = `WAVE_BASE`. It returns the PR URL in its summary. It does **not** merge and does **not** roll up to the trunk.
+3. **The parent does NOT merge branches.** In pod mode the "Wait + Merge Protocol" step 3 (sequential trunk merge) is replaced by: collect the wave's PR URLs, roll up per-group *state* as usual (steps 1–2, 4), and then **wait for this wave's PRs to merge** before computing the next wave — because dependent clusters must build on merged predecessors. Who merges: a human in semi-auto (`/build --autonomous`), or the `AUTO_MERGE` activation key in full-auto (`/build --auto`). The next wave's `WAVE_BASE` is the updated default branch after those merges.
+4. **Conflict avoidance is structural.** Independent clusters in one wave have **disjoint file ownership** (from `component-map.md`) and all branch from the same `WAVE_BASE`, so their PRs don't collide. Cross-cutting/shared files (routing, config, schema) live in **foundation clusters that land in earlier waves** (per `/spec` ordering) and merge before dependent clusters start — so no two concurrent engineers edit a shared file. This is the defense against the ~23% parallel-agent merge-conflict rate.
+
+**Group-orchestrator spawn protocol — pod addendum.** In pod mode, append to the spawn prompt's mandatory steps (after the existing step 5 "commit to branch"):
+
+```
+5a. [POD MODE] Run the Phase 9.5 pre-PR ladder for THIS cluster only: deploy locally,
+    run API tests if your cluster exposes an API, run Playwright E2E if it has UI,
+    and repair defects (fix implementation, not tests) up to the attempt cap. If it
+    cannot go green, return passes=false — do NOT open a PR.
+5b. [POD MODE] On green, push auto/group-{G} and `gh pr create --draft` with base
+    WAVE_BASE; body = stories + Phase 9.5 proof + Forbidden-Actions check. Do NOT merge.
+    Add "pr_url" to your returned summary.
+```
+
+**Failure handling addendum (pod):** a cluster whose Phase 9.5 ladder fails is treated as a wave failure — no PR opened, branch preserved, retry via `/auto --group {G} --pod`. A cluster whose PR opens but whose merge is rejected by review blocks only its *dependents*; independent later clusters proceed.
 
 ---
 
