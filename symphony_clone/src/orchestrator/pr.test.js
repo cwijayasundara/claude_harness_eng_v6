@@ -6,11 +6,11 @@ const { enableAutoMerge, isRealPrUrl, repoSlugFromGitUrl, repoSlugFromPrUrl } = 
 
 const AT = '@'; // assembled so the scp-style git url below doesn't trip the secret scanner
 
-test('repoSlug extraction normalizes git and PR urls to owner/repo', () => {
-  assert.equal(repoSlugFromGitUrl(`git${AT}github.com:Org/Repo.git`), 'org/repo');
-  assert.equal(repoSlugFromGitUrl('https://github.com/Org/Repo.git'), 'org/repo');
-  assert.equal(repoSlugFromGitUrl('https://github.com/org/repo'), 'org/repo');
-  assert.equal(repoSlugFromPrUrl('https://github.com/Org/Repo/pull/7'), 'org/repo');
+test('repoSlug extraction normalizes git and PR urls to host/owner/repo', () => {
+  assert.equal(repoSlugFromGitUrl(`git${AT}github.com:Org/Repo.git`), 'github.com/org/repo');
+  assert.equal(repoSlugFromGitUrl('https://github.com/Org/Repo.git'), 'github.com/org/repo');
+  assert.equal(repoSlugFromGitUrl('https://github.com/org/repo'), 'github.com/org/repo');
+  assert.equal(repoSlugFromPrUrl('https://github.com/Org/Repo/pull/7'), 'github.com/org/repo');
 });
 
 test('enableAutoMerge refuses a PR for a different repo than configured (no gh call)', async () => {
@@ -18,6 +18,13 @@ test('enableAutoMerge refuses a PR for a different repo than configured (no gh c
   const r = await enableAutoMerge('https://github.com/other/repo/pull/9', '/tmp', config);
   assert.equal(r.enabled, false);
   assert.match(r.reason, /does not match|different repo/i);
+});
+
+test('enableAutoMerge refuses a same-owner/repo PR on a DIFFERENT host (no gh call)', async () => {
+  const config = { repoUrl: `git${AT}github.com:org/repo.git`, autoMerge: { method: 'merge' } };
+  const r = await enableAutoMerge('https://evil.example/org/repo/pull/9', '/tmp', config);
+  assert.equal(r.enabled, false);
+  assert.match(r.reason, /does not match/i);
 });
 
 test('isRealPrUrl requires a canonical PR url', () => {

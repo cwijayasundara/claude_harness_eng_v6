@@ -27,17 +27,23 @@ function isRealPrUrl(prUrl) {
   return typeof prUrl === 'string' && /^https?:\/\/[^/\s]+\/[^/\s]+\/[^/\s]+\/pull\/\d+(?:[/?#].*)?$/.test(prUrl.trim());
 }
 
-// owner/repo (lowercased) from a git remote URL — scp-style (git@host:o/r.git),
-// https (https://host/o/r[.git]), or ssh:// — or null if unparseable.
+// host/owner/repo (lowercased) from a git remote URL — scp-style, https, or ssh
+// form — or null if unparseable. The host is included so the pin can't be
+// satisfied by a same-owner/repo PR served from a different host.
 function repoSlugFromGitUrl(url) {
-  const m = String(url || '').match(/[:/]([^/:]+)\/([^/]+?)(?:\.git)?\/?$/);
-  return m ? `${m[1]}/${m[2]}`.toLowerCase() : null;
+  const s = String(url || '').trim().replace(/\.git\/?$/, '');
+  const m = s.match(/^[^@\s/]+@([^:/\s]+):(.+)$/) // scp:  user@host:owner/repo
+    || s.match(/^[a-z][\w+.-]*:\/\/(?:[^@/\s]+@)?([^/:\s]+)(?::\d+)?\/(.+)$/i); // scheme://[user@]host[:port]/owner/repo
+  if (!m) return null;
+  const segs = m[2].split('/').filter(Boolean);
+  if (segs.length < 2) return null;
+  return `${m[1]}/${segs[segs.length - 2]}/${segs[segs.length - 1]}`.toLowerCase();
 }
 
-// owner/repo (lowercased) from a canonical PR URL, or null.
+// host/owner/repo (lowercased) from a canonical PR URL, or null.
 function repoSlugFromPrUrl(prUrl) {
-  const m = String(prUrl || '').match(/^https?:\/\/[^/\s]+\/([^/\s]+)\/([^/\s]+)\/pull\/\d+/);
-  return m ? `${m[1]}/${m[2]}`.toLowerCase() : null;
+  const m = String(prUrl || '').match(/^https?:\/\/([^/\s]+)\/([^/\s]+)\/([^/\s]+)\/pull\/\d+/);
+  return m ? `${m[1]}/${m[2]}/${m[3]}`.toLowerCase() : null;
 }
 
 // Enable GitHub native auto-merge: GitHub merges the PR only once required status
