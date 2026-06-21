@@ -83,3 +83,10 @@ test('enableAutoMerge refuses when there is no real PR url (no gh call)', async 
   assert.equal(r.enabled, false);
   assert.match(r.reason, /no PR/i);
 });
+
+test('enableAutoMerge refuses a URL that is not a canonical PR url (no gh call)', async () => {
+  for (const bad of ['https://example.com/foo', 'https://github.com/o/r/issues/3', 'not a url']) {
+    const r = await enableAutoMerge(bad, '/tmp', { autoMerge: { method: 'merge' } });
+    assert.equal(r.enabled, false, `should refuse ${bad}`);
+  }
+});
