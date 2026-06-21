@@ -16,10 +16,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install tree-sitter wheels for the AST code indexer
+      - name: Install Python deps for the AST code indexer + deck-builder tests
         # Pinned to the versions the suite is validated against locally; prebuilt
-        # cp312 wheels (no compiler). Without these, the code-index AST tests fail
-        # with ModuleNotFoundError: No module named 'tree_sitter'.
+        # wheels (no compiler). Without tree-sitter the code-index AST tests fail
+        # (ModuleNotFoundError: tree_sitter); without python-pptx the
+        # build_matrices_deck tests fail.
         run: >-
           python -m pip install
           tree-sitter==0.25.2
@@ -28,6 +29,7 @@ jobs:
           tree-sitter-java==0.23.5
           tree-sitter-c-sharp==0.23.5
           tree-sitter-go==0.25.0
+          python-pptx==1.0.2
       - name: Unit tests (plugin/skill/hook schema, eval task specs + runner orchestration)
         run: npm test
 
