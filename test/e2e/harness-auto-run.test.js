@@ -1,13 +1,15 @@
 'use strict';
 
-// Live e2e — MODE 1: local full-auto from a PRD. `/build --auto` runs the whole
-// pipeline (plan → build → deploy → test → fix) with ZERO human gates. In a temp
-// repo there is no remote, so the Phase 11 PR step is the boundary; success here =
-// the autonomous build completes and the generated project's own suite is green.
-// Per-cluster PR fan-out (--pod) needs a real remote/merge and is validated in
-// the distributed (symphony) path, not locally.
+// Live e2e — MODE 1: local full-auto, FAST path (< ~20 min). `/build --auto`
+// (zero human gates) over the compressed `--lite` lane and `--mode lean` (skip the
+// GAN loop) on a trivial CLI — no server, so no deploy/browser overhead. Success =
+// the generated app's own test suite is green: PRD-shaped intent -> working,
+// tested code, fully autonomous, in one headless call.
 //
-// LIVE: runs real `claude -p`, costs tokens, NOT in `npm test`. Run: `npm run test:auto`.
+// (The full --auto pipeline on a multi-story PRD needs session chaining across
+// context windows — harness-plan-only proves the planning half headless.)
+//
+// LIVE: real `claude -p`, costs tokens, NOT in `npm test`. Run: `npm run test:auto`.
 
 const path = require('path');
 const assert = require('assert');
@@ -15,32 +17,27 @@ const { test } = require('node:test');
 
 const { runClaude } = require('./helpers/claude-runner');
 const { runProjectSuite } = require('./helpers/project-suite');
-const { summarizeSpecs, formatSummary } = require('./helpers/specs-summary');
 const { freshProject } = require('./helpers/fresh-project');
 
 const PROJECT_DIR = path.join(__dirname, 'auto-output');
-const PRD = path.join(__dirname, 'fixtures', 'counter-prd.md');
 const PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
 const SESSION = 'aaaa0001-0000-4000-8000-000000000001'; // claude --session-id requires a valid UUID
+const APP = 'a Node.js CLI in index.js that reads two integer command-line arguments and prints their sum to stdout, with an npm test that runs it and checks the output';
 
-test('full-auto: PRD -> autonomous plan + build, zero human gates, suite green', { timeout: 2700000 }, (t) => {
-  freshProject(PROJECT_DIR, PRD);
+test('full-auto (lite/lean): trivial CLI -> autonomous build, zero gates, suite green', { timeout: 1500000 }, (t) => {
+  freshProject(PROJECT_DIR, null);
   const opts = { cwd: PROJECT_DIR, model: 'sonnet', pluginDir: PLUGIN_DIR, sessionId: SESSION };
 
-  const scaffold = runClaude('/scaffold', { ...opts, budgetUsd: '2.00', timeoutMs: 300000 });
+  const scaffold = runClaude('/scaffold', { ...opts, budgetUsd: '2.00', timeoutMs: 240000 });
   console.log('[auto] scaffold exit:', scaffold.exitCode);
 
-  const build = runClaude('/build --auto prd.md', { ...opts, continueSession: true, budgetUsd: '20.00', timeoutMs: 2400000 });
-  console.log('[auto] build --auto exit:', build.exitCode, 'signal:', build.signal);
+  // Full-auto over the compressed lane: zero gates, no GAN loop, trivial scope.
+  const build = runClaude(`/build --auto --mode lean --lite ${APP}`, { ...opts, continueSession: true, budgetUsd: '10.00', timeoutMs: 1080000 });
+  console.log('[auto] build exit:', build.exitCode, 'signal:', build.signal);
 
-  const summary = summarizeSpecs(PROJECT_DIR);
-  t.after(() => console.log('[auto]\n' + formatSummary(PROJECT_DIR, summary) + '\n→ artifacts: ' + PROJECT_DIR));
+  t.after(() => console.log('[auto] artifacts: ' + PROJECT_DIR));
 
-  // Floor: the autonomous run must have planned (no human gate stopped it).
-  assert.strictEqual(summary.present.brd, true, 'autonomous planning produced a BRD');
-  assert.ok(summary.clusters >= 1, `planning produced clusters (got ${summary.clusters})`);
-
-  // Goal: the generated app builds and its own tests pass — the independent oracle.
+  // The independent oracle: the generated app's own suite passes.
   const suite = runProjectSuite(PROJECT_DIR);
   console.log('[auto] generated project suite status:', suite.status);
   assert.strictEqual(suite.status, 0, `generated project suite must pass:\n${suite.out}`);

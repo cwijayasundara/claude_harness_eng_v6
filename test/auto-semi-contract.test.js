@@ -15,7 +15,7 @@ test('auto-run harness drives full-auto (/build --auto, zero gates) and checks t
   const h = read('test/e2e/harness-auto-run.test.js');
   assert.match(h, /require\(['"]\.\/helpers\/claude-runner['"]\)/);
   assert.match(h, /runClaude\('\/scaffold'/);
-  assert.match(h, /runClaude\('\/build --auto /);
+  assert.match(h, /runClaude\([`'"]\/build --auto /);
   assert.match(h, /runProjectSuite\(/); // generated app's own suite is the oracle
   assert.doesNotMatch(h, /runClaude\([`'"]\/build --autonomous/); // full-auto, not semi
 });
