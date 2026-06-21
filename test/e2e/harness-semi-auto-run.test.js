@@ -1,42 +1,49 @@
 'use strict';
 
-// Live e2e — MODE 2: local semi-auto. `/build --autonomous` plans, then PAUSES at
-// the single consolidated plan-approval gate (Phase 3.5). Headless there is no
-// human to approve, so the observable contract is: the plan is produced AND the
-// run asks for approval — it does NOT silently build (that is what `--auto` does).
+// Live e2e — MODE 2: local semi-auto, `/build --autonomous` (plan-approve-once lane).
+// HEADLESS NOTE: there is no human to pause for, so --autonomous builds directly —
+// the approval *pause* is a human checkpoint that can't be exercised headless. The
+// explicit "produce the plan, then STOP for review" half is validated by the
+// plan-only harness; the gate's existence is contract-pinned in build/SKILL.md.
+// Here we validate that the --autonomous lane builds a working app AND the
+// extend-already-generated-code path (code-map via /brownfield + /change) works on it.
 //
-// LIVE: runs real `claude -p`, costs tokens, NOT in `npm test`. Run: `npm run test:semi`.
+// LIVE: real `claude -p`, costs tokens, NOT in `npm test`. Run: `npm run test:semi`.
 
 const path = require('path');
 const assert = require('assert');
 const { test } = require('node:test');
 
 const { runClaude } = require('./helpers/claude-runner');
-const { summarizeSpecs, formatSummary } = require('./helpers/specs-summary');
+const { runProjectSuite } = require('./helpers/project-suite');
 const { freshProject } = require('./helpers/fresh-project');
+const { alterAndVerify } = require('./helpers/alter-and-verify');
 
 const PROJECT_DIR = path.join(__dirname, 'semi-auto-output');
-const PRD = path.join(__dirname, 'fixtures', 'counter-prd.md');
 const PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
 const SESSION = 'aaaa0002-0000-4000-8000-000000000002'; // claude --session-id requires a valid UUID
+const APP = 'a Node.js CLI in index.js that reads two integer command-line arguments and prints their sum to stdout, with an npm test that runs it and checks the output';
 
-test('semi-auto: PRD -> plan, then pause at the approval gate (no silent build)', { timeout: 1800000 }, (t) => {
-  freshProject(PROJECT_DIR, PRD);
+test('semi-auto: /build --autonomous -> build -> alter (code-map), suite green', { timeout: 1800000 }, (t) => {
+  freshProject(PROJECT_DIR, null);
   const opts = { cwd: PROJECT_DIR, model: 'sonnet', pluginDir: PLUGIN_DIR, sessionId: SESSION };
 
-  const scaffold = runClaude('/scaffold', { ...opts, budgetUsd: '2.00', timeoutMs: 300000 });
+  const scaffold = runClaude('/scaffold', { ...opts, budgetUsd: '2.00', timeoutMs: 240000 });
   console.log('[semi] scaffold exit:', scaffold.exitCode);
 
-  const build = runClaude('/build --autonomous prd.md', { ...opts, continueSession: true, budgetUsd: '8.00', timeoutMs: 1200000 });
-  const out = (build.stdout || '') + (build.stderr || '');
-  console.log('[semi] build --autonomous exit:', build.exitCode);
+  const build = runClaude(`/build --autonomous --lite ${APP}`, { ...opts, continueSession: true, budgetUsd: '10.00', timeoutMs: 1080000 });
+  console.log('[semi] build exit:', build.exitCode, 'signal:', build.signal);
 
-  const summary = summarizeSpecs(PROJECT_DIR);
-  t.after(() => console.log('[semi]\n' + formatSummary(PROJECT_DIR, summary) + '\n→ artifacts: ' + PROJECT_DIR));
+  const suite = runProjectSuite(PROJECT_DIR);
+  console.log('[semi] suite after build:', suite.status);
+  assert.strictEqual(suite.status, 0, `generated suite must pass after the --autonomous build:\n${suite.out}`);
 
-  // The plan was produced...
-  assert.strictEqual(summary.present.brd, true, 'planning produced a BRD');
-  assert.ok(summary.clusters >= 1, `planning produced clusters (got ${summary.clusters})`);
-  // ...and it paused for approval rather than building unattended (the semi/full distinction).
-  assert.match(out, /approv/i, 'semi-auto must reach the plan-approval gate (no silent build)');
+  // Then ALTER — exercises /code-map + /brownfield on the generated code.
+  const alter = alterAndVerify(runClaude, opts, {
+    projectDir: PROJECT_DIR,
+    changeDesc: 'extend the CLI: accept an optional third argument "op" of "add" or "sub"; "sub" prints a minus b, default stays add; update the tests',
+  });
+  t.after(() => console.log('[semi] code-graph:', alter.codeGraphExists, 'artifacts:', PROJECT_DIR));
+  assert.ok(alter.codeGraphExists, 'code-map must produce specs/brownfield/code-graph.json');
+  assert.strictEqual(alter.suite.status, 0, `suite must stay green after the alteration:\n${alter.suite.out}`);
 });
