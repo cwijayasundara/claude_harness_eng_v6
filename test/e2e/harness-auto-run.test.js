@@ -43,8 +43,8 @@ test('full-auto (lite/lean): trivial CLI -> autonomous build, zero gates, suite 
   console.log('[auto] generated project suite status:', suite.status);
   assert.strictEqual(suite.status, 0, `generated project suite must pass:\n${suite.out}`);
 
-  // Then ALTER the generated functionality — exercises /code-map + /brownfield on
-  // the just-generated code (the extend-existing-code path) before going green.
+  // Then ALTER the generated functionality — exercises /code-map (deterministic
+  // graph + wiki) on the just-generated code (the extend-existing-code path) before going green.
   const alter = alterAndVerify(runClaude, opts, {
     projectDir: PROJECT_DIR,
     changeDesc: 'extend the CLI: accept an optional third argument "op" of "add" or "sub"; "sub" prints a minus b, default stays add; update the tests to cover both',
