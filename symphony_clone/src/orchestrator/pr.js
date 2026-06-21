@@ -42,7 +42,7 @@ function repoSlugFromGitUrl(url) {
 
 // host/owner/repo (lowercased) from a canonical PR URL, or null.
 function repoSlugFromPrUrl(prUrl) {
-  const m = String(prUrl || '').match(/^https?:\/\/([^/\s]+)\/([^/\s]+)\/([^/\s]+)\/pull\/\d+/);
+  const m = String(prUrl || '').match(/^https?:\/\/([^/:\s]+)(?::\d+)?\/([^/\s]+)\/([^/\s]+)\/pull\/\d+/);
   return m ? `${m[1]}/${m[2]}/${m[3]}`.toLowerCase() : null;
 }
 
