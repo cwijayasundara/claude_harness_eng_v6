@@ -31,7 +31,9 @@ Developer C ──push──▶                                    │
                                                    Grafana (:3001)
 ```
 
-**Grafana login:** `http://localhost:3001` — user: `admin`, password: `harness`. A pre-built "Claude Harness — Team Productivity" dashboard is loaded automatically.
+**Grafana login:** `http://localhost:3001` — user: `admin`, password: `harness`. Pre-built dashboards load automatically: **Team Productivity**, **Prompt Cache Health**, and **SDLC Pipeline Progress** (`telemetry/grafana/dashboards/pipeline-progress.json`) — wave/feature/coverage/iteration/pending-review progress plus build velocity.
+
+The pipeline dashboard reads the same `harness_*` metrics the build already pushes, plus two gauges (`harness_features_passing`/`harness_features_total` and `harness_coverage`/`harness_coverage_baseline`) emitted from the pipeline snapshot on every push (see `.claude/scripts/telemetry-pipeline-gauges.js`). For the same view without Grafana, run the CLI: `node .claude/scripts/pipeline-status.js status` (or `/status`).
 
 Anonymous read access is enabled — team members can view dashboards without logging in.
 

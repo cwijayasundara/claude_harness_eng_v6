@@ -143,13 +143,17 @@ Net new surface: **one aggregator script + three presenters (same file) + one `/
 
 ## 5. Build order
 
-All three parts approved for build (2026-06-21).
+All three parts approved for build (2026-06-21). **Status: all shipped 2026-06-21** (branch `feat/pipeline-status-cli`).
 
-1. **Part A** — `pipeline-status.js` (`status` → `--json` → `watch` → `timeline`) + `/status` skill. Highest value; usable standalone immediately.
-2. **Part B** — e2e push wiring + Prometheus assertion + the two snapshot gauges. Closes the dashboard-ingestion test gap.
-3. **Part C** — Grafana SDLC Pipeline Progress dashboard.
+1. **Part A — DONE.** `pipeline-status.js` (`status` / `watch` / `timeline` / `--json`), split into `pipeline-state-readers.js` + `pipeline-snapshot.js` + `pipeline-status.js` for the 300-line/SRP gate; `/status` skill + `npm run status`. 17 tests.
+2. **Part B — DONE.** `claude-runner` sets `HARNESS_PUSHGATEWAY_URL` so e2e builds push live; Stage 5 asserts `harness_conversation_turns_total` reaches Prometheus; `telemetry-pipeline-gauges.js` emits `harness_features_passing`/`_total` + `harness_coverage`/`_baseline` on every push. Contract + unit tests.
+3. **Part C — DONE.** `telemetry/grafana/dashboards/pipeline-progress.json` (auto-provisioned), guarded by `test/pipeline-progress-dashboard.test.js` including an emitter↔dashboard drift check.
 
-### Open questions to settle at build time
-- **Snapshot freshness vs. cost in `watch`:** re-read all state each tick (simple, correct) vs. diff `.claude/runs` tail only (cheaper). Recommend start simple; optimize only if a tick is visibly slow.
-- **`session_id` scoping for `timeline`:** default to the most recent session in `.claude/runs`; allow `--session <id>` to inspect a past run (mirrors Devin `/cloud-attach <id>`).
-- **Multi-wave `wave.total`:** derived from `dependency-graph.md`; confirm the parser handles the current Mermaid group format without a schema change.
+### Open questions — resolved during build
+- **Snapshot freshness in `watch`:** re-reads all state each tick (simple, correct). Not optimized; no measurable cost.
+- **`session_id` scoping for `timeline`:** defaults to the most recent session's id (the last run receipt). `--session <id>` not yet added (deferred; low demand).
+- **Multi-wave `wave.total`:** derived from the dependency-graph group count. Accurate for the single-wave graphs in the repo; true multi-wave partitioning remains deferred.
+
+### Remaining
+- Live e2e assertion runs only in the gated suite (needs `claude` + the telemetry docker stack); the wiring is contract-locked in the cheap suite.
+- Branch not yet pushed / no PR opened.

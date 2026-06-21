@@ -1,0 +1,113 @@
+{
+  "uid": "claude-harness-pipeline-progress",
+  "title": "Claude Harness — SDLC Pipeline Progress",
+  "tags": ["claude-code", "harness", "pipeline", "sdlc"],
+  "refresh": "30s",
+  "panels": [
+    {
+      "title": "Features passing",
+      "targets": [
+        { "expr": "harness_features_passing", "legendFormat": "passing" },
+        { "expr": "harness_features_total", "legendFormat": "total" }
+      ],
+      "type": "stat",
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "title": "Features passing %",
+      "targets": [
+        { "expr": "100 * harness_features_passing / clamp_min(harness_features_total, 1)", "legendFormat": "passing %" }
+      ],
+      "type": "gauge",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 50 },
+              { "color": "green", "value": 100 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Coverage % vs baseline",
+      "targets": [
+        { "expr": "harness_coverage", "legendFormat": "current" },
+        { "expr": "harness_coverage_baseline", "legendFormat": "baseline" }
+      ],
+      "type": "stat",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 60 },
+              { "color": "green", "value": 80 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Pending reviews",
+      "targets": [
+        { "expr": "max(harness_pending_reviews)", "legendFormat": "pending" }
+      ],
+      "type": "stat",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Active stories",
+      "targets": [
+        { "expr": "count(harness_story_active == 1)", "legendFormat": "active" }
+      ],
+      "type": "stat",
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "title": "Ratchet iteration by group",
+      "targets": [
+        { "expr": "harness_iteration_current", "legendFormat": "{{ group }}" }
+      ],
+      "type": "timeseries",
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 } }
+    },
+    {
+      "title": "Build velocity (turns & agent runs, 5m rate)",
+      "targets": [
+        { "expr": "sum(rate(harness_conversation_turns_total[5m]))", "legendFormat": "turns/s" },
+        { "expr": "sum(rate(harness_agent_runs_total[5m]))", "legendFormat": "agent runs/s" }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "title": "Phase quality score",
+      "targets": [
+        { "expr": "harness_phase_eval_score", "legendFormat": "{{ phase }} / {{ criterion }}" }
+      ],
+      "type": "timeseries",
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0, "max": 10 } }
+    }
+  ]
+}
