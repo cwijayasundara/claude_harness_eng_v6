@@ -1,8 +1,9 @@
 'use strict';
 
 const { buildHarnessPrompt, groupFromIssue } = require('./prompt-builder');
+const { buildPlanningPrompt } = require('./planning-prompt');
 const { readResult, buildProofComment } = require('./result-reader');
-const { runCommand } = require('./workspace-manager');
+const { maybeCreatePr, enableAutoMerge } = require('./pr');
 
 class Scheduler {
   constructor({ config, tracker, workspaceManager, claudeRunner, stateStore, logger, enableAutoMerge: enableAutoMergeFn }) {
@@ -25,7 +26,7 @@ class Scheduler {
     const capacity = Math.max(0, this.config.maxConcurrentRuns - this.running.size);
 
     for (const issue of retryReady.slice(0, capacity)) {
-      this.runIssue(issue).catch((error) => {
+      this.dispatchIssue(issue).catch((error) => {
         this.logger.error('run_unhandled_error', { issueKey: issue.key, error: error.message });
       });
     }
@@ -126,6 +127,54 @@ class Scheduler {
     }
   }
 
+  // Route by issue kind: a PRD (plan label) runs the architect planning pipeline;
+  // a groomed group (ready label) runs execution. Same claim/workspace/run spine.
+  dispatchIssue(issue) {
+    return issueKind(issue, this.config) === 'plan'
+      ? this.runPlanningIssue(issue)
+      : this.runIssue(issue);
+  }
+
+  // Architect stage: PRD -> /brd -> /spec -> /design -> /test -> /tracker-publish,
+  // which publishes the per-cluster group issues the execution path then claims.
+  async runPlanningIssue(issue) {
+    if (this.running.has(issue.id)) return;
+    this.running.add(issue.id);
+    try {
+      const attempt = this.stateStore ? this.stateStore.nextAttempt(issue) : 1;
+      if (this.stateStore) this.stateStore.startRun(issue, { attempt, groupId: issue.key });
+      this.logger.info('plan_started', { issueKey: issue.key, attempt });
+      await this.tracker.moveIssue(issue.id, this.config.tracker.runningState);
+      await this.tracker.addComment(issue.id, 'Claude Harness orchestrator claimed PRD for planning.');
+      const workspace = await this.workspaceManager.prepare(issue, { id: issue.key, stories: [] }, { attempt });
+      if (this.stateStore) this.stateStore.updateRun(issue, { workspacePath: workspace.workspacePath, branchName: workspace.branchName });
+      await this.claudeRunner.run(workspace.workspacePath, buildPlanningPrompt(issue));
+      const runResult = await readResult(workspace.workspacePath, issue.key);
+      await this.finishPlanning(issue, workspace, runResult);
+    } catch (error) {
+      await this.handleRunError(issue, error);
+    } finally {
+      this.running.delete(issue.id);
+    }
+  }
+
+  async finishPlanning(issue, workspace, runResult) {
+    const t = this.config.tracker;
+    if (runResult.result.status === 'planned') {
+      const groups = (runResult.result.groups_published || []).join(', ') || 'see specs/';
+      await this.tracker.addComment(issue.id, `Planning complete. Published groups: ${groups}.`);
+      await this.tracker.moveIssue(issue.id, t.plannedState, t.plannedStateCandidates);
+      if (this.stateStore) this.stateStore.finishRun(issue, { status: 'planned', workspacePath: workspace.workspacePath });
+      this.logger.info('plan_completed', { issueKey: issue.key });
+    } else {
+      await this.tracker.addComment(issue.id, `Planning blocked: ${runResult.result.blocker || runResult.result.summary || 'unknown'}`);
+      await this.tracker.moveIssue(issue.id, t.blockedState, t.blockedStateCandidates);
+      if (this.stateStore) this.stateStore.finishRun(issue, { status: 'blocked' });
+      this.logger.warn('plan_blocked', { issueKey: issue.key });
+    }
+    await this.maybeCleanupWorkspace(issue, workspace.workspacePath);
+  }
+
   async maybeCleanupWorkspace(issue, workspacePath) {
     if (!this.workspaceManager || typeof this.workspaceManager.cleanup !== 'function') return;
     try {
@@ -199,64 +248,26 @@ class Scheduler {
   }
 }
 
+// 'plan' (PRD, plan label) | 'execute' (groomed group, ready label) | null.
+function issueKind(issue, config) {
+  const labels = (issue.labels || []).map((label) => normalize(label));
+  if (config.tracker.planLabel && labels.includes(normalize(config.tracker.planLabel))) return 'plan';
+  if (labels.includes(normalize(config.tracker.readyLabel))) return 'execute';
+  return null;
+}
+
 function isEligible(issue, config) {
   const stateMatches = normalize(issue.state) === normalize(config.tracker.readyState);
-  const labels = issue.labels.map((label) => normalize(label));
-  const labelMatches = labels.includes(normalize(config.tracker.readyLabel));
   const blockersDone = issue.blockedBy.every((blocker) =>
     config.tracker.terminalStates.map(normalize).includes(normalize(blocker.state))
   );
-  return stateMatches && labelMatches && blockersDone;
+  return stateMatches && Boolean(issueKind(issue, config)) && blockersDone;
 }
 
 function isStuck(issue, runningSet, config) {
   const inRunningState = normalize(issue.state) === normalize(config.tracker.runningState);
   const claimedByThisProcess = runningSet && runningSet.has(issue.id);
   return inRunningState && !claimedByThisProcess;
-}
-
-async function maybeCreatePr(workspacePath, issue, group, config) {
-  if (!config.github.createPr) return null;
-
-  try {
-    const title = `Implement ${issue.key} group ${group.id}`;
-    const body = `Automated Claude Harness run for ${issue.key}.\n\nGroup: ${group.id}\nStories: ${group.stories.join(', ') || 'not listed'}`;
-    const { stdout } = await runCommand('gh', [
-      'pr',
-      'create',
-      '--title',
-      title,
-      '--body',
-      body,
-      '--base',
-      config.github.baseBranch
-    ], { cwd: workspacePath });
-    return stdout.trim().split('\n').pop();
-  } catch (error) {
-    return `PR creation skipped or failed: ${error.message}`;
-  }
-}
-
-function isRealPrUrl(prUrl) {
-  // Require the canonical PR URL shape (host/owner/repo/pull/<n>), not just an
-  // http(s) prefix: maybeCreatePr scrapes the last stdout line, so a stray line
-  // from a target repo's PR-template/post-create output must not be mergeable.
-  return typeof prUrl === 'string' && /^https?:\/\/[^/\s]+\/[^/\s]+\/[^/\s]+\/pull\/\d+(?:[/?#].*)?$/.test(prUrl.trim());
-}
-
-// Enable GitHub native auto-merge on the PR: GitHub merges it automatically once
-// all required status checks pass (CI) and branch protections are satisfied, so
-// a failing build is never merged. Returns {enabled} so the caller can fall back
-// to human review when auto-merge can't be turned on.
-async function enableAutoMerge(prUrl, cwd, config) {
-  if (!isRealPrUrl(prUrl)) return { enabled: false, reason: 'no PR to merge' };
-  const method = (config.autoMerge && config.autoMerge.method) || 'merge';
-  try {
-    await runCommand('gh', ['pr', 'merge', '--auto', `--${method}`, '--', prUrl], { cwd });
-    return { enabled: true };
-  } catch (error) {
-    return { enabled: false, reason: error.message };
-  }
 }
 
 function normalize(value) {
@@ -272,4 +283,4 @@ async function safeTrackerCall(promise, logger, issue) {
   }
 }
 
-module.exports = { Scheduler, isEligible, isStuck, maybeCreatePr, safeTrackerCall, enableAutoMerge };
+module.exports = { Scheduler, isEligible, isStuck, issueKind, maybeCreatePr, safeTrackerCall, enableAutoMerge };

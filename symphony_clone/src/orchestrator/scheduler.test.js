@@ -8,7 +8,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { Scheduler, enableAutoMerge } = require('./scheduler');
+const { Scheduler, issueKind } = require('./scheduler');
 
 // A workspace whose run reached human_review (harness gates passed) — the only
 // state from which auto-merge is eligible.
@@ -78,15 +78,52 @@ test('autoMerge disabled: unchanged human-review behavior, merge never attempted
   assert.ok(d.moved.includes('Human Review'), `moved: ${d.moved}`);
 });
 
-test('enableAutoMerge refuses when there is no real PR url (no gh call)', async () => {
-  const r = await enableAutoMerge(null, '/tmp', { autoMerge: { method: 'merge' } });
-  assert.equal(r.enabled, false);
-  assert.match(r.reason, /no PR/i);
+// --- S2: planning (PRD -> groomed cluster issues) ---
+
+function plannedWorkspace(key, status = 'planned') {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'symphony-plan-'));
+  const ws = path.join(root, key);
+  fs.mkdirSync(path.join(ws, `.claude/state/tracker-runs/${key}`), { recursive: true });
+  fs.writeFileSync(
+    path.join(ws, `.claude/state/tracker-runs/${key}/result.json`),
+    JSON.stringify({ status, summary: 'planned', groups_published: ['A', 'B'], blocker: status === 'blocked' ? 'no PRD' : undefined })
+  );
+  return ws;
+}
+
+const planTracker = { ...baseConfig.tracker, planLabel: 'agent-plan', plannedState: 'Planned', plannedStateCandidates: ['Planned'] };
+const planConfig = { ...baseConfig, tracker: planTracker };
+const planIssue = { id: 'p1', key: 'PRD-1', state: 'Ready for Agent', labels: ['agent-plan'], blockedBy: [], description: '# PRD\n\n## 3. Functional Requirements\n- FR-1 do a thing' };
+
+test('issueKind routes plan/execute/null by label', () => {
+  const cfg = { tracker: { planLabel: 'agent-plan', readyLabel: 'agent-ready' } };
+  assert.equal(issueKind({ labels: ['agent-plan'] }, cfg), 'plan');
+  assert.equal(issueKind({ labels: ['agent-ready'] }, cfg), 'execute');
+  assert.equal(issueKind({ labels: ['other'] }, cfg), null);
 });
 
-test('enableAutoMerge refuses a URL that is not a canonical PR url (no gh call)', async () => {
-  for (const bad of ['https://example.com/foo', 'https://github.com/o/r/issues/3', 'not a url']) {
-    const r = await enableAutoMerge(bad, '/tmp', { autoMerge: { method: 'merge' } });
-    assert.equal(r.enabled, false, `should refuse ${bad}`);
-  }
+test('planning issue advances to the planned state on status=planned', async () => {
+  const d = makeDeps(plannedWorkspace('PRD-1'));
+  await build(d, planConfig).runPlanningIssue(planIssue);
+  assert.ok(d.moved.includes('Planned'), `moved: ${d.moved}`);
+  assert.ok(!d.moved.includes('Blocked'), `moved: ${d.moved}`);
+});
+
+test('planning issue with a blocked result moves to blocked', async () => {
+  const d = makeDeps(plannedWorkspace('PRD-1', 'blocked'));
+  await build(d, planConfig).runPlanningIssue(planIssue);
+  assert.ok(d.moved.includes('Blocked'), `moved: ${d.moved}`);
+  assert.ok(!d.moved.includes('Planned'), `moved: ${d.moved}`);
+});
+
+test('dispatchIssue routes plan-labeled issues to planning and others to execution', async () => {
+  const d = makeDeps(plannedWorkspace('PRD-1'));
+  const scheduler = build(d, planConfig);
+  let planned = false; let executed = false;
+  scheduler.runPlanningIssue = async () => { planned = true; };
+  scheduler.runIssue = async () => { executed = true; };
+  await scheduler.dispatchIssue(planIssue);
+  await scheduler.dispatchIssue({ ...planIssue, labels: ['agent-ready'] });
+  assert.ok(planned, 'plan-labeled routed to planning');
+  assert.ok(executed, 'ready-labeled routed to execution');
 });

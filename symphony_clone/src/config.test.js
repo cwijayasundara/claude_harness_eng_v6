@@ -25,3 +25,12 @@ test('autoMerge reads AUTO_MERGE / MERGE_METHOD / DONE_STATE', () => {
 test('invalid MERGE_METHOD is rejected', () => {
   assert.throws(() => loadConfig({ ...baseEnv(), MERGE_METHOD: 'rocket' }, { loadDotEnv: false }), /MERGE_METHOD/);
 });
+
+test('planning config: PLAN_LABEL / PLANNED_STATE with defaults', () => {
+  const def = loadConfig(baseEnv(), { loadDotEnv: false });
+  assert.equal(def.tracker.planLabel, 'agent-plan');
+  assert.equal(def.tracker.plannedState, 'Planned');
+  const custom = loadConfig({ ...baseEnv(), PLAN_LABEL: 'prd-ready', PLANNED_STATE: 'Groomed' }, { loadDotEnv: false });
+  assert.equal(custom.tracker.planLabel, 'prd-ready');
+  assert.equal(custom.tracker.plannedState, 'Groomed');
+});

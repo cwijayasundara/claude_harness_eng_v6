@@ -150,6 +150,9 @@ function buildTracker(env) {
     reviewStateCandidates: splitList(env.REVIEW_STATE_CANDIDATES, ['Human Review', 'In Review', 'Review']),
     blockedStateCandidates: splitList(env.BLOCKED_STATE_CANDIDATES, ['Blocked', 'Canceled', 'Cancelled']),
     readyLabel: env.READY_LABEL || 'agent-ready',
+    planLabel: env.PLAN_LABEL || 'agent-plan',
+    plannedState: env.PLANNED_STATE || 'Planned',
+    plannedStateCandidates: splitList(env.PLANNED_STATE_CANDIDATES, ['Planned', 'Ready for Agent']),
     terminalStates: splitList(env.TERMINAL_STATES, DEFAULT_TERMINAL_STATES)
   };
 }
