@@ -30,7 +30,7 @@ const { startApp, stopApp, assertInBrowser, DEFAULT_PORT } = require('./helpers/
 const PROJECT_DIR = path.join(__dirname, 'smoke-output');
 const SHOTS_DIR = path.join(__dirname, 'screenshots');
 const HARNESS_PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
-const SESSION_ID = 'auto-e2e-smoke-0001';
+const SESSION_ID = 'aaaa0003-0000-4000-8000-000000000003'; // claude --session-id requires a valid UUID
 const MAX_FIX_ATTEMPTS = 3;
 
 function logResult(label, data) {

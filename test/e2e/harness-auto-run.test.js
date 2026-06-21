@@ -21,7 +21,7 @@ const { freshProject } = require('./helpers/fresh-project');
 const PROJECT_DIR = path.join(__dirname, 'auto-output');
 const PRD = path.join(__dirname, 'fixtures', 'counter-prd.md');
 const PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
-const SESSION = 'e2e-auto-0001';
+const SESSION = 'aaaa0001-0000-4000-8000-000000000001'; // claude --session-id requires a valid UUID
 
 test('full-auto: PRD -> autonomous plan + build, zero human gates, suite green', { timeout: 2700000 }, (t) => {
   freshProject(PROJECT_DIR, PRD);

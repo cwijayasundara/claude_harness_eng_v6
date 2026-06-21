@@ -18,7 +18,7 @@ const { freshProject } = require('./helpers/fresh-project');
 const PROJECT_DIR = path.join(__dirname, 'semi-auto-output');
 const PRD = path.join(__dirname, 'fixtures', 'counter-prd.md');
 const PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
-const SESSION = 'e2e-semi-0001';
+const SESSION = 'aaaa0002-0000-4000-8000-000000000002'; // claude --session-id requires a valid UUID
 
 test('semi-auto: PRD -> plan, then pause at the approval gate (no silent build)', { timeout: 1800000 }, (t) => {
   freshProject(PROJECT_DIR, PRD);
