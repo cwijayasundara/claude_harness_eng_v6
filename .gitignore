@@ -30,4 +30,4 @@ automated_e2e_test/plan-output/
 automated_e2e_test/screenshots/
 # Generated artifacts — build_matrices_deck.py output and runtime review verdicts
 matrices.pptx
-specs/reviews/
+**/specs/reviews/
