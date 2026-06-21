@@ -5,13 +5,15 @@ const { readResult, buildProofComment } = require('./result-reader');
 const { runCommand } = require('./workspace-manager');
 
 class Scheduler {
-  constructor({ config, tracker, workspaceManager, claudeRunner, stateStore, logger }) {
+  constructor({ config, tracker, workspaceManager, claudeRunner, stateStore, logger, enableAutoMerge: enableAutoMergeFn }) {
     this.config = config;
     this.tracker = tracker;
     this.workspaceManager = workspaceManager;
     this.claudeRunner = claudeRunner;
     this.stateStore = stateStore;
     this.logger = logger || console;
+    // Injectable so tests exercise the state machine without invoking real `gh`.
+    this.enableAutoMerge = enableAutoMergeFn || enableAutoMerge;
     this.running = new Set();
   }
 
@@ -109,20 +111,7 @@ class Scheduler {
       let prUrl = null;
 
       if (runResult.result.status === 'human_review') {
-        await this.workspaceManager.pushBranch(workspace.workspacePath, workspace.branchName);
-        prUrl = await maybeCreatePr(workspace.workspacePath, issue, group, this.config);
-        await this.tracker.addComment(issue.id, buildProofComment(issue, group, runResult, prUrl));
-        await this.tracker.moveIssue(issue.id, this.config.tracker.reviewState, this.config.tracker.reviewStateCandidates);
-        if (this.stateStore) {
-          this.stateStore.finishRun(issue, {
-            status: 'human_review',
-            branchName: workspace.branchName,
-            workspacePath: workspace.workspacePath,
-            prUrl
-          });
-        }
-        this.logger.info('run_completed', { issueKey: issue.key, groupId: group.id, prUrl });
-        await this.maybeCleanupWorkspace(issue, workspace.workspacePath);
+        await this.completeHumanReview(issue, group, workspace, runResult);
       } else {
         await this.tracker.addComment(issue.id, buildProofComment(issue, group, runResult, prUrl));
         await this.tracker.moveIssue(issue.id, this.config.tracker.blockedState, this.config.tracker.blockedStateCandidates);
@@ -144,6 +133,41 @@ class Scheduler {
     } catch (error) {
       this.logger.error('workspace_cleanup_failed', { issueKey: issue.key, workspacePath, error: error.message });
     }
+  }
+
+  // A run that reached human_review has passed the harness's own gates (ratchet,
+  // /gate, Phase 9.5). Push, open the PR, post proof, then either enable
+  // auto-merge (CI becomes the final machine gate) or hand to a human.
+  async completeHumanReview(issue, group, workspace, runResult) {
+    await this.workspaceManager.pushBranch(workspace.workspacePath, workspace.branchName);
+    const prUrl = await maybeCreatePr(workspace.workspacePath, issue, group, this.config);
+    await this.tracker.addComment(issue.id, buildProofComment(issue, group, runResult, prUrl));
+    const outcome = await this.resolveReviewOutcome(issue, workspace, prUrl);
+    await this.tracker.moveIssue(issue.id, outcome.state, outcome.candidates);
+    if (this.stateStore) {
+      this.stateStore.finishRun(issue, { status: outcome.runStatus, branchName: workspace.branchName, workspacePath: workspace.workspacePath, prUrl });
+    }
+    this.logger.info('run_completed', { issueKey: issue.key, groupId: group.id, prUrl, outcome: outcome.runStatus });
+    await this.maybeCleanupWorkspace(issue, workspace.workspacePath);
+  }
+
+  // Default: hand to a human (reviewState). With AUTO_MERGE on, enable GitHub
+  // native auto-merge — GitHub merges only once required checks pass, so a red
+  // build never lands — and move to the done state. Failure to enable falls back
+  // to human review rather than silently dropping the PR.
+  async resolveReviewOutcome(issue, workspace, prUrl) {
+    const t = this.config.tracker;
+    const am = this.config.autoMerge;
+    if (!am || !am.enabled) {
+      return { state: t.reviewState, candidates: t.reviewStateCandidates, runStatus: 'human_review' };
+    }
+    const merge = await this.enableAutoMerge(prUrl, workspace.workspacePath, this.config);
+    if (merge && merge.enabled) {
+      await this.tracker.addComment(issue.id, `Auto-merge enabled (${am.method}); GitHub will merge once required checks pass.`);
+      return { state: am.doneState, candidates: am.doneStateCandidates, runStatus: 'auto_merge' };
+    }
+    await this.tracker.addComment(issue.id, `Auto-merge could not be enabled (${(merge && merge.reason) || 'unknown'}); left for human review.`);
+    return { state: t.reviewState, candidates: t.reviewStateCandidates, runStatus: 'human_review' };
   }
 
   async handleRunError(issue, error) {
@@ -213,6 +237,25 @@ async function maybeCreatePr(workspacePath, issue, group, config) {
   }
 }
 
+function isRealPrUrl(prUrl) {
+  return typeof prUrl === 'string' && /^https?:\/\//.test(prUrl);
+}
+
+// Enable GitHub native auto-merge on the PR: GitHub merges it automatically once
+// all required status checks pass (CI) and branch protections are satisfied, so
+// a failing build is never merged. Returns {enabled} so the caller can fall back
+// to human review when auto-merge can't be turned on.
+async function enableAutoMerge(prUrl, cwd, config) {
+  if (!isRealPrUrl(prUrl)) return { enabled: false, reason: 'no PR to merge' };
+  const method = (config.autoMerge && config.autoMerge.method) || 'merge';
+  try {
+    await runCommand('gh', ['pr', 'merge', prUrl, '--auto', `--${method}`], { cwd });
+    return { enabled: true };
+  } catch (error) {
+    return { enabled: false, reason: error.message };
+  }
+}
+
 function normalize(value) {
   return String(value || '').trim().toLowerCase();
 }
@@ -226,4 +269,4 @@ async function safeTrackerCall(promise, logger, issue) {
   }
 }
 
-module.exports = { Scheduler, isEligible, isStuck, maybeCreatePr, safeTrackerCall };
+module.exports = { Scheduler, isEligible, isStuck, maybeCreatePr, safeTrackerCall, enableAutoMerge };
