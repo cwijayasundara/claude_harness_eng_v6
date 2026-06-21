@@ -238,7 +238,10 @@ async function maybeCreatePr(workspacePath, issue, group, config) {
 }
 
 function isRealPrUrl(prUrl) {
-  return typeof prUrl === 'string' && /^https?:\/\//.test(prUrl);
+  // Require the canonical PR URL shape (host/owner/repo/pull/<n>), not just an
+  // http(s) prefix: maybeCreatePr scrapes the last stdout line, so a stray line
+  // from a target repo's PR-template/post-create output must not be mergeable.
+  return typeof prUrl === 'string' && /^https?:\/\/[^/\s]+\/[^/\s]+\/[^/\s]+\/pull\/\d+(?:[/?#].*)?$/.test(prUrl.trim());
 }
 
 // Enable GitHub native auto-merge on the PR: GitHub merges it automatically once
@@ -249,7 +252,7 @@ async function enableAutoMerge(prUrl, cwd, config) {
   if (!isRealPrUrl(prUrl)) return { enabled: false, reason: 'no PR to merge' };
   const method = (config.autoMerge && config.autoMerge.method) || 'merge';
   try {
-    await runCommand('gh', ['pr', 'merge', prUrl, '--auto', `--${method}`], { cwd });
+    await runCommand('gh', ['pr', 'merge', '--auto', `--${method}`, '--', prUrl], { cwd });
     return { enabled: true };
   } catch (error) {
     return { enabled: false, reason: error.message };
