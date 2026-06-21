@@ -15,12 +15,12 @@ const assert = require('assert');
 const { execFileSync } = require('child_process');
 const { test } = require('node:test');
 
-const { runClaude } = require('../test/e2e/helpers/claude-runner');
+const { runClaude } = require('./helpers/claude-runner');
 const { summarizeSpecs, formatSummary } = require('./helpers/specs-summary');
 
 const PROJECT_DIR = path.join(__dirname, 'plan-output');
 const SAMPLE_PRD = path.join(__dirname, 'fixtures', 'sample-prd.md');
-const HARNESS_PLUGIN_DIR = path.join(__dirname, '..', '.claude');
+const HARNESS_PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
 const SESSION_ID = 'auto-e2e-plan-0001';
 
 function resetProject() {

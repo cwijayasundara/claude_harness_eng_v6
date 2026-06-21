@@ -24,10 +24,12 @@ test/e2e/results/*
 !test/e2e/results/.gitkeep
 test/e2e/output/
 .playwright-mcp/
-# automated_e2e_test live-run output (smoke/plan harnesses generate these)
-automated_e2e_test/smoke-output/
-automated_e2e_test/plan-output/
-automated_e2e_test/screenshots/
+# e2e self-test harness live-run output (smoke/plan/auto/semi-auto generate these)
+test/e2e/smoke-output/
+test/e2e/plan-output/
+test/e2e/auto-output/
+test/e2e/semi-auto-output/
+test/e2e/screenshots/
 # Generated artifacts — build_matrices_deck.py output and runtime review verdicts
 matrices.pptx
 **/specs/reviews/
