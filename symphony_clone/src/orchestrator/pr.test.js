@@ -11,6 +11,8 @@ test('repoSlug extraction normalizes git and PR urls to host/owner/repo', () => 
   assert.equal(repoSlugFromGitUrl('https://github.com/Org/Repo.git'), 'github.com/org/repo');
   assert.equal(repoSlugFromGitUrl('https://github.com/org/repo'), 'github.com/org/repo');
   assert.equal(repoSlugFromPrUrl('https://github.com/Org/Repo/pull/7'), 'github.com/org/repo');
+  // an explicit port is stripped from both parsers so a GHE host matches
+  assert.equal(repoSlugFromPrUrl('https://ghe.local:8443/org/repo/pull/3'), 'ghe.local/org/repo');
 });
 
 test('enableAutoMerge refuses a PR for a different repo than configured (no gh call)', async () => {
