@@ -48,6 +48,7 @@ All artifacts go under `specs/brownfield/`. Create the directory if missing.
 | `skeletons/<path>.skel.md` | Signature-only views of god files (≥ 1500 LOC by default) — navigate huge files without reading them whole |
 | `dependency-graph.md` | Mermaid `flowchart LR` rendering of file/module-level edges |
 | `coupling-report.md` | Per-file fan-in, fan-out, instability, cycles, hubs without tests |
+| `wiki/WIKI.md` + `wiki/pages/*.md` | Navigable, always-current wiki rendered deterministically from `code-graph.json` (no LLM): overview (hubs, entry points, cycles, external deps) linking to bounded per-directory pages with per-symbol `file:line` citations and per-cluster Mermaid. The DeepWiki-grade narrative layer, minus the regeneration cost. |
 
 ---
 
@@ -168,6 +169,31 @@ The report lists:
 - Files with `instability = fan_out / (fan_in + fan_out) > 0.8` and `fan_in > 5` (unstable hubs — refactor candidates)
 - Files with no inbound edges and no test coverage (dead code candidates)
 
+### Step 3.5 — Render the Wiki + Query the Graph
+
+Render the deterministic, always-current wiki (no LLM, instant — re-render any time the graph changes):
+
+```bash
+node .claude/skills/code-map/scripts/code_wiki.js render \
+  --graph specs/brownfield/code-graph.json \
+  --out specs/brownfield/wiki
+```
+
+Writes `wiki/WIKI.md` (overview + page index) and `wiki/pages/*.md` (one bounded page per directory cluster, each with `file:line` symbol citations and a per-cluster Mermaid). Pages cap at `--max-pages` (default 20); the overview notes any overflow. The `graph-refresh` hook re-renders this automatically after AST-graph patches, so it tracks `main` per-turn rather than lagging.
+
+Instead of grepping or reading the six brownfield essays, answer structural questions deterministically off the same graph:
+
+```bash
+node .claude/skills/code-map/scripts/code_wiki.js query --graph specs/brownfield/code-graph.json --callers <id>
+node .claude/skills/code-map/scripts/code_wiki.js query --graph specs/brownfield/code-graph.json --calls <id>
+node .claude/skills/code-map/scripts/code_wiki.js query --graph specs/brownfield/code-graph.json --symbol <name>
+node .claude/skills/code-map/scripts/code_wiki.js query --graph specs/brownfield/code-graph.json --module <id>
+node .claude/skills/code-map/scripts/code_wiki.js query --graph specs/brownfield/code-graph.json --hubs
+node .claude/skills/code-map/scripts/code_wiki.js query --graph specs/brownfield/code-graph.json --cycles
+```
+
+Each returns JSON with `file:line` evidence — the "ask the code-map" layer `/change` and `/refactor` use to enumerate blast radius without re-reading source.
+
 ### Step 4 — Verify
 
 After running, sanity-check:
@@ -204,7 +230,8 @@ Downstream skills should treat `code-graph.json` as the source of truth for stru
 | any agent editing code | `symbol-map.md` for navigation; `skeletons/` + `Read(offset, limit)` for god files |
 | `/seam-finder` | `code-graph.json` only; computes seam scores from edges + CRUD edges if available |
 | `/refactor` | `coupling-report.md` to identify hubs and unstable modules |
-| `/change` | `code-graph.json` to enumerate downstream consumers of a changed symbol |
+| `/change` | `code-graph.json` (or `code_wiki.js query --callers/--symbol`) to enumerate downstream consumers of a changed symbol |
+| any human / agent orienting in the repo | `wiki/WIKI.md` + `code_wiki.js query` — navigable overview and deterministic "ask the code-map" without reading source |
 | `planner` agent | All four; preserves existing public interfaces it sees |
 | `generator` agent | `code-graph.json` to avoid creating parallel implementations |
 

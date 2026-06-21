@@ -28,9 +28,9 @@ test('semi-auto-run harness: /build --autonomous build -> alter via code-map', (
   assert.match(h, /alterAndVerify\(/); // then alters, exercising code-map/brownfield
 });
 
-test('alter-and-verify helper maps the codebase (/brownfield) then changes it (/change)', () => {
+test('alter-and-verify helper maps the codebase (/code-map) then changes it (/change)', () => {
   const a = read('test/e2e/helpers/alter-and-verify.js');
-  assert.match(a, /\/brownfield/);
+  assert.match(a, /\/code-map/); // deterministic graph + wiki, not the slow /brownfield essays
   assert.match(a, /\/change/);
   assert.match(a, /code-graph\.json/);
   assert.match(a, /runProjectSuite/);

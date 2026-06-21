@@ -5,7 +5,10 @@ const { spawnSync } = require('child_process');
 const { test } = require('node:test');
 const { REPO_ROOT, makeHookProject, runHook } = require('./helpers/hook-fixture');
 
-const INDEXER_REL = path.join('.claude', 'skills', 'code-map', 'scripts', 'code_index');
+const SCRIPTS_REL = path.join('.claude', 'skills', 'code-map', 'scripts');
+const INDEXER_REL = path.join(SCRIPTS_REL, 'code_index');
+const WIKI_DIR_REL = path.join(SCRIPTS_REL, 'code_wiki');
+const WIKI_CLI_REL = path.join(SCRIPTS_REL, 'code_wiki.js');
 const fixture = path.join(__dirname, 'fixtures', 'code-index', 'sample');
 
 function graphPath(projectDir) {
@@ -20,6 +23,8 @@ function makeIndexedProject(hookNames) {
   const dir = makeHookProject(hookNames);
   fs.cpSync(fixture, dir, { recursive: true });
   fs.cpSync(path.join(REPO_ROOT, INDEXER_REL), path.join(dir, INDEXER_REL), { recursive: true });
+  fs.cpSync(path.join(REPO_ROOT, WIKI_DIR_REL), path.join(dir, WIKI_DIR_REL), { recursive: true });
+  fs.copyFileSync(path.join(REPO_ROOT, WIKI_CLI_REL), path.join(dir, WIKI_CLI_REL));
   const res = spawnSync('python3', [
     path.join(dir, INDEXER_REL, 'code_index.py'),
     '--root', dir, '--out', graphPath(dir),
@@ -71,6 +76,11 @@ test('graph-refresh drains the dirty list, patches the graph, and re-renders the
     path.join(dir, 'specs', 'brownfield', 'symbol-map.md'), 'utf8'
   );
   assert.ok(map.includes('purge_sessions'), 'symbol map not re-rendered');
+  // The hook also re-renders the deterministic wiki off the patched graph.
+  const wiki = fs.readFileSync(
+    path.join(dir, 'specs', 'brownfield', 'wiki', 'WIKI.md'), 'utf8'
+  );
+  assert.ok(wiki.includes('Codebase Wiki'), 'wiki not re-rendered by the hook');
 });
 
 test('graph-refresh is a silent no-op when there is nothing dirty', async () => {

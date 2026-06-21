@@ -61,6 +61,14 @@ function refresh(projectDir, rels) {
     indexer, '--render-map', graph,
     '--out', path.join(projectDir, 'specs', 'brownfield', 'symbol-map.md'),
   ], { encoding: 'utf8', timeout: 25000 });
+  // Re-render the deterministic wiki off the freshly-patched graph so it stays
+  // current with zero LLM cost (fails open — wiki render never blocks the stop,
+  // but a persistent failure is surfaced so a stale wiki is not silent).
+  const wiki = spawnSync('node', [
+    path.join(projectDir, '.claude', 'skills', 'code-map', 'scripts', 'code_wiki.js'),
+    'render', '--graph', graph, '--out', path.join(projectDir, 'specs', 'brownfield', 'wiki'),
+  ], { encoding: 'utf8', timeout: 25000 });
+  if (wiki.status !== 0) process.stderr.write(`graph-refresh: wiki render failed: ${(wiki.stderr || '').trim()}\n`);
   return true;
 }
 
