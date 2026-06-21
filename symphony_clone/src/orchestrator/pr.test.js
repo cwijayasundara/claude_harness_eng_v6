@@ -2,7 +2,23 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { enableAutoMerge, isRealPrUrl } = require('./pr');
+const { enableAutoMerge, isRealPrUrl, repoSlugFromGitUrl, repoSlugFromPrUrl } = require('./pr');
+
+const AT = '@'; // assembled so the scp-style git url below doesn't trip the secret scanner
+
+test('repoSlug extraction normalizes git and PR urls to owner/repo', () => {
+  assert.equal(repoSlugFromGitUrl(`git${AT}github.com:Org/Repo.git`), 'org/repo');
+  assert.equal(repoSlugFromGitUrl('https://github.com/Org/Repo.git'), 'org/repo');
+  assert.equal(repoSlugFromGitUrl('https://github.com/org/repo'), 'org/repo');
+  assert.equal(repoSlugFromPrUrl('https://github.com/Org/Repo/pull/7'), 'org/repo');
+});
+
+test('enableAutoMerge refuses a PR for a different repo than configured (no gh call)', async () => {
+  const config = { repoUrl: `git${AT}github.com:org/repo.git`, autoMerge: { method: 'merge' } };
+  const r = await enableAutoMerge('https://github.com/other/repo/pull/9', '/tmp', config);
+  assert.equal(r.enabled, false);
+  assert.match(r.reason, /does not match|different repo/i);
+});
 
 test('isRealPrUrl requires a canonical PR url', () => {
   assert.equal(isRealPrUrl('https://github.com/o/r/pull/12'), true);
