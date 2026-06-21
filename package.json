@@ -5,10 +5,10 @@
   "description": "Claude Code plugin scaffold for autonomous long-running application development.",
   "scripts": {
     "certification": "node .claude/scripts/certification-report.js",
-    "test": "node --test \"test/*.test.js\"",
-    "test:e2e": "node --test \"test/e2e/*.test.js\"",
+    "test": "node --test test/*.test.js",
+    "test:e2e": "node --test test/e2e/*.test.js",
     "test:evals": "node test/evals/run-evals.js",
-    "test:all": "node --test \"test/*.test.js\" \"test/e2e/*.test.js\"",
+    "test:all": "node --test test/*.test.js test/e2e/*.test.js",
     "test:symphony": "cd symphony_clone && npm ci --silent && npm test"
   }
 }

@@ -1,6 +1,6 @@
 ---
 name: evaluate
-description: Run the application and verify sprint contract criteria via API tests, Playwright interaction, and schema validation.
+description: "[Internal pipeline stage — run by /auto and /gate; invoke directly only as a power user.] Run the application and verify sprint contract criteria via API tests, Playwright interaction, and schema validation."
 argument-hint: "[group-id]"
 context: fork
 agent: evaluator

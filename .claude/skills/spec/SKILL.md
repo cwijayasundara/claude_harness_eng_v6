@@ -1,6 +1,6 @@
 ---
 name: spec
-description: Decompose BRD into epics, stories, dependency graph, and feature list for agent team execution.
+description: "[Internal pipeline stage — run by /build; invoke directly only as a power user.] Decompose BRD into epics, stories, dependency graph, and feature list for agent team execution."
 argument-hint: "[path-to-BRD]"
 context: fork
 agent: planner
@@ -84,6 +84,23 @@ Write `specs/stories/dependency-graph.md` with:
 - ... and so on
 
 Format each group as a table showing Story ID, Title, Layer, and Dependencies.
+
+Then, directly below the tables, render the same graph visually as a Mermaid `flowchart TD` so reviewers see the parallelism and critical path at a glance (not just rows). One node per story (label `E{n}-S{n}`), one edge per `depends_on` (`dependency --> story`), and group the nodes with `subgraph Group A`/`Group B`/… blocks matching the tables. Example:
+
+```mermaid
+flowchart TD
+  subgraph GroupA[Group A]
+    E1S1[E1-S1 Types]
+    E1S2[E1-S2 Config]
+  end
+  subgraph GroupB[Group B]
+    E2S1[E2-S1 Repository]
+  end
+  E1S1 --> E2S1
+  E1S2 --> E2S1
+```
+
+The Mermaid block must stay consistent with the tables — every story and every dependency edge appears in both. The tables remain the machine-checkable source; the diagram is the human-readable view of the same data.
 
 Rules:
 - No circular dependencies. Validate before writing.

@@ -13,6 +13,8 @@ You need to hold exactly four ideas to use this:
 
 Everything else (telemetry, trackers, modes, framework packs) is optional tuning.
 
+> **Building docs, not shippable code?** UI mockups, architecture/ARB narratives, and research reports are disposable artifacts — they should *not* go through the GAN/ratchet/TDD pipeline. Load the lighter **harness-lite** plugin instead (`claude --plugin-dir ~/claude_harness_eng_v5/harness-lite/.claude`); it ships only `/mockup`, `/arch-doc`, and `/research` and makes the heavyweight machinery structurally unreachable. Switch to the full harness the moment an artifact becomes shipped product code. See `harness-lite/README.md`.
+
 ---
 
 ## Quickstart
@@ -43,14 +45,16 @@ Run `/scaffold`. This asks a few questions about your stack and project type, th
 ```
 Are you building something NEW?
 ├── Yes → small scope (CLI, library, ≤5 stories)?  → /build --lite
-│         otherwise → /brd → /spec → /design → /auto
+│         otherwise                                 → /build
 │
 └── No (existing codebase) → first time here? run /brownfield once, then:
           ├── tiny safe edit (≤3 files, <150 lines, no auth/API) → /vibe
           ├── changed behavior (add --issue N for a GitHub bug)  → /change
           ├── structure only, no behavior change                 → /refactor
-          └── big enough to need specs → /seam-finder, then /spec → /design → /auto
+          └── big enough to need specs                           → /build (brownfield-aware)
 ```
+
+`/build` runs the planning stages (BRD → spec → design → test plan) and the `/auto` loop for you, with human approval gates between each. Need the safest cut-points before a big change first? `/brownfield --seams "<goal>"`.
 
 Not sure? Just describe the change in plain words — the harness classifies it and recommends a lane.
 
@@ -76,32 +80,41 @@ Steer it mid-run by editing `.claude/program.md`. Quality gates are enforced by 
 
 ## Command reference
 
-The commands you'll actually type are the lane entry points above. The full surface:
+These are the **entry points you actually type** — one per situation:
 
 | Command | Purpose |
 |---|---|
-| `/scaffold` | Bootstrap a project (only true slash command) |
-| `/brd` | BRD from a Socratic interview; `--frd <path>` grounds it in a Functional Requirements Document (deterministic net-new/dropped gate) |
-| `/spec` | BRD → stories + dependency graph + features.json |
-| `/design` | Architecture + schemas + UI mockups; `--doc-only` for a standalone ARB/architecture narrative (no pipeline) |
-| `/build` | Full pipeline, phases 0–10; `--lite` for small new projects |
-| `/auto` | Autonomous ratcheting loop |
-| `/vibe` | Controlled small-change lane |
-| `/brownfield` | Map an existing codebase before changing it |
-| `/code-map` | Build deterministic dependency graph (AST for Python/React/JS/TS; symbol map + god-file skeletons; hook-refreshed) |
-| `/seam-finder` | Rank safe cut-points for a goal |
-| `/implement` | Code generation with agent teams |
-| `/evaluate` | Run app, verify sprint contract |
-| `/gate` | Evaluator + security review (on-demand pre-merge quality gate) |
-| `/test` | Test plan + Playwright E2E |
-| `/deploy` | Docker Compose + init.sh |
+| `/scaffold` | Bootstrap a project (the only true slash command) |
+| `/build` | Greenfield (or brownfield-aware) build: runs planning → `/auto` for you, with human gates. `--lite` for small new projects |
+| `/auto` | Resume / steer the autonomous ratcheting loop directly |
+| `/brownfield` | Map an existing codebase before changing it; `--seams "<goal>"` ranks the safest cut-points |
+| `/vibe` | Controlled small-change lane (≤3 files, <150 lines, no auth/API) |
 | `/change` | Behavior change on existing code (test-first); `--issue N` for a GitHub bug fix |
-| `/refactor` | Quality-driven refactoring with ratchet gate |
-| `/refactor --sweep` | Whole-repo entropy scan for pattern drift |
+| `/refactor` | Behavior-preserving cleanup with ratchet gate; `--sweep` scans the repo for pattern drift |
+| `/gate` | On-demand pre-merge quality gate (evaluator + security review) |
 | `/tracker-publish` | Publish dependency groups to Linear/Jira (optional) |
-| `/install-framework-packs` | Verify configured framework packs (optional) |
 
-Execution modes for `/auto`: **Full** (all gates, the default) and **Lean** (same as Full but does not run the design-critic vision loop). Both run the security gate and the evaluator. For small or quick work use `/build --lite` or `/vibe` rather than a weaker `/auto` mode.
+Execution modes for `/auto`: **Full** (all gates, the default) and **Lean** (same as Full but skips the design-critic vision loop). Both run the security gate and the evaluator. For small or quick work use `/build --lite` or `/vibe` rather than a weaker `/auto` mode.
+
+### Internal pipeline stages
+
+`/build`, `/auto`, and `/brownfield` run these for you. They remain invokable directly as a power-user escape hatch, but you don't need to learn them to use the harness:
+
+| Stage | Run by | Purpose |
+|---|---|---|
+| `/brd` | `/build` | BRD from a Socratic interview; `--frd <path>` grounds it in a Functional Requirements Document |
+| `/spec` | `/build` | BRD → stories + dependency graph + features.json |
+| `/design` | `/build` | Architecture + schemas + UI mockups; `--doc-only` for a standalone ARB narrative (no pipeline) |
+| `/test` | `/build`, `/auto` | Test plan + Playwright E2E |
+| `/implement` | `/auto` | Code generation with agent teams |
+| `/evaluate` | `/auto`, `/gate` | Run app, verify sprint contract (API + Playwright + schema) |
+| `/deploy` | `/build` | Docker Compose + init.sh |
+| `/code-map` | `/brownfield`, `/seam-finder` | Deterministic AST dependency graph (`code-graph.json` + symbol map + skeletons; hook-refreshed) |
+| `/seam-finder` | `/brownfield --seams` | Rank safe cut-points for a goal |
+| `/clarify` | planning stages | Bounded clarification gate |
+| `/install-framework-packs` | `/scaffold` | Verify configured framework packs |
+
+Behavior-preservation sub-skills run automatically when editing existing code (see below).
 
 ### Harness vs native Claude Code commands
 
@@ -276,7 +289,8 @@ GitHub CI runs the fast harness suite from `.github/workflows/ci.yml`. `.github/
 | Document | Where |
 |---|---|
 | Architecture reference | `design.md` in your project |
-| Simplification roadmap | `docs/SIMPLIFICATION_PROPOSAL.md` |
+| Artifact-only loadout (mockups / ARB / research) | `harness-lite/README.md` |
+| Design history & internal proposals | `docs/internal/` |
 | Orchestrator operator guide | `symphony_clone/README.md` in the harness repo |
 | Any skill's full instructions | `.claude/skills/<name>/SKILL.md` |
 | Any agent's definition | `.claude/agents/<name>.md` |

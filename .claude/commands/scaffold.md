@@ -155,7 +155,10 @@ Based on their answers, write `project-manifest.json` to the project root. Fill 
   - `model_tier` sets the cost posture by stamping each agent's `model:` pin (applied in Step 3). `cost` = Sonnet generation, Opus judgment; `balanced` (default, Profile B) = identical pins to `cost` today (top tier is a single model, Opus 4.8), kept as a distinct posture name for per-project re-tuning; `max-quality` = generation bumped to Opus 4.8. See `docs/model-allocation.md`.
 - lsp: detected language servers and install commands (see below)
 - verification: mode, and mode-specific config (see below)
-- architecture (optional): only when the project deviates from the default `src/<layer>/` layout. `layers` is the import hierarchy low→high; `layer_roots` lists the directory prefixes that contain layer dirs. Read by the layer gates (verify-on-save + pre-commit), which otherwise default to `{"layers": ["types","config","repository","service","api","ui"], "layer_roots": ["src"]}`:
+- architecture (optional): controls the one-way layer-import gate. Read by the layer gates (verify-on-save + pre-commit), which otherwise default to the web-app `{"layers": ["types","config","repository","service","api","ui"], "layer_roots": ["src"]}`. Set it in three cases:
+  - **Custom layered layout** — give `layers` (the import hierarchy low→high) and `layer_roots` (directory prefixes containing layer dirs).
+  - **Non-layered project shape** — for a library, CLI, data pipeline, ML project, or the minimal preset (D), write `"architecture": {"enabled": false}` so the layer gate does not impose a web-app hierarchy on code that has none. **Default to this for project type D and any non-web stack.**
+  - **Standard web app** — omit the block entirely to take the 6-layer default.
 
 ```json
 "architecture": {
@@ -564,41 +567,8 @@ Read `.claude/templates/claude-md.template.md`, fill in `{project-name}`, `{desc
 
 If the project has separate `backend/` and `frontend/` directories (presets A, B, C), generate scoped CLAUDE.md files for each subdirectory. These load additively as Claude navigates the tree.
 
-**backend/CLAUDE.md** (Python projects):
-```markdown
-# Backend
-
-## Test & Lint Commands (run from this directory)
-
-- `uv run pytest -x -q` — run tests
-- `uv run ruff check --fix .` — lint
-- `uv run mypy src/` — type check
-
-## Conventions
-
-- FastAPI route handlers in `src/api/`
-- Business logic in `src/services/` — never import from `api/`
-- Database access in `src/repository/` — never import from `services/`
-- All functions must have type annotations
-```
-
-**frontend/CLAUDE.md** (TypeScript projects):
-```markdown
-# Frontend
-
-## Test & Lint Commands (run from this directory)
-
-- `npm test` — run tests
-- `npm run lint` — lint
-- `npm run typecheck` — type check
-
-## Conventions
-
-- Components in `src/components/` — one component per file
-- API client calls in `src/api/` — never call fetch directly from components
-- Shared types in `src/types/`
-- No `any` types — use `unknown` and narrow
-```
+- **backend/CLAUDE.md** (Python projects): copy `.claude/templates/backend-claude-md.template.md`, then tailor the test/lint commands and conventions to the actual stack.
+- **frontend/CLAUDE.md** (TypeScript projects): copy `.claude/templates/frontend-claude-md.template.md`, then tailor the same way.
 
 For single-root projects (custom Python/Node, project type D), skip this step — the root CLAUDE.md is sufficient.
 
@@ -665,117 +635,14 @@ mkdir -p .claude/runs
 
 ### Optional: Enable telemetry (default: OFF)
 
-**Telemetry is off by default.** The copied `settings.json` sets no OTEL/Pushgateway env vars, so Claude Code exports nothing and the `record-run` hook runs inert (it only pushes when `HARNESS_PUSHGATEWAY_URL` is set). **Do NOT do the steps below unless the user explicitly asks for telemetry dashboards.** If they don't, skip to the `.gitignore` step. (Full setup + how to read the dashboards lives in `docs/telemetry.md`.)
+**Telemetry is off by default.** The copied `settings.json` sets no OTEL/Pushgateway env vars, so Claude Code exports nothing and the `record-run` hook runs inert (it only pushes when `HARNESS_PUSHGATEWAY_URL` is set). **Do NOT enable it unless the user explicitly asks for telemetry dashboards** — if they don't, skip to the `.gitignore` step.
 
-To **enable** telemetry, Claude Code ships 8 native OTEL metrics (tokens, cost, sessions, commits, PRs, LOC, tool acceptance, active time); the harness adds custom lane/agent metrics via `record-run`. Set the env vars **both** in `.claude/settings.json` (so Claude Code loads them) and in `.env` (for shell scripts and docker compose).
+To enable it, follow **`docs/telemetry.md`** (copied into the project): it has the exact `settings.json` env block + `.env` file, the `docker compose -f telemetry_docker_compose.yml up -d` start command, the non-Docker exporters, and what native OTEL covers vs. what the harness adds. The stack (`telemetry_docker_compose.yml`, dashboards) is already copied in Step 3; only the env vars and `docker compose up` remain, and only if asked.
 
-**Step A — Add telemetry env vars to `.claude/settings.json`'s `env` block.** Claude Code only reads env vars from `settings.json`, not `.env`. Merge these into the existing `env` object (do NOT overwrite keys already present like `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`):
-
-```json
-"env": {
-  "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
-  "OTEL_METRICS_EXPORTER": "otlp",
-  "OTEL_LOGS_EXPORTER": "otlp",
-  "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
-  "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
-  "OTEL_LOG_TOOL_DETAILS": "1",
-  "HARNESS_PUSHGATEWAY_URL": "http://localhost:9091",
-  "HARNESS_USER": "<resolved from git config user.name>"
-}
-```
-
-Resolve `HARNESS_USER` by running `git config user.name` via Bash and inserting the result.
-
-**Step B — Also create a `.env` file** for shell scripts and documentation:
+Write `.gitignore` by copying the template:
 
 ```bash
-GIT_USER=$(git config user.name 2>/dev/null || echo "unknown")
-cat > .env << ENVEOF
-# --- Claude Code native telemetry ---
-CLAUDE_CODE_ENABLE_TELEMETRY=1
-OTEL_METRICS_EXPORTER=otlp
-OTEL_LOGS_EXPORTER=otlp
-OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
-OTEL_LOG_TOOL_DETAILS=1
-
-# --- Harness-custom telemetry ---
-HARNESS_PUSHGATEWAY_URL=http://localhost:9091
-HARNESS_USER=${GIT_USER}
-ENVEOF
-```
-
-If enabling, complete both steps. Each team member's `settings.json` and `.env` must have their own `HARNESS_USER` so metrics are attributed correctly in the shared Prometheus/Grafana stack.
-
-The telemetry stack is included at `telemetry_docker_compose.yml`. Once the env vars above are set, start it with:
-
-```bash
-docker compose -f telemetry_docker_compose.yml up -d
-```
-
-This launches an OTEL Collector (receives native OTLP on :4317), Prometheus (scrapes at :9090), Pushgateway (receives custom harness metrics on :9091), and Grafana (dashboards at :3001). All team members point to the same telemetry server — the `user` label on every metric identifies who pushed it.
-
-If the user does not want Docker, suggest `OTEL_METRICS_EXPORTER=prometheus` (scrape at `http://localhost:9464/metrics`) or `OTEL_METRICS_EXPORTER=console` for local debugging. The Grafana community dashboard is at `grafana.com/grafana/dashboards/24993`.
-
-**What native OTEL covers (do NOT build custom):** tokens · cost · sessions · commits · PRs · LOC · tool accept/reject · active time · per-API-call latency · cost attribution by model/agent/skill.
-
-**What the harness adds on top (custom, via record-run.js + commit trailers):**
-- `Harness-Lane:` / `Harness-Mode:` / `Harness-Iteration:` / `Harness-Group:` commit trailers — segmentation key for lane-level dashboards in Jira/ADO/GitHub. Auto-injected by the `prepare-commit-msg` hook from `.claude/state/current-*` markers.
-- `.claude/runs/*.jsonl` run-receipts — harness-specific fields only: lane, mode, iteration, group, story, contract pass/fail. Lightweight journal, not a telemetry system.
-
-Write `.gitignore`:
-```
-# Environment
-.env
-.env.local
-.env.production
-
-# Dependencies
-node_modules/
-.venv/
-venv/
-
-# Build artifacts
-dist/
-build/
-.next/
-out/
-*.egg-info/
-
-# Python caches
-__pycache__/
-*.pyc
-.mypy_cache/
-.ruff_cache/
-.pytest_cache/
-
-# Test output
-.coverage
-htmlcov/
-playwright-report/
-test-results/
-coverage/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Generated / large files Claude should skip
-*.min.js
-*.min.css
-*.map
-*.lock
-package-lock.json
-
-# Harness state (not source)
-.claude/runs/
-.claude/state/archive/
-.claude/state/lane-router-last.txt
-.claude/state/last-drift-scan.txt
-.claude/tdd-guard/
-.claude/claude-security-guidance.local.md
+cp .claude/templates/gitignore.template .gitignore
 ```
 
 ## Step 9: Initialize State Files
@@ -818,10 +685,10 @@ Tailor the "Next steps" ordering based on the project-type decision:
 Installed:
   agents        → .claude/agents/
   skills        → .claude/skills/
-  hooks         → .claude/hooks/ (one per event + lib/)
-  18 templates  → .claude/templates/ (+ state-seeds/)
+  hooks         → .claude/hooks/ (per-event gates + lib/)
+  templates     → .claude/templates/ (+ state-seeds/)
   workflows/    → .claude/workflows/  (no built-ins; author your own)
-  6 state seeds  → .claude/state/ (from templates/state-seeds/)
+  state seeds   → .claude/state/ (from templates/state-seeds/)
   1 manifest    → .claude/.claude-plugin/plugin.json
 
 Telemetry (OFF by default — opt-in):
@@ -853,10 +720,10 @@ Next steps:
 Installed:
   agents        → .claude/agents/
   skills        → .claude/skills/
-  hooks         → .claude/hooks/ (one per event + lib/)
-  18 templates  → .claude/templates/ (+ state-seeds/)
+  hooks         → .claude/hooks/ (per-event gates + lib/)
+  templates     → .claude/templates/ (+ state-seeds/)
   workflows/    → .claude/workflows/  (no built-ins; author your own)
-  6 state seeds  → .claude/state/ (from templates/state-seeds/)
+  state seeds   → .claude/state/ (from templates/state-seeds/)
   1 manifest    → .claude/.claude-plugin/plugin.json
 
 Telemetry (OFF by default — opt-in):

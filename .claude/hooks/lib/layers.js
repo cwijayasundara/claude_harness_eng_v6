@@ -7,10 +7,14 @@ const path = require('path');
 // Applied to both Python (<pkg>.<layer>) and JS/TS (path segments) imports.
 // The topology is configurable per project via project-manifest.json:
 //   "architecture": { "layers": [low..high], "layer_roots": ["src", "backend/src"] }
-// Defaults preserve the original src/<layer>/ convention.
+// Defaults preserve the original src/<layer>/ convention (a web-app shape).
+// Opt out entirely with "architecture": { "enabled": false } or { "layers": [] }
+// — the right default for libraries, CLIs, data pipelines, and ML projects that
+// don't follow a layered import hierarchy (/scaffold sets this for those shapes).
 const DEFAULT_LAYERS = ['types', 'config', 'repository', 'service', 'api', 'ui'];
 const DEFAULT_ROOTS = ['src'];
 const DEFAULT_CONFIG = { layers: DEFAULT_LAYERS, roots: DEFAULT_ROOTS };
+const DISABLED_CONFIG = { layers: [], roots: [] };
 
 function isStringArray(a) {
   return Array.isArray(a) && a.length > 0 && a.every((s) => typeof s === 'string' && s.length > 0);
@@ -19,7 +23,12 @@ function isStringArray(a) {
 function loadLayerConfig(projectDir) {
   try {
     const manifest = JSON.parse(fs.readFileSync(path.join(projectDir, 'project-manifest.json'), 'utf8'));
-    const arch = manifest.architecture || {};
+    const arch = manifest.architecture;
+    if (!arch) return DEFAULT_CONFIG; // no architecture block → web-app default
+    // Explicit opt-out for non-layered project shapes.
+    if (arch.enabled === false || (Array.isArray(arch.layers) && arch.layers.length === 0)) {
+      return DISABLED_CONFIG;
+    }
     return {
       layers: isStringArray(arch.layers) ? arch.layers : DEFAULT_LAYERS,
       roots: isStringArray(arch.layer_roots) ? arch.layer_roots : DEFAULT_ROOTS,

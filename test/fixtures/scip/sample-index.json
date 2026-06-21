@@ -1,0 +1,60 @@
+{
+  "metadata": {
+    "version": "UnspecifiedProtocolVersion",
+    "toolInfo": { "name": "scip-python", "version": "0.6.0" },
+    "projectRoot": "file:///repo",
+    "textDocumentEncoding": "UTF8"
+  },
+  "documents": [
+    {
+      "language": "python",
+      "relativePath": "src/repository/users.py",
+      "occurrences": [
+        { "range": [4, 6, 14], "symbol": "scip-python python myapp 1.0 src/repository/users/UserRepo#", "symbolRoles": 1 }
+      ],
+      "symbols": [
+        { "symbol": "scip-python python myapp 1.0 src/repository/users/UserRepo#", "displayName": "UserRepo", "kind": 5 }
+      ]
+    },
+    {
+      "language": "python",
+      "relativePath": "src/service/base.py",
+      "occurrences": [
+        { "range": [2, 6, 17], "symbol": "scip-python python myapp 1.0 src/service/base/BaseService#", "symbolRoles": 1 }
+      ],
+      "symbols": [
+        { "symbol": "scip-python python myapp 1.0 src/service/base/BaseService#", "displayName": "BaseService", "kind": 5 }
+      ]
+    },
+    {
+      "language": "python",
+      "relativePath": "src/service/user_service.py",
+      "occurrences": [
+        { "range": [0, 0, 40], "symbol": "scip-python python myapp 1.0 src/repository/users/UserRepo#", "symbolRoles": 2 },
+        { "range": [6, 6, 17], "symbol": "scip-python python myapp 1.0 src/service/user_service/UserService#", "symbolRoles": 1 },
+        { "range": [9, 12, 20], "symbol": "scip-python python myapp 1.0 src/repository/users/UserRepo#", "symbolRoles": 0 }
+      ],
+      "symbols": [
+        {
+          "symbol": "scip-python python myapp 1.0 src/service/user_service/UserService#",
+          "displayName": "UserService",
+          "kind": 5,
+          "relationships": [
+            { "symbol": "scip-python python myapp 1.0 src/service/base/BaseService#", "isImplementation": true }
+          ]
+        }
+      ]
+    },
+    {
+      "language": "python",
+      "relativePath": "src/api/routes.py",
+      "occurrences": [
+        { "range": [0, 0, 45], "symbol": "scip-python python myapp 1.0 src/service/user_service/UserService#", "symbolRoles": 2 },
+        { "range": [3, 8, 19], "symbol": "scip-python python myapp 1.0 src/service/user_service/UserService#", "symbolRoles": 0 },
+        { "range": [1, 0, 18], "symbol": "scip-python python python-stdlib 3.11 typing/List#", "symbolRoles": 2 },
+        { "range": [12, 4, 8], "symbol": "local 7", "symbolRoles": 1 }
+      ],
+      "symbols": []
+    }
+  ]
+}

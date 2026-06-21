@@ -1,0 +1,51 @@
+# Environment
+.env
+.env.local
+.env.production
+
+# Dependencies
+node_modules/
+.venv/
+venv/
+
+# Build artifacts
+dist/
+build/
+.next/
+out/
+*.egg-info/
+
+# Python caches
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Test output
+.coverage
+htmlcov/
+playwright-report/
+test-results/
+coverage/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Generated / large files Claude should skip
+*.min.js
+*.min.css
+*.map
+*.lock
+package-lock.json
+
+# Harness state (not source)
+.claude/runs/
+.claude/state/archive/
+.claude/state/lane-router-last.txt
+.claude/state/last-drift-scan.txt
+.claude/tdd-guard/
+.claude/claude-security-guidance.local.md

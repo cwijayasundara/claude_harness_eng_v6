@@ -16,7 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { checkContentViolations, loadLayerConfig, getLayer } = require(path.join(__dirname, '..', 'hooks', 'lib', 'layers'));
-const { run, output, shouldBlock, unavailable } = require(path.join(__dirname, '..', 'hooks', 'lib', 'toolchain'));
+const { run, output, shouldBlock, skipped } = require(path.join(__dirname, '..', 'hooks', 'lib', 'toolchain'));
 const { findImpureFiles } = require(path.join(__dirname, 'lib', 'refactor-purity'));
 const { validate: validateSchema } = require(path.join(__dirname, '..', 'hooks', 'lib', 'contract-schema'));
 
@@ -27,6 +27,16 @@ function fail(message) {
   process.stdout.write(message);
   process.stderr.write(message);
   process.exit(1);
+}
+
+// A gate that should have run but failed open (missing/unprovisioned toolchain)
+// is announced, not swallowed — otherwise "skipped" is indistinguishable from
+// "passed" and unverified code commits looking green. Advisory only: never exits.
+function noteSkip(gate, reason) {
+  process.stdout.write(
+    `WARNING: GATE SKIPPED — ${gate} did not run (${reason}). Staged code was NOT verified by this gate.\n` +
+      `         Fix: provision the toolchain, or set the matching *_GATE=off to acknowledge the skip.\n`
+  );
 }
 
 function stagedFiles() {
@@ -152,6 +162,8 @@ function checkTypescript(projectDir, stagedTs) {
   const res = run(['npx', '--no-install', 'tsc', '--noEmit'], projectDir, 120000);
   if (shouldBlock(res)) {
     fail(`BLOCKED: type errors in the project:\n${output(res)}\nFix: resolve the type errors above before committing.\n`);
+  } else if (skipped(res)) {
+    noteSkip('TypeScript typecheck (tsc --noEmit)', 'tsc unavailable or unprovisioned');
   }
 }
 
@@ -184,11 +196,10 @@ function checkCoverage(projectDir, stagedPy) {
   if (!fs.existsSync(path.join(projectDir, 'src')) || !fs.existsSync(path.join(projectDir, 'tests'))) return;
 
   const res = run(['uv', 'run', 'pytest', '--cov=src', '--cov-report=term-missing', '-q'], projectDir, 110000);
-  if (!res || res.error || res.status === null) return; // spawn failed / timed out → skip
+  if (skipped(res)) { noteSkip('Python coverage ratchet', 'pytest/uv unavailable, timed out, or unprovisioned'); return; }
   const out = output(res);
-  if (unavailable(out)) return; // unprovisioned toolchain → skip
   const match = out.match(/^TOTAL\s+.*?(\d+(?:\.\d+)?)%/m);
-  if (!match) return; // could not parse coverage → do not block
+  if (!match) { noteSkip('Python coverage ratchet', 'could not parse pytest --cov output'); return; }
   const pct = parseFloat(match[1]);
 
   const baseline = readBaseline(projectDir, 'py');
@@ -245,13 +256,12 @@ function checkCoverageJs(projectDir, stagedJs) {
   } else {
     res = run(['npx', '--no-install', 'jest', '--coverage', '--passWithNoTests', '--silent'], projectDir, 110000);
   }
-  if (!res || res.error || res.status === null) return; // spawn failed / timed out → skip
+  if (skipped(res)) { noteSkip(`JS/TS coverage ratchet (${runner})`, 'runner unavailable, timed out, or unprovisioned'); return; }
   const out = output(res);
-  if (unavailable(out)) return; // unprovisioned toolchain → skip
 
   const re = runner === 'vitest' ? VITEST_TOTAL_RE : JEST_TOTAL_RE;
   const match = out.match(re);
-  if (!match) return; // could not parse coverage → do not block
+  if (!match) { noteSkip(`JS/TS coverage ratchet (${runner})`, 'could not parse coverage table'); return; }
 
   const pct = parseFloat(match[1]);
   const baseline = readBaseline(projectDir, 'js');

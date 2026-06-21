@@ -8,8 +8,9 @@
 // failure documented for coding agents. Machinery changes belong to the human:
 // made in the harness repo (detected via package.json name) or under an
 // explicit HARNESS_PROTECT=off.
-// Limitation: this guards the Write/Edit/MultiEdit path only — file writes
-// via Bash do not pass the pre-write gate.
+// Both write paths are guarded: the pre-write gate covers Write/Edit/MultiEdit,
+// and pre-bash-gate.js re-applies this same machineryViolation check to write
+// targets it extracts from shell commands (redirections, tee, sed -i, cp/mv).
 
 const fs = require('fs');
 const path = require('path');

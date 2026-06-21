@@ -5,11 +5,27 @@ const { spawn } = require('child_process');
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
 
+// Fixtures must live OUTSIDE /tmp: the write-scope rule (isWriteInScope) treats
+// anything under /tmp as in-scope scratch space, so on Linux — where os.tmpdir()
+// IS /tmp — fixtures placed there would be silently in-scope and the scope/env/
+// secret gates would never fire (they pass on macOS only because os.tmpdir() is
+// /var/folders/...). Root fixtures under a dedicated cache dir instead, and clean
+// up per-process on exit (parallel test files each own their own dirs).
+const FIXTURE_BASE = path.join(os.homedir(), '.cache', 'harness-hook-fixtures');
+const createdFixtures = [];
+process.on('exit', () => {
+  for (const d of createdFixtures) {
+    try { fs.rmSync(d, { recursive: true, force: true }); } catch (_) { /* best effort */ }
+  }
+});
+
 // Hooks locate their project dir by walking up from their own location looking
 // for `.claude`, so they must run from a copy inside a temp project — never
 // from the repo, or tests would read/write the repo's real state files.
 function makeHookProject(hookNames) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hook-fixture-'));
+  fs.mkdirSync(FIXTURE_BASE, { recursive: true });
+  const dir = fs.mkdtempSync(path.join(FIXTURE_BASE, 'hook-fixture-'));
+  createdFixtures.push(dir);
   const hooksDir = path.join(dir, '.claude', 'hooks');
   fs.mkdirSync(hooksDir, { recursive: true });
   fs.mkdirSync(path.join(dir, '.claude', 'state'), { recursive: true });

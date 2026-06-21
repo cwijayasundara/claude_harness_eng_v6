@@ -1,6 +1,6 @@
 ---
 name: design
-description: Generate system architecture, machine-readable schemas, and UI mockups. Spawns planner + generator concurrently.
+description: "[Internal pipeline stage — run by /build (use --doc-only standalone for an ARB narrative); invoke directly only as a power user.] Generate system architecture, machine-readable schemas, and UI mockups. Spawns planner + generator concurrently."
 context: fork
 ---
 

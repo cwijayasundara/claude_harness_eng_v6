@@ -1,6 +1,6 @@
 ---
 name: brd
-description: Create a Business Requirements Document — from a Socratic interview, or grounded in a Functional Requirements Document via --frd (with a deterministic net-new/dropped gate). First step in the SDLC pipeline.
+description: "[Internal pipeline stage — run by /build; invoke directly only as a power user.] Create a Business Requirements Document — from a Socratic interview, or grounded in a Functional Requirements Document via --frd (with a deterministic net-new/dropped gate). First step in the SDLC pipeline."
 context: fork
 agent: planner
 ---
@@ -12,10 +12,11 @@ agent: planner
 ```
 /brd                              # interview-from-scratch
 /brd --frd path/to/frd.md         # ground the BRD in a Functional Requirements Document
+/brd --prd path/to/prd.md         # alias for --frd: a PRD is the grounding baseline
 ```
 
 Two modes:
-- **FRD-grounded (recommended for greenfield):** pass `--frd <path>` to a Functional Requirements Document. The FRD becomes the immutable grounding baseline — Claude interrogates it for gaps, then generates a BRD in which **every requirement traces back to an FRD section or to a confirmed clarification.** A deterministic gate (Step 4.4) hard-blocks anything invented or dropped relative to the FRD before you ever see it for approval.
+- **Document-grounded (recommended for greenfield):** pass `--frd <path>` (or its alias `--prd <path>`) to a Functional/Product Requirements Document. `--prd` and `--frd` are treated identically — the document becomes the immutable grounding baseline, extracted into the same requirements spine (`frd-requirements.json`); only the input flag name differs. For the canonical PRD shape this skill grounds best against, see `docs/prd-format.md`. The document becomes the immutable grounding baseline — Claude interrogates it for gaps, then generates a BRD in which **every requirement traces back to a source section or to a confirmed clarification.** A deterministic gate (Step 4.4) hard-blocks anything invented or dropped relative to the source before you ever see it for approval.
 - **Interview-from-scratch:** no argument — an interactive Socratic interview gathers requirements from nothing. Use only when there is no source document.
 
 ---
@@ -167,6 +168,7 @@ After all five dimensions are confirmed, produce a structured BRD with these sec
 11. Edge Cases & Constraints
 12. UI Context
 13. Open Questions
+14. Forbidden Actions — an explicit list of things the implementation must **not** do, derived from the Out-of-Scope items (Dimension 2) and any source "non-goals". This becomes the deny-list the downstream gate (and any autonomous merge) enforces; phrase each as a checkable prohibition (e.g. "must not call external payment APIs", "must not store raw passwords").
 
 ### Step 4 — Write to `specs/brd/`
 
@@ -176,10 +178,12 @@ After all five dimensions are confirmed, produce a structured BRD with these sec
 Also write the **machine-readable requirement spine** to `specs/brd/brd-requirements.json` — one entry per BRD requirement, each with a stable id and a `traces` array citing the FRD section ids and/or `C-n` clarification ids it derives from:
 ```json
 [
-  { "id": "BR-1", "text": "Password reset via emailed link, token valid 1h", "traces": ["FRD-1", "C1"] },
-  { "id": "BR-2", "text": "Paginated order history (20/page)", "traces": ["FRD-2", "C2"] }
+  { "id": "BR-1", "text": "Password reset via emailed link, token valid 1h", "traces": ["FRD-1", "C1"], "acceptance": "Requesting a reset emails a link that logs the user in once within 1h and is rejected after." },
+  { "id": "BR-2", "text": "Paginated order history (20/page)", "traces": ["FRD-2", "C2"], "acceptance": "Order history returns 20 items/page with working next/prev." }
 ]
 ```
+
+Each BR entry carries an `acceptance` postcondition — an observable end-state the evaluator can verify, not a restatement of the requirement. This gives downstream gates (and any autonomous merge) a concrete pass/fail oracle instead of a self-judged "looks done".
 **Every BR entry must carry at least one valid trace.** If you cannot trace a requirement to an FRD section or a clarification, it is invented — either remove it, or (if the human genuinely wants it) capture the human's confirmation as a new `C-n` entry in `clarification-log.json` first, then trace to it. In interview-from-scratch mode (no FRD), trace BR entries to `C-n` clarifications only.
 
 Create the `specs/brd/` directory if it does not exist.

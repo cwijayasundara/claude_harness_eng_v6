@@ -85,16 +85,19 @@
       "rationale": "The harness has install and framework smoke coverage, but it still needs a fresh-user usability script that proves setup from a clean checkout."
     },
     "multi_agent_claims": {
-      "status": "unproven",
+      "status": "partially_proven",
       "evidence": [
         ".claude/agents/planner.md",
         ".claude/agents/generator.md",
-        ".claude/agents/evaluator.md"
+        ".claude/agents/evaluator.md",
+        ".claude/skills/auto/SKILL.md",
+        "test/multi-agent-wiring.test.js"
       ],
       "required_tests": [
-        "test/certification-status.test.js"
+        "test/certification-status.test.js",
+        "test/multi-agent-wiring.test.js"
       ],
-      "rationale": "Agent roles exist, but there is no deterministic test proving delegated multi-agent execution, review handoff, or failure recovery."
+      "rationale": "The delegation CONTRACT is now deterministically proven: agent-teams execution is enabled, the generator declares the Agent tool and mandates one teammate per story with logged spawn evidence, review handoff (no self-evaluation) and GAN separation (evaluator never generates) are declared, and /auto delegates generation and verification to distinct agents. Live delegated execution and failure recovery still require the model-gated e2e, so this remains partially_proven."
     }
   }
 }

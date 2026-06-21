@@ -48,6 +48,17 @@ function shouldBlock(result) {
   return true;
 }
 
+// True when a gate that was attempted neither passed nor blocked — it failed
+// open (tool missing, spawn failed, killed/timed out, or unprovisioned). The
+// caller surfaces this loudly so a silently-ungated file is never mistaken for a
+// clean pass. A clean pass (status 0) is NOT skipped.
+function skipped(result) {
+  if (!result || result.error) return true; // spawn failed
+  if (result.status === null || result.status === 127) return true; // killed / not found
+  if (result.status === 0) return false; // clean pass
+  return unavailable(output(result)); // ran, non-zero, but tool/env missing
+}
+
 // Detect subdirectory (frontend/, backend/) to set correct cwd for config discovery
 function detectCwd(filePath, fallback) {
   const normalized = filePath.replace(/\\/g, '/');
@@ -58,4 +69,4 @@ function detectCwd(filePath, fallback) {
   return fallback;
 }
 
-module.exports = { run, output, shouldBlock, unavailable, detectCwd };
+module.exports = { run, output, shouldBlock, skipped, unavailable, detectCwd };

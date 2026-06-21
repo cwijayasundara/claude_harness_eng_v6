@@ -117,6 +117,11 @@ test('coverage gate fails open when the toolchain is unprovisioned', async () =>
   // PATH with git/sh but no uv/pytest — the gate must skip, not block.
   const result = await runGitHook(projectDir, HOOK, { PATH: '/usr/bin:/bin' });
   assert.strictEqual(result.status, 0, result.stdout + result.stderr);
+  // ...but the skip must be announced, never silent (a silent skip reads as a pass).
+  assert.ok(
+    /GATE SKIPPED.*coverage/i.test(result.stdout + result.stderr),
+    `expected a loud skip notice, got: ${result.stdout + result.stderr}`
+  );
 });
 
 test('respects HARNESS_COVERAGE_GATE=off', async () => {

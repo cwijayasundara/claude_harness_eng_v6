@@ -17,9 +17,29 @@ Full software development lifecycle pipeline. Orchestrates BRD creation, story s
 /build path/to/requirements.md
 /build path/to/requirements.md --mode lean
 /build --lite "Python CLI that summarizes a URL"   # small new project
+/build path/to/requirements.md --autonomous        # plan-approve once, then run to PR
+/build path/to/prd.md --autonomous --plan-only     # produce specs/ for inspection, then stop
+/build path/to/prd.md --autonomous --pod 3         # pod: each cluster raises its own PR
+/build path/to/prd.md --auto --pod 3               # full-auto: PRD -> per-cluster PRs, zero gates
 ```
 
 The `--mode` flag controls which ratchet gates `/auto` enforces. Default: `full`.
+
+## Approval model
+
+Three approval models, selected by `--autonomous` / `--auto`:
+
+- **Gated (default).** Humans approve at Phases 1, 2, and 3 (BRD, stories, design+tests) before the autonomous build runs. The pipeline stops at each and waits for explicit approval. Best for new workflows, public APIs, security/privacy work, or anything ambiguous.
+- **Semi-auto (`--autonomous`) — Devin-style plan-approve-once.** The Phase 1/2/3 stops are **collapsed into a single consolidated Plan Approval gate** (Phase 3.5): the human approves the whole plan — BRD + stories + design + test plan — **once**, and the pipeline then runs Phases 4–11 to an **open PR with no further human stops**.
+- **Full-auto (`--auto`) — PRD straight to PR(s), zero build-time gates.** Exactly the semi-auto lane **minus** the Phase 3.5 plan gate: the human supplies only the PRD and the pipeline runs Phases 0–11 with **no human stops at all**. The human re-appears only as the **merge gate** on the resulting PR(s) — which is the one human touchpoint you keep by design (the `AUTO_MERGE` activation key removes even that, see the autonomous-engineer roadmap). `--auto` implies `--autonomous`'s tail; pair it with `--pod N` for one PR per cluster.
+
+After approval (or immediately, for `--auto`), the only barriers are machine gates that are **independent of the generator** — `/auto`'s ratchet, `/gate` (evaluator + security), and the Phase 9.5 pre-PR verify gate — so the code is never self-approved by the agent that wrote it, and **no PR is ever opened over a red build** regardless of model. Full lane detail: **`.claude/skills/build/references/autonomous-lane.md`**.
+
+This is the in-session human trigger. The tracker-driven equivalent (Jira/Linear + symphony) reuses the same Phases 4–11 tail.
+
+**PRD grounding (required for headless autonomy).** In `--autonomous` and `--auto` mode the input requirements document is treated as a **PRD** and passed to `/brd --prd <path>` — the deterministic grounding path, **not** the interactive Socratic interview. An interview cannot run headless, so these modes never use it; the PRD (see `docs/prd-format.md`) plus any pre-recorded clarifications are the only sanctioned content. If no usable PRD is supplied, stop and say so rather than inventing requirements — this is especially important in `--auto`, where there is no plan gate to catch a hallucinated scope.
+
+**`--plan-only`.** Run the architect phases only — Phases 0–3 (`/brd --prd → /spec → /design → /test --plan-only`) — then **stop before Phase 3.5**, writing all `specs/` artifacts (BRD, stories + dependency graph, design, test plan) for inspection. No approval gate, no code generation, no PR. Use it to validate the plan locally (e.g. eyeball `specs/stories/dependency-graph.md` and its Mermaid cluster graph) before committing to a semi-auto or full-auto run. End by printing an inventory of what was written under `specs/`.
 
 ### `--lite` — compressed greenfield lane
 
@@ -27,7 +47,7 @@ For a **small** new project (single language/runtime, one module, no DB/auth, �
 
 ---
 
-## Pipeline Phases (0–10)
+## Pipeline Phases (0–11)
 
 ### Phase 0 — Brownfield Discovery [EXISTING CODEBASES]
 
@@ -41,7 +61,7 @@ Run `/brd` with the provided requirements document. Outputs are written to `spec
 
 **Stop and wait for explicit human approval before proceeding.** Present a summary of the BRD and ask: "Approve BRD to proceed to Phase 2?"
 
-Do NOT proceed without a clear "yes" or "approved" from the user.
+Do NOT proceed without a clear "yes" or "approved" from the user. *(In `--autonomous` mode, do not stop here — the BRD is approved together with everything else at the consolidated Plan Approval gate, Phase 3.5.)*
 
 ### Phase 2 — Story Specification [HUMAN APPROVAL]
 
@@ -49,7 +69,7 @@ Run `/spec` using the approved BRD. Outputs are written to `specs/stories/` and 
 
 **Stop and wait for explicit human approval before proceeding.** Present the story count, dependency groups, and feature list. Ask: "Approve stories to proceed to Phase 3?"
 
-Do NOT proceed without a clear "yes" or "approved" from the user.
+Do NOT proceed without a clear "yes" or "approved" from the user. *(In `--autonomous` mode, do not stop here — deferred to the consolidated Plan Approval gate, Phase 3.5.)*
 
 If the user already has product stories, `/spec` may normalize those existing stories instead of deriving them from the BRD. The output contract is still the same: `epics.md`, ready story files, `dependency-graph.md`, and root `features.json`. Stories marked `needs_breakdown` must be resolved before Phase 3.
 
@@ -68,7 +88,20 @@ Wait for BOTH to complete before presenting results.
 
 Ask: "Approve design and test plan to proceed to autonomous build?"
 
-Do NOT proceed without a clear "yes" or "approved" from the user.
+Do NOT proceed without a clear "yes" or "approved" from the user. *(In `--autonomous` mode, do not present a design-only gate here — go to Phase 3.5, which presents the whole plan at once.)*
+
+### Phase 3.5 — Consolidated Plan Approval [`--autonomous` ONLY]
+
+**Skipped entirely in `--auto` (full-auto).** In full-auto there is no human gate at all — Phases 1–3 produce the plan and the pipeline proceeds straight to Phase 4. (In `--auto` you may still print the plan summary below for the log, but do **not** stop for approval.)
+
+In `--autonomous` mode this is the **single** human gate. After Phases 1–3 have produced the BRD, stories, design, and test plan **without stopping**, present them together in one summary:
+1. BRD: problem, scope (in/out), **Forbidden Actions**, success metrics.
+2. Stories: count, dependency groups, the Mermaid dependency graph.
+3. Design: tech stack, component count, API surface, data model.
+4. Test plan: case count, story coverage, fixture count.
+5. Deliverable shape detected from `project-manifest.json` (has API? has UI?) and the verification mode — so the human knows which pre-PR checks (Phase 9.5) will run.
+
+Ask once: **"Approve this plan to build autonomously through to an open PR?"** On a clear "yes/approved", proceed through Phases 4–11 with **no further human stops** — the machine gates carry the rest. On anything else, fall back to the gated model (treat the remaining phases as gated). In the default (non-`--autonomous`) model, skip Phase 3.5 entirely; the per-phase gates above already ran.
 
 ### Phase 4 — Initialize State
 
@@ -100,6 +133,8 @@ Skip Phase 4.5 for `local` or `stub` verification modes — those reach the app 
 
 Run `/auto --mode {mode}` to enter the autonomous build loop. The `/auto` skill handles all remaining execution: sprint contracts, agent teams, ratchet gates, self-healing, and session chaining.
 
+**Pod mode (`--pod N`).** Pass `--pod N` through to `/auto` to run the **multi-engineer pod**: each independent cluster (dependency group) is built by its own engineer-orchestrator, verified per-cluster (the Phase 9.5 ladder, scoped to the cluster), and raised as **its own draft PR** — "few PRs, one per independent cluster." Dependent clusters wait for predecessor PRs to merge (human in semi-auto, the `AUTO_MERGE` key in full-auto). In pod mode the per-cluster PRs ARE the deliverable, so Phase 9.5 and Phase 11 below run **inside** `/auto` per cluster rather than once over the whole app — see `.claude/skills/auto/SKILL.md` Section 4B → *Pod mode*. Without `--pod`, the pipeline produces a single integrated PR (Phases 9.5 + 11 below).
+
 **Parallel agent teams:** the full SDLC pipeline runs each dependency group through `/auto`, which parallelizes on two axes:
 - **Within-group:** one teammate per story for any group with **≥ 2 stories** — see `.claude/agents/generator.md` Rule 2.
 - **Cross-group:** up to 3 independent dependency groups run concurrently as group-orchestrator subagents (configurable via `--parallel-groups N`; opt out with `--sequential`) — see Section 4B of `.claude/skills/auto/SKILL.md`.
@@ -113,6 +148,17 @@ After `/auto` completes (all groups done or stopping criteria met), run `/test -
 The generator generates one Playwright spec per story (`e2e/{story-id}.spec.ts`), copies the Playwright config template, installs Playwright, and runs the full E2E suite. All tests must pass.
 
 If E2E tests fail, fix them before proceeding. The tests are the specification — if a test fails because the implementation is wrong, fix the implementation, not the test.
+
+### Phase 9.5 — Pre-PR Verification & Defect Repair
+
+The final acceptance run on the **integrated** build, against a **locally deployed** app — the Devin-style "deploy, test, fix defects" gate that must pass before any PR. It is **shape-aware**: read `project-manifest.json` to detect whether the deliverable has an API, a UI, or both, then run only the relevant checks **in this order**:
+
+1. **Deploy locally.** Bring the whole app up the way it actually runs — honor `verification.mode`: `docker` → `bash init.sh` (compose up + health checks); `local` → the manifest's start command (e.g. `npm start`); `stub` → the in-process harness. Confirm health before testing.
+2. **API tests (if the deliverable exposes an API).** Run the API/integration suite against the running app, asserting the `api-contracts` (status codes, schemas, auth). API tests run **first** — a broken API makes UI failures noise.
+3. **Playwright E2E (if the deliverable has a UI).** Only after the API is green, run the Phase 9 Playwright suite against the deployed UI.
+4. **Defect-repair loop (bounded).** On any failure, capture the concrete diagnostics (failing assertion, response body, browser console errors, service logs), fix the **implementation** (not the test), redeploy, and re-run from step 2. Cap at a small number of attempts; if still failing, stop and surface the diagnostics rather than raising a PR. The evaluator agent is the oracle — the generator never declares this green itself.
+
+Only when the applicable suites are all green does the pipeline proceed. Full loop detail: `.claude/skills/build/references/autonomous-lane.md`.
 
 ### Phase 10 — Generate README.md
 
@@ -213,6 +259,16 @@ cd frontend && npm test
 
 Commit the README: `git add README.md && git commit -m "docs: add README with architecture, setup, and API reference"`
 
+### Phase 11 — Raise PR [gated on all-green]
+
+The pipeline's terminal step. **Only reachable when Phase 9.5 passed** (applicable API + E2E suites green) and `/gate` (evaluator + security) is clean — never raise a PR over a failing or unverified build.
+
+1. Run `/gate` if it has not already run on the final integrated state; abort the PR on any block-level finding.
+2. Push the build branch and open the PR with `gh pr create`, body summarizing: stories delivered, the Phase 9.5 proof (which suites ran + results), `/gate` verdict, and any Forbidden-Actions checks. Link the source requirement/PRD.
+3. **Do not merge.** Raising the PR is the autonomous boundary; merge is a separate decision (a human, or the symphony `AUTO_MERGE` activation key — see the autonomous-engineer roadmap).
+
+In the **gated** model, offer to raise the PR rather than doing it unprompted. In **`--autonomous`** mode, raise it automatically once green — that is the point of the run. **In `--pod` mode this phase is superseded:** the per-cluster PRs were already raised by the engineer-orchestrators inside `/auto` (Section 4B → Pod mode), so there is no single integrated PR to open here — instead, confirm every cluster's PR is open and green and report the set. Detail: `.claude/skills/build/references/autonomous-lane.md`.
+
 ---
 
 ## Mode Reference
@@ -226,7 +282,8 @@ Commit the README: `git add README.md && git commit -m "docs: add README with ar
 
 ## Gotchas
 
-- **Proceeding without approval:** Phases 1-3 each require explicit human approval. Silence is not consent. If the user has not clearly approved, ask again.
+- **Proceeding without approval:** in the default gated model, Phases 1-3 each require explicit human approval — silence is not consent; if the user has not clearly approved, ask again. In `--autonomous` mode there is exactly **one** gate (Phase 3.5) — never invent extra stops after it, and never skip it. In `--auto` mode there are **zero** human gates before the PR(s); the machine gates carry all the weight, so never weaken them to "make it run".
+- **Raising a PR over a red build:** Phase 11 is reachable only when Phase 9.5 and `/gate` are green. Never open a PR on a failing or unverified build, even in `--autonomous` mode.
 - **Skipping the design phase:** Phase 3 produces `component-map.md` and `api-contracts.md` which are required by `/auto` for sprint contracts and file ownership. Skipping design breaks the entire downstream pipeline.
 - **Not initializing state files:** Phase 4 must create all three state files before `/auto` runs. Missing state files cause context recovery failures in session chaining.
 - **Wrong mode passthrough:** Read the `--mode` flag from the user's invocation and pass it to `/auto` exactly. Do not default silently if the user specified a mode.

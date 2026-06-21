@@ -62,7 +62,10 @@ test('certification matrix is conservative about proof claims', () => {
   assert.strictEqual(status.capabilities.real_workflow_e2e.status, 'partially_proven');
   assert.strictEqual(status.capabilities.phase_evaluation.status, 'proven');
   assert.strictEqual(status.capabilities.end_user_usability.status, 'partially_proven');
-  assert.strictEqual(status.capabilities.multi_agent_claims.status, 'unproven');
+  // The delegation contract is deterministically proven (test/multi-agent-wiring.test.js);
+  // live delegated execution still requires the model-gated e2e → partially_proven.
+  assert.strictEqual(status.capabilities.multi_agent_claims.status, 'partially_proven');
+  assert.match(status.capabilities.multi_agent_claims.rationale, /contract|wiring|deterministically proven/i);
   assert.match(status.capabilities.real_workflow_e2e.rationale, /live E2E/i);
 });
 
@@ -77,5 +80,5 @@ test('certification report command summarizes the matrix', () => {
 
   assert.match(output, /Certification Status/);
   assert.match(output, /greenfield_scaffold\s+proven/);
-  assert.match(output, /multi_agent_claims\s+unproven/);
+  assert.match(output, /multi_agent_claims\s+partially_proven/);
 });

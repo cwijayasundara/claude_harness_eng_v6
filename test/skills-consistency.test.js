@@ -26,7 +26,7 @@ function allDocFiles() {
 
 // A reference-only skill that exists solely to say "use the other name instead"
 // is the clearest complexity smell — its content belongs in references/, not in
-// the skill surface. (docs/SIMPLIFICATION_PROPOSAL.md §3.3)
+// the skill surface. (docs/internal/SIMPLIFICATION_PROPOSAL.md §3.3)
 test('no SKILL.md is a reference-only tombstone', () => {
   const offenders = [];
   for (const skill of listSkills()) {
@@ -73,6 +73,26 @@ test('no doc references a removed skill directory', () => {
     }
   }
   assert.deepStrictEqual(offenders, [], offenders.join('\n'));
+});
+
+// Pipeline-step skills are run by an entry point (/build, /auto, /brownfield,
+// /scaffold), not typed by users. Their description must mark them internal so
+// the model surfaces only the ~9 entry points — keeps the advertised surface
+// from silently re-expanding. (docs/internal/SIMPLIFICATION_PROPOSAL.md §3.1)
+test('internal pipeline-stage skills are marked internal in their description', () => {
+  const internal = [
+    'brd', 'spec', 'design', 'test', 'implement', 'evaluate',
+    'deploy', 'code-map', 'seam-finder', 'clarify', 'install-framework-packs',
+  ];
+  const present = new Set(listSkills());
+  const unmarked = [];
+  for (const name of internal) {
+    if (!present.has(name)) continue; // skill may be renamed/removed later
+    const text = fs.readFileSync(path.join(SKILLS_DIR, name, 'SKILL.md'), 'utf8');
+    const desc = (text.match(/^description:\s*(.*)$/m) || [])[1] || '';
+    if (!/Internal pipeline stage/i.test(desc)) unmarked.push(name);
+  }
+  assert.deepStrictEqual(unmarked, [], `internal skills missing the marker: ${unmarked.join(', ')}`);
 });
 
 function listAgents() {

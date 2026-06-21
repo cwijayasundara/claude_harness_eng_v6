@@ -22,6 +22,19 @@ One lane for changing what existing code *does*: adding to or altering observabl
 
 Both modes are **test-first**: no production code changes until a test that captures the desired behavior (or reproduces the bug) has been written and observed failing.
 
+## Step 0 — Lane check (auto-route)
+
+`/change` is the safe default entry for "modify existing code" — you don't have to pre-pick the lane. Before any change work, classify the request and route it. Estimate scope from the request (and `specs/brownfield/risk-map.md` + `change-strategy.md` if present): files touched, lines, and whether observable behavior actually changes.
+
+| If the request is… | Route to | Why |
+|---|---|---|
+| **No observable behavior change** — pure rename / move / extract / dedupe; tests would be unchanged | **stop → `/refactor`** | Behavior-change ceremony (new story, red-first test) is wrong for structure-only work |
+| **Tiny and low-risk** — ≤3 files, <150 lines, and no auth/authz/payments/persistence/public-API change | **recommend `/vibe`** | Lighter micro-contract. Proceed here only if the user wants full ceremony |
+| **Too large for one bounded change** — needs more than ~2–3 stories, spans many modules, or introduces a new subsystem | **stop → `/build`** (brownfield-aware) | `/build` plans BRD→spec→design and runs `/auto`; `/change` is one story or issue, not a multi-story build |
+| **A single behavior change to existing code** | **continue with this skill** | The intended lane |
+
+State the chosen lane in one line. When you redirect (`/refactor` or `/build`), say why and stop — do not silently switch lanes. For the `/vibe` case, note it as the lighter option, then proceed if the user invoked `/change` deliberately.
+
 > **CR-driven brownfield tests:** when the change is described by a change-request document or a GitHub issue, run `/test --from-cr <file.md>` (or `--from-cr --issue N`) first. It produces a regression-pin set (existing behavior to hold) plus a CR-grounded delta test plan (new behavior to prove), so the test-first step below has its oracle and its targets ready.
 
 > **/goal tip (optional unattended iteration):** On Claude Code v2.1.139+ you can let `/goal` drive this single bounded session toward a verifiable condition — e.g. `/goal pytest exits 0 and lint is clean, or stop after N turns` (issue mode: `/goal the failing repro test now passes and lint is clean, or stop after N turns`). Always include the "or stop after N turns" safety clause, and phrase conditions so each turn must produce *fresh* evidence (re-run the tests, show the exit code) to avoid false-positive completion. `/goal`'s evaluator (Haiku) only judges what is in the transcript — it does **not** run tools or read files — so the proof (test output, exit codes) must be printed in the conversation, not routed through subagents. That makes `/goal` suitable for this small lane only. Do **not** use `/goal` inside `/auto`: it is single-session and would conflict with session chaining, the GAN evaluator, and sprint contracts. `/goal` does not replace the evaluator/sprint-contract gate.

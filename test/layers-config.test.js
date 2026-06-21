@@ -43,6 +43,31 @@ test('malformed architecture values fall back to defaults', () => {
   assert.deepStrictEqual(cfg.roots, ['src']);
 });
 
+test('architecture.enabled=false opts a non-layered project out of the gate', () => {
+  const dir = projectWithManifest({ architecture: { enabled: false } });
+  const cfg = loadLayerConfig(dir);
+  assert.deepStrictEqual(cfg.layers, []);
+  // No file maps to a layer, so no upward-import violation can ever fire.
+  assert.strictEqual(getLayer('src/api/routes.py', cfg), null);
+  assert.deepStrictEqual(
+    checkContentViolations('src/api/routes.py', 'from src.service import x\n', cfg),
+    []
+  );
+});
+
+test('architecture.layers=[] also disables the gate (explicit opt-out)', () => {
+  const dir = projectWithManifest({ architecture: { layers: [] } });
+  const cfg = loadLayerConfig(dir);
+  assert.deepStrictEqual(cfg.layers, []);
+  assert.strictEqual(getLayer('src/ui/App.tsx', cfg), null);
+});
+
+test('absent architecture block still defaults to the web 6-layer (backward compatible)', () => {
+  const dir = projectWithManifest({ name: 'lib', stack: {} });
+  const cfg = loadLayerConfig(dir);
+  assert.deepStrictEqual(cfg.layers, DEFAULT_LAYERS);
+});
+
 test('getLayer honors custom roots and layer names', () => {
   const cfg = { layers: ['domain', 'application', 'handlers'], roots: ['app'] };
   assert.strictEqual(getLayer('app/handlers/http.js', cfg), 'handlers');

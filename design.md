@@ -140,8 +140,8 @@ Neither runtime changes how `/auto` runs inside the workspace. The only differen
 | Slash command (true) | 1 | `.claude/commands/scaffold.md` | Bootloader only |
 | Skills (virtual commands) | 26 | `.claude/skills/<name>/SKILL.md` | All other workflows |
 | Specialized agents | 8 | `.claude/agents/<name>.md` | Subagents with tool allowlists + model tier |
-| Lifecycle hooks | 5 | `.claude/hooks/*.js` | PreToolUse, PostToolUse, UserPromptSubmit, Stop, SubagentStop |
-| Templates | 18 | `.claude/templates/*` | Sprint contract, story, init.sh, tracker config, state seeds, etc. |
+| Lifecycle hooks | 7 | `.claude/hooks/*.js` | SessionStart, PreToolUse (Write/Edit + Bash), PostToolUse, UserPromptSubmit, Stop, SubagentStop |
+| Templates | — | `.claude/templates/*` | Sprint contract, story, init.sh, .gitignore, tracker config, state seeds, etc. (count omitted — it rots on every template add) |
 | State files | 12 tracked in this repo; 6 scaffold seeds | `.claude/state/`, `.claude/templates/state-seeds/` | Runtime snapshot + initial scaffold continuity files |
 | Utility scripts | 14 | `.claude/scripts/*.js`, `.claude/scripts/*.sh` | Model tiering, telemetry, validation, archive, certification, upstream watch |
 | GitHub automation | 2 workflows | `.github/workflows/`, `.github/upstream/` | CI and upstream Claude Code drift watch |
@@ -200,7 +200,9 @@ One consolidated hook per event — each spawns once and dispatches its checks i
 
 | Event matcher | Hook | Purpose |
 |---|---|---|
+| `SessionStart` | `check-git-hooks.js` | Advisory: warns once when a git repo is missing the harness commit-time gates (e.g. `git init` without re-scaffolding). Never blocks; exempts the harness repo and foreign pre-commit hooks |
 | `PreToolUse Write|Edit|MultiEdit` | `pre-write-gate.js` | Blocks BEFORE disk, first failure wins: scope → `.env` protection → secret scan on inserted content only → `security-patterns.{json,yaml}` `block: true` rules (`HARNESS_PATTERN_BLOCK=off`) → 300-line file cap → 30-line function cap → TDD test-first (`HARNESS_TDD_GATE=off`) |
+| `PreToolUse Bash` | `pre-bash-gate.js` | Closes the shell write-bypass: extracts write targets from the command (redirections, `tee`, `sed -i`, `dd`, `cp`/`mv`) and re-applies project scope, the machinery trust-boundary, and `.env` protection so a shell write can't disable a gate (`HARNESS_PROTECT=off`) |
 | `PostToolUse Edit|Write|MultiEdit` | `verify-on-save.js` | Queue file in `pending-reviews.jsonl` (silent), then one-way layer imports check, ruff/mypy or eslint on the saved file — report-only, never `--fix` |
 | `UserPromptSubmit · Stop · SubagentStop` | `record-run.js` | Telemetry journal — off the per-edit hot path |
 | `Stop` | `review-on-stop.js` | Force reviewer agents before turn ends; session-learnings advisories when clean |
@@ -209,7 +211,7 @@ Commit-time gates are real **git hooks** (installed by `/scaffold` Step 8) — t
 
 | Git hook | Purpose |
 |---|---|
-| `pre-commit` | Staged-file layer scan → sprint-contract `VERDICT: PASS` check → project-wide `tsc --noEmit` (TS) → pytest coverage ratchet vs baseline / 80% floor (Python; `HARNESS_COVERAGE_GATE=off` bypass). Skips when no source files are staged |
+| `pre-commit` | Staged-file layer scan → sprint-contract `VERDICT: PASS` check → project-wide `tsc --noEmit` (TS) → pytest coverage ratchet vs baseline / 80% floor (Python; `HARNESS_COVERAGE_GATE=off` bypass). Skips when no source files are staged. A gate that fails open (toolchain unprovisioned/timed out) prints a loud `WARNING: GATE SKIPPED` so a silent skip is never mistaken for a pass |
 | `prepare-commit-msg` | Harness-Lane/Mode/Iteration/Group commit trailers |
 
 A hook crash never blocks work, but is never silent either: failures are appended to `.claude/state/hook-errors.log`.
