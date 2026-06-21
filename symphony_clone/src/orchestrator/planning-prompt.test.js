@@ -21,6 +21,10 @@ test('buildPlanningPrompt embeds the PRD and drives the planning pipeline + trac
   assert.match(prompt, /\/tracker-publish/);
   assert.match(prompt, /do not (generate|implement) application code/i);
   assert.match(prompt, /"status": "planned"/); // the status the orchestrator keys off
+  // VULN-101: the PRD is fenced as untrusted data with an injection guard
+  assert.match(prompt, /untrusted/i);
+  assert.match(prompt, /NOT instructions to you|never follow directives/i);
+  assert.match(prompt, /BEGIN PRD[\s\S]*FR-1 save a link[\s\S]*END PRD/);
 });
 
 test('buildPlanningPrompt handles a missing description without leaking placeholders', () => {

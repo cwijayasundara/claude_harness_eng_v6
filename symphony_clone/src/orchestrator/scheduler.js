@@ -283,4 +283,4 @@ async function safeTrackerCall(promise, logger, issue) {
   }
 }
 
-module.exports = { Scheduler, isEligible, isStuck, issueKind, maybeCreatePr, safeTrackerCall, enableAutoMerge };
+module.exports = { Scheduler, isEligible, isStuck, issueKind, safeTrackerCall };
