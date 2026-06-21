@@ -25,8 +25,8 @@ test('autonomous mode grounds on the PRD non-interactively (no headless intervie
 });
 
 test('the plan smoke runs scaffold + build --plan-only and summarizes specs/', () => {
-  const smoke = read('automated_e2e_test/plan-smoke.test.js');
-  assert.match(smoke, /require\(['"]\.\.\/test\/e2e\/helpers\/claude-runner['"]\)/);
+  const smoke = read('test/e2e/harness-plan-only.test.js');
+  assert.match(smoke, /require\(['"]\.\/helpers\/claude-runner['"]\)/);
   assert.match(smoke, /runClaude\('\/scaffold'/);
   assert.match(smoke, /runClaude\('\/build --autonomous --plan-only/);
   assert.match(smoke, /summarizeSpecs\(/);
@@ -36,7 +36,7 @@ test('the plan smoke runs scaffold + build --plan-only and summarizes specs/', (
 });
 
 test('the sample PRD follows the canonical PRD format', () => {
-  const prd = read('automated_e2e_test/fixtures/sample-prd.md');
+  const prd = read('test/e2e/fixtures/sample-prd.md');
   assert.match(prd, /# PRD:/);
   assert.match(prd, /\bFR-1\b/);
   assert.match(prd, /\bNFR-1\b/);
@@ -45,7 +45,7 @@ test('the sample PRD follows the canonical PRD format', () => {
 });
 
 test('the specs-summary helper exposes summarize + format', () => {
-  const h = read('automated_e2e_test/helpers/specs-summary.js');
+  const h = read('test/e2e/helpers/specs-summary.js');
   assert.match(h, /function summarizeSpecs/);
   assert.match(h, /function formatSummary/);
 });

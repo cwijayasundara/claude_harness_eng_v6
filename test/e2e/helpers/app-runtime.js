@@ -69,7 +69,7 @@ async function assertInBrowser(baseUrl, steps, { screenshotPath } = {}) {
   try {
     ({ chromium } = require('playwright'));
   } catch (_) {
-    throw new Error('playwright not installed — run `npm run install:browser` in automated_e2e_test/');
+    throw new Error('playwright not installed — run `npm install && npm run install:browser` from the repo root');
   }
   const consoleErrors = [];
   const browser = await chromium.launch({ headless: true });

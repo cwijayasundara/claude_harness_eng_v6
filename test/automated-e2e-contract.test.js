@@ -1,7 +1,7 @@
 'use strict';
 
-// Static contract for the automated_e2e_test self-healing smoke. Like
-// real-workflow-e2e-contract.test.js, this runs in the main (cheap) suite and
+// Static contract for the self-healing smoke (test/e2e/harness-selfheal-smoke.test.js).
+// Like real-workflow-e2e-contract.test.js, this runs in the main (cheap) suite and
 // asserts the live smoke wires the full lifecycle — scaffold, build, browser
 // verify, modify-existing-code, regression, and a bounded fix loop — without
 // paying for an actual live `claude -p` run.
@@ -12,15 +12,15 @@ const path = require('path');
 const { test } = require('node:test');
 
 const ROOT = path.join(__dirname, '..');
-const SMOKE = path.join(ROOT, 'automated_e2e_test', 'smoke.test.js');
-const RUNTIME = path.join(ROOT, 'automated_e2e_test', 'helpers', 'app-runtime.js');
+const SMOKE = path.join(ROOT, 'test', 'e2e', 'harness-selfheal-smoke.test.js');
+const RUNTIME = path.join(ROOT, 'test', 'e2e', 'helpers', 'app-runtime.js');
 
 function read(p) { return fs.readFileSync(p, 'utf8'); }
 
 test('smoke harness exists and reuses the shared claude-runner (no reinvented runner)', () => {
-  assert.ok(fs.existsSync(SMOKE), 'automated_e2e_test/smoke.test.js must exist');
+  assert.ok(fs.existsSync(SMOKE), 'test/e2e/harness-selfheal-smoke.test.js must exist');
   const smoke = read(SMOKE);
-  assert.match(smoke, /require\(['"]\.\.\/test\/e2e\/helpers\/claude-runner['"]\)/);
+  assert.match(smoke, /require\(['"]\.\/helpers\/claude-runner['"]\)/);
   assert.match(smoke, /runClaude\(/);
 });
 
