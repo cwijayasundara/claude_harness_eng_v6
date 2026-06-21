@@ -36,7 +36,11 @@ function resolveProjectDir(scriptDir) {
 }
 
 function readHookInput() {
-  return JSON.parse(fs.readFileSync('/dev/stdin', 'utf8'));
+  // Read fd 0 directly, not the '/dev/stdin' path: re-opening stdin by path
+  // fails with ENXIO on Linux when stdin is a spawned pipe (which is how Claude
+  // Code — and the tests — feed hook events), making every gate fail open. fd 0
+  // reads the already-open descriptor and works for pipes on all platforms.
+  return JSON.parse(fs.readFileSync(0, 'utf8'));
 }
 
 function isSkippedPath(filePath) {
