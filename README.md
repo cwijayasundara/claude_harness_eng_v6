@@ -213,6 +213,12 @@ The harness invokes [superpowers](https://github.com/obra/superpowers) skills at
 
 Hooks enforce these in real time; ratchet gates enforce them at commit time.
 
+### Auto-continue on long runs (opt-in)
+
+The `auto-continue-on-stop.js` Stop hook replaces manually typing **"continue"** when the orchestrator ends a turn while the build still has verifiable unfinished work. It is **off by default** — set `CLAUDE_AUTO_CONTINUE=1` in `.claude/settings.json`'s `env` block before a long `/auto` run (and unset it for ordinary interactive sessions).
+
+When enabled, it nudges the loop onward **only** while harness state proves work remains (an incomplete `current_group`/`groups_remaining` in `claude-progress.txt`, or a still-failing `features.json` feature) **and** the build is making progress. The bound is on *stalled* progress, not total turns: while the passing-feature count keeps rising it continues indefinitely, but once that count stalls for 5 consecutive turns it **fails open loudly** (writes a `STUCK` warning + a `hook-errors.log` entry) and lets the session stop so a human can step in — a stuck build is surfaced, never spun forever. It defers to the review gate while a review cycle is open, and honors an explicit `next_action: DONE …` as a clean stop.
+
 ---
 
 ## Key files in your scaffolded project
