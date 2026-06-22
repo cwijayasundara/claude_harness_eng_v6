@@ -43,11 +43,11 @@ async function runChain(deps) {
     if (S.stallExceeded(noProgress, maxNoProgress)) return done(S.STATES.STUCK, `no feature progress for ${noProgress} links`, links);
 
     log(`chain: BUILD #${links + 1}`);
-    runBuildLink(spawnLink);
+    const linkOk = runBuildLink(spawnLink);
     links += 1;
 
     const after = loadState();
-    if (after.featuresPassing > lastPassing) { lastPassing = after.featuresPassing; noProgress = 0; }
+    if (linkOk && after.featuresPassing > lastPassing) { lastPassing = after.featuresPassing; noProgress = 0; }
     else { noProgress += 1; }
   }
 
@@ -64,7 +64,7 @@ function promptFor(kind, prd, opts = {}) {
   return `/auto --once${opts.sequential ? ' --sequential' : ''}`; // BUILD
 }
 
-function realSpawnLink(cwd) {
+function realSpawnLink(cwd, prd) {
   const model = process.env.BUILD_CHAIN_MODEL || 'sonnet';
   const timeout = parseInt(process.env.BUILD_CHAIN_LINK_TIMEOUT_MS || '1800000', 10); // 30 min < wall
   const pluginDir = process.env.HARNESS_PLUGIN_DIR || null;
@@ -72,7 +72,7 @@ function realSpawnLink(cwd) {
     const args = ['-p', '--model', model];
     if (pluginDir) args.push('--plugin-dir', pluginDir);
     const r = spawnSync('claude', args, {
-      input: promptFor(kind, process.env.BUILD_CHAIN_PRD, opts),
+      input: promptFor(kind, prd, opts),
       cwd, encoding: 'utf8', timeout, killSignal: 'SIGKILL',
       stdio: ['pipe', 'inherit', 'inherit'],
     });
@@ -95,8 +95,7 @@ if (require.main === module) {
     process.exit(2);
   }
   const cwd = process.cwd();
-  process.env.BUILD_CHAIN_PRD = prd;
-  runChain({ spawnLink: realSpawnLink(cwd), loadState: realLoadState(cwd), log: (m) => process.stdout.write(`${m}\n`) })
+  runChain({ spawnLink: realSpawnLink(cwd, prd), loadState: realLoadState(cwd), log: (m) => process.stdout.write(`${m}\n`) })
     .then((res) => {
       process.stdout.write(`chain finished: ${res.state} — ${res.reason} (${res.links} build links)\n`);
       process.exit(res.state === S.STATES.DONE ? 0 : 1);

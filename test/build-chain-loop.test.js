@@ -93,3 +93,24 @@ test('a failed BUILD link retries once sequential before counting no-progress', 
   assert.deepStrictEqual(opts, [false, true]); // wave attempt, then sequential retry
   assert.strictEqual(res.state, STATES.DONE);
 });
+
+test('a BUILD link whose wave and sequential retry both fail counts as no-progress -> STUCK', async () => {
+  const res = await runChain({
+    spawnLink: (kind) => ({ ok: kind !== 'BUILD' }), // PLAN ok, every BUILD attempt fails
+    loadState: scripted([block(['A'], 0, false)]),    // never advances, never completes
+    maxNoProgress: 2,
+    log: () => {},
+  });
+  assert.strictEqual(res.state, STATES.STUCK);
+  assert.match(res.reason, /progress/i);
+});
+
+test('a failed FINALIZE link is terminal STUCK', async () => {
+  const res = await runChain({
+    spawnLink: (kind) => ({ ok: kind !== 'FINALIZE' }), // PLAN+BUILD ok, FINALIZE fails
+    loadState: scripted([block([], 4, true)]),          // already complete -> straight to finalize
+    log: () => {},
+  });
+  assert.strictEqual(res.state, STATES.STUCK);
+  assert.match(res.reason, /finalize/i);
+});
