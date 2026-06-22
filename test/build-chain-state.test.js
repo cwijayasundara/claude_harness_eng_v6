@@ -42,6 +42,14 @@ test('parseLastBlock on empty/garbage text reports not found', () => {
   assert.strictEqual(b.featuresPassing, 0);
 });
 
+test('parseLastBlock on a session header with no body fields returns empty/zero values', () => {
+  const b = S.parseLastBlock('=== Session 2 ===\nrandom noise line');
+  assert.strictEqual(b.found, true);             // header present
+  assert.deepStrictEqual(b.groupsRemaining, []);
+  assert.strictEqual(b.featuresPassing, 0);
+  assert.strictEqual(b.nextAction, '');
+});
+
 test('isBuildComplete is true on DONE next_action', () => {
   assert.strictEqual(S.isBuildComplete(S.parseLastBlock(BLOCK_DONE)), true);
 });
@@ -60,6 +68,12 @@ test('nextPhase transitions', () => {
   assert.strictEqual(S.nextPhase(S.STATES.BUILD, S.parseLastBlock(BLOCK_MID)), S.STATES.BUILD);
   assert.strictEqual(S.nextPhase(S.STATES.BUILD, S.parseLastBlock(BLOCK_DONE)), S.STATES.FINALIZE);
   assert.strictEqual(S.nextPhase(S.STATES.FINALIZE, S.parseLastBlock(BLOCK_DONE)), S.STATES.DONE);
+});
+
+test('nextPhase treats STUCK and DONE as terminal (idempotent)', () => {
+  const b = S.parseLastBlock(BLOCK_MID);
+  assert.strictEqual(S.nextPhase(S.STATES.STUCK, b), S.STATES.STUCK);
+  assert.strictEqual(S.nextPhase(S.STATES.DONE, b), S.STATES.DONE);
 });
 
 test('stallExceeded and budgetExceeded are inclusive thresholds', () => {

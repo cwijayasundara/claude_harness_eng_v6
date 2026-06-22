@@ -53,6 +53,8 @@ function nextPhase(currentPhase, block) {
   if (currentPhase === STATES.PLAN) return STATES.BUILD;
   if (currentPhase === STATES.BUILD) return isBuildComplete(block) ? STATES.FINALIZE : STATES.BUILD;
   if (currentPhase === STATES.FINALIZE) return STATES.DONE;
+  if (currentPhase === STATES.STUCK) return STATES.STUCK; // terminal — never auto-advances
+  if (currentPhase === STATES.DONE) return STATES.DONE;   // terminal
   return STATES.DONE;
 }
 
