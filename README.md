@@ -74,7 +74,36 @@ Steer it mid-run by editing `.claude/program.md`. Quality gates are enforced by 
 ## When it finishes
 
 - Proof lands in `specs/reviews/`, `iteration-log.md`, `features.json`, plus the commits
-- Review diffs in git as usual — the harness never merges on its own
+- Review diffs in git as usual — locally the harness never merges on its own
+
+---
+
+## Operating modes
+
+Two independent choices decide how a build runs. Full flag detail lives in `.claude/skills/build/SKILL.md` — this is the summary.
+
+**How much human approval?**
+
+| Lane | Command | Human gates |
+|---|---|---|
+| Gated (default) | `/build <prd>` | Approve BRD, stories, design+tests — then it builds to a PR |
+| Semi-auto | `/build <prd> --autonomous` | One plan-approval gate, then runs to an open PR |
+| Full-auto | `/build <prd> --auto` | None — PRD straight to PR |
+
+In every lane the **machine gates still run** (ratchet, security, pre-PR verify) — the agent never grades its own work and no PR opens over a red build. `--auto` requires a PRD (`docs/prd-format.md`); it cannot interview headless.
+
+**One PR or many?** Default is a single integrated PR; add `--pod N` for **one PR per independent story cluster** (dependent clusters wait for theirs to merge).
+
+`--mode full|lean` is orthogonal to both: each runs every gate; `lean` only skips the design-critic vision loop.
+
+## Tracker-driven builds (symphony)
+
+For fully autonomous delivery from a backlog, run **`symphony_clone/`** — a standalone orchestrator, deployed separately from any Claude Code session, that turns a **Linear, Jira, or Azure DevOps** board into the control plane:
+
+- Drop a PRD as an issue labelled `agent-plan` → it plans (`/brd → /spec → /design → /test`), publishes one `agent-ready` issue per cluster, then builds each cluster into its own PR.
+- `AUTO_MERGE=true` merges each PR once required checks pass — PRD in, merged code out, no human in the loop. Leave it off (default) to stop at Human Review.
+
+Setup, the three trackers, and the end-to-end test recipe live in **`symphony_clone/README.md`**.
 
 ---
 
@@ -93,9 +122,9 @@ These are the **entry points you actually type** — one per situation:
 | `/refactor` | Behavior-preserving cleanup with ratchet gate; `--sweep` scans the repo for pattern drift |
 | `/gate` | On-demand pre-merge quality gate (evaluator + security review) |
 | `/status` | Read-only SDLC pipeline progress — one-shot snapshot, live `watch`, or step `timeline`; `--json` for scripting. Runs as a plain script too (`npm run status`), so you can watch a running `/auto` from a second terminal |
-| `/tracker-publish` | Publish dependency groups to Linear/Jira (optional) |
+| `/tracker-publish` | Publish dependency groups to a tracker (Linear/Jira/Azure DevOps); the symphony lane uses it |
 
-Execution modes for `/auto`: **Full** (all gates, the default) and **Lean** (same as Full but skips the design-critic vision loop). Both run the security gate and the evaluator. For small or quick work use `/build --lite` or `/vibe` rather than a weaker `/auto` mode.
+Approval lanes, `--pod`, and `--mode full|lean` are covered in **Operating modes** above. For small or quick work prefer `/build --lite` or `/vibe` over `/auto`.
 
 ### Internal pipeline stages
 
@@ -207,7 +236,6 @@ Hooks enforce these in real time; ratchet gates enforce them at commit time.
 | Power-up | What it adds | Docs |
 |---|---|---|
 | Telemetry dashboards | Grafana/Prometheus team metrics, cost tracking, PromQL reference | [docs/telemetry.md](docs/telemetry.md) |
-| Tracker agent factory | Linear/Jira queue + parallel orchestrator | [docs/extras.md](docs/extras.md) |
 | Framework skill packs | LangChain / Google ADK aware codegen | [docs/extras.md](docs/extras.md) |
 | Understand-Anything | AST-backed graphs for brownfield work | [docs/extras.md](docs/extras.md) |
 | Dynamic workflows | Author your own multi-agent orchestration | [docs/extras.md](docs/extras.md) |
