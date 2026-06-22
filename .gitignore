@@ -18,7 +18,14 @@ symphony_clone/.symphony/
 symphony_clone/workspaces/
 symphony_clone/logs/
 *.jsonl
-.claude/state/
+# .claude/state/ is a tracked harness snapshot (learned rules, failures, iteration
+# log, coverage baseline). Only runtime churn stays out: telemetry-ledger.jsonl and
+# the live pending-reviews.jsonl are already covered by *.jsonl above; also exclude
+# logs, log offsets, transient counters, and archived state.
+.claude/state/archive/
+.claude/state/*.log
+.claude/state/*.offset
+.claude/state/review-block-count
 !.claude/templates/state-seeds/pending-reviews.jsonl
 test/e2e/results/*
 !test/e2e/results/.gitkeep
