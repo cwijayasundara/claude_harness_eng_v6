@@ -30,6 +30,7 @@ async function assertMetricExists(query) {
 function isPrometheusUp() {
   return new Promise((resolve) => {
     http.get(PROMETHEUS_URL + '/-/healthy', (res) => {
+      res.resume(); // drain the body so the socket is released, not left holding the event loop open
       resolve(res.statusCode === 200);
     }).on('error', () => resolve(false));
   });
