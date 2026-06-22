@@ -72,7 +72,7 @@ function loadConfig(env = process.env, options = {}) {
   maybeLoadDotEnv(env, options);
   const workspaceRoot = env.WORKSPACE_ROOT || '/workspaces';
   const config = {
-    provider: env.TRACKER_PROVIDER || 'linear',
+    provider: normalizeProvider(env.TRACKER_PROVIDER),
     repoUrl: env.TARGET_REPO_URL || '',
     workspaceRoot,
     workspaceRetention: resolveRetention(env),
@@ -88,10 +88,18 @@ function loadConfig(env = process.env, options = {}) {
     autoMerge: buildAutoMerge(env),
     tracker: buildTracker(env),
     linear: buildLinear(env),
-    jira: buildJira(env)
+    jira: buildJira(env),
+    azure: buildAzure(env)
   };
   validateConfig(config);
   return config;
+}
+
+// Accept friendly aliases for Azure DevOps so TRACKER_PROVIDER is forgiving.
+function normalizeProvider(raw) {
+  const provider = (raw || 'linear').trim().toLowerCase();
+  if (['ado', 'azuredevops', 'azure-devops', 'azure_devops'].includes(provider)) return 'azure';
+  return provider;
 }
 
 function maybeLoadDotEnv(env, options) {
@@ -167,10 +175,21 @@ function buildLinear(env) {
 
 function buildJira(env) {
   return {
-    baseUrl: env.JIRA_BASE_URL || '',
+    baseUrl: (env.JIRA_BASE_URL || '').replace(/\/+$/, ''),
     email: env.JIRA_EMAIL || '',
     apiToken: env.JIRA_API_TOKEN || '',
     projectKey: env.JIRA_PROJECT_KEY || ''
+  };
+}
+
+function buildAzure(env) {
+  const orgUrl = (env.AZURE_DEVOPS_ORG_URL || '').replace(/\/+$/, '');
+  const project = env.AZURE_DEVOPS_PROJECT || '';
+  return {
+    orgUrl,
+    project,
+    pat: env.AZURE_DEVOPS_PAT || '',
+    baseUrl: orgUrl && project ? `${orgUrl}/${encodeURIComponent(project)}` : ''
   };
 }
 
@@ -218,6 +237,10 @@ function validateConfig(config) {
     if (!config.jira.email) throw new Error('JIRA_EMAIL is required for Jira');
     if (!config.jira.apiToken) throw new Error('JIRA_API_TOKEN is required for Jira');
     if (!config.jira.projectKey) throw new Error('JIRA_PROJECT_KEY is required for Jira');
+  } else if (config.provider === 'azure') {
+    if (!config.azure.orgUrl) throw new Error('AZURE_DEVOPS_ORG_URL is required for Azure DevOps');
+    if (!config.azure.project) throw new Error('AZURE_DEVOPS_PROJECT is required for Azure DevOps');
+    if (!config.azure.pat) throw new Error('AZURE_DEVOPS_PAT is required for Azure DevOps');
   } else {
     throw new Error(`Unsupported TRACKER_PROVIDER: ${config.provider}`);
   }

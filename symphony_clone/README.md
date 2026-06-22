@@ -2,7 +2,7 @@
 
 `symphony_clone` is a standalone Symphony-style orchestrator for Claude Harness story groups.
 
-It runs outside Claude Code. Its job is to monitor Linear, claim an eligible dependency group, create an isolated Git workspace, and launch Claude Code non-interactively inside that workspace.
+It runs outside Claude Code. Its job is to monitor a tracker (Linear, Jira, or Azure DevOps Boards), claim an eligible dependency group, create an isolated Git workspace, and launch Claude Code non-interactively inside that workspace.
 
 ```text
 Linear issue (Todo + label)
@@ -33,6 +33,30 @@ Linear issue (Todo + label)
 - Retries failed runs with exponential backoff before moving work to the blocked state.
 
 By default it does not mark tracker work `Done` — human review and merge remain explicit. Set `AUTO_MERGE=true` for the fully autonomous path: a run that reaches `human_review` (harness gates already passed) enables GitHub native auto-merge on its PR — GitHub merges only once required checks pass, so a red build never lands — and advances the issue to `DONE_STATE`. See `.env.example`.
+
+## Tracker providers
+
+Select the provider with `TRACKER_PROVIDER` (`linear` | `jira` | `azure`; aliases `ado`,
+`azure-devops` map to `azure`). All three implement the same adapter contract, so the
+orchestration loop, eligibility, and PR flow are identical — only the API transport and
+the way "state" and "labels" map to native concepts differ:
+
+| Concept | Linear | Jira Cloud | Azure DevOps Boards |
+|---|---|---|---|
+| Auth | API key (`LINEAR_API_KEY`) | email + API token, HTTP Basic | Personal Access Token, HTTP Basic |
+| Pipeline state (`READY_STATE`, …) | workflow state | status (workflow transition) | work-item `System.State` |
+| Label (`READY_LABEL`, `PLAN_LABEL`) | issue label | issue label | work-item tag |
+| Blockers | `blocked_by` relations | "Blocks" issue links | Predecessor (Dependency) links |
+| Required env | `LINEAR_API_KEY`, `LINEAR_PROJECT_SLUG` | `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_PROJECT_KEY` | `AZURE_DEVOPS_ORG_URL`, `AZURE_DEVOPS_PROJECT`, `AZURE_DEVOPS_PAT` |
+
+The configured state names (`READY_STATE`, `RUNNING_STATE`, `REVIEW_STATE`, `BLOCKED_STATE`,
+`PLANNED_STATE`, `DONE_STATE`) and labels must exist in your board. For Jira, `READY_STATE`/etc.
+must be reachable workflow **transitions**; for Azure DevOps they must be valid states for the
+work-item type. The fallback-candidate lists (e.g. `BLOCKED_STATE_CANDIDATES`) let one `.env`
+cover boards with slightly different state names. See `.env.example` for the full per-provider block.
+
+All three authenticate with a long-lived token (no interactive OAuth), so the daemon runs
+headless. Tokens stay in `.env`/runtime secrets — never in Git.
 
 ## Prerequisites
 
@@ -379,6 +403,40 @@ Verify:
 npm test        # unit tests (scheduler, prompt-builder, state-store, tracker, runner, etc.)
 npm run check   # node --check on every JS file
 ```
+
+## Testing end-to-end
+
+Validate the orchestrator in three escalating layers (cheapest first). The recipe is the
+same for every provider — only the board and credentials change.
+
+**1. Unit (no network, no Claude).** `npm test`. Each tracker adapter takes an injectable
+`fetchImpl`, so the adapter logic (issue normalization, state transitions, blocker
+resolution) is asserted against mocked API responses — see `src/tracker/*.test.js`.
+
+**2. Dry control-plane loop (real tracker, stub Claude).** Point `.env` at a real project
+and replace the agent with a stub so you exercise polling → claim → state machine → PR
+plumbing without spending a real build:
+
+```bash
+# stub-claude.sh — pretend a group built successfully
+mkdir -p .claude/state/tracker-runs/A
+printf '{"group":"A","status":"human_review","summary":"stub","branch":"agent/test","commit":"HEAD"}' \
+  > .claude/state/tracker-runs/A/result.json
+```
+
+Set `CLAUDE_COMMAND=bash /path/to/stub-claude.sh` and `CREATE_PR=false`, create a test
+issue in `READY_STATE` with the `agent-ready` label, then run `node src/index.js`. Watch
+it move the issue In Progress → comment → Human Review. This proves eligibility, the state
+machine, retries, and reclaim logic per provider.
+
+**3. Full live (real tracker, real Claude — full auto).** Use the real `CLAUDE_COMMAND`,
+set `AUTO_MERGE=true`, and create a **PRD** issue in `READY_STATE` labelled `agent-plan`.
+The planning lane runs `/brd → /spec → /design → /test → /tracker-publish`, publishes one
+`agent-ready` issue per cluster, and the execution lane builds each cluster into its own
+PR, which GitHub auto-merges once checks pass. This is the end-to-end Flow 1.
+
+For Linear specifically, `node scripts/diagnose-linear.js` prints live state/label counts,
+which is the fastest way to confirm your `.env` states and labels match the board.
 
 ## Security Notes
 

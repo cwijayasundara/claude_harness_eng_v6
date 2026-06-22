@@ -3,6 +3,7 @@
 const { loadConfig } = require('./config');
 const { LinearTracker } = require('./tracker/linear');
 const { JiraTracker } = require('./tracker/jira');
+const { AzureDevOpsTracker } = require('./tracker/azure');
 const { WorkspaceManager } = require('./orchestrator/workspace-manager');
 const { ClaudeRunner } = require('./orchestrator/claude-runner');
 const { Scheduler } = require('./orchestrator/scheduler');
@@ -31,6 +32,7 @@ async function main() {
 function createTracker(config) {
   if (config.provider === 'linear') return new LinearTracker(config);
   if (config.provider === 'jira') return new JiraTracker(config);
+  if (config.provider === 'azure') return new AzureDevOpsTracker(config);
   throw new Error(`Unsupported provider: ${config.provider}`);
 }
 

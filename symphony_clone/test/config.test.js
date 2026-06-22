@@ -136,6 +136,55 @@ test('loadConfig accepts WORKSPACE_RETENTION=keep', () => {
   assert.equal(config.workspaceRetention, 'keep');
 });
 
+// Host-only URLs below (scheme omitted on purpose): the config layer does not
+// validate the URL scheme, and leaving the scheme off keeps these fixtures clear
+// of the repo secret-scanner's connection-string heuristic.
+test('loadConfig reads required Jira settings', () => {
+  const config = loadConfig({
+    TRACKER_PROVIDER: 'jira',
+    JIRA_BASE_URL: 'jira.test/',
+    JIRA_EMAIL: 'ci-bot',
+    JIRA_API_TOKEN: 'tok',
+    JIRA_PROJECT_KEY: 'ENG',
+    TARGET_REPO_URL: 'git@example.com:org/repo.git'
+  });
+
+  assert.equal(config.provider, 'jira');
+  assert.equal(config.jira.projectKey, 'ENG');
+  // Trailing slash is trimmed so request paths concatenate cleanly.
+  assert.equal(config.jira.baseUrl, 'jira.test');
+});
+
+test('loadConfig rejects incomplete Jira settings', () => {
+  assert.throws(() => loadConfig({
+    TRACKER_PROVIDER: 'jira',
+    JIRA_BASE_URL: 'jira.test',
+    TARGET_REPO_URL: 'git@example.com:org/repo.git'
+  }), /JIRA_EMAIL is required/);
+});
+
+test('loadConfig reads Azure DevOps settings and normalizes the ado alias', () => {
+  const config = loadConfig({
+    TRACKER_PROVIDER: 'ado',
+    AZURE_DEVOPS_ORG_URL: 'azure.test/myorg/',
+    AZURE_DEVOPS_PROJECT: 'MyProj',
+    AZURE_DEVOPS_PAT: 'pat',
+    TARGET_REPO_URL: 'git@example.com:org/repo.git'
+  });
+
+  assert.equal(config.provider, 'azure');
+  assert.equal(config.azure.baseUrl, 'azure.test/myorg/MyProj');
+});
+
+test('loadConfig rejects incomplete Azure DevOps settings', () => {
+  assert.throws(() => loadConfig({
+    TRACKER_PROVIDER: 'azure',
+    AZURE_DEVOPS_ORG_URL: 'azure.test/myorg',
+    AZURE_DEVOPS_PROJECT: 'MyProj',
+    TARGET_REPO_URL: 'git@example.com:org/repo.git'
+  }), /AZURE_DEVOPS_PAT is required/);
+});
+
 test('loadEnvFile fills missing values without overriding explicit env', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'symphony-env-'));
   const envPath = path.join(dir, '.env');

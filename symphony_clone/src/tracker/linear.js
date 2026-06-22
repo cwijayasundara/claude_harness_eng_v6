@@ -1,5 +1,7 @@
 'use strict';
 
+const { normalize, unique } = require('./http');
+
 class LinearTracker {
   constructor(config, fetchImpl = globalThis.fetch) {
     this.config = config;
@@ -147,14 +149,6 @@ function normalizeLinearIssue(issue) {
         state: relation.relatedIssue && relation.relatedIssue.state && relation.relatedIssue.state.name
       }))
   };
-}
-
-function normalize(value) {
-  return String(value || '').trim().toLowerCase();
-}
-
-function unique(values) {
-  return [...new Set(values.filter(Boolean))];
 }
 
 module.exports = { LinearTracker, normalizeLinearIssue, normalize, unique };
