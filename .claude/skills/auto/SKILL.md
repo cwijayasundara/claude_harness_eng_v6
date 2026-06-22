@@ -24,6 +24,7 @@ Autonomous build loop implementing Karpathy's ratcheting pattern with GAN-style 
 /auto --group D
 /auto --parallel-groups 3
 /auto --sequential
+/auto --once
 /auto --pod 3
 ```
 
@@ -31,6 +32,7 @@ Autonomous build loop implementing Karpathy's ratcheting pattern with GAN-style 
 - `--group` resumes or targets a specific dependency group. If omitted, picks the next unfinished group from the dependency graph.
 - `--parallel-groups N` enables cross-group parallelism: up to N independent dependency groups run concurrently as separate group-orchestrator subagents. Default: `3`. Set `1` (or pass `--sequential`) to force one-group-at-a-time behavior.
 - `--sequential` shorthand for `--parallel-groups 1`. Use when you need deterministic group ordering for debugging.
+- `--once` — **single-wave mode** for cross-process chaining: run exactly **one** wave (the next ready group, or up to `--parallel-groups N` ready groups), take it through all ratchet gates, commit, append the session block to `claude-progress.txt`, then **exit cleanly without looping to the next wave**. The driver (`.claude/scripts/build-chain.js`) re-spawns a fresh `claude -p` for the next wave. Use `--once --sequential` to shrink a link to a single group when a full wave is too large to finish under the per-link timeout.
 - `--pod N` — **pod mode**: cross-group parallelism (implies `--parallel-groups N`, default `3`) where each cluster (dependency group) is an "engineer" that raises its **own draft PR** instead of rolling its branch up to the trunk. Each independent cluster in a wave is verified per-cluster (the Phase 9.5 deploy→API→E2E→fix ladder, scoped to that cluster) and opens one PR. Dependent clusters wait for their predecessor PRs to merge, then the next wave rebases on the updated base. See Section 4B → *Pod mode*. This is the multi-engineer pod surfaced by `/build --autonomous --pod N`.
 
 ### Prerequisites
@@ -710,6 +712,20 @@ next_action: Run evaluator against group D
 - **Session number increments monotonically.** Parse the last session number and add 1.
 - **`next_action` is critical.** This field tells a fresh context window exactly what to do first. Be specific: "Run evaluator against group D" is good. "Continue" is not.
 - **Include `blocked_stories`** if any stories failed 3 consecutive self-heal attempts. Format: `[E4-S3 (import error), E5-S1 (docker fail)]`.
+
+### SECTION 10.1: Single-wave mode (`--once`) — cross-process handoff
+
+When invoked with `--once`, `/auto` performs **one** pass of the loop and then stops, instead of iterating until all features pass:
+
+1. Run Context Recovery (SECTION 2) and select the current wave exactly as normal.
+2. Execute that one wave through Sprint Contract negotiation, agent-team build, all 8 ratchet gates, and pass/fail handling (SECTIONS 3–6) — unchanged.
+3. On a clean wave, **commit** and **append the session block** (SECTION 10 format) — this is the durable checkpoint.
+4. Set `next_action` precisely so a fresh process can continue with zero ambiguity:
+   - If `features.json` now has every feature passing (or no groups remain): `next_action: DONE — all groups complete` and `groups_remaining: []`.
+   - Otherwise: `next_action: CONTINUE — next wave: [<group ids>]` with an accurate `groups_remaining: [...]`.
+5. **Exit the turn** — do not loop back to SECTION 2.
+
+This is the voluntary-yield boundary the chain driver relies on: because the process exits cleanly *after* the commit and checkpoint, a per-link timeout/SIGKILL can never land mid-write. Do **not** rely on the `auto-continue-on-stop` hook here — `--once` is driven across processes, not nudged within one; the driver owns re-spawning.
 
 ---
 
