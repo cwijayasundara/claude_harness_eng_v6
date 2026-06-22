@@ -92,6 +92,7 @@ These are the **entry points you actually type** — one per situation:
 | `/change` | Behavior change on existing code (test-first); `--issue N` for a GitHub bug fix |
 | `/refactor` | Behavior-preserving cleanup with ratchet gate; `--sweep` scans the repo for pattern drift |
 | `/gate` | On-demand pre-merge quality gate (evaluator + security review) |
+| `/status` | Read-only SDLC pipeline progress — one-shot snapshot, live `watch`, or step `timeline`; `--json` for scripting. Runs as a plain script too (`npm run status`), so you can watch a running `/auto` from a second terminal |
 | `/tracker-publish` | Publish dependency groups to Linear/Jira (optional) |
 
 Execution modes for `/auto`: **Full** (all gates, the default) and **Lean** (same as Full but skips the design-critic vision loop). Both run the security gate and the evaluator. For small or quick work use `/build --lite` or `/vibe` rather than a weaker `/auto` mode.

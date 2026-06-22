@@ -7,7 +7,8 @@ const { spawn } = require('child_process');
 const REPO_ROOT = path.join(__dirname, '..', '..');
 
 // record-run.js requires telemetry-memory, which in turn requires
-// telemetry-skill-helpers, telemetry-phase-eval, and telemetry-ledger-rotate —
+// telemetry-skill-helpers, telemetry-phase-eval, telemetry-ledger-rotate, and
+// telemetry-pipeline-gauges (→ pipeline-snapshot → pipeline-state-readers) —
 // all must be present in the temp project or the hook child crashes with
 // MODULE_NOT_FOUND.
 const HOOK_DEP_SCRIPTS = [
@@ -16,6 +17,9 @@ const HOOK_DEP_SCRIPTS = [
   'telemetry-skill-helpers.js',
   'telemetry-phase-eval.js',
   'telemetry-ledger-rotate.js',
+  'telemetry-pipeline-gauges.js',
+  'pipeline-snapshot.js',
+  'pipeline-state-readers.js',
 ];
 
 const STATE_FILES = {

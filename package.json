@@ -5,15 +5,16 @@
   "description": "Claude Code plugin scaffold for autonomous long-running application development.",
   "scripts": {
     "certification": "node .claude/scripts/certification-report.js",
+    "status": "node .claude/scripts/pipeline-status.js",
     "test": "node --test test/*.test.js test/e2e/helpers/*.test.js",
-    "test:e2e": "node --test test/e2e/*.test.js",
-    "test:smoke": "node --test --test-timeout=1200000 test/e2e/harness-selfheal-smoke.test.js",
-    "test:plan": "node --test --test-timeout=1200000 test/e2e/harness-plan-only.test.js",
-    "test:auto": "node --test --test-timeout=2700000 test/e2e/harness-auto-run.test.js",
-    "test:semi": "node --test --test-timeout=2700000 test/e2e/harness-semi-auto-run.test.js",
+    "test:e2e": "node --test --test-force-exit test/e2e/*.test.js",
+    "test:smoke": "node --test --test-force-exit --test-timeout=1200000 test/e2e/harness-selfheal-smoke.test.js",
+    "test:plan": "node --test --test-force-exit --test-timeout=1200000 test/e2e/harness-plan-only.test.js",
+    "test:auto": "node --test --test-force-exit --test-timeout=2700000 test/e2e/harness-auto-run.test.js",
+    "test:semi": "node --test --test-force-exit --test-timeout=2700000 test/e2e/harness-semi-auto-run.test.js",
     "install:browser": "playwright install chromium",
     "test:evals": "node test/evals/run-evals.js",
-    "test:all": "node --test test/*.test.js test/e2e/*.test.js",
+    "test:all": "node --test --test-force-exit test/*.test.js test/e2e/*.test.js",
     "test:symphony": "cd symphony_clone && npm ci --silent && npm test"
   },
   "devDependencies": {

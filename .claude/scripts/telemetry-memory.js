@@ -11,6 +11,7 @@ const { readSkillCatalog, collectSkillInventory, inferRecordSkills, addSkillUsag
 const { processPhaseEval } = require('./telemetry-phase-eval');
 
 const { rotateLedgerIfNeeded } = require('./telemetry-ledger-rotate');
+const { pipelineGaugeLines } = require('./telemetry-pipeline-gauges');
 
 const MEMORY_JOB = 'claude_harness_memory';
 const LEDGER_FILE = 'telemetry-ledger.jsonl';
@@ -262,7 +263,12 @@ function pushSnapshot({ projectDir, stateDir, gatewayUrl }) {
     if (!target) return resolve({ pushed: false, body: '', disabled: true });
 
     seedLedgerFromRuns(projectDir, stateDir);
-    const body = buildSnapshot(readLedger(stateDir), readSkillCatalog(projectDir));
+    // Append pipeline-progress gauges (features/coverage) so every push — including
+    // the live record-run hook pushes — keeps them current. They share the same
+    // job/instance group, so they must travel in the same body (a POST replaces
+    // the whole group). Empty for a fresh project, preserving empty-push behaviour.
+    const body = buildSnapshot(readLedger(stateDir), readSkillCatalog(projectDir))
+      + pipelineGaugeLines(projectDir);
     if (body.trim() === '') return resolve({ pushed: false, body });
 
     sendMetrics(resolve, target, projectDir, body);

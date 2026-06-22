@@ -114,9 +114,18 @@ describe('Harness E2E Pipeline — Build + Observability', { timeout: 900000 }, 
     assert.ok(scoreCheck.exists, 'harness_phase_eval_score must exist in Prometheus after push in Stage 3b');
     console.log(`[e2e] harness_phase_eval_score: FOUND (${scoreCheck.resultCount})`);
 
+    // The build's OWN receipts must reach the dashboard too. The record-run hook
+    // pushes them live during Stage 4 now that claude-runner sets
+    // HARNESS_PUSHGATEWAY_URL — every prompt/turn produces this metric, so its
+    // presence proves real e2e build activity lands in Prometheus, not just the
+    // synthetic phase_eval push. (Part B of the pipeline-progress proposal.)
+    const turns = await pollMetric('harness_conversation_turns_total', 5000, 60000);
+    assert.ok(turns.exists, 'harness_conversation_turns_total from the e2e build must reach Prometheus');
+    console.log(`[e2e] harness_conversation_turns_total: FOUND (${turns.resultCount})`);
+
     // Remaining harness_* metrics are informational.
     const infoMetrics = [
-      'harness_conversation_turns_total', 'harness_agent_runs_total',
+      'harness_agent_runs_total',
       'harness_phase_eval_iterations_total', 'claude_code_session_count_total',
     ];
     for (const m of infoMetrics) {
@@ -134,7 +143,7 @@ describe('Harness E2E Pipeline — Build + Observability', { timeout: 900000 }, 
       console.log('[e2e] claude_code_* advisory query failed (non-fatal):', err.message);
     }
 
-    logResult('stage-5-prometheus', { up: true, scoreExists: scoreCheck.exists });
+    logResult('stage-5-prometheus', { up: true, scoreExists: scoreCheck.exists, turnsExist: turns.exists });
   });
 
   // ── Stage 6: Grafana dashboard ──────────────────────────────────────────

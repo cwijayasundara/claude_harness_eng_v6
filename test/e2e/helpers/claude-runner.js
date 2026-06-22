@@ -39,6 +39,12 @@ function buildClaudeEnv() {
     OTEL_EXPORTER_OTLP_PROTOCOL: 'grpc',
     OTEL_EXPORTER_OTLP_ENDPOINT: 'http://localhost:4317',
     OTEL_METRIC_EXPORT_INTERVAL: '10000',
+    // Push harness_* receipts live via the record-run hook, same path as
+    // production. When the pushgateway is down the hook's push fails silently,
+    // so this is safe to set unconditionally. Lets the build+observability e2e
+    // prove real build activity reaches the dashboard (Part B of the
+    // pipeline-progress proposal).
+    HARNESS_PUSHGATEWAY_URL: process.env.HARNESS_PUSHGATEWAY_URL || 'http://localhost:9091',
   };
 }
 
