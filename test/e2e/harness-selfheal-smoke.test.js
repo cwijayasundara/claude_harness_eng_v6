@@ -22,6 +22,7 @@ const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
 const { execFileSync } = require('child_process');
+const { randomUUID } = require('node:crypto');
 const { test } = require('node:test');
 
 const { runClaude } = require('./helpers/claude-runner');
@@ -30,7 +31,11 @@ const { startApp, stopApp, assertInBrowser, DEFAULT_PORT } = require('./helpers/
 const PROJECT_DIR = path.join(__dirname, 'smoke-output');
 const SHOTS_DIR = path.join(__dirname, 'screenshots');
 const HARNESS_PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
-const SESSION_ID = 'aaaa0003-0000-4000-8000-000000000003'; // claude --session-id requires a valid UUID
+// Fresh id per run. `claude --session-id` (scaffold's create path) aborts with
+// "Session ID … is already in use" if the id ever repeats, so a hardcoded
+// constant fails every run after the first. build/change still chain off this
+// same id via --resume within the run.
+const SESSION_ID = randomUUID();
 const MAX_FIX_ATTEMPTS = 3;
 
 function logResult(label, data) {
@@ -97,6 +102,13 @@ function scaffoldAndBuild() {
 
   const scaffold = runClaude('/scaffold', { ...claudeOpts(), continueSession: false, budgetUsd: '2.00', timeoutMs: 300000 });
   logResult('scaffold', { exitCode: scaffold.exitCode });
+  // Headless /scaffold asks its mandatory Q1 and ends the turn — a success
+  // (exit 0). A non-zero exit almost always means the --session-id create path
+  // collided with an existing session; assert so that regression can't hide.
+  assert.strictEqual(
+    scaffold.exitCode, 0,
+    `/scaffold must exit 0 (non-zero usually means a --session-id collision): ${(scaffold.stderr || '').slice(0, 300)}`,
+  );
 
   const buildGoal =
     'a minimal counter web app in Node.js with NO external runtime deps: an HTTP server in server.js ' +
