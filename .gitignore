@@ -42,3 +42,6 @@ matrices.pptx
 # Runtime output: review/eval agents (clean-code, security, diff) write reports + verdict
 # JSON here each run; the pre-commit gate reads them. Regenerated every time, never shipped.
 **/specs/reviews/
+# Superpowers SDD execution scratch (task briefs/reports, progress, review diffs)
+# generated while implementing a plan. The durable design lives in docs/superpowers/.
+.superpowers/
