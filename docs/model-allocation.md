@@ -20,31 +20,31 @@ The harness runs a **GAN**: the generator produces, the evaluator judges. Cost f
 
 ## The cost lever: generation, not the top tier
 
-With **Opus 4.8** as the single top-capability model, the only knob that moves a build's bill materially is **whether generation runs on Sonnet 4.6 or Opus 4.8**. Generation is ~60% of output tokens, and Opus is ~1.7× Sonnet on output — so bumping the generator from Sonnet to Opus roughly doubles the dominant bucket. Judgment roles (planner, evaluator, critics, security) are low-volume, so keeping them on Opus 4.8 costs little regardless of tier.
+Judgment roles (planner, evaluator, critics, security) are low-volume, so they stay on **Opus 4.8** regardless of tier. The knob that moves a build's bill is the **generator** — ~60% of output tokens — which steps **Sonnet 4.6 → Opus 4.7 → Opus 4.8** across the three tiers. The shipped default (`balanced`) runs generation on **Opus 4.7**: stronger first-shot code than Sonnet, a step below the top tier on cost.
 
-> Bump generation to Opus only when first-shot code quality has high enough downstream leverage to justify ~2× on the largest bucket; otherwise the detailed contracts + the ratchet gates make Sonnet generation the right default.
+> Drop generation to Sonnet (`cost`) when the detailed contracts + ratchet gates make first-shot quality cheap to recover; bump it to Opus 4.8 (`max-quality`) only when first-shot quality has enough downstream leverage to justify the top rate on the largest bucket.
 
 ## The presets (`execution.model_tier`)
 
 | Role | `cost` (A) | **`balanced` (B, default)** | `max-quality` |
 |---|---|---|---|
 | planner | Opus 4.8 | **Opus 4.8** | Opus 4.8 |
-| generator | Sonnet 4.6 | **Sonnet 4.6** | Opus 4.8 |
+| generator | Sonnet 4.6 | **Opus 4.7** | Opus 4.8 |
 | evaluator | Opus 4.8 | **Opus 4.8** | Opus 4.8 |
 | design-critic | Opus 4.8 | **Opus 4.8** | Opus 4.8 |
 | security-reviewer | Opus 4.8 | **Opus 4.8** | Opus 4.8 |
 | codebase-explorer | Sonnet 4.6 | **Sonnet 4.6** | Sonnet 4.6 |
 | *session / orchestrator* | Opus 4.8 | Opus 4.8 | Opus 4.8 |
 
-Pins are written as **exact model IDs** in the agent frontmatter — `claude-opus-4-8`, `claude-sonnet-4-6` — not bare aliases, so they are version-pinned and unambiguous.
+Pins are written as **exact model IDs** in the agent frontmatter — `claude-opus-4-8`, `claude-opus-4-7`, `claude-sonnet-4-6` — not bare aliases, so they are version-pinned and unambiguous.
 
-- **`cost` (Profile A):** Sonnet generation, Opus judgment. Lowest bill.
-- **`balanced` (Profile B, shipped default):** identical pins to `cost` today (top tier is a single model, so there is no middle posture to occupy). It is retained as a distinct posture name so a project can re-tune it independently of `cost` without a code change.
-- **`max-quality`:** generation bumped to Opus 4.8 (the one expensive move); codebase-explorer stays Sonnet. For the highest-stakes builds where first-shot code quality is worth ~2× on the volume bucket.
+- **`cost` (Profile A):** Sonnet 4.6 generation, Opus 4.8 judgment. Lowest bill.
+- **`balanced` (Profile B, shipped default):** Opus 4.7 generation, Opus 4.8 judgment. Stronger first-shot code than Sonnet at a step below the top-tier rate — the middle posture.
+- **`max-quality`:** generation bumped to Opus 4.8; codebase-explorer stays Sonnet. For the highest-stakes builds where first-shot code quality has the most downstream leverage.
 
-Rough relative build cost (illustrative, generation ≈ 60% of output tokens): `cost` ≈ 1.0× · `balanced` ≈ 1.0× · `max-quality` ≈ 1.6×. The generator choice dominates the bill — keeping it on Sonnet is what keeps `cost`/`balanced` affordable.
+Rough relative build cost (illustrative, generation ≈ 60% of output tokens): `cost` ≈ 1.0× · `balanced` ≈ 1.4× · `max-quality` ≈ 1.6×. The generator choice dominates the bill.
 
-> **Note (Fable 5 removed, 2026-06):** Earlier revisions of this harness reserved a premium **Fable 5** tier for the planner and the `max-quality` judgment roles. Anthropic has disabled Fable 5, so the top-capability tier is now solely **Opus 4.8**. The consequence is that `cost` and `balanced` resolve to identical pins; the three posture *names* are kept for forward compatibility and per-project re-tuning.
+> **Note (Fable 5 removed, 2026-06):** Earlier revisions of this harness reserved a premium **Fable 5** tier for the planner and the `max-quality` judgment roles. Anthropic has disabled Fable 5, so judgment runs on **Opus 4.8** in every tier; the generator is the only role that varies (Sonnet 4.6 → Opus 4.7 → Opus 4.8).
 
 ## Operating it
 

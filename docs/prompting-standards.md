@@ -8,7 +8,8 @@ How to write the harness's prompt surfaces (`.claude/agents/*.md`, `.claude/skil
 |---|---|---|
 | `/auto` orchestrator, direct chat | **Opus 4.8** (session model) | Top-capability tier. Long-horizon autonomy; needs grounded-progress + don't-stop-early + reversible-action guidance. Do **not** ask it to echo its reasoning as response text (see §7). |
 | `planner`, `evaluator`, `design-critic`, `security-reviewer` | **Opus 4.8** (top-capability) | Literal instruction follower; report-everything-then-filter for judging; effort matters. |
-| `generator`, `codebase-explorer` | **Sonnet 4.6** (cost-efficient) | Set effort explicitly; precise, observable acceptance criteria. |
+| `generator` | **Opus 4.7** (default tier; Sonnet 4.6 on `cost`, Opus 4.8 on `max-quality`) | Set effort explicitly; precise, observable acceptance criteria. |
+| `codebase-explorer` | **Sonnet 4.6** (cost-efficient, read-only) | Set effort explicitly; precise, observable acceptance criteria. |
 
 Opus 4.8 is the single top-capability model. The actual model is pinned in each agent's `model:` frontmatter (and the session model for the orchestrator); that frontmatter is the *only* place a model is named — never the prompt body.
 

@@ -5,23 +5,21 @@
 // Model-tier presets — map a cost posture to the per-agent model pins.
 //
 // The harness runs a GAN: generation is the high-volume output bucket, judgment
-// is lower-volume but quality-sensitive. The top-capability model is Opus 4.8;
-// the real cost lever is whether *generation* (the big bucket) runs on the
-// cheaper Sonnet 4.6 or on Opus 4.8.
+// is lower-volume but quality-sensitive. Judgment (evaluator + reviewers +
+// planner) is pinned to Opus 4.8 across every posture; the cost lever is the
+// generator, which steps Sonnet 4.6 -> Opus 4.7 -> Opus 4.8 across the tiers.
 //
-//   cost        (Profile A) — Sonnet generation, Opus judgment.
-//   balanced    (Profile B) — the shipped default. Same pins as `cost` today
-//                             (kept as a distinct posture name for forward
-//                             compatibility / per-project re-tuning).
-//   max-quality              — Opus across the board, generation included;
-//                             codebase-explorer stays Sonnet.
+//   cost        (Profile A) — Sonnet 4.6 generation, Opus 4.8 judgment. Lowest bill.
+//   balanced    (Profile B) — the shipped default. Opus 4.7 generation, Opus 4.8 judgment.
+//   max-quality              — Opus 4.8 generation; codebase-explorer stays Sonnet.
 
 const fs = require('fs');
 const path = require('path');
 
 // Exact model IDs (not bare aliases) — version-pinned and unambiguous.
-const OPUS = 'claude-opus-4-8';
-const SONNET = 'claude-sonnet-4-6';
+const OPUS = 'claude-opus-4-8';      // judgment: evaluator + reviewers + planner
+const OPUS_47 = 'claude-opus-4-7';   // generation
+const SONNET = 'claude-sonnet-4-6';  // read-only exploration
 
 const PRESETS = {
   cost: {
@@ -30,7 +28,7 @@ const PRESETS = {
     'clean-code-reviewer': OPUS, 'codebase-explorer': SONNET,
   },
   balanced: {
-    planner: OPUS, generator: SONNET, evaluator: OPUS,
+    planner: OPUS, generator: OPUS_47, evaluator: OPUS,
     'design-critic': OPUS, 'security-reviewer': OPUS, 'diff-reviewer': OPUS,
     'clean-code-reviewer': OPUS, 'codebase-explorer': SONNET,
   },

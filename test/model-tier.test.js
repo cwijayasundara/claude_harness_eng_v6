@@ -10,6 +10,7 @@ const SCRIPT = path.join(__dirname, '..', '.claude', 'scripts', 'model-tier.js')
 const { modelsForTier, sessionFor, applyTier, PRESETS } = require(SCRIPT);
 
 const OPUS = 'claude-opus-4-8';
+const OPUS_47 = 'claude-opus-4-7';
 const SONNET = 'claude-sonnet-4-6';
 const ROLES = [
   'planner',
@@ -34,7 +35,7 @@ test('every preset assigns a model to all eight agent roles', () => {
 });
 
 test('pins are exact model IDs, never bare aliases', () => {
-  const valid = new Set([OPUS, SONNET]);
+  const valid = new Set([OPUS, OPUS_47, SONNET]);
   for (const preset of Object.keys(PRESETS)) {
     for (const [role, model] of Object.entries(modelsForTier(preset))) {
       assert.ok(valid.has(model), `${preset}/${role} = "${model}" must be an exact model id`);
@@ -42,7 +43,7 @@ test('pins are exact model IDs, never bare aliases', () => {
   }
 });
 
-test('cost (Profile A): Sonnet generation, Opus judgment', () => {
+test('cost (Profile A): Sonnet 4.6 generation, Opus 4.8 judgment', () => {
   const m = modelsForTier('cost');
   assert.strictEqual(m.generator, SONNET);
   assert.strictEqual(m['codebase-explorer'], SONNET);
@@ -50,14 +51,20 @@ test('cost (Profile A): Sonnet generation, Opus judgment', () => {
   assert.strictEqual(m.evaluator, OPUS);
 });
 
-test('balanced (Profile B, default): same pins as cost today', () => {
-  assert.deepStrictEqual(modelsForTier('balanced'), modelsForTier('cost'));
+test('balanced (Profile B, default): Opus 4.7 generation, Opus 4.8 judgment', () => {
+  const m = modelsForTier('balanced');
+  assert.strictEqual(m.generator, OPUS_47);
+  assert.strictEqual(m.evaluator, OPUS);
+  assert.strictEqual(m.planner, OPUS);
+  // a real step up from cost (Sonnet) and below max-quality (Opus 4.8)
+  assert.notStrictEqual(m.generator, modelsForTier('cost').generator);
+  assert.notStrictEqual(m.generator, modelsForTier('max-quality').generator);
 });
 
-test('max-quality: Opus across the board; only codebase-explorer stays Sonnet', () => {
+test('max-quality: Opus 4.8 across the board; only codebase-explorer stays Sonnet', () => {
   const m = modelsForTier('max-quality');
   assert.strictEqual(m.planner, OPUS);
-  assert.strictEqual(m.generator, OPUS); // generation bumped off Sonnet
+  assert.strictEqual(m.generator, OPUS); // generation bumped to the top tier
   assert.strictEqual(m.evaluator, OPUS);
   assert.strictEqual(m['design-critic'], OPUS);
   assert.strictEqual(m['diff-reviewer'], OPUS);
@@ -89,8 +96,8 @@ test('applyTier rewrites each agent model: line to the exact id for the preset',
   for (const role of ROLES) fakeAgent(dir, role, OPUS);
   const changed = applyTier(dir, 'balanced');
   assert.match(fs.readFileSync(path.join(dir, 'planner.md'), 'utf8'), /^model: claude-opus-4-8$/m);
-  assert.match(fs.readFileSync(path.join(dir, 'generator.md'), 'utf8'), /^model: claude-sonnet-4-6$/m);
-  assert.ok(changed.includes('generator')); // OPUS -> SONNET
+  assert.match(fs.readFileSync(path.join(dir, 'generator.md'), 'utf8'), /^model: claude-opus-4-7$/m);
+  assert.ok(changed.includes('generator')); // OPUS 4.8 -> OPUS 4.7
   assert.ok(changed.includes('codebase-explorer')); // OPUS -> SONNET
   assert.ok(!changed.includes('planner')); // already OPUS, unchanged
   assert.ok(!changed.includes('evaluator')); // already OPUS, unchanged
@@ -112,7 +119,7 @@ test('applyTier preserves the rest of the frontmatter and body', () => {
 test('repo agents are stamped with exact model ids (default tier = balanced)', () => {
   const dir = path.join(__dirname, '..', '.claude', 'agents');
   const expected = modelsForTier('balanced');
-  const valid = new Set([OPUS, SONNET]);
+  const valid = new Set([OPUS, OPUS_47, SONNET]);
   for (const role of ROLES) {
     const txt = fs.readFileSync(path.join(dir, `${role}.md`), 'utf8');
     const m = txt.match(/^model: (.+)$/m);

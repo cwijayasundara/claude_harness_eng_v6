@@ -178,7 +178,7 @@ Eight agents (model pinned in each agent's frontmatter):
 | Agent | Role | Model |
 |---|---|---|
 | Planner | Sprint planning, story breakdown, design architecture | Opus 4.8 |
-| Generator | Feature implementation (spawns teammates); also authors tests and UI mockups | Sonnet 4.6 |
+| Generator | Feature implementation (spawns teammates); also authors tests and UI mockups | Opus 4.7 |
 | Evaluator | Runtime mode: runs app, API + Playwright verification + latency regression ratchet. Artifact mode: rubric-scores planning docs (BRD/spec/design/brownfield/seam-finder/deploy) | Opus 4.8 |
 | Design Critic | GAN visual scoring loop (max 10 iterations) | Opus 4.8 |
 | Security Reviewer | OWASP audit, blocking `security-verdict.json` | Opus 4.8 |
@@ -188,7 +188,7 @@ Eight agents (model pinned in each agent's frontmatter):
 
 The Model column shows the **`balanced` default** (Profile B). **Opus 4.8 is the top-capability tier** — the prompts are written to be model-agnostic (see [docs/prompting-standards.md](docs/prompting-standards.md) → "Model-agnostic by construction"); the actual model is named only in each agent's `model:` frontmatter.
 
-The cost/quality posture is one field — `execution.model_tier` in `project-manifest.json` (`cost` / `balanced` / `max-quality`), stamped onto the agent `model:` pins (exact ids like `claude-opus-4-8`) by `.claude/scripts/model-tier.js`. The default **`balanced`** keeps generation on Sonnet 4.6 and judgment on Opus 4.8; `max-quality` bumps generation to Opus 4.8. Full rationale + decision rule: [docs/model-allocation.md](docs/model-allocation.md).
+The cost/quality posture is one field — `execution.model_tier` in `project-manifest.json` (`cost` / `balanced` / `max-quality`), stamped onto the agent `model:` pins (exact ids like `claude-opus-4-8`) by `.claude/scripts/model-tier.js`. The default **`balanced`** runs generation on Opus 4.7 and judgment on Opus 4.8; `cost` drops generation to Sonnet 4.6 and `max-quality` bumps it to Opus 4.8. Full rationale + decision rule: [docs/model-allocation.md](docs/model-allocation.md).
 
 The former `phase-evaluator` is now the evaluator's **artifact mode**; `test-engineer` and `ui-designer` folded into the **generator** (their authoring guides live in `skills/test/references/` and `skills/design/references/`).
 
