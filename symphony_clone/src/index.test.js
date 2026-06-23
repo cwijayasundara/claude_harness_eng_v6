@@ -24,7 +24,8 @@ test('serialized tick skips interval fires that overlap a slow tick', async () =
   resolveTick({});
   await first;
 
-  await tick();              // after completion the next tick runs normally
+  const second = tick();     // after completion the next tick re-enters
   assert.equal(calls, 2);
   resolveTick({});
+  await second;
 });
