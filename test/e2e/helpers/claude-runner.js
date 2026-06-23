@@ -1,6 +1,8 @@
 'use strict';
 
 const { spawnSync } = require('child_process');
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const HARNESS_ROOT = path.join(__dirname, '..', '..');
@@ -61,22 +63,45 @@ function runClaude(prompt, options = {}) {
   } = options;
 
   const args = buildClaudeArgs(model, budgetUsd, continueSession, pluginDir, sessionId, outputFormat);
-  const result = spawnSync('claude', args, {
-    input: prompt,
-    cwd,
-    encoding: 'utf8',
-    timeout: timeoutMs,
-    killSignal: 'SIGKILL', // SIGTERM can be survived mid-subprocess, hanging spawnSync past the cap
-    env: buildClaudeEnv(),
+  const { result, stdout, stderr } = spawnCapturedGroup('claude', args, {
+    input: prompt, cwd, timeoutMs, env: buildClaudeEnv(),
   });
-
-  return {
-    stdout: result.stdout || '',
-    stderr: result.stderr || '',
-    exitCode: result.status,
-    signal: result.signal,
-    error: result.error,
-  };
+  return { stdout, stderr, exitCode: result.status, signal: result.signal, error: result.error };
 }
 
-module.exports = { runClaude, HARNESS_ROOT };
+function readTextOr(p, fallback) {
+  try { return fs.readFileSync(p, 'utf8'); } catch (_) { return fallback; }
+}
+
+// spawnSync, but capture stdout/stderr to FILES instead of pipes and reap the
+// whole process group afterward. With pipes, a grandchild that outlives the
+// killed `claude` — a lingering dev server, or a node:test that never
+// force-exits — keeps the pipe open, so spawnSync blocks draining it far past
+// timeoutMs; because runClaude is synchronous that also wedges node:test's own
+// timeout. Files never block, and the group-kill (-pid, only reachable because
+// the child is detached/a group leader) cleans up the orphans spawnSync's
+// single-pid SIGKILL leaves behind.
+function spawnCapturedGroup(command, args, { input, cwd, timeoutMs, env }) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-run-'));
+  const outFd = fs.openSync(path.join(dir, 'out'), 'w');
+  const errFd = fs.openSync(path.join(dir, 'err'), 'w');
+  let result;
+  try {
+    result = spawnSync(command, args, {
+      input, cwd, env, timeout: timeoutMs,
+      killSignal: 'SIGKILL', detached: true, stdio: ['pipe', outFd, errFd],
+    });
+  } finally {
+    fs.closeSync(outFd);
+    fs.closeSync(errFd);
+  }
+  if (result.pid) {
+    try { process.kill(-result.pid, 'SIGKILL'); } catch (_) { /* group already gone */ }
+  }
+  const stdout = readTextOr(path.join(dir, 'out'), '');
+  const stderr = readTextOr(path.join(dir, 'err'), '');
+  fs.rmSync(dir, { recursive: true, force: true });
+  return { result, stdout, stderr };
+}
+
+module.exports = { runClaude, spawnCapturedGroup, HARNESS_ROOT };

@@ -36,7 +36,20 @@ const HARNESS_PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
 // constant fails every run after the first. build/change still chain off this
 // same id via --resume within the run.
 const SESSION_ID = randomUUID();
-const MAX_FIX_ATTEMPTS = 3;
+const MAX_FIX_ATTEMPTS = 2;
+
+// Hard wall-clock budget: the whole e2e must finish in ~15 min. Each synchronous
+// claude step is capped to the time that remains (claude steps share a 14-min
+// budget; the last ~1 min is left for the browser verifies + teardown, with the
+// test-level timeout below as the final backstop). A step that can't fit the
+// remaining budget fails fast rather than letting the run drift past 15 min.
+const CLAUDE_BUDGET_MS = 14 * 60 * 1000;
+const RUN_START = Date.now();
+function stepTimeout(preferredMs) {
+  const left = CLAUDE_BUDGET_MS - (Date.now() - RUN_START);
+  if (left <= 30000) throw new Error('15-min wall-clock budget exhausted before a claude step');
+  return Math.min(preferredMs, left);
+}
 
 function logResult(label, data) {
   console.log(`[smoke] ${label}:`, JSON.stringify(data));
@@ -53,7 +66,7 @@ function requestRepair(fixGoal, diagnostics) {
   return runClaude(
     `/change a browser end-to-end check failed for the existing counter web app. Goal: ${fixGoal}. ` +
       `Fix the generated code so the check passes; keep all currently working behavior intact.\n${diagnostics}`,
-    claudeOpts(),
+    { ...claudeOpts(), timeoutMs: stepTimeout(240000) },
   );
 }
 
@@ -109,7 +122,7 @@ function runScaffold() {
   const desc =
     'a minimal counter web app in Node.js with no external runtime dependencies; ' +
     'an HTTP server serving one HTML page; web UI surface; no team integrations';
-  const scaffold = runClaude(`/scaffold --yes ${desc}`, { ...claudeOpts(), continueSession: false, budgetUsd: '4.00', timeoutMs: 480000 });
+  const scaffold = runClaude(`/scaffold --yes ${desc}`, { ...claudeOpts(), continueSession: false, budgetUsd: '4.00', timeoutMs: stepTimeout(360000) });
   logResult('scaffold', { exitCode: scaffold.exitCode });
   assert.strictEqual(
     scaffold.exitCode, 0,
@@ -127,7 +140,7 @@ function runBuild() {
     'that listens on process.env.PORT and serves one HTML page; the page shows a count (element id="count" ' +
     'starting at 0) and an Increment button (id="increment") that increases the count by 1. ' +
     'package.json must have "start": "node server.js" and a passing "test" script.';
-  const build = runClaude(`/build --lite implement ${buildGoal}`, { ...claudeOpts(), budgetUsd: '5.00', timeoutMs: 600000 });
+  const build = runClaude(`/build --lite implement ${buildGoal}`, { ...claudeOpts(), budgetUsd: '5.00', timeoutMs: stepTimeout(480000) });
   logResult('build-lite', { exitCode: build.exitCode });
 }
 
@@ -137,7 +150,7 @@ function scaffoldAndBuild() {
   runBuild();
 }
 
-test('full lifecycle: scaffold -> build -> verify -> modify -> regression (self-healing)', { timeout: 1200000 }, async (t) => {
+test('full lifecycle: scaffold -> build -> verify -> modify -> regression (self-healing)', { timeout: 15 * 60 * 1000 }, async (t) => {
   t.after(() => logResult('done', { artifacts: PROJECT_DIR, screenshots: SHOTS_DIR }));
 
   scaffoldAndBuild();
@@ -157,7 +170,7 @@ test('full lifecycle: scaffold -> build -> verify -> modify -> regression (self-
   const change = runClaude(
     '/change add a Decrement button (id="decrement") to the existing counter web app that lowers #count by 1; ' +
       'keep the existing Increment behavior unchanged',
-    { ...claudeOpts(), budgetUsd: '4.00', timeoutMs: 480000 },
+    { ...claudeOpts(), budgetUsd: '4.00', timeoutMs: stepTimeout(300000) },
   );
   logResult('change-decrement', { exitCode: change.exitCode });
 
