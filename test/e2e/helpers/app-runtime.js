@@ -10,9 +10,38 @@
 // live browser assertion needs it.
 
 const net = require('net');
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 
 const DEFAULT_PORT = 4417; // avoid 4317, the OTEL grpc port the e2e runner uses
+
+function sleepSync(ms) {
+  // Synchronous pause with no child process — gives the kernel time to release a
+  // socket after SIGKILL before we re-check / rebind.
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+// Kill anything still LISTENing on `port` and wait until the port is actually
+// free. A server leaked by a prior attempt's stopApp stays bound to our fixed
+// PORT, and waitForPort only checks "is something listening" — so without this
+// the next attempt's browser silently talks to the STALE server (old code),
+// producing false-negative failures. SIGKILL is delivered asynchronously, so we
+// poll until lsof reports no listener (bounded to ~2s).
+function freePort(port) {
+  for (let i = 0; i < 20; i++) {
+    let pids;
+    try {
+      pids = execFileSync('lsof', ['-tiTCP:' + port, '-sTCP:LISTEN'], { encoding: 'utf8' });
+    } catch (_) {
+      return; // lsof exits non-zero when nothing is listening — port is free
+    }
+    const listeners = pids.split('\n').map((s) => s.trim()).filter(Boolean);
+    if (listeners.length === 0) return;
+    for (const pid of listeners) {
+      try { process.kill(Number(pid), 'SIGKILL'); } catch (_) { /* already gone */ }
+    }
+    sleepSync(100);
+  }
+}
 
 function waitForPort(port, host, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
@@ -35,6 +64,7 @@ function waitForPort(port, host, timeoutMs) {
 // owns the port rather than guessing it. detached so the whole process group can
 // be killed (a dev server often spawns children that outlive a bare proc.kill).
 async function startApp(projectDir, { port = DEFAULT_PORT, startTimeoutMs = 30000 } = {}) {
+  freePort(port); // reap a leaked server from a prior attempt before we reuse the port
   const proc = spawn('npm', ['start', '--silent'], {
     cwd: projectDir,
     env: { ...process.env, PORT: String(port) },
@@ -48,16 +78,21 @@ async function startApp(projectDir, { port = DEFAULT_PORT, startTimeoutMs = 3000
   try {
     await waitForPort(port, '127.0.0.1', startTimeoutMs);
   } catch (err) {
-    stopApp({ proc });
+    stopApp({ proc, port });
     throw new Error(`${err.message}\n--- app output ---\n${logs.join('').slice(-1500)}`);
   }
-  return { proc, baseUrl: `http://127.0.0.1:${port}`, logs };
+  return { proc, port, baseUrl: `http://127.0.0.1:${port}`, logs };
 }
 
 function stopApp(handle) {
-  if (!handle || !handle.proc || handle.proc.killed || !handle.proc.pid) return;
-  try { process.kill(-handle.proc.pid, 'SIGKILL'); } catch (_) { /* no group / already gone */ }
-  try { handle.proc.kill('SIGKILL'); } catch (_) { /* already gone */ }
+  if (!handle) return;
+  if (handle.proc && handle.proc.pid && !handle.proc.killed) {
+    try { process.kill(-handle.proc.pid, 'SIGKILL'); } catch (_) { /* no group / already gone */ }
+    try { handle.proc.kill('SIGKILL'); } catch (_) { /* already gone */ }
+  }
+  // Group-kill can miss a node grandchild that reparented; reap by port so the
+  // next startApp (or the suite's exit) is never poisoned by a survivor.
+  if (handle.port) freePort(handle.port);
 }
 
 // Drive the running app in a headless browser. `steps` is an async fn given the
