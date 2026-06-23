@@ -88,9 +88,9 @@ async function verifyWithFix({ label, steps, fixGoal }) {
   return { ok: false, reason: 'exhausted fix attempts' };
 }
 
-function scaffoldAndBuild() {
-  // Confinement guard: never rm a path outside this package, even if a future
-  // change makes PROJECT_DIR configurable.
+// Confinement guard: never rm a path outside this package, even if a future
+// change makes PROJECT_DIR configurable. Then start each run from a clean dir.
+function prepareProjectDir() {
   const resolved = path.resolve(PROJECT_DIR);
   if (!resolved.startsWith(__dirname + path.sep)) {
     throw new Error(`refusing to wipe ${resolved}: outside ${__dirname}`);
@@ -99,17 +99,29 @@ function scaffoldAndBuild() {
   fs.mkdirSync(PROJECT_DIR, { recursive: true });
   fs.mkdirSync(SHOTS_DIR, { recursive: true });
   execFileSync('git', ['init'], { cwd: PROJECT_DIR, stdio: 'ignore' });
+}
 
-  const scaffold = runClaude('/scaffold', { ...claudeOpts(), continueSession: false, budgetUsd: '2.00', timeoutMs: 300000 });
+// Non-interactive scaffold: `--yes <description>` skips the interactive Q1 +
+// confirmation card (no human in `claude -p`), infers the profile, and
+// generates the project for real (see scaffold.md "Invocation modes"). Asserts
+// it did REAL work — the two core deliverables must exist, not just exit 0.
+function runScaffold() {
+  const desc =
+    'a minimal counter web app in Node.js with no external runtime dependencies; ' +
+    'an HTTP server serving one HTML page; web UI surface; no team integrations';
+  const scaffold = runClaude(`/scaffold --yes ${desc}`, { ...claudeOpts(), continueSession: false, budgetUsd: '4.00', timeoutMs: 480000 });
   logResult('scaffold', { exitCode: scaffold.exitCode });
-  // Headless /scaffold asks its mandatory Q1 and ends the turn — a success
-  // (exit 0). A non-zero exit almost always means the --session-id create path
-  // collided with an existing session; assert so that regression can't hide.
   assert.strictEqual(
     scaffold.exitCode, 0,
-    `/scaffold must exit 0 (non-zero usually means a --session-id collision): ${(scaffold.stderr || '').slice(0, 300)}`,
+    `/scaffold --yes must exit 0 (non-zero usually means a --session-id collision or a prompt with no human): ${(scaffold.stderr || '').slice(0, 300)}`,
   );
+  const required = ['project-manifest.json', 'CLAUDE.md']; // Step 2 + Step 5 outputs
+  const present = required.filter((f) => fs.existsSync(path.join(PROJECT_DIR, f)));
+  logResult('scaffold-artifacts', { present });
+  assert.deepStrictEqual(present, required, `/scaffold --yes must generate ${JSON.stringify(required)}; found ${JSON.stringify(present)}`);
+}
 
+function runBuild() {
   const buildGoal =
     'a minimal counter web app in Node.js with NO external runtime deps: an HTTP server in server.js ' +
     'that listens on process.env.PORT and serves one HTML page; the page shows a count (element id="count" ' +
@@ -117,6 +129,12 @@ function scaffoldAndBuild() {
     'package.json must have "start": "node server.js" and a passing "test" script.';
   const build = runClaude(`/build --lite implement ${buildGoal}`, { ...claudeOpts(), budgetUsd: '5.00', timeoutMs: 600000 });
   logResult('build-lite', { exitCode: build.exitCode });
+}
+
+function scaffoldAndBuild() {
+  prepareProjectDir();
+  runScaffold();
+  runBuild();
 }
 
 test('full lifecycle: scaffold -> build -> verify -> modify -> regression (self-healing)', { timeout: 1200000 }, async (t) => {

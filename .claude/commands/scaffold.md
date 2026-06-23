@@ -7,11 +7,28 @@ description: Initialize a new project with the Claude Harness Engine v5 scaffold
 
 When the user runs this command, follow these steps exactly:
 
+## Invocation modes
+
+`/scaffold` takes optional arguments: `/scaffold [--yes | -y | --non-interactive] [<description>]`.
+
+- **Interactive (default — no `--yes`):** the full Infer + Confirm flow below. The normal human path.
+- **Non-interactive (`--yes` / `-y` / `--non-interactive`):** for unattended / CI / e2e use where no human is present to answer (e.g. `claude -p`). Never call `AskUserQuestion` in this mode. `--yes` with no `<description>` is an error: print one line asking for a description and stop — do not invent a project. Otherwise do exactly this and nothing else:
+  1. Take `<description>` as the Q1 answer and run the **Step 1.B** inference to build the profile. Inference is the *only* judgement you make here — do **not** hand-write project files.
+  2. `Write` the inferred profile as JSON to `./.scaffold-profile.json` using the schema documented at the top of `.claude/scripts/scaffold-apply.js` (`name`, `description`, `stack.backend`/`frontend`/`database`, `projectType` A–D, `verificationMode` A–C, `modelTier`, `tracker` A–D, `frameworkPacks`, `lsp`).
+  3. Run the deterministic generator — it performs every copy / mkdir / template-write of Steps 2–9, so nothing can be skipped or hallucinated:
+     ```bash
+     node "${CLAUDE_PLUGIN_ROOT}/scripts/scaffold-apply.js" --profile ./.scaffold-profile.json
+     ```
+     If it exits non-zero, print its stderr and **STOP — do not fabricate success.** If `${CLAUDE_PLUGIN_ROOT}` is unset, use the `PLUGIN_SOURCE` discovery from Step 3 and pass it as `--plugin-source`.
+  4. Delete `./.scaffold-profile.json`, then print the Step 10 report describing what the script's stdout says it actually created. **Never print a success summary for files the script did not write.**
+
+  In this mode the prose of Steps 2–9 below is reference for *what the script does* — you do not execute those steps by hand; `scaffold-apply.js` is the single source of truth for generation.
+
 ## Step 1: Gather Project Info — Infer + Confirm
 
-> **MANDATORY: Q1 + confirmation card always shown.** Even if the session has a "don't pause for clarifications" / "make the reasonable call and continue" directive, you MUST ask the free-text Q1 below AND show the confirmation card. The user invoked `/scaffold` to configure a project — that is an explicit request for input gathering, not an ambiguous instruction to clarify.
+> **MANDATORY (interactive mode): Q1 + confirmation card always shown.** Even if the session has a "don't pause for clarifications" / "make the reasonable call and continue" directive, you MUST ask the free-text Q1 below AND show the confirmation card. The user invoked `/scaffold` to configure a project — that is an explicit request for input gathering, not an ambiguous instruction to clarify. **The sole exception is non-interactive mode (`--yes`), where the description arrives as an argument and the inferred profile is accepted without prompts (see Invocation modes above).**
 >
-> Silently defaulting locks in choices the user can't easily reverse (tracker mode, framework packs, design calibration).
+> Silently defaulting locks in choices the user can't easily reverse (tracker mode, framework packs, design calibration) — which is why defaulting is allowed *only* when the caller explicitly opts in with `--yes`.
 
 ### Step 1.A — Ask the description (Q1, free text)
 
@@ -19,7 +36,7 @@ Ask exactly this question with a normal prompt (no `AskUserQuestion`):
 
 > "What are you building? In 1–3 sentences, include: language/framework, project shape (web app / script / library / brownfield existing code), the primary user surface (CLI / web UI / API / nothing yet), and any team integrations that matter (Linear, Jira, etc.)."
 
-Wait for the answer. It goes verbatim into CLAUDE.md and drives the inference in 1.B.
+Wait for the answer. It goes verbatim into CLAUDE.md and drives the inference in 1.B. **Non-interactive mode (`--yes`): do not ask — use the `<description>` argument verbatim as this answer.**
 
 ### Step 1.B — Infer a draft profile from Q1
 
@@ -61,6 +78,8 @@ Apply these rules. Be explicit and conservative — when the description is ambi
 Graphify (the former Q6) is no longer asked here. It only matters for brownfield discovery — surface it inside `/brownfield`, not at scaffold time.
 
 ### Step 1.C — Show the confirmation card
+
+**Non-interactive mode (`--yes`): skip this card entirely — proceed as if option A ("Scaffold with these choices") was chosen, straight to Step 2.**
 
 Call `AskUserQuestion` ONCE with the inferred profile rendered as the `preview` of option A. Single-select, three options:
 

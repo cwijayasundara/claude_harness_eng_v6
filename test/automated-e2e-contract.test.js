@@ -26,7 +26,8 @@ test('smoke harness exists and reuses the shared claude-runner (no reinvented ru
 
 test('smoke runs the full lifecycle: scaffold -> lite build -> modify via /change', () => {
   const smoke = read(SMOKE);
-  assert.match(smoke, /runClaude\('\/scaffold'/);
+  assert.match(smoke, /runClaude\([`'"]\/scaffold --yes/, 'must scaffold non-interactively via /scaffold --yes');
+  assert.match(smoke, /project-manifest\.json/, 'must verify /scaffold produced real artifacts, not just exit 0');
   assert.match(smoke, /runClaude\([`'"]\/build --lite/);
   assert.match(smoke, /runClaude\(\s*['"`]\/change/, 'must modify already-generated code via /change');
 });
