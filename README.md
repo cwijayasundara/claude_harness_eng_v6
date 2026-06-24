@@ -134,6 +134,8 @@ In every lane the **machine gates still run** (ratchet, security, pre-PR verify)
 
 **What stays in force even with nobody watching** — removing the *prompts* does not remove the *guardrails*. The deterministic hooks (`pre-write-gate`, `pre-bash-gate`) run regardless of permission mode and block out-of-project writes, edits to the gates themselves, and secret/`.env` writes; the `/auto` ratchet, security review, and Phase 9.5 pre-PR verify still block; and **no PR opens over a red build**. If a run stalls (no feature progress for several turns), auto-continue **fails open loudly** with a `STUCK` warning and lets the session stop so you can step in — it is never spun forever.
 
+> **⚠️ Isolate the unattended run.** The `settings.auto.json` profile allows `Bash(*)`, and the gate hooks only constrain *writes* — they do **not** stop a broad shell from *reading* host secrets (`~/.ssh`, cloud credentials) or making network egress. Run the headless `--auto` command inside an **isolation boundary** — a container, CI runner, or VM with no host secrets mounted and egress limited to what the build needs (package registries, your git remote). Treat the machine you give `settings.auto.json` to as one the agent fully controls. For interactive work, keep using `settings.json`'s curated allowlist, which never grants blanket `Bash`.
+
 For a fully unattended **backlog-to-merge** pipeline (PRD-issue in, *merged* code out, `AUTO_MERGE` removing even the merge touchpoint), use the standalone **symphony** orchestrator — see *Tracker-driven builds* below.
 
 **One PR or many?** Default is a single integrated PR; add `--pod N` for **one PR per independent story cluster** (dependent clusters wait for theirs to merge).
