@@ -1,0 +1,18 @@
+{
+  "_comment": "Unattended full-auto profile. NOT auto-loaded by Claude Code — pass it explicitly for headless `--auto` runs: `claude -p \"/build docs/prd.md --auto\" --settings .claude/settings.auto.json`. It removes permission prompts (there is no human to approve them) by allowing the core tools, and forces auto-continue so the loop drives itself across turns. Safety is NOT relaxed: this MERGES over `.claude/settings.json`, whose deterministic gate hooks (pre-write-gate, pre-bash-gate) and git hooks still fire, the /auto ratchet + security + pre-PR verify gates still block, and no PR opens over a red build. Do NOT make this the default settings.json — interactive sessions keep the curated allowlist in settings.json.",
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "CLAUDE_AUTO_CONTINUE": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Read(*)",
+      "Write(*)",
+      "Edit(*)",
+      "MultiEdit(*)",
+      "Glob(*)",
+      "Grep(*)"
+    ]
+  }
+}

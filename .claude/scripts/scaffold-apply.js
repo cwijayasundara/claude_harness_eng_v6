@@ -86,7 +86,7 @@ function copyScaffoldTree(src, target) {
   for (const dir of ['agents', 'skills', 'hooks', 'scripts', 'templates', 'workflows']) {
     copyTree(path.join(src, dir), path.join(dotClaude, dir));
   }
-  for (const file of ['architecture.md', 'program.md', 'settings.json']) {
+  for (const file of ['architecture.md', 'program.md', 'settings.json', 'settings.auto.json']) {
     copyTree(path.join(src, file), path.join(dotClaude, file));
   }
   copyDirContents(path.join(src, 'templates', 'state-seeds'), path.join(dotClaude, 'state'));

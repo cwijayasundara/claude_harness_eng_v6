@@ -26,6 +26,8 @@ symphony_clone/logs/
 .claude/state/*.log
 .claude/state/*.offset
 .claude/state/review-block-count
+.claude/state/auto-continue-count
+.claude/state/auto-continue-progress
 !.claude/templates/state-seeds/pending-reviews.jsonl
 test/e2e/results/*
 !test/e2e/results/.gitkeep

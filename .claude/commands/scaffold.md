@@ -374,7 +374,10 @@ cp -r $PLUGIN_SOURCE/workflows/ .claude/workflows/
 cp $PLUGIN_SOURCE/architecture.md .claude/architecture.md
 cp $PLUGIN_SOURCE/program.md .claude/program.md
 cp $PLUGIN_SOURCE/settings.json .claude/settings.json
+cp $PLUGIN_SOURCE/settings.auto.json .claude/settings.auto.json
 ```
+
+`settings.auto.json` is the **unattended full-auto profile** — a no-prompt permission set (`Bash(*)`, `Write(*)`, …) plus `CLAUDE_AUTO_CONTINUE=1`. Claude Code does **not** auto-load it; a headless `--auto` run passes it explicitly with `--settings .claude/settings.auto.json`. It merges over the curated `settings.json`, so the deterministic gate hooks and ratchet still enforce safety — interactive sessions keep `settings.json`'s curated allowlist untouched. Do not enable broad permissions in `settings.json` itself.
 
 **Apply the cost-posture preset.** Stamp each agent's `model:` pin from the manifest's `execution.model_tier` (default `balanced` = Profile B — Sonnet generation, Opus 4.8 judgment). This is the one place a model is named; the prompt bodies stay model-agnostic.
 

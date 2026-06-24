@@ -63,6 +63,14 @@ test('applyScaffold produces a real scaffold from a Minimal Node profile', () =>
     assert.ok(fs.statSync(path.join(target, '.claude', 'skills')).isDirectory());
     assert.ok(fs.statSync(path.join(target, '.claude', 'state')).isDirectory());
 
+    // The interactive settings ships auto-continue on; the unattended profile
+    // ships the no-prompt permission set used by headless `--auto` runs.
+    const settings = JSON.parse(fs.readFileSync(path.join(target, '.claude', 'settings.json'), 'utf8'));
+    assert.strictEqual(settings.env.CLAUDE_AUTO_CONTINUE, '1', 'scaffolded settings.json must enable auto-continue');
+    const autoSettings = JSON.parse(fs.readFileSync(path.join(target, '.claude', 'settings.auto.json'), 'utf8'));
+    assert.ok(autoSettings.permissions.allow.includes('Bash(*)'), 'settings.auto.json must allow Bash for unattended runs');
+    assert.strictEqual(autoSettings.env.CLAUDE_AUTO_CONTINUE, '1', 'settings.auto.json must force auto-continue');
+
     const initSh = fs.readFileSync(path.join(target, 'init.sh'), 'utf8');
     assert.ok(!initSh.includes('{{'), 'init.sh must not contain leftover {{ placeholders');
     assert.ok((fs.statSync(path.join(target, 'init.sh')).mode & 0o100) !== 0, 'init.sh should be executable');

@@ -54,7 +54,7 @@ Are you building something NEW?
           └── big enough to need specs                           → /build (brownfield-aware)
 ```
 
-`/build` runs the planning stages (BRD → spec → design → test plan) and the `/auto` loop for you, with human approval gates between each. Need the safest cut-points before a big change first? `/brownfield --seams "<goal>"`.
+`/build` runs the planning stages (BRD → spec → design → test plan) and the `/auto` loop for you, with human approval gates between each. To skip the gates and run hands-off from a PRD, add `--auto` — see [Run a build fully autonomously from a PRD](#run-a-build-fully-autonomously-from-a-prd). Need the safest cut-points before a big change first? `/brownfield --seams "<goal>"`.
 
 Not sure? Just describe the change in plain words — the harness classifies it and recommends a lane.
 
@@ -91,6 +91,50 @@ Two independent choices decide how a build runs. Full flag detail lives in `.cla
 | Full-auto | `/build <prd> --auto` | None — PRD straight to PR |
 
 In every lane the **machine gates still run** (ratchet, security, pre-PR verify) — the agent never grades its own work and no PR opens over a red build. `--auto` requires a PRD (`docs/prd-format.md`); it cannot interview headless.
+
+#### Run a build fully autonomously from a PRD
+
+`--auto` is the hands-off lane: a PRD goes in, an open PR comes out, with **no human approval gates** in between. Three things have to be true for a run to need *zero* babysitting, and the scaffold sets all three up:
+
+- **No approval gates** — `--auto` collapses every planning gate (the pipeline never stops to ask "approve?").
+- **No "continue" prompts** — `CLAUDE_AUTO_CONTINUE=1` (shipped on by default, see *Auto-continue on long runs* below) makes the loop re-enter itself across turns.
+- **No permission prompts** — the unattended profile `.claude/settings.auto.json` allows the core tools so a headless run never stops for an approval no human is there to give.
+
+**Steps:**
+
+1. **Scaffold the project** (once): `/scaffold` — writes `.claude/settings.json` (auto-continue on) and the unattended `.claude/settings.auto.json`.
+2. **Write a PRD.** `--auto` cannot run the Socratic interview headless, so the requirements must live in a PRD file. Follow `docs/prd-format.md` and save it, e.g. `docs/prd.md`.
+3. **Launch it.** Two ways, depending on whether a human is at the keyboard at all:
+
+   **Truly unattended (headless — cron, CI, "kick it off and walk away"):**
+
+   ```bash
+   claude -p "/build docs/prd.md --auto" \
+     --settings .claude/settings.auto.json \
+     --strict-mcp-config \
+     --max-budget-usd 50 \
+     --output-format stream-json --verbose
+   ```
+
+   `--settings .claude/settings.auto.json` is the piece that removes permission prompts; it merges over the project's `settings.json`, so the gate hooks and ratchet still apply. `--strict-mcp-config` stops the run from hanging on unrelated global MCP servers. Set `--max-budget-usd` to a real ceiling — it is your spend stop. (Prefer the curated profile over the blunt `--dangerously-skip-permissions` flag, which skips *all* prompts; the profile is auditable and still leaves the hooks in force.)
+
+   **From inside an interactive session** (you may still get an occasional permission prompt for a novel command):
+
+   ```
+   /build docs/prd.md --auto
+   ```
+
+   Either way the harness grounds a BRD in the PRD (`/brd --prd …`), decomposes stories, designs, generates tests, then runs the `/auto` ratchet loop per dependency group — recovering state, self-healing failed gates, committing as it goes — until every feature passes, then opens a PR.
+
+   - Add `--pod N` for **one PR per independent story cluster** instead of a single integrated PR.
+   - `--mode lean` skips only the design-critic vision loop; every verification gate still runs.
+   - Steer a run in flight by editing `.claude/program.md` — no need to stop it.
+
+4. **You still merge.** The harness produces commits, verdicts in `specs/reviews/`, and an open PR; it never merges on its own. Review the diff and merge when satisfied.
+
+**What stays in force even with nobody watching** — removing the *prompts* does not remove the *guardrails*. The deterministic hooks (`pre-write-gate`, `pre-bash-gate`) run regardless of permission mode and block out-of-project writes, edits to the gates themselves, and secret/`.env` writes; the `/auto` ratchet, security review, and Phase 9.5 pre-PR verify still block; and **no PR opens over a red build**. If a run stalls (no feature progress for several turns), auto-continue **fails open loudly** with a `STUCK` warning and lets the session stop so you can step in — it is never spun forever.
+
+For a fully unattended **backlog-to-merge** pipeline (PRD-issue in, *merged* code out, `AUTO_MERGE` removing even the merge touchpoint), use the standalone **symphony** orchestrator — see *Tracker-driven builds* below.
 
 **One PR or many?** Default is a single integrated PR; add `--pod N` for **one PR per independent story cluster** (dependent clusters wait for theirs to merge).
 
@@ -213,11 +257,11 @@ The harness invokes [superpowers](https://github.com/obra/superpowers) skills at
 
 Hooks enforce these in real time; ratchet gates enforce them at commit time.
 
-### Auto-continue on long runs (opt-in)
+### Auto-continue on long runs (on by default)
 
-The `auto-continue-on-stop.js` Stop hook replaces manually typing **"continue"** when the orchestrator ends a turn while the build still has verifiable unfinished work. It is **off by default** — set `CLAUDE_AUTO_CONTINUE=1` in `.claude/settings.json`'s `env` block before a long `/auto` run (and unset it for ordinary interactive sessions).
+The `auto-continue-on-stop.js` Stop hook replaces manually typing **"continue"** when the orchestrator ends a turn while the build still has verifiable unfinished work. **`/scaffold` turns it on by default** — every scaffolded project ships `CLAUDE_AUTO_CONTINUE=1` in `.claude/settings.json`'s `env` block, so a `/build … --auto` run drives itself from PRD to PR without you babysitting the prompt. To go back to manual "continue" for ordinary interactive sessions, set `CLAUDE_AUTO_CONTINUE=0` (or remove the line) in that `env` block.
 
-When enabled, it nudges the loop onward **only** while harness state proves work remains (an incomplete `current_group`/`groups_remaining` in `claude-progress.txt`, or a still-failing `features.json` feature) **and** the build is making progress. The bound is on *stalled* progress, not total turns: while the passing-feature count keeps rising it continues indefinitely, but once that count stalls for 5 consecutive turns it **fails open loudly** (writes a `STUCK` warning + a `hook-errors.log` entry) and lets the session stop so a human can step in — a stuck build is surfaced, never spun forever. It defers to the review gate while a review cycle is open, and honors an explicit `next_action: DONE …` as a clean stop.
+It nudges the loop onward **only** while harness state proves work remains (an incomplete `current_group`/`groups_remaining` in `claude-progress.txt`, or a still-failing `features.json` feature) **and** the build is making progress. The bound is on *stalled* progress, not total turns: while the passing-feature count keeps rising it continues indefinitely, but once that count stalls for 5 consecutive turns it **fails open loudly** (writes a `STUCK` warning + a `hook-errors.log` entry) and lets the session stop so a human can step in — a stuck build is surfaced, never spun forever. It defers to the review gate while a review cycle is open, and honors an explicit `next_action: DONE …` as a clean stop.
 
 ---
 
