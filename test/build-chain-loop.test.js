@@ -63,6 +63,22 @@ test('budget: too many links stop as STUCK', async () => {
   assert.match(res.reason, /budget|link/i);
 });
 
+test('budget: an exhausted compute budget stops the chain as STUCK between links', async () => {
+  let passing = 0;
+  let link = 0;
+  const res = await runChain({
+    spawnLink: () => ({ ok: true }),
+    loadState: () => block(['A'], passing++, false), // progress rises; stall guard never fires
+    // budget is fine for the first link, exhausted before the second
+    checkBudget: () => (link++ >= 1 ? { exhausted: true, reason: 'budget exhausted (exhausted)' } : null),
+    maxLinks: 50,
+    log: () => {},
+  });
+  assert.strictEqual(res.state, STATES.STUCK);
+  assert.match(res.reason, /budget exhausted/i);
+  assert.strictEqual(res.links, 1, 'halts at the clean boundary after the first link');
+});
+
 test('a failed PLAN link is terminal STUCK', async () => {
   const res = await runChain({
     spawnLink: (kind) => ({ ok: kind !== 'PLAN' }),

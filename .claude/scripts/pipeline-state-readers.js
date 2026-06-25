@@ -5,6 +5,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { gatherSpend, computeBudget, defaultBudget } = require('./budget-state');
 
 function readText(file) {
   try {
@@ -139,6 +140,25 @@ function readPlanConfidence(projectDir) {
   };
 }
 
+// Live per-run budget, or null when no run is being metered (no budget-start
+// marker) or the budget is disabled. Wall-clock needs an origin, so absence of
+// the marker means "not metering" → /status omits the line (backward compatible).
+function readBudget(projectDir, nowMs) {
+  const started = parseInt(readMarker(path.join(projectDir, '.claude', 'state'), 'budget-start') || '', 10);
+  if (!Number.isFinite(started)) return null;
+  let manifest = {};
+  try {
+    manifest = JSON.parse(readText(path.join(projectDir, 'project-manifest.json')));
+  } catch (_) {
+    manifest = {};
+  }
+  const exec = (manifest && manifest.execution) || {};
+  const tier = exec.model_tier || 'balanced';
+  const config = exec.budget || defaultBudget(tier);
+  const spent = gatherSpend(readRunReceipts(projectDir), started, nowMs || Date.now(), tier);
+  return computeBudget(spent, config);
+}
+
 function readPendingReviews(stateDir) {
   return readText(path.join(stateDir, 'pending-reviews.jsonl'))
     .split('\n')
@@ -181,5 +201,6 @@ module.exports = {
   countGroupsFromGraph,
   readPendingReviews,
   readPlanConfidence,
+  readBudget,
   parseIterationLog,
 };

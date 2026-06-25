@@ -28,7 +28,7 @@ function runBuildLink(spawnLink) {
 }
 
 async function runChain(deps) {
-  const { spawnLink, loadState, log = () => {}, maxLinks = 50, maxNoProgress = 3 } = deps;
+  const { spawnLink, loadState, log = () => {}, maxLinks = 50, maxNoProgress = 3, checkBudget = () => null } = deps;
 
   log('chain: PLAN');
   if (!spawnLink(S.STATES.PLAN).ok) return done(S.STATES.STUCK, 'plan link failed', 0);
@@ -41,6 +41,8 @@ async function runChain(deps) {
     if (S.isBuildComplete(block)) break;
     if (S.budgetExceeded(links, maxLinks)) return done(S.STATES.STUCK, `link budget exceeded (${links})`, links);
     if (S.stallExceeded(noProgress, maxNoProgress)) return done(S.STATES.STUCK, `no feature progress for ${noProgress} links`, links);
+    const spend = checkBudget();
+    if (spend && spend.exhausted) return done(S.STATES.STUCK, spend.reason, links);
 
     log(`chain: BUILD #${links + 1}`);
     const linkOk = runBuildLink(spawnLink);
@@ -88,6 +90,24 @@ function realLoadState(cwd) {
   };
 }
 
+// Between links, halt if the per-run budget is exhausted. Reuses the same
+// readBudget the /status snapshot uses (marker + manifest + receipts).
+function realCheckBudget(cwd) {
+  const { readBudget } = require('./pipeline-state-readers.js');
+  return () => {
+    const b = readBudget(cwd, Date.now());
+    return b && b.exhausted ? { exhausted: true, reason: `budget exhausted (${b.band})` } : null;
+  };
+}
+
+// Stamp the run origin so wall-clock metering has a start. Overwrite: a fresh
+// driver invocation is a fresh run.
+function stampBudgetStart(cwd) {
+  const dir = path.join(cwd, '.claude', 'state');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'budget-start'), String(Date.now()));
+}
+
 if (require.main === module) {
   const prd = process.argv[2];
   if (!prd || !fs.existsSync(prd)) {
@@ -95,7 +115,8 @@ if (require.main === module) {
     process.exit(2);
   }
   const cwd = process.cwd();
-  runChain({ spawnLink: realSpawnLink(cwd, prd), loadState: realLoadState(cwd), log: (m) => process.stdout.write(`${m}\n`) })
+  stampBudgetStart(cwd);
+  runChain({ spawnLink: realSpawnLink(cwd, prd), loadState: realLoadState(cwd), checkBudget: realCheckBudget(cwd), log: (m) => process.stdout.write(`${m}\n`) })
     .then((res) => {
       process.stdout.write(`chain finished: ${res.state} — ${res.reason} (${res.links} build links)\n`);
       process.exit(res.state === S.STATES.DONE ? 0 : 1);
