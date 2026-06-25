@@ -69,6 +69,12 @@ function evaluationBlock() {
 
 function buildManifest(profile) {
   const stack = profile.stack || {};
+  // Lite-shaped = CLI / library / single-script (projectType D) or any non-web
+  // stack. These projects don't earn full-stack ceremony, so default them to the
+  // cheaper cost posture: Sonnet generation (cost tier), single-story groups skip
+  // sprint decomposition (trimmed ceremony), and no Docker deploy phase (local
+  // verification). Each default is still overridable by an explicit profile field.
+  const lite = profile.projectType === 'D' || (!stack.frontend && !stack.backend);
   const manifest = {
     name: profile.name || 'untitled-project',
     description: profile.description || '',
@@ -76,15 +82,16 @@ function buildManifest(profile) {
     lsp: { servers: lspServers(profile) },
     evaluation: evaluationBlock(),
     execution: {
-      default_mode: 'full', model_tier: profile.modelTier || 'balanced',
+      default_mode: 'full', model_tier: profile.modelTier || (lite ? 'cost' : 'balanced'),
+      ceremony: profile.ceremony || (lite ? 'trimmed' : 'full'),
       session_chaining: true, teammate_model: 'sonnet',
     },
-    verification: verificationBlock(profile.verificationMode),
+    verification: verificationBlock(profile.verificationMode || (lite ? 'B' : undefined)),
   };
   if (Array.isArray(profile.frameworkPacks) && profile.frameworkPacks.length) {
     manifest.framework_skill_packs = profile.frameworkPacks;
   }
-  if (profile.projectType === 'D' || (!stack.frontend && !stack.backend)) {
+  if (lite) {
     manifest.architecture = { enabled: false };
   }
   return manifest;
