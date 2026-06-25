@@ -34,6 +34,7 @@ The `--granularity` flag chooses what becomes a tracker issue:
 |------|---------------|-------------|
 | `group` (default) | One tracker issue per dependency group from `dependency-graph.md`. The group issue body lists every ready story in that group, and the harness command is `/auto --group <id>` (or whatever `HARNESS_COMMAND_TEMPLATE` resolves to). | Default for `/build` projects and any work where a group is reviewed as a single PR. The agent team inside `/auto` handles per-story decomposition. |
 | `story` | One tracker issue per ready story. Each story issue carries `Story: E1-S1` plus its group ID. Group-level blockers are mirrored as `blocked_by` links between story issues. The orchestrator runs each story individually via the per-issue mode override (default `mode-vibe` for trivial stories; the publisher writes `mode-lite` or `mode-vibe` based on story metadata). | When the human reviewer wants one PR per story (smaller diffs, faster review cycle), when stories are independently shippable, or when you want different Claude commands per story (for example, `mode-vibe` for a docs story, `/auto` for an API story). |
+| `single` | One tracker issue for a single brownfield story (no epic/dependency-graph prerequisites). Built by `scripts/single-story-map.js` into the same map shape `publish-to-linear.js` consumes, then published with the unchanged publisher. | Used by `/feature`'s single-story lane, where the change is one bounded story and the full `/build` artifact set (epics, dependency-graph, component-map, features.json) does not exist. |
 
 Picking the right granularity matters more than people think:
 
@@ -55,6 +56,8 @@ The following files must exist and be approved by the human:
 - `.claude/tracker-config.json`
 
 If design artifacts are missing, stop and ask the human to run `/design` first. The orchestrator needs `component-map.md` so `/auto` can coordinate agent teams without file ownership conflicts.
+
+- **`--granularity single` exception:** the single-story lane needs only `.claude/tracker-config.json` and the story's acceptance criteria — none of `epics.md`, `dependency-graph.md`, `component-map.md`, or `features.json` is required. `/feature` builds the one-entry map via `scripts/single-story-map.js`.
 
 ## Output Contract
 
