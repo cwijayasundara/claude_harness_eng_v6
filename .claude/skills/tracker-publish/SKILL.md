@@ -43,6 +43,8 @@ Picking the right granularity matters more than people think:
 
 If you do not specify `--granularity`, default to `group`. Switch to `story` only if the human explicitly asks for per-story PRs.
 
+> `--granularity` is prose-driven, not a parsed CLI flag: `publish-to-linear.js` takes no `--granularity` argument. The granularity is realized by *which map this skill writes* before invoking the publisher — `group`/`story` from the dependency graph, `single` via `scripts/single-story-map.js`. The publisher just creates one Linear issue per `groups` entry it finds.
+
 ## Prerequisites
 
 The following files must exist and be approved by the human:
