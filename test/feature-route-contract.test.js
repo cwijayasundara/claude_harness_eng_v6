@@ -9,10 +9,15 @@ const ROOT = path.join(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 const SKILL = '.claude/skills/feature/SKILL.md';
 
-test('skill exists with correct frontmatter (name, fork context)', () => {
+test('skill runs in the main session (NOT forked) so it can gate, branch, commit, and open the PR', () => {
   const s = read(SKILL);
   assert.match(s, /^name:\s*feature\s*$/m);
-  assert.match(s, /^context:\s*fork\s*$/m);
+  // A forked skill cannot hold the three interactive human gates, branch,
+  // commit, push, or open the PR — the whole point of this route. It must
+  // run in the main conversation loop.
+  assert.doesNotMatch(s, /^context:\s*fork\s*$/m);
+  // And the skill must say so, so nobody re-adds context: fork.
+  assert.match(s, /main (session|loop|conversation)/i);
 });
 
 test('A: documents the scope-adaptive lanes (single -> /change, cluster -> spec/design/auto)', () => {
