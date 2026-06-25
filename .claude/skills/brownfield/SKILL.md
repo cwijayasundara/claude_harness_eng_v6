@@ -23,9 +23,12 @@ This skill does not change production code.
 /brownfield backend/src
 /brownfield "map auth and billing before adding team invites"
 /brownfield --seams "add team invites"        # map, then rank the safest cut-points for this goal
+/brownfield --full                            # add CI/flag/perf inventory + evaluator scoring
 ```
 
 `--seams "<goal>"` is the single entry point for seam analysis: it runs the normal discovery, then runs the `/seam-finder` stage for `<goal>` and writes `specs/brownfield/seams-<goal>.md`. (`/seam-finder` remains directly invokable as a power-user stage, but you don't need to call it separately.)
+
+Default `/brownfield` is intentionally lean and DeepWiki-first: build the deterministic graph/wiki, write the short maps needed for future code changes, and stop. Use `--full` for migration audits, CI/flag/perf inventory, or formal discovery scoring.
 
 ---
 
@@ -35,15 +38,18 @@ Write these files:
 
 | File | Purpose |
 |---|---|
-| `specs/brownfield/codebase-map.md` | Languages, frameworks, package managers, entry points, services, commands. **LLM-written inventory** — distinct from `symbol-map.md`, the script-generated navigation index from `/code-map` |
 | `specs/brownfield/code-graph.json` | Deterministic dependency graph produced by `/code-map` |
 | `specs/brownfield/code-graph.meta.json` | Producer, language counts, scan warnings, timestamp |
+| `specs/brownfield/wiki/WIKI.md` + `wiki/pages/*.md` | Committed DeepWiki-style repo guide: module pages, Mermaid diagrams, source citations, and page index. Future code changes read this first. |
+| `specs/brownfield/symbol-map.md` | Agent navigation map with symbols and line ranges for precise `Read(offset, limit)` slicing |
+| `specs/brownfield/codebase-map.md` | Short repo inventory: languages, frameworks, entry points, services, commands. Keep it brief; the wiki is the main orientation artifact. |
 | `specs/brownfield/dependency-graph.md` | Mermaid render of file/module-level edges |
 | `specs/brownfield/coupling-report.md` | Fan-in, fan-out, cycles, hubs, unstable modules |
 | `specs/brownfield/architecture-map.md` | Modules, layers, data flow, public interfaces, external dependencies — cites graph evidence |
 | `specs/brownfield/test-map.md` | Test commands, coverage signals, public interfaces covered/missing, slow/flaky tests |
 | `specs/brownfield/risk-map.md` | Sensitive areas, fragile zones, structural risks, auth/security/billing/data risks |
 | `specs/brownfield/change-strategy.md` | Recommended lane for future work: `/vibe`, `/change`, `/refactor`, `/spec`, `/auto` |
+| `specs/brownfield/ci-map.md`, `flag-inventory.md`, `perf-baseline.json` | `--full` only: CI alignment, feature flags, and latency baseline |
 | `specs/brownfield/seams-<goal>.md` | Optional ranked seam candidates produced by `/seam-finder "<goal>"` |
 | `CONTEXT.md` | Optional domain glossary, created only when meaningful domain terms are discovered |
 
@@ -72,7 +78,7 @@ Use `rg`, `find`, package manifests, config files, and existing docs. Prefer pri
 
 Run the `/code-map` skill (`.claude/skills/code-map/SKILL.md`) — its Steps 1–3 are the **single source of truth** for producer detection (AST indexer → Understand-Anything import → regex fallback), the exact commands, and the rendering of `symbol-map.md`, `dependency-graph.md`, and `coupling-report.md`. Do not restate or improvise those commands here; if anything in this skill disagrees with code-map's SKILL.md, code-map wins.
 
-Expected artifacts under `specs/brownfield/` when it completes: `code-graph.json` (+ `.meta.json`), `symbol-map.md`, `skeletons/` (god files only), `dependency-graph.md`, `coupling-report.md`.
+Expected artifacts under `specs/brownfield/` when it completes: `code-graph.json` (+ `.meta.json`), `symbol-map.md`, `skeletons/` (god files only), `dependency-graph.md`, `coupling-report.md`, and `wiki/WIKI.md` + pages.
 
 If the graph is empty or has only warnings, stop and report. Do not invent architecture from filenames. When the AST producer ran, treat `symbol-map.md` and `skeletons/` as the navigation layer: read a single symbol with `Read(offset=START, limit=END-START+1)` instead of reading god files whole.
 
@@ -80,7 +86,7 @@ If the graph is empty or has only warnings, stop and report. Do not invent archi
 
 ## Step 2 — Map Architecture
 
-Write `architecture-map.md` with:
+Write `architecture-map.md` as a short companion to the wiki:
 
 - Major modules and their responsibilities — cite specific edges from `code-graph.json`
 - Public interfaces for each major module — use the graph symbols list where available
@@ -111,16 +117,16 @@ If commands are obvious and safe, run lightweight discovery commands such as `np
 
 ---
 
-## Step 3.5 — Ingest CI Gates and Inventory Feature Flags (deterministic)
+## Step 3.5 — Optional Full Inventory (`--full` only)
 
-Two scripts, both safe to run on any repo:
+Skip this section in default lean mode. In `--full`, run the deterministic CI and flag inventory scripts:
 
 ```bash
 node .claude/scripts/ci-ingest.js --root .     # → specs/brownfield/ci-map.md
 node .claude/scripts/flag-scan.js --root .     # → specs/brownfield/flag-inventory.md
 ```
 
-If the app is runnable (manifest has `evaluation.api_base_url` and `evaluation.health_check`, and the stack is up), also capture the performance baseline — a change that passes every functional test can still silently double latency:
+If the app is runnable (manifest has `evaluation.api_base_url` and `evaluation.health_check`, and the stack is up), also capture the performance baseline:
 
 ```bash
 node .claude/scripts/perf-baseline.js          # → specs/brownfield/perf-baseline.json
@@ -218,9 +224,9 @@ Do not proceed to code changes from `/brownfield` unless the user explicitly ask
 
 ---
 
-## Phase Evaluation Gate
+## Phase Evaluation Gate (`--full` only)
 
-After all discovery artifacts are written, spawn the `evaluator` agent (artifact mode) to validate the brownfield analysis.
+In lean mode, do not spawn an evaluator just to score discovery prose. The deterministic graph/wiki and source citations are the gate. In `--full`, after all discovery artifacts are written, spawn the `evaluator` agent (artifact mode) to validate the brownfield analysis.
 
 **Agent invocation:**
 
@@ -247,9 +253,9 @@ Spawn Agent with subagent_type="evaluator" and prompt:
 
 **Human approval is required before proceeding to implementation.**
 
-Present the discovery maps with the evaluator's quality summary:
-- Weighted average score (e.g., "Discovery quality: 8.2/10")
-- Any remaining warnings from the evaluator
+Present the discovery maps with the quality summary:
+- Wiki path: `specs/brownfield/wiki/WIKI.md`
+- Any remaining warnings from the graph producer or, in `--full`, the evaluator
 - Recommended change strategy
 
 Ask: "Does this brownfield analysis look accurate? Approve to proceed, or flag areas that need re-scanning."

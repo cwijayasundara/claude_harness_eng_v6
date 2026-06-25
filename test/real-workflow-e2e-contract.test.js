@@ -37,7 +37,7 @@ test('real workflow E2E does not bypass skills or planning workflows', () => {
 });
 
 test('e2e runner includes the real workflow certification layer', () => {
-  const runner = read('test/e2e/run.sh');
+  const runner = read('test/e2e/run-pack.js');
 
   assert.match(runner, /harness-real-workflow\.test\.js/);
   assert.match(runner, /Real Workflow Certification/);

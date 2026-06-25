@@ -40,7 +40,7 @@ test('live adversarial E2E uses preservation-oriented prompts, not bypass prompt
 });
 
 test('e2e runner includes the live adversarial mutation layer', () => {
-  const runner = read('test/e2e/run.sh');
+  const runner = read('test/e2e/run-pack.js');
 
   assert.match(runner, /harness-adversarial-live\.test\.js/);
   assert.match(runner, /Live Adversarial Mutation/);

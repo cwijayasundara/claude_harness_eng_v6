@@ -3,8 +3,9 @@
 
 const assert = require('assert');
 const { test } = require('node:test');
-const { runChain } = require('../.claude/scripts/build-chain.js');
+const { runChain, claudeArgsFor, promptFor } = require('../.claude/scripts/build-chain.js');
 const { STATES } = require('../.claude/scripts/build-chain-state.js');
+const { parseBuildInvocation } = require('../.claude/scripts/build-lane.js');
 
 // A scripted fake: each loadState() call returns the next queued block.
 function scripted(blocks) {
@@ -129,4 +130,37 @@ test('a failed FINALIZE link is terminal STUCK', async () => {
   });
   assert.strictEqual(res.state, STATES.STUCK);
   assert.match(res.reason, /finalize/i);
+});
+
+test('real claude args use the unattended settings profile when requested', () => {
+  const args = claudeArgsFor({
+    model: 'opus',
+    pluginDir: '/tmp/harness/.claude',
+    settings: '.claude/settings.auto.json',
+    strictMcp: true,
+    maxBudgetUsd: '25',
+  });
+
+  assert.deepStrictEqual(args, [
+    '-p',
+    '--model', 'opus',
+    '--plugin-dir', '/tmp/harness/.claude',
+    '--settings', '.claude/settings.auto.json',
+    '--strict-mcp-config',
+    '--max-budget-usd', '25',
+  ]);
+});
+
+test('build-chain PLAN and FINALIZE prompts parse as valid build lanes', () => {
+  const plan = parseBuildInvocation(promptFor(STATES.PLAN, 'docs/prd.md'));
+  const finalize = parseBuildInvocation(promptFor(STATES.FINALIZE, 'docs/prd.md'));
+
+  assert.strictEqual(plan.valid, true);
+  assert.strictEqual(plan.lane, 'auto');
+  assert.strictEqual(plan.planOnly, true);
+  assert.strictEqual(plan.prdPath, 'docs/prd.md');
+
+  assert.strictEqual(finalize.valid, true);
+  assert.strictEqual(finalize.lane, 'finalize');
+  assert.strictEqual(finalize.requiresPrd, false);
 });

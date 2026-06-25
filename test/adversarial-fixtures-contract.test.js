@@ -71,7 +71,7 @@ test('brownfield adversarial repos declare preservation contracts and runnable t
 });
 
 test('e2e runner includes the adversarial fixture verification layer', () => {
-  const runner = read('test/e2e/run.sh');
+  const runner = read('test/e2e/run-pack.js');
 
   assert.match(runner, /harness-adversarial-fixtures\.test\.js/);
   assert.match(runner, /Adversarial Fixture/);

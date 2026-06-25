@@ -7,10 +7,27 @@ The harness includes a full E2E test suite that builds a real project through th
 ### Quick run
 
 ```bash
-./test/e2e/run.sh
+npm run test:e2e:fast       # no live Claude and no local server; contracts + safe helper tests
+npm run test:e2e:live       # plan -> semi -> auto -> smoke
+npm run test:e2e:cert       # certification stack
+npm run test:e2e:all        # fast -> live -> cert
 ```
 
-This auto-starts the telemetry stack (Docker Compose) if not running, then executes all 8 stages.
+`./test/e2e/run.sh` remains as a compatibility wrapper for `npm run test:e2e:cert`.
+The Node runner writes per-layer logs to `test/e2e/results/logs/` and a summary
+JSON to `test/e2e/results/e2e-pack-summary.json`.
+
+Target or trim the pack without editing package scripts:
+
+```bash
+npm run test:e2e:live -- --only plan,auto
+npm run test:e2e:all -- --skip smoke
+npm run test:e2e:cert -- --bail
+node test/e2e/run-pack.js --list
+```
+
+The certification profile auto-starts the telemetry stack (Docker Compose) if not
+running, then executes the certification layers.
 
 ### What it tests
 
@@ -32,7 +49,7 @@ This auto-starts the telemetry stack (Docker Compose) if not running, then execu
 ### Keep artifacts for debugging
 
 ```bash
-E2E_KEEP_ARTIFACTS=1 ./test/e2e/run.sh
+E2E_KEEP_ARTIFACTS=1 npm run test:e2e:live
 ```
 
 Artifacts are saved in a temp directory printed at the start of the run.
@@ -79,8 +96,9 @@ node --test test/record-run-hook.test.js         # telemetry hook
 ```
 test/
   e2e/
-    harness-pipeline.test.js       # Main orchestrator (8 stages)
-    run.sh                         # One-command runner with auto-start
+    run-pack.js                    # One-command pack runner with logs, summary, watchdogs
+    run.sh                         # Compatibility wrapper for run-pack.js cert
+    harness-pipeline.test.js       # Certification layer
     helpers/
       claude-runner.js             # Spawn claude -p with model/budget
       llm-validator.js             # LLM artifact quality checks (Haiku)

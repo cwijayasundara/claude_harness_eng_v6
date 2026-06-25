@@ -86,12 +86,13 @@ test('applyScaffold produces a real scaffold from a Minimal Node profile', () =>
     assert.strictEqual(autoSettings.env.CLAUDE_AUTO_CONTINUE, '1', 'settings.auto.json must force auto-continue');
 
     // Telemetry ships ON in scaffolded projects (both interactive + headless),
-    // without clobbering the pre-existing env keys. The master switch is the
-    // Pushgateway URL the record-run hook checks; the OTEL block feeds cache-health.
+    // only when explicitly requested. The lean default keeps record-run wired
+    // but leaves push/OTEL env absent so small projects do not start with ops
+    // machinery in their first-run surface.
     for (const s of [settings, autoSettings]) {
-      assert.strictEqual(s.env.CLAUDE_CODE_ENABLE_TELEMETRY, '1', 'telemetry must be enabled by default');
-      assert.strictEqual(s.env.HARNESS_PUSHGATEWAY_URL, 'http://localhost:9091', 'record-run push must be switched on');
-      assert.strictEqual(s.env.OTEL_EXPORTER_OTLP_ENDPOINT, 'http://localhost:4317', 'OTEL export must target the collector');
+      assert.ok(!('CLAUDE_CODE_ENABLE_TELEMETRY' in s.env), 'telemetry must be opt-in');
+      assert.ok(!('HARNESS_PUSHGATEWAY_URL' in s.env), 'record-run push must be opt-in');
+      assert.ok(!('OTEL_EXPORTER_OTLP_ENDPOINT' in s.env), 'OTEL export must be opt-in');
       assert.strictEqual(s.env.CLAUDE_AUTO_CONTINUE, '1', 'existing env keys must be preserved');
     }
     // HARNESS_USER stays unset — the record-run hook derives it from git/OS.
@@ -118,6 +119,118 @@ test('applyScaffold produces a real scaffold from a Minimal Node profile', () =>
   }
 });
 
+test('core scaffold profile ships the lean product-development spine by default', () => {
+  const workDir = makeTempDir();
+  const target = path.join(workDir, 'project');
+  try {
+    const profilePath = writeProfile(workDir, MINIMAL_NODE_PROFILE);
+    const result = applyScaffold({ profile: profilePath, pluginSource: PLUGIN_SOURCE, target });
+
+    assert.strictEqual(result.scaffoldProfile, 'core');
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'build', 'SKILL.md')));
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'auto', 'SKILL.md')));
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'gate', 'SKILL.md')));
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'feature', 'SKILL.md')));
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'brownfield', 'SKILL.md')));
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'code-map', 'SKILL.md')));
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'change', 'SKILL.md')));
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'refactor', 'SKILL.md')));
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'vibe', 'SKILL.md')));
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'tracker-publish', 'SKILL.md')));
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'build-chain.js')));
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'ci-ingest.js')));
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'flag-scan.js')));
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'telemetry-memory.js')),
+      'record-run dependency stays copied even when telemetry export is off');
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'agents', 'codebase-explorer.md')),
+      'core keeps the read-only explorer because Sprint 2+ is brownfield');
+
+    assert.ok(!fs.existsSync(path.join(target, '.claude', 'skills', 'install-framework-packs')),
+      'core should not ship framework-pack installer');
+    assert.ok(!fs.existsSync(path.join(target, '.claude', 'scripts', 'replay-telemetry.js')),
+      'core should not ship telemetry replay tooling');
+    assert.ok(!fs.existsSync(path.join(target, '.claude', 'scripts', 'upstream-watch.js')),
+      'core should not ship upstream ops watch tooling');
+  } finally {
+    fs.rmSync(workDir, { recursive: true, force: true });
+  }
+});
+
+test('brownfield scaffold profile is a backward-compatible alias for core product development', () => {
+  const workDir = makeTempDir();
+  const target = path.join(workDir, 'project');
+  try {
+    const profile = { ...MINIMAL_NODE_PROFILE, scaffoldProfile: 'brownfield' };
+    const profilePath = writeProfile(workDir, profile);
+    const result = applyScaffold({ profile: profilePath, pluginSource: PLUGIN_SOURCE, target });
+
+    assert.strictEqual(result.scaffoldProfile, 'brownfield');
+    for (const skill of ['feature', 'brownfield', 'change', 'refactor', 'vibe', 'code-map', 'seam-finder', 'tracker-publish']) {
+      assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', skill, 'SKILL.md')), `${skill} should be copied`);
+    }
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'agents', 'codebase-explorer.md')));
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'ci-ingest.js')));
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'flag-scan.js')));
+    assert.ok(!fs.existsSync(path.join(target, '.claude', 'scripts', 'upstream-watch.js')));
+    assert.ok(!fs.existsSync(path.join(target, '.claude', 'scripts', 'replay-telemetry.js')));
+  } finally {
+    fs.rmSync(workDir, { recursive: true, force: true });
+  }
+});
+
+test('full-stack projects also default to core; full is explicit only', () => {
+  const workDir = makeTempDir();
+  const target = path.join(workDir, 'project');
+  try {
+    const profile = {
+      ...MINIMAL_NODE_PROFILE,
+      name: 'sample-app',
+      projectType: 'A',
+      stack: {
+        backend: { language: 'python', framework: 'fastapi' },
+        frontend: { language: 'typescript', framework: 'react' },
+        database: { primary: 'postgres' },
+      },
+    };
+    const profilePath = writeProfile(workDir, profile);
+    const result = applyScaffold({ profile: profilePath, pluginSource: PLUGIN_SOURCE, target });
+
+    assert.strictEqual(result.scaffoldProfile, 'core');
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'feature', 'SKILL.md')));
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'brownfield', 'SKILL.md')));
+    assert.ok(!fs.existsSync(path.join(target, '.claude', 'scripts', 'upstream-watch.js')));
+  } finally {
+    fs.rmSync(workDir, { recursive: true, force: true });
+  }
+});
+
+test('full scaffold profile preserves the complete harness copy and can opt into telemetry', () => {
+  const workDir = makeTempDir();
+  const target = path.join(workDir, 'project');
+  try {
+    const profile = { ...MINIMAL_NODE_PROFILE, scaffoldProfile: 'full', telemetry: true };
+    const profilePath = writeProfile(workDir, profile);
+    const result = applyScaffold({ profile: profilePath, pluginSource: PLUGIN_SOURCE, target });
+
+    assert.strictEqual(result.scaffoldProfile, 'full');
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'tracker-publish', 'SKILL.md')));
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'brownfield', 'SKILL.md')));
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'upstream-watch.js')));
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'replay-telemetry.js')));
+
+    const settings = JSON.parse(fs.readFileSync(path.join(target, '.claude', 'settings.json'), 'utf8'));
+    const autoSettings = JSON.parse(fs.readFileSync(path.join(target, '.claude', 'settings.auto.json'), 'utf8'));
+    for (const s of [settings, autoSettings]) {
+      assert.strictEqual(s.env.CLAUDE_CODE_ENABLE_TELEMETRY, '1');
+      assert.strictEqual(s.env.HARNESS_PUSHGATEWAY_URL, 'http://localhost:9091');
+      assert.strictEqual(s.env.OTEL_EXPORTER_OTLP_ENDPOINT, 'http://localhost:4317');
+      assert.strictEqual(s.env.CLAUDE_AUTO_CONTINUE, '1');
+    }
+  } finally {
+    fs.rmSync(workDir, { recursive: true, force: true });
+  }
+});
+
 test('applyScaffold throws clearly when plugin source is invalid', () => {
   const workDir = makeTempDir();
   try {
@@ -138,6 +251,23 @@ test('applyScaffold throws when --profile is missing', () => {
 test('lite-shaped projects default to the cheap cost posture', () => {
   // A type-D CLI with no explicit posture fields gets cost + trimmed + local.
   const m = buildManifest({ name: 'cli', projectType: 'D', stack: {} });
+  assert.strictEqual(m.execution.model_tier, 'cost');
+  assert.strictEqual(m.execution.ceremony, 'trimmed');
+  assert.strictEqual(m.verification.mode, 'local');
+  assert.deepStrictEqual(m.architecture, { enabled: false });
+});
+
+test('non-web CLI/library stacks default to the lite posture even with backend metadata', () => {
+  const m = buildManifest({
+    name: 'url-summarizer',
+    description: 'Python CLI utility that summarizes URLs',
+    stack: {
+      backend: { language: 'python', version: '3.12', package_manager: 'uv', test_runner: 'pytest' },
+      frontend: null,
+      database: null,
+    },
+  });
+
   assert.strictEqual(m.execution.model_tier, 'cost');
   assert.strictEqual(m.execution.ceremony, 'trimmed');
   assert.strictEqual(m.verification.mode, 'local');

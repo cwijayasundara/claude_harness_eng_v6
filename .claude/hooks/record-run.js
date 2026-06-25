@@ -7,6 +7,7 @@ const path = require('path');
 const os = require('os');
 const { execFileSync } = require('child_process');
 const { appendLedger, pushSnapshot, readSkillCatalog, seedLedgerFromRuns } = require('../scripts/telemetry-memory');
+const { parseBuildInvocation } = require('../scripts/build-lane');
 const { readHookInput, reportFailure } = require('./lib/common');
 const { inferSkills } = require('./lib/record-skills');
 
@@ -85,6 +86,12 @@ function inferCommand(prompt) {
   return match ? match[1].toLowerCase() : null;
 }
 
+function inferLane(prompt, command) {
+  if (command !== 'build') return command || null;
+  const parsed = parseBuildInvocation(prompt);
+  return parsed.valid === false ? command : parsed.lane;
+}
+
 function shouldSkipCommandTelemetry(command) {
   return command === 'scaffold';
 }
@@ -115,7 +122,7 @@ function shouldSkipCommandTelemetry(command) {
     if (eventKind === 'UserPromptSubmit') {
       const command = inferCommand(input.prompt);
       if (shouldSkipCommandTelemetry(command)) process.exit(0);
-      const inferredLane = command || null;
+      const inferredLane = inferLane(input.prompt, command);
       if (inferredLane) writeMarker(stateDir, 'current-lane', inferredLane);
       const skills = inferSkills({ input, command, lane: inferredLane || lane, catalog: skillInventory });
       const promptRecord = {

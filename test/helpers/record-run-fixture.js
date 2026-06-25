@@ -12,6 +12,7 @@ const REPO_ROOT = path.join(__dirname, '..', '..');
 // budget-state) — all must be present in the temp project or the hook child
 // crashes with MODULE_NOT_FOUND.
 const HOOK_DEP_SCRIPTS = [
+  'build-lane.js',
   'telemetry-memory.js',
   'replay-telemetry.js',
   'telemetry-skill-helpers.js',

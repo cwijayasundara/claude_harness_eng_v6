@@ -38,7 +38,7 @@ Then, inside Claude Code:
 /scaffold
 ```
 
-Run `/scaffold`. This asks a few questions about your stack and project type, then generates the `.claude/` directory (agents, skills, hooks, templates), `project-manifest.json`, `CLAUDE.md`, `design.md`, `init.sh`, `features.json`, and initializes git with the harness commit hooks.
+Run `/scaffold`. This asks a few questions about your stack and project type, then generates a lane-appropriate `.claude/` directory, `project-manifest.json`, `CLAUDE.md`, `design.md`, `init.sh`, `features.json`, and initializes git with the harness commit hooks. Every project gets the lean `core` scaffold by default: `/build`, `/auto`, `/gate`, plus the minimal brownfield spine (`/feature`, `/brownfield`, `/code-map`, `/change`, `/refactor`, `/vibe`, tracker publishing). Use `/scaffold --full` only when you explicitly want the entire optional harness surface copied into the target repo.
 
 ## One decision: new code or existing code?
 
@@ -47,7 +47,8 @@ Are you building something NEW?
 ├── Yes → small scope (CLI, library, ≤5 stories)?  → /build --lite
 │         otherwise                                 → /build
 │
-└── No (existing codebase) → first time here? run /brownfield once, then:
+└── No (existing codebase) → normal route: /feature "<request>"
+          first time here? /feature refreshes the DeepWiki/code-map first, then:
           ├── tiny safe edit (≤3 files, <150 lines, no auth/API) → /vibe
           ├── changed behavior (add --issue N for a GitHub bug)  → /change
           ├── structure only, no behavior change                 → /refactor
@@ -55,6 +56,8 @@ Are you building something NEW?
 ```
 
 `/build` runs the planning stages (BRD → spec → design → test plan) and the `/auto` loop for you, with human approval gates between each. To skip the gates and run hands-off from a PRD, add `--auto` — see [Run a build fully autonomously from a PRD](#run-a-build-fully-autonomously-from-a-prd). Need the safest cut-points before a big change first? `/brownfield --seams "<goal>"`.
+
+For sprint-by-sprint product work on an existing repo, start with `/feature "<request>"`. It keeps the committed DeepWiki fresh, creates/publishes the story when a tracker is configured, checks the existing design before planning changes, delegates to `/vibe`, `/change`, `/refactor`, or `/build` by scope, runs tests and gates, and leaves the issue in Human Review with the PR linked.
 
 Not sure? Just describe the change in plain words — the harness classifies it and recommends a lane.
 
@@ -119,6 +122,17 @@ Flag order does not matter — `/build --lite --auto <prd>` and `/build --auto -
    **Truly unattended (headless — cron, CI, "kick it off and walk away"):**
 
    ```bash
+   cd ~/my-project
+   HARNESS_PLUGIN_DIR=~/claude_harness_eng_v5/.claude \
+   BUILD_CHAIN_MAX_BUDGET_USD=50 \
+   node .claude/scripts/build-chain.js docs/prd.md
+   ```
+
+   The build-chain launcher is the resilient PRD-to-PR path: it spawns a fresh `claude -p` process per build wave (`/build --auto --plan-only` → repeated `/auto --once` → `/build --auto --finalize`), re-reading `claude-progress.txt` and `features.json` between links so a long run survives single-process wall-clock limits. It auto-loads `.claude/settings.auto.json` when present, passes `--strict-mcp-config` by default, and honors `BUILD_CHAIN_MAX_BUDGET_USD` as the CLI budget cap.
+
+   The raw single-process equivalent for a short run is:
+
+   ```bash
    claude -p "/build docs/prd.md --auto" \
      --settings .claude/settings.auto.json \
      --strict-mcp-config \
@@ -172,7 +186,7 @@ These are the **entry points you actually type** — one per situation:
 | `/scaffold` | Bootstrap a project (the only true slash command) |
 | `/build` | Greenfield (or brownfield-aware) build: runs planning → `/auto` for you, with human gates. `--lite` for small new projects; `--lite --auto <prd>` runs a small project headless to a PR |
 | `/auto` | Resume / steer the autonomous ratcheting loop directly |
-| `/brownfield` | Map an existing codebase before changing it; `--seams "<goal>"` ranks the safest cut-points |
+| `/brownfield` | Lean DeepWiki/code-map for an existing codebase before changing it; `--seams "<goal>"` ranks safe cut-points; `--full` adds CI/flag/perf inventory and evaluator scoring |
 | `/feature` | Brownfield change route: feature request → reviewed PR, scaling single `/change` to epic `/spec`→`/design`→`/auto`; Linear-tracked, committed DeepWiki |
 | `/vibe` | Controlled small-change lane (≤3 files, <150 lines, no auth/API) |
 | `/change` | Behavior change on existing code (test-first); `--issue N` for a GitHub bug fix |
@@ -196,7 +210,7 @@ Approval lanes, `--pod`, and `--mode full|lean` are covered in **Operating modes
 | `/implement` | `/auto` | Code generation with agent teams |
 | `/evaluate` | `/auto`, `/gate` | Run app, verify sprint contract (API + Playwright + schema) |
 | `/deploy` | `/build` | Docker Compose + init.sh |
-| `/code-map` | `/brownfield`, `/seam-finder` | Deterministic AST dependency graph (`code-graph.json` + symbol map + skeletons; hook-refreshed) |
+| `/code-map` | `/brownfield`, `/seam-finder` | Deterministic AST dependency graph and committed repo wiki (`code-graph.json`, `symbol-map.md`, `wiki/WIKI.md`; hook-refreshed) |
 | `/seam-finder` | `/brownfield --seams` | Rank safe cut-points for a goal |
 | `/clarify` | planning stages | Bounded clarification gate |
 | `/install-framework-packs` | `/scaffold` | Verify configured framework packs |
@@ -329,9 +343,9 @@ gate does — just unattended. Keep it off until the project has a green `main` 
 routine on a red tree is noise. This is a thin convenience over commands you already have, not new
 harness machinery.
 
-### Telemetry (on by default in scaffolded projects)
+### Telemetry (opt-in)
 
-A **scaffolded project ships with telemetry on**: `/scaffold` bakes the OTEL + Pushgateway env vars into the new project's `.claude/settings.json` and `.claude/settings.auto.json`, so Claude Code exports metrics and the `record-run` hook pushes harness metrics from the first run — in both `/build` and headless `/build --auto`. (The harness's *own* repo stays telemetry-off; only the projects it scaffolds default on.) The env vars baked in:
+A scaffolded project keeps the lightweight `record-run` hook wired, but **does not export OTEL or push to Pushgateway unless you ask for it**. Enable it with `/scaffold --telemetry` or by setting `"telemetry": true` in the scaffold profile. That bakes the OTEL + Pushgateway env vars into `.claude/settings.json` and `.claude/settings.auto.json`, so Claude Code exports metrics and the hook pushes harness metrics in both `/build` and headless `/build --auto`. The env vars added are:
 
 ```json
 "env": {
@@ -345,20 +359,20 @@ A **scaffolded project ships with telemetry on**: `/scaffold` bakes the OTEL + P
 }
 ```
 
-`HARNESS_PUSHGATEWAY_URL` is the master switch the `record-run` hook checks; the `OTEL_*` block feeds the cache-health dashboard. The push has a 2s timeout and swallows connection errors, so until the stack is up it simply no-ops — a project with telemetry on but no stack running behaves like one with it off.
+`HARNESS_PUSHGATEWAY_URL` is the master switch the `record-run` hook checks; the `OTEL_*` block feeds the cache-health dashboard. The push has a 2s timeout and swallows connection errors, so until the stack is up it simply no-ops.
 
 **To actually see data on the dashboards, two steps remain** (scaffold can't automate either):
 
 1. **Start the stack:** `docker compose -f telemetry_docker_compose.yml up -d` (OTEL Collector :4317, Prometheus :9090, Pushgateway :9091, Grafana :3001 — login `admin`/`harness`). The compose file, `telemetry/` configs, and dashboards are already copied into the project.
 2. **Restart the Claude Code session** so it picks up the env block.
 
-Each team member can set `HARNESS_USER` in their `settings.json` to label their metrics; left unset, the hook derives it from git `user.name` / the OS username. Point `OTEL_EXPORTER_OTLP_ENDPOINT` / `HARNESS_PUSHGATEWAY_URL` at a shared host to aggregate a whole team. To turn telemetry **off** for a project, remove those env keys. Full setup, the metric catalog, and PromQL queries are in [docs/telemetry.md](docs/telemetry.md).
+Each team member can set `HARNESS_USER` in their `settings.json` to label their metrics; left unset, the hook derives it from git `user.name` / the OS username. Point `OTEL_EXPORTER_OTLP_ENDPOINT` / `HARNESS_PUSHGATEWAY_URL` at a shared host to aggregate a whole team. To turn telemetry off again, remove those env keys. Full setup, the metric catalog, and PromQL queries are in [docs/telemetry.md](docs/telemetry.md).
 
 ---
 
 ## Testing the harness
 
-Unit suite (fast, no API calls): `npm test` or `node --test "test/*.test.js"`. Full E2E pipeline build: `npm run test:e2e` or `./test/e2e/run.sh` (~15-20 min, live Claude required). Symphony orchestrator suite: `npm run test:symphony` (installs its deps on first run). Golden assertion and upstream-watch guards live in `test/evals/`, `test/golden-assertions.test.js`, `test/plugin-schema.test.js`, and `test/upstream-watch.test.js`. Details: [docs/testing.md](docs/testing.md).
+Unit suite (fast, no API calls): `npm test` or `node --test "test/*.test.js"`. E2E packs are automated through `test/e2e/run-pack.js`: `npm run test:e2e:fast` for no-live-Claude/no-local-server contracts, `npm run test:e2e:live` for plan→semi→auto→smoke, `npm run test:e2e:cert` for the certification stack, and `npm run test:e2e:all` for the whole pack. `npm run test:e2e` and `./test/e2e/run.sh` remain aliases for the certification stack. Logs land in `test/e2e/results/logs/` and the summary JSON lands at `test/e2e/results/e2e-pack-summary.json`. Symphony orchestrator suite: `npm run test:symphony` (installs its deps on first run). Golden assertion and upstream-watch guards live in `test/evals/`, `test/golden-assertions.test.js`, `test/plugin-schema.test.js`, and `test/upstream-watch.test.js`. Details: [docs/testing.md](docs/testing.md).
 
 **Full scaffold lifecycle (self-healing smoke):** `npm install && npm run install:browser`, then `npm run test:smoke` (~15 min, live Claude required, costs tokens). This is the end-to-end proof that the engine is wired together and can extend code it already generated. It `/scaffold`s a fresh repo, `/build --lite`s a dependency-free counter web app, then **independently verifies it in a headless browser** (click `#increment` → `#count` rises 0→1), `/change`s the *generated* code to add a `#decrement` button, and re-verifies that decrement works **and** increment still does (regression). The browser is the oracle — the generator never grades its own work, which is what distinguishes this from self-judged verification — and each failed gate feeds concrete diagnostics back into a grounded `/change` repair (max 3 attempts). The app-runtime helpers (`test/e2e/helpers/app-runtime.js`) free the fixed port before every boot and reap on teardown, so a server leaked by a prior attempt cannot stay bound and silently serve stale code to the verifier (a false-negative class guarded by `app-runtime.test.js`). Related live runs: `npm run test:auto` (autonomous loop) and `npm run test:semi` (semi-auto).
 

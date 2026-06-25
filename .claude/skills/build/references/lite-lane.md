@@ -11,9 +11,9 @@ Read by `/build --lite`. Use this compressed lane for small new projects where t
 ## Usage
 
 ```text
-/lite "Python CLI that searches DuckDuckGo and summarizes results with an LLM"
-/lite "Slack bot that posts daily standup reminders"
-/lite "Library: pure-functional retry decorator with exponential backoff"
+/build --lite "Python CLI that searches DuckDuckGo and summarizes results with an LLM"
+/build --lite "Slack bot that posts daily standup reminders"
+/build --lite "Library: pure-functional retry decorator with exponential backoff"
 ```
 
 If no argument is given, ask the user for a one-paragraph description before starting the interview.
@@ -26,7 +26,7 @@ If no argument is given, ask the user for a one-paragraph description before sta
 
 `/build --lite --auto <prd>` (and `--lite --autonomous <prd>`) run this same compressed lane **without the interview or the approval gate** — the cut-down equivalent of `/build --auto`. Three substitutions turn the interactive lane headless; everything else below is unchanged:
 
-1. **PRD grounding replaces Step 1.** The input is a PRD file path, not a `/lite "<description>"` one-liner. Derive the Step 1 fields — project name, language/runtime, core capability, load-bearing dependencies, interface — from the PRD (see `docs/prd-format.md`). Do **not** interview; an interview cannot run headless. Where the PRD is silent on a load-bearing detail, **record an assumption** in the BRD-lite *Notes* section and proceed — do not stop to ask. If no usable PRD is supplied, stop and say so rather than inventing scope (in `--auto` there is no plan gate to catch a hallucinated project).
+1. **PRD grounding replaces Step 1.** The input is a PRD file path, not a `/build --lite "<description>"` one-liner. Derive the Step 1 fields — project name, language/runtime, core capability, load-bearing dependencies, interface — from the PRD (see `docs/prd-format.md`). Do **not** interview; an interview cannot run headless. Where the PRD is silent on a load-bearing detail, **record an assumption** in the BRD-lite *Notes* section and proceed — do not stop to ask. If no usable PRD is supplied, stop and say so rather than inventing scope (in `--auto` there is no plan gate to catch a hallucinated project).
 
 2. **The Eligibility check becomes an automated gate that auto-escalates.** Evaluate the PRD against the Eligibility caps below *before writing any artifact*. If it stays within the caps, proceed with the lite lane. If it exceeds them — a database, a second service, auth/payments/PII, a real public API, or > 5 stories — **do not** compress it into 5 stories. Hand off to the full `--auto` pipeline (`/build`'s Phase 0 onward) automatically and **log the escalation reason**. There is no human to ask, so the escalation that the interactive lane leaves to the user is here made automatic — silently cramming an oversized project into the lite caps is the one failure this gate exists to prevent.
 
@@ -66,7 +66,7 @@ If eligibility is uncertain, use the `clarify` gate (`.claude/skills/clarify/SKI
 
 ### Step 1 — Bounded Interview
 
-Ask **at most 5 questions**. One at a time. Skip any answered by the user's `/lite "<description>"` argument.
+Ask **at most 5 questions**. One at a time. Skip any answered by the user's `/build --lite "<description>"` argument.
 
 1. **Project name** (used for `project-manifest.json`, package directory, README).
 2. **Language and runtime** (e.g., "Python 3.12", "Node 20").
@@ -253,7 +253,7 @@ If any item fails, fix it before handing off. If a missing artifact is one `/aut
 If at any point during the lite lane you discover the project is bigger than the eligibility criteria allow — for example, the user reveals a database, a second service, or an auth requirement — stop, delete or mark partial artifacts as draft, and recommend the full path:
 
 ```text
-This project exceeds the /lite scope ({reason}). Switch to:
+This project exceeds the /build --lite scope ({reason}). Switch to:
   /brd specs/brd/brd.md      # if you want to keep the partial BRD
   /spec specs/brd/brd.md
   /design
