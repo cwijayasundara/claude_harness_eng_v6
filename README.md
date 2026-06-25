@@ -80,7 +80,7 @@ Steer it mid-run by editing `.claude/program.md`. Quality gates are enforced by 
 
 ## Operating modes
 
-Two independent choices decide how a build runs. Full flag detail lives in `.claude/skills/build/SKILL.md` — this is the summary.
+A few independent choices decide how a build runs — how much human approval, how big the project is, and `--mode full|lean`. Full flag detail lives in `.claude/skills/build/SKILL.md` — this is the summary.
 
 **How much human approval?**
 
@@ -91,6 +91,16 @@ Two independent choices decide how a build runs. Full flag detail lives in `.cla
 | Full-auto | `/build <prd> --auto` | None — PRD straight to PR |
 
 In every lane the **machine gates still run** (ratchet, security, pre-PR verify) — the agent never grades its own work and no PR opens over a red build. `--auto` requires a PRD (`docs/prd-format.md`); it cannot interview headless.
+
+**How big is the project?**
+
+| Scope | Command | What it does |
+|---|---|---|
+| Full | `/build <prd>` | The full 11-phase pipeline (above) |
+| Lite (interactive) | `/build --lite "<one-line desc>"` | Compressed greenfield lane for a small project — single language/runtime, one module, no DB/auth, ≤5 stories. A 5-question interview → one-page BRD-lite → ≤5 stories in one group → minimal design → one approval gate → `/auto`. |
+| **Lite + headless** | `/build --lite --auto <prd>` | The compressed lane run hands-off — the cut-down equivalent of `--auto`. PRD grounding replaces the interview, the approval gate is dropped, and it runs straight to a PR. If the PRD exceeds the lite caps it **auto-escalates** to the full `--auto` pipeline rather than cramming the project into 5 stories. |
+
+Flag order does not matter — `/build --lite --auto <prd>` and `/build --auto --lite <prd>` are the same command. `--lite` composes with `--autonomous` too (`/build --lite --autonomous <prd>` keeps the single consolidated approval). Either way the lite lane only compresses *planning ceremony* — the ratchet, evaluator, security, and Phase 9.5 verify run unchanged. A lite-shaped project also scaffolds with the cheaper **cost** posture by default (see *Agent team* → model tiers).
 
 #### Run a build fully autonomously from a PRD
 
@@ -160,7 +170,7 @@ These are the **entry points you actually type** — one per situation:
 | Command | Purpose |
 |---|---|
 | `/scaffold` | Bootstrap a project (the only true slash command) |
-| `/build` | Greenfield (or brownfield-aware) build: runs planning → `/auto` for you, with human gates. `--lite` for small new projects |
+| `/build` | Greenfield (or brownfield-aware) build: runs planning → `/auto` for you, with human gates. `--lite` for small new projects; `--lite --auto <prd>` runs a small project headless to a PR |
 | `/auto` | Resume / steer the autonomous ratcheting loop directly |
 | `/brownfield` | Map an existing codebase before changing it; `--seams "<goal>"` ranks the safest cut-points |
 | `/vibe` | Controlled small-change lane (≤3 files, <150 lines, no auth/API) |
@@ -234,7 +244,9 @@ Eight agents (model pinned in each agent's frontmatter):
 
 The Model column shows the **`balanced` default** (Profile B). **Opus 4.8 is the top-capability tier** — the prompts are written to be model-agnostic (see [docs/prompting-standards.md](docs/prompting-standards.md) → "Model-agnostic by construction"); the actual model is named only in each agent's `model:` frontmatter.
 
-The cost/quality posture is one field — `execution.model_tier` in `project-manifest.json` (`cost` / `balanced` / `max-quality`), stamped onto the agent `model:` pins (exact ids like `claude-opus-4-8`) by `.claude/scripts/model-tier.js`. The default **`balanced`** runs generation on Opus 4.7 and judgment on Opus 4.8; `cost` drops generation to Sonnet 4.6 and `max-quality` bumps it to Opus 4.8. Full rationale + decision rule: [docs/model-allocation.md](docs/model-allocation.md).
+The cost/quality posture is one field — `execution.model_tier` in `project-manifest.json` (`cost` / `balanced` / `max-quality`), stamped onto the agent `model:` pins (exact ids like `claude-opus-4-8`) by `.claude/scripts/model-tier.js`. **`balanced`** runs generation on Opus 4.7 and judgment on Opus 4.8; `cost` drops generation to Sonnet 4.6 and `max-quality` bumps it to Opus 4.8. Full rationale + decision rule: [docs/model-allocation.md](docs/model-allocation.md).
+
+**Scope-aware default.** `/scaffold` picks the posture from project shape: a **lite-shaped** project (CLI / library / single-script, or any non-web stack) defaults to `model_tier: cost` + `ceremony: trimmed` (single-story groups skip sprint decomposition) + `verification.mode: local` (no Docker deploy phase), so a small `/build --auto` run isn't taxed with full-stack ceremony. Full-stack projects keep `balanced` / `full` / `docker`. Every default stays overridable by editing the manifest, and no verification gate is weakened in either posture.
 
 The former `phase-evaluator` is now the evaluator's **artifact mode**; `test-engineer` and `ui-designer` folded into the **generator** (their authoring guides live in `skills/test/references/` and `skills/design/references/`).
 
