@@ -22,6 +22,8 @@ If no argument is given, ask the user for a one-paragraph description before sta
 
 ## Headless mode (`--auto` / `--autonomous`)
 
+> **Canonical source:** `../SKILL.md` → *Approval model* defines what gated / `--autonomous` / `--auto` mean. This section only describes how the **lite** lane substitutes its interactive steps when run headless — it does not redefine the modes. On any conflict, SKILL.md wins.
+
 `/build --lite --auto <prd>` (and `--lite --autonomous <prd>`) run this same compressed lane **without the interview or the approval gate** — the cut-down equivalent of `/build --auto`. Three substitutions turn the interactive lane headless; everything else below is unchanged:
 
 1. **PRD grounding replaces Step 1.** The input is a PRD file path, not a `/lite "<description>"` one-liner. Derive the Step 1 fields — project name, language/runtime, core capability, load-bearing dependencies, interface — from the PRD (see `docs/prd-format.md`). Do **not** interview; an interview cannot run headless. Where the PRD is silent on a load-bearing detail, **record an assumption** in the BRD-lite *Notes* section and proceed — do not stop to ask. If no usable PRD is supplied, stop and say so rather than inventing scope (in `--auto` there is no plan gate to catch a hallucinated project).

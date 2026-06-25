@@ -93,7 +93,7 @@ At the start of EVERY iteration — including the first — read these files in 
 
 If `claude-progress.txt` indicates a `current_group` (or `current_wave`) that is not yet complete, resume from there. Otherwise, compute a fresh wave per Section 4B.
 
-**Budget metering.** If `.claude/state/budget-start` does not exist, create it now with the current epoch-ms (`date +%s%3N`) — this stamps the run origin so wall-clock metering has a start (`/build` Phase 4 already stamps it; this covers standalone `/auto`). Then read the live budget with `node .claude/scripts/budget-state.js` and honor the result per SECTION 11 criterion 1 — if it reports `[exhausted]`, stop at this iteration boundary before dispatching the group. A `warn` band is non-blocking: note it in the iteration log and keep building.
+**Budget metering.** If `.claude/state/budget-start` does not exist, create it now with the current epoch-ms (`node -e 'process.stdout.write(String(Date.now()))' > .claude/state/budget-start` — portable; do **not** use `date +%s%3N`, which is GNU-only and on macOS/BSD writes a malformed `…N`-suffixed value) — this stamps the run origin so wall-clock metering has a start (`/build` Phase 4 already stamps it; this covers standalone `/auto`). Then read the live budget with `node .claude/scripts/budget-state.js` and honor the result per SECTION 11 criterion 1 — if it reports `[exhausted]`, stop at this iteration boundary before dispatching the group. A `warn` band is non-blocking: note it in the iteration log and keep building.
 
 ---
 
