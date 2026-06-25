@@ -1,5 +1,7 @@
 # Autonomous lane — plan-approve-once → run to PR
 
+> **Canonical source:** the **Approval model** section of `../SKILL.md` is the single source of truth for the gated / `--autonomous` / `--auto` distinction. This file is the *operational detail* of the tail (Phases 4–11, Phase 9.5 ladder, pod fan-out). If the two ever disagree on what a gate *means*, SKILL.md wins — fix this file, don't fork the definition.
+
 The `--autonomous` flow for `/build`. It is the in-session, human-triggered
 equivalent of Devin: a developer kicks it off, approves the plan **once**, and the
 pipeline runs to an **open PR** with no further human stops. The tracker-driven
@@ -67,8 +69,11 @@ the manifest start command; `stub` → in-process. Confirm health before testing
 2. Spawn the generator to fix the **implementation** (never the test) grounded in
    those diagnostics.
 3. Redeploy and re-run from the API step.
-4. Cap attempts (default 3). If still red, **stop — do not raise a PR** — and
-   surface the diagnostics for a human.
+4. Cap attempts (default 3). If still red, **stop — do not raise a PR** — write a
+   structured `specs/verification/failure-report.md` (failed suite, final failing
+   assertion(s), captured diagnostics, attempt count, last diff tried), then
+   surface the diagnostics for a human. In headless mode that report is the only
+   durable record of why the run halted.
 
 The evaluator agent (runtime mode: API + Playwright + schema) is the oracle for
 pass/fail; the generator only repairs.

@@ -59,7 +59,13 @@ For a **small** new project (single language/runtime, one module, no DB/auth, �
 
 ## Pipeline Phases (0–11)
 
+> **Numbering note.** The phases run **0 → 11**, with three half-step inserts (3.5 plan gate, 4.5 deploy, 9.5 pre-PR verify) for steps that only apply in some modes. The autonomous *execution* is a **single `/auto` call** — the "Phases 5–8" heading below is one step, not four; the sub-numbers are historical and kept only so cross-references stay stable. When in doubt, the canonical list is the tail diagram in `references/autonomous-lane.md`.
+
+> **Resumability.** `/build` is re-entrant. Each planning phase (0–3) is **skip-if-its-artifacts-exist**: if `specs/brd/`, `specs/stories/`, or `specs/design/` are already populated from an interrupted run, do not regenerate them — confirm they are complete and move on (re-running a phase silently discards human-approved plan edits). Phase 4 state files follow the per-file reset-vs-preserve rule documented there. Only force a regenerate when the user explicitly asks to redo a phase.
+
 ### Phase 0 — Brownfield Discovery [EXISTING CODEBASES]
+
+**Boundary with `/feature`.** `/build` is the **greenfield** pipeline. For *changing existing-code behavior* — adding or altering a feature in a live codebase — use **`/feature`**, the brownfield change route (it owns the DeepWiki lifecycle, Linear tracking, and the single-story-vs-epic routing). Reach Phase 0 here only when you are running a **full greenfield-style build that happens to be layered onto an existing repo** (e.g. standing up a new service inside a monorepo) and you need the discovery maps as planning constraints. If the request is really an existing-code change, stop and route to `/feature`.
 
 If this is a non-trivial existing codebase and `specs/brownfield/codebase-map.md` does not exist, run `/brownfield` before Phase 1. Use the generated architecture, test, risk, and change-strategy maps as constraints for the BRD, stories, and design.
 
@@ -97,8 +103,9 @@ Wait for BOTH to complete before presenting results.
 **Stop and wait for explicit human approval before proceeding.** Present:
 1. Architecture summary: tech stack, component count, API surface area.
 2. Test plan summary: test case count, story coverage, fixture count.
+3. **Plan confidence** from `specs/plan-confidence.json`: the band and its drivers — present it here too, not only in the `--autonomous` Phase 3.5 gate, so the human approves with the planner's uncertainty in view.
 
-Ask: "Approve design and test plan to proceed to autonomous build?"
+Ask: "Approve design and test plan to proceed to autonomous build?" **When confidence is LOW, lead with the drivers and recommend `/clarify` first** — e.g. *"Plan confidence is LOW (2 open questions, 1 undecomposable story). Recommend `/clarify` before building. Clarify now, approve anyway, or stop?"* — rather than the bare approve/reject question. (This mirrors what `--auto` does automatically; in the gated model the human makes the call.)
 
 Do NOT proceed without a clear "yes" or "approved" from the user. *(In `--autonomous` mode, do not present a design-only gate here — go to Phase 3.5, which presents the whole plan at once.)*
 
@@ -123,11 +130,11 @@ When confidence is **low**, do not present the bare approve/reject question — 
 
 ### Phase 4 — Initialize State
 
-Create the following state files before entering the autonomous loop:
+Create the following state files before entering the autonomous loop. **Re-entry rule:** `/build` is resumable — if a state file already exists (a prior run was interrupted), follow the per-file reset-vs-preserve note below rather than blindly clobbering it. Only `budget-start` resets on every fresh run; the accumulated ratchet state must survive a re-run.
 
-1. `.claude/state/coverage-baseline.txt` — Write `0` (initial baseline).
-2. `.claude/state/iteration-log.md` — Write header: `# Iteration Log\n\nTracking all autonomous build iterations.\n`
-2b. `.claude/state/budget-start` — Write the current epoch-ms (`date +%s%3N`). Stamps the run origin for budget metering (SECTION 11 of `auto/SKILL.md`); overwrite on each fresh `/build` so a new run resets the clock.
+1. `.claude/state/coverage-baseline.txt` — **Preserve if present.** Write `0` only when the file does not yet exist; if it already holds a value (a prior run ratcheted it up), leave it — resetting it to `0` would discard the coverage floor the ratchet has earned.
+2. `.claude/state/iteration-log.md` — **Preserve if present.** Write the header `# Iteration Log\n\nTracking all autonomous build iterations.\n` only when the file does not exist; otherwise append, never overwrite — the log is the audit trail across sessions.
+2b. `.claude/state/budget-start` — **Always reset.** Write the current epoch-ms with `node -e 'process.stdout.write(String(Date.now()))' > .claude/state/budget-start` (portable; do **not** use `date +%s%3N`, which is GNU-only and on macOS/BSD writes a malformed `…N`-suffixed value). Stamps the run origin for budget metering (SECTION 11 of `auto/SKILL.md`); overwrite on each fresh `/build` so a new run resets the clock.
 3. `claude-progress.txt` — Write session 0 block:
    ```
    === Session 0 ===
@@ -176,6 +183,8 @@ The final acceptance run on the **integrated** build, against a **locally deploy
 2. **API tests (if the deliverable exposes an API).** Run the API/integration suite against the running app, asserting the `api-contracts` (status codes, schemas, auth). API tests run **first** — a broken API makes UI failures noise.
 3. **Playwright E2E (if the deliverable has a UI).** Only after the API is green, run the Phase 9 Playwright suite against the deployed UI.
 4. **Defect-repair loop (bounded).** On any failure, capture the concrete diagnostics (failing assertion, response body, browser console errors, service logs), fix the **implementation** (not the test), redeploy, and re-run from step 2. Cap at a small number of attempts; if still failing, stop and surface the diagnostics rather than raising a PR. The evaluator agent is the oracle — the generator never declares this green itself.
+
+   **On give-up, write a structured failure report** to `specs/verification/failure-report.md` before stopping: which suite failed, the final failing assertion(s), the captured diagnostics, the attempt count, and the last implementation diff tried. In `--auto`/`--autonomous` mode no human is watching the loop live, so this artifact is the only durable record of *why* the run halted — without it the failure is invisible until someone re-derives it. A human (or a later resumed run) reads this report instead of re-running the loop from scratch.
 
 Only when the applicable suites are all green does the pipeline proceed. Full loop detail: `.claude/skills/build/references/autonomous-lane.md`.
 
