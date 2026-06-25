@@ -72,6 +72,18 @@ test('applyScaffold produces a real scaffold from a Minimal Node profile', () =>
     assert.ok(autoSettings.permissions.allow.includes('Bash(*)'), 'settings.auto.json must allow Bash for unattended runs');
     assert.strictEqual(autoSettings.env.CLAUDE_AUTO_CONTINUE, '1', 'settings.auto.json must force auto-continue');
 
+    // Telemetry ships ON in scaffolded projects (both interactive + headless),
+    // without clobbering the pre-existing env keys. The master switch is the
+    // Pushgateway URL the record-run hook checks; the OTEL block feeds cache-health.
+    for (const s of [settings, autoSettings]) {
+      assert.strictEqual(s.env.CLAUDE_CODE_ENABLE_TELEMETRY, '1', 'telemetry must be enabled by default');
+      assert.strictEqual(s.env.HARNESS_PUSHGATEWAY_URL, 'http://localhost:9091', 'record-run push must be switched on');
+      assert.strictEqual(s.env.OTEL_EXPORTER_OTLP_ENDPOINT, 'http://localhost:4317', 'OTEL export must target the collector');
+      assert.strictEqual(s.env.CLAUDE_AUTO_CONTINUE, '1', 'existing env keys must be preserved');
+    }
+    // HARNESS_USER stays unset — the record-run hook derives it from git/OS.
+    assert.ok(!('HARNESS_USER' in settings.env), 'HARNESS_USER must be left for the hook to derive');
+
     const initSh = fs.readFileSync(path.join(target, 'init.sh'), 'utf8');
     assert.ok(!initSh.includes('{{'), 'init.sh must not contain leftover {{ placeholders');
     assert.ok((fs.statSync(path.join(target, 'init.sh')).mode & 0o100) !== 0, 'init.sh should be executable');

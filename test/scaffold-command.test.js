@@ -94,7 +94,7 @@ test('scaffold rebuilds target enabledPlugins from the user choice, not the harn
   assert.match(scaffold, /Replace the copied `enabledPlugins` object/, 'replaces rather than merges the seed set');
 });
 
-test('init.sh does not auto-start opt-in telemetry stack', () => {
+test('init.sh does not auto-start the telemetry stack (env is on by default; starting the stack stays manual)', () => {
   const initTemplate = fs.readFileSync(path.join(__dirname, '..', '.claude', 'templates', 'init-sh.template'), 'utf8');
 
   assert.doesNotMatch(initTemplate, /docker compose -f telemetry_docker_compose\.yml up -d/);

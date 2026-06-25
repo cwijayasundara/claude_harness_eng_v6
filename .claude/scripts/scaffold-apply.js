@@ -9,11 +9,14 @@
 // Step 10 "scaffolded successfully" report without writing anything. This script
 // is the part that MUST NOT be skipped or hallucinated: given a profile JSON, it
 // copies the harness `.claude` tree and writes the manifest, CLAUDE.md, design.md,
-// init.sh, security files, .mcp.json, .gitignore and the specs/ output dirs.
+// init.sh, security files, .mcp.json, .gitignore and the specs/ output dirs. It
+// also bakes the telemetry env into the copied settings (see enableTelemetry) so
+// a new project exports to the dashboards by default.
 //
-// Out of scope (still handled by the interactive command): telemetry/grafana
-// copy, tracker-config files, git init + git-hooks, framework-pack installs,
-// subdirectory CLAUDE.md files, and the official-plugins enabledPlugins rebuild.
+// Out of scope (still handled by the interactive command): the telemetry/grafana
+// stack copy (the dir + compose file), tracker-config files, git init + git-hooks,
+// framework-pack installs, subdirectory CLAUDE.md files, and the official-plugins
+// enabledPlugins rebuild.
 //
 // CLI:
 //   node scaffold-apply.js --profile <profile.json> \
@@ -90,6 +93,34 @@ function copyScaffoldTree(src, target) {
     copyTree(path.join(src, file), path.join(dotClaude, file));
   }
   copyDirContents(path.join(src, 'templates', 'state-seeds'), path.join(dotClaude, 'state'));
+}
+
+// Telemetry env baked into every scaffolded project so a new project exports to
+// the dashboards out of the box (the harness's own repo stays off — these are
+// injected into the COPIED settings, not the source). The only manual step left
+// for the user is starting the stack (`docker compose -f telemetry_docker_compose.yml up -d`);
+// until it is up, the record-run push no-ops on a 2s timeout. HARNESS_USER is left
+// unset on purpose — the record-run hook derives it from git user.name / the OS user.
+const TELEMETRY_ENV = {
+  CLAUDE_CODE_ENABLE_TELEMETRY: '1',
+  OTEL_METRICS_EXPORTER: 'otlp',
+  OTEL_LOGS_EXPORTER: 'otlp',
+  OTEL_EXPORTER_OTLP_PROTOCOL: 'grpc',
+  OTEL_EXPORTER_OTLP_ENDPOINT: 'http://localhost:4317',
+  OTEL_LOG_TOOL_DETAILS: '1',
+  HARNESS_PUSHGATEWAY_URL: 'http://localhost:9091',
+};
+
+// Merge TELEMETRY_ENV into the copied settings files (interactive + headless), so
+// both `/build` and `/build --auto` runs export. Existing env keys are preserved.
+function enableTelemetry(target) {
+  for (const file of ['settings.json', 'settings.auto.json']) {
+    const p = path.join(target, '.claude', file);
+    if (!fs.existsSync(p)) continue;
+    const settings = JSON.parse(fs.readFileSync(p, 'utf8'));
+    settings.env = { ...(settings.env || {}), ...TELEMETRY_ENV };
+    fs.writeFileSync(p, `${JSON.stringify(settings, null, 2)}\n`);
+  }
 }
 
 function requireTemplate(src, rel) {
@@ -187,6 +218,7 @@ function applyScaffold(rawOpts) {
   const profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
   fs.mkdirSync(target, { recursive: true });
   copyScaffoldTree(pluginSource, target);
+  enableTelemetry(target);
   const written = [
     writeManifest(target, profile), writeClaudeMd(target, pluginSource, profile),
     writeDesignMd(target, pluginSource), writeInitSh(target, pluginSource, profile),

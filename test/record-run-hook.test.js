@@ -244,8 +244,9 @@ test('replay-telemetry seeds the ledger from existing run receipts', async () =>
 test('telemetry is OFF by default — no OTEL/Pushgateway env vars, but record-run stays wired', () => {
   const settings = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '.claude', 'settings.json'), 'utf8'));
 
-  // Telemetry is opt-in (docs/telemetry.md). A fresh project must not export
-  // OTEL or push to a Pushgateway until the user explicitly enables it.
+  // The harness's OWN repo stays telemetry-off — its dev/CI runs must not export
+  // OTEL or push to a Pushgateway. (Scaffolded *projects* default telemetry ON;
+  // that is injected into the copied settings and asserted in scaffold-apply.test.js.)
   assert.equal(settings.env.CLAUDE_CODE_ENABLE_TELEMETRY, undefined);
   assert.equal(settings.env.OTEL_METRICS_EXPORTER, undefined);
   assert.equal(settings.env.OTEL_EXPORTER_OTLP_ENDPOINT, undefined);
