@@ -63,15 +63,18 @@ test('applyScaffold produces a real scaffold from a Minimal Node profile', () =>
     assert.ok(claudeMd.length > 0, 'CLAUDE.md should be non-empty');
     assert.ok(claudeMd.includes('sample-cli'), 'CLAUDE.md should mention the project name');
 
-    // Project-tailored user guide (not a verbatim harness-README copy): names the
-    // project, recommends the lite lane for this type-D CLI, and omits the
-    // harness-dev-only sections that a project user shouldn't see.
-    const readme = fs.readFileSync(path.join(target, 'SCAFFOLD_README.md'), 'utf8');
-    assert.ok(readme.includes('sample-cli'), 'SCAFFOLD_README must name the project');
+    // Project-tailored dashboard guide (not a verbatim harness-README copy):
+    // names the project, recommends the lite lane for this type-D CLI, and
+    // omits harness-dev-only sections that a project user shouldn't see.
+    const scaffoldReadme = fs.readFileSync(path.join(target, 'SCAFFOLD_README.md'), 'utf8');
+    const readme = fs.readFileSync(path.join(target, 'README.md'), 'utf8');
+    assert.strictEqual(readme, scaffoldReadme, 'empty scaffolded projects should receive README.md too');
+    assert.ok(readme.includes('sample-cli'), 'README must name the project');
+    assert.match(readme, /Pick The Work Route/, 'README must use the route dashboard');
     assert.match(readme, /\/build --lite/, 'a type-D CLI must be steered to the lite lane');
     assert.match(readme, /Telemetry/, 'guide must cover telemetry');
     assert.doesNotMatch(readme, /\{\{[A-Z_]+\}\}/, 'no unrendered placeholders');
-    assert.doesNotMatch(readme, /npm run test:smoke|Testing the harness/, 'must not carry harness-dev-only sections');
+    assert.doesNotMatch(readme, /npm run test:smoke|Testing This Harness/, 'must not carry harness-dev-only sections');
 
     assert.ok(fs.statSync(path.join(target, '.claude', 'agents')).isDirectory());
     assert.ok(fs.statSync(path.join(target, '.claude', 'skills')).isDirectory());
@@ -114,6 +117,25 @@ test('applyScaffold produces a real scaffold from a Minimal Node profile', () =>
     // Minimal (type D) skips calibration-profile.json.
     assert.ok(!fs.existsSync(path.join(target, 'calibration-profile.json')),
       'type D must not write calibration-profile.json');
+  } finally {
+    fs.rmSync(workDir, { recursive: true, force: true });
+  }
+});
+
+test('applyScaffold preserves an existing README.md while writing SCAFFOLD_README.md', () => {
+  const workDir = makeTempDir();
+  const target = path.join(workDir, 'project');
+  try {
+    fs.mkdirSync(target, { recursive: true });
+    fs.writeFileSync(path.join(target, 'README.md'), '# Existing product README\n');
+    const profilePath = writeProfile(workDir, MINIMAL_NODE_PROFILE);
+    applyScaffold({ profile: profilePath, pluginSource: PLUGIN_SOURCE, target });
+
+    const readme = fs.readFileSync(path.join(target, 'README.md'), 'utf8');
+    const scaffoldReadme = fs.readFileSync(path.join(target, 'SCAFFOLD_README.md'), 'utf8');
+    assert.strictEqual(readme, '# Existing product README\n');
+    assert.match(scaffoldReadme, /Claude Harness Dashboard/);
+    assert.match(scaffoldReadme, /Pick The Work Route/);
   } finally {
     fs.rmSync(workDir, { recursive: true, force: true });
   }
