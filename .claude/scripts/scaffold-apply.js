@@ -9,7 +9,7 @@
 // Step 10 "scaffolded successfully" report without writing anything. This script
 // is the part that MUST NOT be skipped or hallucinated: given a profile JSON, it
 // copies the harness `.claude` tree and writes the manifest, CLAUDE.md, the
-// project-tailored SCAFFOLD_README.md, design.md, init.sh, security files,
+// project-tailored README.md / SCAFFOLD_README.md, design.md, init.sh, security files,
 // .mcp.json, .gitignore and the specs/ output dirs. Telemetry export stays
 // opt-in via --telemetry / profile.telemetry.
 //
@@ -248,13 +248,19 @@ function writeClaudeMd(target, src, profile) {
   return out;
 }
 
-// Project-tailored user guide. Named SCAFFOLD_README.md so it never collides with
-// the product README.md that /build Phase 10 generates for the built app.
+// Project-tailored user guide. New/empty repos get README.md. Brownfield repos
+// keep any existing product README intact and still receive SCAFFOLD_README.md.
 function writeProjectReadme(target, src, profile) {
   const body = fs.readFileSync(requireTemplate(src, 'templates/project-readme.template.md'), 'utf8');
-  const out = path.join(target, 'SCAFFOLD_README.md');
-  fs.writeFileSync(out, render.renderProjectReadme(body, profile));
-  return out;
+  const rendered = render.renderProjectReadme(body, profile);
+  const scaffoldReadme = path.join(target, 'SCAFFOLD_README.md');
+  fs.writeFileSync(scaffoldReadme, rendered);
+  const readme = path.join(target, 'README.md');
+  if (!fs.existsSync(readme)) {
+    fs.writeFileSync(readme, rendered);
+    return [scaffoldReadme, readme];
+  }
+  return [scaffoldReadme];
 }
 
 function writeDesignMd(target, src) {
@@ -338,7 +344,7 @@ function applyScaffold(rawOpts) {
   if (telemetryEnabled(profile, rawOpts)) enableTelemetry(target);
   const written = [
     writeManifest(target, profile), writeClaudeMd(target, pluginSource, profile),
-    writeProjectReadme(target, pluginSource, profile),
+    ...writeProjectReadme(target, pluginSource, profile),
     writeDesignMd(target, pluginSource), writeInitSh(target, pluginSource, profile),
   ];
   copyStarterFiles(target, pluginSource);
