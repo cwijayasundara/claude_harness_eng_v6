@@ -7,7 +7,10 @@ const os = require('os');
 const path = require('path');
 
 const { applyScaffold } = require('../.claude/scripts/scaffold-apply');
-const { buildManifest } = require('../.claude/scripts/scaffold-render');
+const { buildManifest, renderProjectReadme } = require('../.claude/scripts/scaffold-render');
+
+const README_TEMPLATE = fs.readFileSync(
+  path.resolve(__dirname, '..', '.claude', 'templates', 'project-readme.template.md'), 'utf8');
 
 // The harness's own .claude is the plugin source. This file lives in <repo>/test/,
 // so the harness .claude root is ../.claude from here.
@@ -59,6 +62,16 @@ test('applyScaffold produces a real scaffold from a Minimal Node profile', () =>
     const claudeMd = fs.readFileSync(path.join(target, 'CLAUDE.md'), 'utf8');
     assert.ok(claudeMd.length > 0, 'CLAUDE.md should be non-empty');
     assert.ok(claudeMd.includes('sample-cli'), 'CLAUDE.md should mention the project name');
+
+    // Project-tailored user guide (not a verbatim harness-README copy): names the
+    // project, recommends the lite lane for this type-D CLI, and omits the
+    // harness-dev-only sections that a project user shouldn't see.
+    const readme = fs.readFileSync(path.join(target, 'SCAFFOLD_README.md'), 'utf8');
+    assert.ok(readme.includes('sample-cli'), 'SCAFFOLD_README must name the project');
+    assert.match(readme, /\/build --lite/, 'a type-D CLI must be steered to the lite lane');
+    assert.match(readme, /Telemetry/, 'guide must cover telemetry');
+    assert.doesNotMatch(readme, /\{\{[A-Z_]+\}\}/, 'no unrendered placeholders');
+    assert.doesNotMatch(readme, /npm run test:smoke|Testing the harness/, 'must not carry harness-dev-only sections');
 
     assert.ok(fs.statSync(path.join(target, '.claude', 'agents')).isDirectory());
     assert.ok(fs.statSync(path.join(target, '.claude', 'skills')).isDirectory());
@@ -139,6 +152,26 @@ test('explicit posture fields override the lite defaults', () => {
   assert.strictEqual(m.execution.model_tier, 'balanced');
   assert.strictEqual(m.execution.ceremony, 'full');
   assert.strictEqual(m.verification.mode, 'stub');
+});
+
+test('the project README is tailored per shape (lite CLI vs full-stack)', () => {
+  const cli = renderProjectReadme(README_TEMPLATE, {
+    name: 'todo-cli', description: 'a todo manager', projectType: 'D', stack: {},
+  });
+  assert.match(cli, /todo-cli/);
+  assert.match(cli, /Minimal — CLI \/ library \/ single-script/);
+  assert.match(cli, /\/build --lite "todo-cli: a todo manager"/);
+  assert.match(cli, /cost \(Sonnet generation\)/);
+  assert.doesNotMatch(cli, /\{\{[A-Z_]+\}\}/);
+
+  const app = renderProjectReadme(README_TEMPLATE, {
+    name: 'shop', projectType: 'A',
+    stack: { backend: { language: 'python' }, frontend: { language: 'react' } },
+  });
+  assert.match(app, /Consumer-facing app/);
+  assert.match(app, /\/build docs\/prd\.md --auto/);
+  assert.match(app, /balanced \(Opus generation\)/);
+  assert.doesNotMatch(app, /\{\{[A-Z_]+\}\}/);
 });
 
 test('full-stack projects keep balanced + full + docker', () => {

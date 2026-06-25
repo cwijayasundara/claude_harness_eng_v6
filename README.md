@@ -283,6 +283,7 @@ It nudges the loop onward **only** while harness state proves work remains (an i
 
 | File | Purpose |
 |---|---|
+| `SCAFFOLD_README.md` | Project-tailored guide to driving the harness in *this* project — start here |
 | `.claude/program.md` | Human-agent bridge — edit mid-run to steer `/auto` |
 | `.claude/settings.json` | Hook config, permissions, enabled plugins |
 | `.claude/state/learned-rules.md` | Accumulated rules from past failures (never deleted) |

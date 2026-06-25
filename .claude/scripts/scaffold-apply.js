@@ -8,10 +8,11 @@
 // model-executed procedure. In headless `claude -p` mode the model can emit the
 // Step 10 "scaffolded successfully" report without writing anything. This script
 // is the part that MUST NOT be skipped or hallucinated: given a profile JSON, it
-// copies the harness `.claude` tree and writes the manifest, CLAUDE.md, design.md,
-// init.sh, security files, .mcp.json, .gitignore and the specs/ output dirs. It
-// also bakes the telemetry env into the copied settings (see enableTelemetry) so
-// a new project exports to the dashboards by default.
+// copies the harness `.claude` tree and writes the manifest, CLAUDE.md, the
+// project-tailored SCAFFOLD_README.md, design.md, init.sh, security files,
+// .mcp.json, .gitignore and the specs/ output dirs. It also bakes the telemetry
+// env into the copied settings (see enableTelemetry) so a new project exports to
+// the dashboards by default.
 //
 // Out of scope (still handled by the interactive command): the telemetry/grafana
 // stack copy (the dir + compose file), tracker-config files, git init + git-hooks,
@@ -142,6 +143,15 @@ function writeClaudeMd(target, src, profile) {
   return out;
 }
 
+// Project-tailored user guide. Named SCAFFOLD_README.md so it never collides with
+// the product README.md that /build Phase 10 generates for the built app.
+function writeProjectReadme(target, src, profile) {
+  const body = fs.readFileSync(requireTemplate(src, 'templates/project-readme.template.md'), 'utf8');
+  const out = path.join(target, 'SCAFFOLD_README.md');
+  fs.writeFileSync(out, render.renderProjectReadme(body, profile));
+  return out;
+}
+
 function writeDesignMd(target, src) {
   // design.template.md carries no {{PLACEHOLDER}} markers — copy verbatim.
   const out = path.join(target, 'design.md');
@@ -221,6 +231,7 @@ function applyScaffold(rawOpts) {
   enableTelemetry(target);
   const written = [
     writeManifest(target, profile), writeClaudeMd(target, pluginSource, profile),
+    writeProjectReadme(target, pluginSource, profile),
     writeDesignMd(target, pluginSource), writeInitSh(target, pluginSource, profile),
   ];
   copyStarterFiles(target, pluginSource);
