@@ -118,10 +118,11 @@ gate requirement, not a hope.
   it already creates one issue per dependency group, mirrors blockers, and
   writes `.claude/state/tracker-map.json`. Transport via Linear MCP →
   `publish-to-linear.js` → manual CLI, in that order (existing behavior).
-- **Single-story lane:** new lightweight path that creates one Linear issue
-  (title, AC in body) reusing `tracker-config.json` + `publish-to-linear.js`,
-  without requiring the full `/build` artifact set (epics, dependency-graph,
-  component-map, features.json).
+- **Single-story lane:** add a `--granularity single` mode to `tracker-publish`
+  that creates one Linear issue (title, AC in body) reusing `tracker-config.json`
+  + `publish-to-linear.js`, without requiring the full `/build` artifact set
+  (epics, dependency-graph, component-map, features.json). Keeping it inside
+  `tracker-publish` keeps all Linear logic in one place.
 - **PR linkage (new):** every opened PR links back to its Linear issue; the
   Linear issue is left in `Human Review` (never auto-`Done`, per existing
   tracker safety rules).
@@ -145,13 +146,12 @@ gate requirement, not a hope.
 - `/auto` — parallel agent-team execution with sprint contracts.
 - `/gate` — evaluator + security verification.
 
-## Open questions for spec review
+## Decisions locked in review
 
-- Exact command name confirmed as `/feature` (alternatives `/brownfield-change`,
-  `/work` were considered and rejected for brevity/coverage).
-- Whether the single-story Linear path should live inside `tracker-publish` as a
-  `--granularity single` mode or as a small helper in `/feature` itself
-  (leaning: extend `tracker-publish`, keep Linear logic in one place).
+- Command name: `/feature` (alternatives `/brownfield-change`, `/work`
+  considered and rejected for brevity/coverage).
+- Single-story Linear publish lives in `tracker-publish` as `--granularity
+  single`, keeping all Linear logic in one place.
 
 ## Testing strategy
 
