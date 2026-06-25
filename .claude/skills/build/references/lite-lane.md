@@ -20,6 +20,20 @@ If no argument is given, ask the user for a one-paragraph description before sta
 
 ---
 
+## Headless mode (`--auto` / `--autonomous`)
+
+`/build --lite --auto <prd>` (and `--lite --autonomous <prd>`) run this same compressed lane **without the interview or the approval gate** — the cut-down equivalent of `/build --auto`. Three substitutions turn the interactive lane headless; everything else below is unchanged:
+
+1. **PRD grounding replaces Step 1.** The input is a PRD file path, not a `/lite "<description>"` one-liner. Derive the Step 1 fields — project name, language/runtime, core capability, load-bearing dependencies, interface — from the PRD (see `docs/prd-format.md`). Do **not** interview; an interview cannot run headless. Where the PRD is silent on a load-bearing detail, **record an assumption** in the BRD-lite *Notes* section and proceed — do not stop to ask. If no usable PRD is supplied, stop and say so rather than inventing scope (in `--auto` there is no plan gate to catch a hallucinated project).
+
+2. **The Eligibility check becomes an automated gate that auto-escalates.** Evaluate the PRD against the Eligibility caps below *before writing any artifact*. If it stays within the caps, proceed with the lite lane. If it exceeds them — a database, a second service, auth/payments/PII, a real public API, or > 5 stories — **do not** compress it into 5 stories. Hand off to the full `--auto` pipeline (`/build`'s Phase 0 onward) automatically and **log the escalation reason**. There is no human to ask, so the escalation that the interactive lane leaves to the user is here made automatic — silently cramming an oversized project into the lite caps is the one failure this gate exists to prevent.
+
+3. **Step 7 is dropped and handoff is automatic.** Skip the approval gate entirely (that is what `--auto` means) and **invoke `/auto --group A` directly**, then run the autonomous tail (Phase 9.5 pre-PR verify → PR) exactly as `/build --auto` does. In `--lite --autonomous` (semi-auto), keep **one** consolidated approval — present the Step 7 summary once, and on approval run straight through to the PR. In `--lite --auto` (full-auto), keep **zero** gates.
+
+The machine gates are identical in every case: the `/auto` ratchet, the evaluator, the security review, and the Phase 9.5 verify run unchanged. Headless lite compresses *planning ceremony*, never verification — the same contract as interactive lite.
+
+---
+
 ## Eligibility
 
 Use `/build --lite` only when **all** are true:
@@ -199,13 +213,13 @@ External deps: {list}
 Approve to proceed to /auto, or provide corrections.
 ```
 
-Wait for explicit "approve" / "yes" / "go". Do **not** invoke `/auto` automatically.
+Wait for explicit "approve" / "yes" / "go". Do **not** invoke `/auto` automatically. *(Headless exception: in `--lite --auto` this gate is skipped entirely and `/auto` is invoked automatically; in `--lite --autonomous` this summary is the single consolidated approval — see [Headless mode](#headless-mode---auto----autonomous).)*
 
 ---
 
 ## Handoff
 
-On approval, the user runs `/auto --group A`. From here, the standard ratchet loop (sprint contract → generator → evaluator → review) runs unchanged.
+On approval, the user runs `/auto --group A` (interactive lite). In headless lite (`--lite --auto` / `--lite --autonomous`) the lane invokes `/auto --group A` itself and continues through the autonomous tail to a PR. From here, the standard ratchet loop (sprint contract → generator → evaluator → review) runs unchanged.
 
 `/build --lite` does **not** modify the autonomous build loop, gates, or self-healing logic. It only compresses phases 1-3.
 

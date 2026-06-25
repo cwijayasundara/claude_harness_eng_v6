@@ -16,7 +16,8 @@ Full software development lifecycle pipeline. Orchestrates BRD creation, story s
 ```
 /build path/to/requirements.md
 /build path/to/requirements.md --mode lean
-/build --lite "Python CLI that summarizes a URL"   # small new project
+/build --lite "Python CLI that summarizes a URL"   # small new project (interactive)
+/build --lite --auto path/to/prd.md                # headless lite: small PRD -> PR, zero gates
 /build path/to/requirements.md --autonomous        # plan-approve once, then run to PR
 /build path/to/prd.md --autonomous --plan-only     # produce specs/ for inspection, then stop
 /build path/to/prd.md --autonomous --pod 3         # pod: each cluster raises its own PR
@@ -44,6 +45,12 @@ This is the in-session human trigger. The tracker-driven equivalent (Jira/Linear
 ### `--lite` — compressed greenfield lane
 
 For a **small** new project (single language/runtime, one module, no DB/auth, ≤ ~5 stories — e.g. a CLI tool, single-script utility, or small library), pass `--lite` with a one-line description. Instead of the full phases below, follow the compressed lane in **`.claude/skills/build/references/lite-lane.md`**: a 5-question interview → one-page BRD-lite → ≤5 stories in a single group → minimal design artifacts → one approval gate → hand off to `/auto --group A`. It enforces the same ratchet/gates; it only compresses the planning ceremony. If the project exceeds the lite scope caps (a database, a second service, auth, >5 stories), the lane escalates you to the full pipeline. Everything from Phase 0 below is the full (non-lite) path.
+
+**`--lite --auto` (and `--lite --autonomous`) — headless lite.** Combine the compressed lane with autonomous grounding to run a small **PRD** straight through to a PR with no interview and no approval gate — the cut-down equivalent of `/build --auto`. The two flags compose by their usual meaning: `--lite` picks the compressed lane (single group, ≤5 stories, minimal design), and `--auto`/`--autonomous` make it headless. Concretely, the lite lane runs with these substitutions (full detail: lite-lane.md → *Headless mode*):
+
+- **PRD grounding replaces the interview.** The input is a PRD file path, not a one-liner. Derive the lite-lane Step 1 fields (name, runtime, capability, deps, interface) from the PRD instead of asking; record assumptions rather than questions. If no usable PRD is supplied, stop and say so — do not invent scope.
+- **Automated eligibility gate with auto-escalation.** Before writing any artifact, check the PRD against the lite-lane eligibility caps. If it exceeds them (a database, a second service, auth, >5 stories, a real public API), **auto-escalate to the full `--auto` pipeline** (Phase 0 below) instead of cramming the project into 5 stories — there is no human to ask, so escalation is automatic and must be logged.
+- **The Step 7 approval gate is dropped** (that is what `--auto` means) and the lane **auto-invokes `/auto --group A`**, then runs the autonomous tail (Phase 9.5 pre-PR verify → PR). `--lite --autonomous` keeps the *one* consolidated approval before handoff; `--lite --auto` keeps zero gates. Either way the machine gates — ratchet, evaluator, security, Phase 9.5 — run unchanged; headless lite compresses planning, never verification.
 
 ---
 

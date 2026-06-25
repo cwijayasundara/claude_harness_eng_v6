@@ -7,6 +7,7 @@ const os = require('os');
 const path = require('path');
 
 const { applyScaffold } = require('../.claude/scripts/scaffold-apply');
+const { buildManifest } = require('../.claude/scripts/scaffold-render');
 
 // The harness's own .claude is the plugin source. This file lives in <repo>/test/,
 // so the harness .claude root is ../.claude from here.
@@ -107,4 +108,34 @@ test('applyScaffold throws clearly when plugin source is invalid', () => {
 
 test('applyScaffold throws when --profile is missing', () => {
   assert.throws(() => applyScaffold({ pluginSource: PLUGIN_SOURCE }), /--profile/);
+});
+
+test('lite-shaped projects default to the cheap cost posture', () => {
+  // A type-D CLI with no explicit posture fields gets cost + trimmed + local.
+  const m = buildManifest({ name: 'cli', projectType: 'D', stack: {} });
+  assert.strictEqual(m.execution.model_tier, 'cost');
+  assert.strictEqual(m.execution.ceremony, 'trimmed');
+  assert.strictEqual(m.verification.mode, 'local');
+  assert.deepStrictEqual(m.architecture, { enabled: false });
+});
+
+test('explicit posture fields override the lite defaults', () => {
+  const m = buildManifest({
+    name: 'cli', projectType: 'D', stack: {},
+    modelTier: 'balanced', ceremony: 'full', verificationMode: 'C',
+  });
+  assert.strictEqual(m.execution.model_tier, 'balanced');
+  assert.strictEqual(m.execution.ceremony, 'full');
+  assert.strictEqual(m.verification.mode, 'stub');
+});
+
+test('full-stack projects keep balanced + full + docker', () => {
+  const m = buildManifest({
+    name: 'app', projectType: 'A',
+    stack: { backend: { language: 'python' }, frontend: { language: 'react' } },
+  });
+  assert.strictEqual(m.execution.model_tier, 'balanced');
+  assert.strictEqual(m.execution.ceremony, 'full');
+  assert.strictEqual(m.verification.mode, 'docker');
+  assert.strictEqual(m.architecture, undefined);
 });
