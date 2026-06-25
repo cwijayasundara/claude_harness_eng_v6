@@ -82,3 +82,20 @@ test('build SKILL wires the parser as a mandatory first step (no dead code)', ()
     'SKILL.md must forbid hand-parsing the invocation',
   );
 });
+
+test('build SKILL feeds the real invocation to the parser via $ARGUMENTS (regression)', () => {
+  // The original bug: the parser was wired in but fed a prose placeholder the
+  // forked agent could not substitute, so it ran empty and silently resolved to
+  // the bare `gated` lane with prdPath:null. The fix is harness interpolation —
+  // the parser must be invoked with "$ARGUMENTS", never a "<placeholder>".
+  assert.match(
+    BUILD_SKILL,
+    /build-lane\.js"?\s+"\$ARGUMENTS"/,
+    'build-lane.js must be invoked with the interpolated "$ARGUMENTS", not a hand-substituted placeholder',
+  );
+  assert.doesNotMatch(
+    BUILD_SKILL,
+    /build-lane\.js"?\s+"<[^>]*>"/,
+    'build-lane.js must not be invoked with a prose <placeholder> the fork has to substitute by hand',
+  );
+});
