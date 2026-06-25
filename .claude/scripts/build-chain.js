@@ -66,13 +66,26 @@ function promptFor(kind, prd, opts = {}) {
   return `/auto --once${opts.sequential ? ' --sequential' : ''}`; // BUILD
 }
 
+function claudeArgsFor(opts = {}) {
+  const args = ['-p', '--model', opts.model || 'sonnet'];
+  if (opts.pluginDir) args.push('--plugin-dir', opts.pluginDir);
+  if (opts.settings) args.push('--settings', opts.settings);
+  if (opts.strictMcp) args.push('--strict-mcp-config');
+  if (opts.maxBudgetUsd) args.push('--max-budget-usd', String(opts.maxBudgetUsd));
+  return args;
+}
+
 function realSpawnLink(cwd, prd) {
   const model = process.env.BUILD_CHAIN_MODEL || 'sonnet';
   const timeout = parseInt(process.env.BUILD_CHAIN_LINK_TIMEOUT_MS || '1800000', 10); // 30 min < wall
   const pluginDir = process.env.HARNESS_PLUGIN_DIR || null;
+  const settings = process.env.BUILD_CHAIN_SETTINGS || (
+    fs.existsSync(path.join(cwd, '.claude', 'settings.auto.json')) ? '.claude/settings.auto.json' : null
+  );
+  const strictMcp = process.env.BUILD_CHAIN_STRICT_MCP !== '0';
+  const maxBudgetUsd = process.env.BUILD_CHAIN_MAX_BUDGET_USD || null;
   return (kind, opts = {}) => {
-    const args = ['-p', '--model', model];
-    if (pluginDir) args.push('--plugin-dir', pluginDir);
+    const args = claudeArgsFor({ model, pluginDir, settings, strictMcp, maxBudgetUsd });
     const r = spawnSync('claude', args, {
       input: promptFor(kind, prd, opts),
       cwd, encoding: 'utf8', timeout, killSignal: 'SIGKILL',
@@ -123,4 +136,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { runChain };
+module.exports = { runChain, claudeArgsFor, promptFor };

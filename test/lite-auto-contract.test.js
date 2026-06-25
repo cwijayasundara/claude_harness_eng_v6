@@ -19,6 +19,12 @@ test('/build documents the headless-lite lane (--lite --auto)', () => {
   assert.match(b, /PRD grounding replaces the interview/i);
 });
 
+test('lite lane reference uses /build --lite, not a removed /lite command', () => {
+  const lane = read('.claude/skills/build/references/lite-lane.md');
+  assert.doesNotMatch(lane, /(^|\s)\/lite\b/);
+  assert.match(lane, /\/build --lite/);
+});
+
 test('headless lite drops the interview and the approval gate', () => {
   const lane = read('.claude/skills/build/references/lite-lane.md');
   assert.match(lane, /## Headless mode/i);

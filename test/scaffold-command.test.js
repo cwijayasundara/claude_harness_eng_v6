@@ -17,11 +17,10 @@ const installFrameworkPacks = fs.readFileSync(
   'utf8'
 );
 
-test('/scaffold validates every telemetry asset before copying it to target repos', () => {
+test('/scaffold validates telemetry assets only for the opt-in telemetry profile', () => {
   const requiredChecks = [
     'test -f "$PLUGIN_SOURCE/skills/code-map/scripts/import_understand_graph.js"',
     'test -f "$PLUGIN_SOURCE/scripts/telemetry-memory.js"',
-    'test -f "$PLUGIN_SOURCE/scripts/replay-telemetry.js"',
     'test -f "$HARNESS_ROOT/telemetry_docker_compose.yml"',
     'test -f "$HARNESS_ROOT/telemetry/otel-collector-config.yml"',
     'test -f "$HARNESS_ROOT/telemetry/prometheus.yml"',
@@ -33,21 +32,23 @@ test('/scaffold validates every telemetry asset before copying it to target repo
   for (const check of requiredChecks) {
     assert.match(scaffold, new RegExp(check.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
+  assert.match(scaffold, /only if telemetry was requested/i);
 });
 
-test('/scaffold copies telemetry, docs, and git hook assets into target repos', () => {
+test('/scaffold keeps telemetry stack copying opt-in while still copying git hook assets', () => {
   const requiredCopies = [
     'cp "$HARNESS_ROOT/telemetry_docker_compose.yml" ./telemetry_docker_compose.yml',
     'cp "$HARNESS_ROOT/telemetry/otel-collector-config.yml" ./telemetry/',
     'cp "$HARNESS_ROOT/telemetry/prometheus.yml" ./telemetry/',
     'cp -r "$HARNESS_ROOT/telemetry/grafana" ./telemetry/',
-    'cp -r $PLUGIN_SOURCE/scripts/ .claude/scripts/',
     'cp $PLUGIN_SOURCE/git-hooks/prepare-commit-msg .git/hooks/prepare-commit-msg',
   ];
 
   for (const copy of requiredCopies) {
     assert.match(scaffold, new RegExp(copy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
+  assert.match(scaffold, /Copy the telemetry stack config only if telemetry was requested/);
+  assert.doesNotMatch(scaffold, /cp -r \$PLUGIN_SOURCE\/scripts\/ \.claude\/scripts\//);
 });
 
 test('/scaffold does not vendor redundant Karpathy guidelines as a separate skill', () => {
@@ -93,7 +94,7 @@ test('scaffold rebuilds target enabledPlugins from the user choice, not the harn
   assert.match(scaffold, /Replace the copied `enabledPlugins` object/, 'replaces rather than merges the seed set');
 });
 
-test('init.sh does not auto-start the telemetry stack (env is on by default; starting the stack stays manual)', () => {
+test('init.sh does not auto-start the telemetry stack (telemetry remains opt-in)', () => {
   const initTemplate = fs.readFileSync(path.join(__dirname, '..', '.claude', 'templates', 'init-sh.template'), 'utf8');
 
   assert.doesNotMatch(initTemplate, /docker compose -f telemetry_docker_compose\.yml up -d/);
@@ -109,6 +110,17 @@ test('public docs and scaffold instructions agree on agent count and scaffold co
   assert.match(claudeMd, /8-agent team/);
   assert.match(scaffold, /Agent roles table \(8 agents\)/);
   assert.doesNotMatch(scaffold, /full 8-question wizard/);
+});
+
+test('/scaffold docs make core the universal default with brownfield included', () => {
+  const readme = fs.readFileSync(path.join(__dirname, '..', 'README.md'), 'utf8');
+
+  assert.match(scaffold, /Default to `core` for every project/);
+  assert.match(scaffold, /minimal brownfield route/i);
+  assert.match(scaffold, /backward-compatible alias/);
+  assert.doesNotMatch(scaffold, /default to `full` for full-stack/i);
+  assert.match(readme, /Every project gets the lean `core` scaffold by default/);
+  assert.match(readme, /\/feature.*\/brownfield.*\/code-map/s);
 });
 
 test('/install-framework-packs verifies and prints manual commands instead of running npx', () => {

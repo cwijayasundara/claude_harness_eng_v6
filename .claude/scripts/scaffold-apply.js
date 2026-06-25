@@ -10,9 +10,8 @@
 // is the part that MUST NOT be skipped or hallucinated: given a profile JSON, it
 // copies the harness `.claude` tree and writes the manifest, CLAUDE.md, the
 // project-tailored SCAFFOLD_README.md, design.md, init.sh, security files,
-// .mcp.json, .gitignore and the specs/ output dirs. It also bakes the telemetry
-// env into the copied settings (see enableTelemetry) so a new project exports to
-// the dashboards by default.
+// .mcp.json, .gitignore and the specs/ output dirs. Telemetry export stays
+// opt-in via --telemetry / profile.telemetry.
 //
 // Out of scope (still handled by the interactive command): the telemetry/grafana
 // stack copy (the dir + compose file), tracker-config files, git init + git-hooks,
@@ -39,6 +38,8 @@
 //     "projectType":      "A"|"B"|"C"|"D",   // A consumer / B internal / C api / D minimal
 //     "verificationMode": "A"|"B"|"C",       // A docker / B local / C stub
 //     "modelTier":        "cost"|"balanced"|"max-quality",
+//     "scaffoldProfile":  "core"|"brownfield"|"full",
+//     "telemetry":        boolean,
 //     "tracker":          "A"|"B"|"C"|"D",   // recorded only; files out of scope
 //     "frameworkPacks":   string[],          // e.g. ["langchain","google-adk"]
 //     "lsp":              [{ name, language }]  // OR auto-derived from stack
@@ -53,6 +54,63 @@ const OUTPUT_DIRS = [
   'specs/reviews', 'specs/test_artefacts', 'specs/brownfield', 'sprint-contracts', 'e2e',
 ];
 
+const SCAFFOLD_PROFILES = new Set(['core', 'brownfield', 'full']);
+
+const CORE_AGENTS = [
+  'clean-code-reviewer.md', 'design-critic.md', 'diff-reviewer.md',
+  'evaluator.md', 'generator.md', 'planner.md', 'security-reviewer.md',
+  'codebase-explorer.md',
+];
+const BROWNFIELD_AGENTS = [...CORE_AGENTS];
+
+const CORE_SKILLS = [
+  'auto', 'brd', 'build', 'clarify', 'code-gen', 'deploy', 'design',
+  'evaluate', 'gate', 'implement', 'spec', 'status', 'test',
+  'feature', 'brownfield', 'change', 'checking-coverage-before-change',
+  'checking-migration-safety', 'code-map', 'keeping-refactors-pure',
+  'pinning-down-behavior', 'refactor', 'seam-finder',
+  'sprouting-instead-of-editing', 'tracker-publish',
+  'upgrading-dependencies', 'vibe',
+];
+const BROWNFIELD_SKILLS = [
+  ...CORE_SKILLS,
+];
+
+const CORE_SCRIPTS = [
+  'archive-state.js',
+  'budget-state.js',
+  'build-chain-state.js',
+  'build-chain.js',
+  'build-lane.js',
+  'ci-ingest.js',
+  'constraints-extract.js',
+  'coverage-diff.js',
+  'cr-index.js',
+  'flag-scan.js',
+  'model-tier.js',
+  'mutation-smoke.js',
+  'perf-baseline.js',
+  'pipeline-snapshot.js',
+  'pipeline-state-readers.js',
+  'pipeline-status.js',
+  'plan-confidence.js',
+  'telemetry-ledger-rotate.js',
+  'telemetry-memory.js',
+  'telemetry-phase-eval.js',
+  'telemetry-pipeline-gauges.js',
+  'telemetry-skill-helpers.js',
+  'trace-check.js',
+  'validate-contract.js',
+];
+const BROWNFIELD_SCRIPTS = [
+  ...CORE_SCRIPTS,
+];
+
+const LEAN_PLUGIN_ALLOWLIST = {
+  'playwright@claude-plugins-official': true,
+  'superpowers@claude-plugins-official': true,
+};
+
 // Throw rather than process.exit so applyScaffold stays testable as a library.
 // main() catches and turns this into a non-zero CLI exit with a stderr message.
 function fail(msg) {
@@ -66,6 +124,9 @@ function parseArgs(argv) {
     if (key === '--profile') opts.profile = argv[++i];
     else if (key === '--plugin-source') opts.pluginSource = argv[++i];
     else if (key === '--target') opts.target = argv[++i];
+    else if (key === '--scaffold-profile') opts.scaffoldProfile = argv[++i];
+    else if (key === '--telemetry') opts.telemetry = true;
+    else if (key === '--no-telemetry') opts.telemetry = false;
     else fail(`unknown argument: ${key}`);
   }
   return opts;
@@ -83,12 +144,59 @@ function copyDirContents(srcDir, destDir) {
   }
 }
 
+function copyNamedFiles(srcDir, destDir, names) {
+  fs.mkdirSync(destDir, { recursive: true });
+  for (const name of names) copyTree(path.join(srcDir, name), path.join(destDir, name));
+}
+
+function selectedCopySet(profileName) {
+  if (profileName === 'full') return null;
+  if (profileName === 'brownfield') {
+    return { agents: BROWNFIELD_AGENTS, skills: BROWNFIELD_SKILLS, scripts: BROWNFIELD_SCRIPTS };
+  }
+  return { agents: CORE_AGENTS, skills: CORE_SKILLS, scripts: CORE_SCRIPTS };
+}
+
+function resolveScaffoldProfile(profile, opts = {}) {
+  const requested = opts.scaffoldProfile || profile.scaffoldProfile || null;
+  const resolved = requested || 'core';
+  if (!SCAFFOLD_PROFILES.has(resolved)) {
+    fail(`unknown scaffold profile: ${resolved} (expected core, brownfield, or full)`);
+  }
+  return resolved;
+}
+
+function telemetryEnabled(profile, opts = {}) {
+  if (typeof opts.telemetry === 'boolean') return opts.telemetry;
+  return profile.telemetry === true;
+}
+
+function pruneSettings(target, profileName) {
+  if (profileName === 'full') return;
+  for (const file of ['settings.json', 'settings.auto.json']) {
+    const p = path.join(target, '.claude', file);
+    if (!fs.existsSync(p)) continue;
+    const settings = JSON.parse(fs.readFileSync(p, 'utf8'));
+    settings.enabledPlugins = { ...LEAN_PLUGIN_ALLOWLIST };
+    fs.writeFileSync(p, `${JSON.stringify(settings, null, 2)}\n`);
+  }
+}
+
 // Copy the harness `.claude` tree into <target>/.claude per scaffold Step 3.
-function copyScaffoldTree(src, target) {
+function copyScaffoldTree(src, target, profileName) {
   const dotClaude = path.join(target, '.claude');
   copyTree(path.join(src, '.claude-plugin'), path.join(dotClaude, '.claude-plugin'));
-  for (const dir of ['agents', 'skills', 'hooks', 'scripts', 'templates', 'workflows']) {
-    copyTree(path.join(src, dir), path.join(dotClaude, dir));
+  const selected = selectedCopySet(profileName);
+  if (!selected) {
+    for (const dir of ['agents', 'skills', 'hooks', 'scripts', 'templates', 'workflows']) {
+      copyTree(path.join(src, dir), path.join(dotClaude, dir));
+    }
+  } else {
+    copyNamedFiles(path.join(src, 'agents'), path.join(dotClaude, 'agents'), selected.agents);
+    copyNamedFiles(path.join(src, 'skills'), path.join(dotClaude, 'skills'), selected.skills);
+    copyNamedFiles(path.join(src, 'scripts'), path.join(dotClaude, 'scripts'), selected.scripts);
+    copyTree(path.join(src, 'hooks'), path.join(dotClaude, 'hooks'));
+    copyTree(path.join(src, 'templates'), path.join(dotClaude, 'templates'));
   }
   for (const file of ['architecture.md', 'program.md', 'settings.json', 'settings.auto.json']) {
     copyTree(path.join(src, file), path.join(dotClaude, file));
@@ -96,12 +204,9 @@ function copyScaffoldTree(src, target) {
   copyDirContents(path.join(src, 'templates', 'state-seeds'), path.join(dotClaude, 'state'));
 }
 
-// Telemetry env baked into every scaffolded project so a new project exports to
-// the dashboards out of the box (the harness's own repo stays off — these are
-// injected into the COPIED settings, not the source). The only manual step left
-// for the user is starting the stack (`docker compose -f telemetry_docker_compose.yml up -d`);
-// until it is up, the record-run push no-ops on a 2s timeout. HARNESS_USER is left
-// unset on purpose — the record-run hook derives it from git user.name / the OS user.
+// Telemetry env is opt-in. When enabled, these keys are injected into the copied
+// settings, not the source. HARNESS_USER stays unset on purpose — record-run
+// derives it from git user.name / the OS user.
 const TELEMETRY_ENV = {
   CLAUDE_CODE_ENABLE_TELEMETRY: '1',
   OTEL_METRICS_EXPORTER: 'otlp',
@@ -112,8 +217,8 @@ const TELEMETRY_ENV = {
   HARNESS_PUSHGATEWAY_URL: 'http://localhost:9091',
 };
 
-// Merge TELEMETRY_ENV into the copied settings files (interactive + headless), so
-// both `/build` and `/build --auto` runs export. Existing env keys are preserved.
+// Merge TELEMETRY_ENV into the copied settings files (interactive + headless).
+// Existing env keys are preserved.
 function enableTelemetry(target) {
   for (const file of ['settings.json', 'settings.auto.json']) {
     const p = path.join(target, '.claude', file);
@@ -226,9 +331,11 @@ function resolveOpts(opts) {
 function applyScaffold(rawOpts) {
   const { profile: profilePath, pluginSource, target } = resolveOpts(rawOpts);
   const profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
+  const scaffoldProfile = resolveScaffoldProfile(profile, rawOpts);
   fs.mkdirSync(target, { recursive: true });
-  copyScaffoldTree(pluginSource, target);
-  enableTelemetry(target);
+  copyScaffoldTree(pluginSource, target, scaffoldProfile);
+  pruneSettings(target, scaffoldProfile);
+  if (telemetryEnabled(profile, rawOpts)) enableTelemetry(target);
   const written = [
     writeManifest(target, profile), writeClaudeMd(target, pluginSource, profile),
     writeProjectReadme(target, pluginSource, profile),
@@ -239,7 +346,7 @@ function applyScaffold(rawOpts) {
   writeStateFiles(target, profile);
   const cal = writeCalibration(target, profile);
   if (cal) written.push(cal);
-  return { target, written, profileName: profile.name || 'untitled-project' };
+  return { target, written, profileName: profile.name || 'untitled-project', scaffoldProfile };
 }
 
 function run() {
@@ -249,7 +356,7 @@ function run() {
 
 function report(result) {
   process.stdout.write(`scaffold applied for "${result.profileName}" into ${result.target}\n`);
-  process.stdout.write('  .claude/ tree copied (agents, skills, hooks, scripts, templates, workflows, state)\n');
+  process.stdout.write(`  .claude/ tree copied (${result.scaffoldProfile} profile)\n`);
   for (const f of result.written) process.stdout.write(`  wrote ${path.relative(result.target, f)}\n`);
   process.stdout.write(`  created output dirs: ${OUTPUT_DIRS.join(', ')}\n`);
   process.stdout.write('  wrote .mcp.json, .gitignore, .claude/claude-security-guidance.md, .claude/security-patterns.yaml\n');

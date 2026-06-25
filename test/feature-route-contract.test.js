@@ -84,6 +84,29 @@ test('C: PR links back to the Linear issue; issue left in Human Review, never au
 test('registration: README and CLAUDE.md reference /feature', () => {
   const readme = read('README.md');
   assert.match(readme, /\|\s*`\/feature`\s*\|/);
+  assert.match(readme, /normal route:\s*\/feature/i);
+  assert.match(readme, /committed DeepWiki fresh/i);
   const claude = read('CLAUDE.md');
   assert.match(claude, /\/feature/);
+});
+
+test('brownfield discovery is lean by default and --full owns heavier inventory/scoring', () => {
+  const s = read('.claude/skills/brownfield/SKILL.md');
+  assert.match(s, /\/brownfield --full/);
+  assert.match(s, /DeepWiki-first/i);
+  assert.match(s, /wiki\/WIKI\.md/);
+  assert.match(s, /Optional Full Inventory \(`--full` only\)/);
+  assert.match(s, /Phase Evaluation Gate \(`--full` only\)/);
+  assert.match(s, /do not spawn an evaluator/i);
+  assert.match(s, /ci-map\.md.*flag-inventory\.md.*perf-baseline\.json/s);
+});
+
+test('/brownfield delegates graph and wiki generation to /code-map', () => {
+  const s = read('.claude/skills/brownfield/SKILL.md');
+  assert.match(s, /Build the Dependency Graph \(delegate to `\/code-map`\)/);
+  assert.match(s, /Run the `\/code-map` skill/);
+  assert.match(s, /single source of truth/i);
+  assert.match(s, /Do not restate or improvise those commands/);
+  assert.match(s, /code-map wins/);
+  assert.match(s, /wiki\/WIKI\.md/);
 });

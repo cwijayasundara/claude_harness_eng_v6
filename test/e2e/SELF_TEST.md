@@ -5,27 +5,32 @@ All live end-to-end harnesses live here under `test/e2e/`. They run real
 `npm test` (the fast unit/contract suite). Each has a cheap static **contract**
 in `test/*-contract.test.js` that pins its shape in CI without a live run.
 
-Run them from the repo root:
+Run them from the repo root through the e2e pack runner:
 
 ```bash
 npm install
-npm run install:browser     # one-time: playwright chromium (for the browser smoke)
-npm run test:plan           # MODE: plan-only — architect half, inspect specs/, no code/PR
-npm run test:semi           # MODE 2: semi-auto — /build --autonomous, pauses at the plan gate
-npm run test:auto           # MODE 1: full-auto — /build --auto, plan→build→deploy→test, zero gates
-npm run test:smoke          # self-healing browser smoke (scaffold→build→verify→modify→regression)
+npm run test:e2e:fast       # no live Claude and no local server; contracts + safe helper tests
+npm run test:e2e:live       # plan → semi → auto → smoke
+npm run test:e2e:cert       # certification layers (same as ./test/e2e/run.sh)
+npm run test:e2e:all        # fast → live → cert
 ```
+
+The runner writes per-layer logs to `test/e2e/results/logs/` and a machine-readable
+summary to `test/e2e/results/e2e-pack-summary.json`. It continues through
+independent layers by default and exits non-zero at the end if any failed. Add
+`-- --bail` to stop at the first failure, `-- --only plan,auto` to target layers,
+or `-- --skip smoke` to omit known-expensive layers.
 
 | Harness | Script | What it proves |
 |---|---|---|
-| `harness-plan-only.test.js` | `test:plan` | `/build --autonomous --plan-only` → `specs/` for inspection, then stop. Cheapest. |
-| `harness-semi-auto-run.test.js` | `test:semi` | Mode 2: `/build --autonomous` plans then **pauses at the approval gate** (no silent build). |
-| `harness-auto-run.test.js` | `test:auto` | Mode 1: `/build --auto` runs the full pipeline with **zero human gates**; the generated app's own suite is the oracle. |
-| `harness-selfheal-smoke.test.js` | `test:smoke` | Self-healing: build a counter web app → Playwright verify → `/change` add a feature → regression, with a bounded fix loop. Browser is the independent oracle. |
+| `harness-plan-only.test.js` | `npm run test:plan` or `npm run test:e2e:live -- --only plan` | `/build --autonomous --plan-only` → `specs/` for inspection, then stop. Cheapest. |
+| `harness-semi-auto-run.test.js` | `npm run test:semi` or `npm run test:e2e:live -- --only semi` | Mode 2: `/build --autonomous` plans then **pauses at the approval gate** (no silent build). |
+| `harness-auto-run.test.js` | `npm run test:auto` or `npm run test:e2e:live -- --only auto` | Mode 1: `/build --auto` runs the full pipeline with **zero human gates**; the generated app's own suite is the oracle. |
+| `harness-selfheal-smoke.test.js` | `npm run test:smoke` or `npm run test:e2e:live -- --only smoke` | Self-healing: build a counter web app → Playwright verify → `/change` add a feature → regression, with a bounded fix loop. Browser is the independent oracle. |
 
 Plus the pre-existing certification layers (`harness-real-workflow`,
 `harness-adversarial-*`, `harness-pipeline*`, `harness-brownfield`,
-`harness-native-commands`) and `run.sh`, which runs the certification stack.
+`harness-native-commands`) under `npm run test:e2e:cert`.
 
 ## Notes
 - **Local vs distributed:** the local `--auto` run uses a single integrated build

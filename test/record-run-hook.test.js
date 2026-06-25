@@ -106,6 +106,28 @@ test('record-run emits prompt telemetry and updates lane for slash commands', as
   assert.equal(ledger[0].skill_inventory.length, 3);
 });
 
+test('record-run records normalized build lane variants, not just generic build', async () => {
+  const projectDir = makeProject();
+  const gateway = await withGateway((port) => {
+    runHook(projectDir, {
+      hook_event_name: 'UserPromptSubmit',
+      session_id: 'build-lane-session',
+      prompt: '/build --auto --lite docs/prd.md',
+    }, {
+      HARNESS_USER: 'dev',
+      HARNESS_PUSHGATEWAY_URL: `http://127.0.0.1:${port}`,
+    }).then((result) => assert.equal(result.status, 0, result.stderr));
+  });
+
+  gateway.server.close();
+
+  assert.match(gateway.body, /harness_conversation_turns_total\{[^}]*lane="lite-auto"/);
+  assert.equal(
+    fs.readFileSync(path.join(projectDir, '.claude', 'state', 'current-lane'), 'utf8').trim(),
+    'lite-auto'
+  );
+});
+
 test('record-run emits command telemetry for any non-scaffold slash command', async () => {
   const projectDir = makeProject();
   const gateway = await withGateway((port) => {

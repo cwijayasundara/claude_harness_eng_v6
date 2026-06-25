@@ -9,15 +9,15 @@ When the user runs this command, follow these steps exactly:
 
 ## Invocation modes
 
-`/scaffold` takes optional arguments: `/scaffold [--yes | -y | --non-interactive] [<description>]`.
+`/scaffold` takes optional arguments: `/scaffold [--yes | -y | --non-interactive] [--core | --brownfield | --full] [--telemetry] [<description>]`.
 
 - **Interactive (default — no `--yes`):** the full Infer + Confirm flow below. The normal human path.
 - **Non-interactive (`--yes` / `-y` / `--non-interactive`):** for unattended / CI / e2e use where no human is present to answer (e.g. `claude -p`). Never call `AskUserQuestion` in this mode. `--yes` with no `<description>` is an error: print one line asking for a description and stop — do not invent a project. Otherwise do exactly this and nothing else:
   1. Take `<description>` as the Q1 answer and run the **Step 1.B** inference to build the profile. Inference is the *only* judgement you make here — do **not** hand-write project files.
-  2. `Write` the inferred profile as JSON to `./.scaffold-profile.json` using the schema documented at the top of `.claude/scripts/scaffold-apply.js` (`name`, `description`, `stack.backend`/`frontend`/`database`, `projectType` A–D, `verificationMode` A–C, `modelTier`, `tracker` A–D, `frameworkPacks`, `lsp`).
+  2. `Write` the inferred profile as JSON to `./.scaffold-profile.json` using the schema documented at the top of `.claude/scripts/scaffold-apply.js` (`name`, `description`, `stack.backend`/`frontend`/`database`, `projectType` A–D, `verificationMode` A–C, `modelTier`, `scaffoldProfile` core/brownfield/full, `telemetry`, `tracker` A–D, `frameworkPacks`, `lsp`).
   3. Run the deterministic generator — it performs every copy / mkdir / template-write of Steps 2–9, so nothing can be skipped or hallucinated:
      ```bash
-     node "${CLAUDE_PLUGIN_ROOT}/scripts/scaffold-apply.js" --profile ./.scaffold-profile.json
+     node "${CLAUDE_PLUGIN_ROOT}/scripts/scaffold-apply.js" --profile ./.scaffold-profile.json [--scaffold-profile core|brownfield|full] [--telemetry]
      ```
      If it exits non-zero, print its stderr and **STOP — do not fabricate success.** If `${CLAUDE_PLUGIN_ROOT}` is unset, use the `PLUGIN_SOURCE` discovery from Step 3 and pass it as `--plugin-source`.
   4. Delete `./.scaffold-profile.json`, then print the Step 10 report describing what the script's stdout says it actually created. **Never print a success summary for files the script did not write.**
@@ -63,7 +63,11 @@ Apply these rules. Be explicit and conservative — when the description is ambi
 - Mentions local dev / no Docker / uvicorn / npm run dev → B Local
 - Otherwise → A Docker
 
-**Plugins:** Always default to A (all 8). The "recommended" answer is rarely wrong for new projects.
+**Scaffold profile:** Default to `core` for every project. `core` is the lean product-development spine: `/build`, `/auto`, `/gate`, `/feature`, `/brownfield`, `/code-map`, `/change`, `/refactor`, `/vibe`, and tracker publishing. This keeps Sprint 2+ existing-code work available without copying optional ops/extras. If the user passes `--brownfield`, set `scaffoldProfile: "brownfield"` as a backward-compatible alias for the same lean product spine. If the user passes `--full`, set `scaffoldProfile: "full"` to copy the entire optional harness surface. If the user passes `--core`, set `scaffoldProfile: "core"`.
+
+**Telemetry:** Default OFF. If the user passes `--telemetry`, set `telemetry: true`; otherwise leave it false/absent. The `record-run` hook still records local memory without OTEL/Pushgateway env.
+
+**Plugins:** The deterministic generator trims target `enabledPlugins` to Playwright + Superpowers for `core` and `brownfield`. Use `full` only when the project should receive the whole optional plugin surface.
 
 **Tracker:** Default to A Local-only unless Q1 explicitly names a tracker:
 - Mentions "Linear" → C Publish + sync
@@ -97,7 +101,9 @@ The `preview` for option A must be a markdown block in this exact shape (substit
   Stack           {inferred stack summary, e.g. "Python 3.12 · uv · ruff · mypy · pytest"}
   Project type    {A / B / C / D — display name}
   Verification    {A / B / C — display name}
-  Plugins         All 8 official (recommended)
+  Scaffold        {core / brownfield / full}
+  Telemetry       {off by default; on only with --telemetry}
+  Plugins         Playwright + Superpowers in lean profiles; full optional set only in full
   Tracker         {A / B / C / D — display name}
   Framework pack  {A / B / C — display name(s)}
 
@@ -132,7 +138,7 @@ Ask the following one at a time, using `AskUserQuestion` for each multi-choice q
    - C) API-only / backend service (no UI scoring)
    - D) Minimal — CLI / library / single-script (recommends `/build --lite`)
 
-If the user picks D, the full harness is still installed (in case scope grows) but the Step 10 report recommends `/build --lite` and `calibration-profile.json` is skipped.
+If the user picks D, install the `core` scaffold by default, recommend `/build --lite`, and skip `calibration-profile.json`. `core` still includes the minimal brownfield route because generated code becomes existing code after Sprint 1; the user can request `--full` only when they want the entire optional harness copied.
 
 4. "How will the evaluator reach the running app?":
    - A) Docker Compose (default)
@@ -316,6 +322,8 @@ Resolve the harness root (one level above `.claude/`) before validation:
 
 ```bash
 HARNESS_ROOT=$(dirname "$PLUGIN_SOURCE")
+SCAFFOLD_PROFILE="${SCAFFOLD_PROFILE:-core}"       # core | brownfield | full
+TELEMETRY_REQUESTED="${TELEMETRY_REQUESTED:-0}"   # 1 only when --telemetry was passed
 ```
 
 Before copying, validate the source:
@@ -326,17 +334,15 @@ test -d "$PLUGIN_SOURCE/skills/brownfield"
 test -d "$PLUGIN_SOURCE/skills/code-map"
 test -f "$PLUGIN_SOURCE/skills/code-map/scripts/import_understand_graph.js"
 test -f "$PLUGIN_SOURCE/scripts/telemetry-memory.js"
-test -f "$PLUGIN_SOURCE/scripts/replay-telemetry.js"
 test -d "$PLUGIN_SOURCE/skills/seam-finder"
 test -d "$PLUGIN_SOURCE/skills/vibe"
-test -d "$PLUGIN_SOURCE/workflows"
 test -f "$PLUGIN_SOURCE/templates/context.template.md"
 test -f "$PLUGIN_SOURCE/templates/claude-security-guidance.template.md"
 test -f "$PLUGIN_SOURCE/templates/security-patterns.template.yaml"
 test -f "$PLUGIN_SOURCE/templates/story.template.md"
 # Assert load-bearing skills exist rather than a brittle exact count (the count
 # changes whenever a skill is merged/split — existence checks don't).
-for s in scaffold build auto brownfield review vibe refactor code-gen evaluate; do
+for s in build auto feature brownfield code-map change vibe refactor tracker-publish code-gen evaluate gate status; do
   test -f "$PLUGIN_SOURCE/skills/$s/SKILL.md"
 done
 SKILL_COUNT=$(find "$PLUGIN_SOURCE/skills" -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')
@@ -348,34 +354,30 @@ test -f "$PLUGIN_SOURCE/templates/design.template.md"
 test -f "$PLUGIN_SOURCE/git-hooks/prepare-commit-msg"
 test -f "$PLUGIN_SOURCE/git-hooks/pre-commit"
 test -f "$HARNESS_ROOT/README.md"
-test -f "$HARNESS_ROOT/telemetry_docker_compose.yml"
-test -f "$HARNESS_ROOT/telemetry/otel-collector-config.yml"
-test -f "$HARNESS_ROOT/telemetry/prometheus.yml"
-test -f "$HARNESS_ROOT/telemetry/cache-alerts.rules.yml"
-test -f "$HARNESS_ROOT/telemetry/grafana/dashboards/harness-overview.json"
-test -f "$HARNESS_ROOT/telemetry/grafana/dashboards/cache-health.json"
-test -f "$HARNESS_ROOT/telemetry/grafana/provisioning/dashboards/dashboards.yml"
-test -f "$HARNESS_ROOT/telemetry/grafana/provisioning/datasources/prometheus.yml"
+# Validate telemetry stack assets only if telemetry was requested.
+if [ "$TELEMETRY_REQUESTED" = "1" ]; then
+  test -f "$HARNESS_ROOT/telemetry_docker_compose.yml"
+  test -f "$HARNESS_ROOT/telemetry/otel-collector-config.yml"
+  test -f "$HARNESS_ROOT/telemetry/prometheus.yml"
+  test -f "$HARNESS_ROOT/telemetry/cache-alerts.rules.yml"
+  test -f "$HARNESS_ROOT/telemetry/grafana/dashboards/harness-overview.json"
+  test -f "$HARNESS_ROOT/telemetry/grafana/dashboards/cache-health.json"
+  test -f "$HARNESS_ROOT/telemetry/grafana/provisioning/dashboards/dashboards.yml"
+  test -f "$HARNESS_ROOT/telemetry/grafana/provisioning/datasources/prometheus.yml"
+fi
 ```
 
 If any validation command fails, stop and report: "The resolved plugin source is stale or incomplete; refresh the local marketplace and update the plugin before scaffolding."
 
-Once you have the source path, create `.claude/` in the target project and copy:
+Once you have the source path, run the deterministic generator. It owns the lane-appropriate copy set (`core`, `brownfield`, or `full`), writes settings, seeds state, and applies the scaffold profile without hand-copy drift:
 
 ```bash
-mkdir -p .claude
-cp -r $PLUGIN_SOURCE/.claude-plugin/ .claude/.claude-plugin/
-cp -r $PLUGIN_SOURCE/agents/ .claude/agents/
-cp -r $PLUGIN_SOURCE/skills/ .claude/skills/
-cp -r $PLUGIN_SOURCE/hooks/ .claude/hooks/
-cp -r $PLUGIN_SOURCE/scripts/ .claude/scripts/
-cp -r $PLUGIN_SOURCE/templates/ .claude/templates/
-mkdir -p .claude/state && cp $PLUGIN_SOURCE/templates/state-seeds/* .claude/state/
-cp -r $PLUGIN_SOURCE/workflows/ .claude/workflows/
-cp $PLUGIN_SOURCE/architecture.md .claude/architecture.md
-cp $PLUGIN_SOURCE/program.md .claude/program.md
-cp $PLUGIN_SOURCE/settings.json .claude/settings.json
-cp $PLUGIN_SOURCE/settings.auto.json .claude/settings.auto.json
+node "$PLUGIN_SOURCE/scripts/scaffold-apply.js" \
+  --profile ./.scaffold-profile.json \
+  --plugin-source "$PLUGIN_SOURCE" \
+  --target . \
+  --scaffold-profile "$SCAFFOLD_PROFILE" \
+  ${TELEMETRY_REQUESTED:+--telemetry}
 ```
 
 `settings.auto.json` is the **unattended full-auto profile** — a no-prompt permission set (`Bash(*)`, `Write(*)`, …) plus `CLAUDE_AUTO_CONTINUE=1`. Claude Code does **not** auto-load it; a headless `--auto` run passes it explicitly with `--settings .claude/settings.auto.json`. It merges over the curated `settings.json`, so the deterministic gate hooks and ratchet still enforce safety — interactive sessions keep `settings.json`'s curated allowlist untouched. Do not enable broad permissions in `settings.json` itself.
@@ -388,16 +390,18 @@ node .claude/scripts/model-tier.js "$(node -e "process.stdout.write(require('./p
 
 To change a project's cost posture later, edit `execution.model_tier` in `project-manifest.json` and re-run that command (`cost` | `balanced` | `max-quality`). See `docs/model-allocation.md` for the profiles and the decision rule.
 
-Copy the telemetry stack config (OTEL Collector + Prometheus + Pushgateway). These files are **dormant** — telemetry stays off until the user enables it in Step 8 — but copying them now makes enabling a one-step change later:
+Copy the telemetry stack config only if telemetry was requested. These files are dormant until the stack is started, but the env block is already written by `scaffold-apply.js --telemetry`:
 
 ```bash
-cp "$HARNESS_ROOT/telemetry_docker_compose.yml" ./telemetry_docker_compose.yml
-mkdir -p telemetry
-cp "$HARNESS_ROOT/telemetry/otel-collector-config.yml" ./telemetry/
-cp "$HARNESS_ROOT/telemetry/prometheus.yml" ./telemetry/
-cp "$HARNESS_ROOT/telemetry/cache-alerts.rules.yml" ./telemetry/
-cp "$HARNESS_ROOT/telemetry/CACHE_MONITORING.md" ./telemetry/
-rm -rf ./telemetry/grafana && cp -r "$HARNESS_ROOT/telemetry/grafana" ./telemetry/
+if [ "$TELEMETRY_REQUESTED" = "1" ]; then
+  cp "$HARNESS_ROOT/telemetry_docker_compose.yml" ./telemetry_docker_compose.yml
+  mkdir -p telemetry
+  cp "$HARNESS_ROOT/telemetry/otel-collector-config.yml" ./telemetry/
+  cp "$HARNESS_ROOT/telemetry/prometheus.yml" ./telemetry/
+  cp "$HARNESS_ROOT/telemetry/cache-alerts.rules.yml" ./telemetry/
+  cp "$HARNESS_ROOT/telemetry/CACHE_MONITORING.md" ./telemetry/
+  rm -rf ./telemetry/grafana && cp -r "$HARNESS_ROOT/telemetry/grafana" ./telemetry/
+fi
 mkdir -p docs
 cp "$HARNESS_ROOT/docs/telemetry.md" "$HARNESS_ROOT/docs/testing.md" "$HARNESS_ROOT/docs/extras.md" "$HARNESS_ROOT/docs/prompting-standards.md" "$HARNESS_ROOT/docs/model-allocation.md" ./docs/
 ```
@@ -655,18 +659,18 @@ chmod +x .git/hooks/prepare-commit-msg .git/hooks/pre-commit .git/hooks/commit-m
 mkdir -p .claude/runs
 ```
 
-### Telemetry (default: ON)
+### Telemetry (default: OFF)
 
-**Telemetry ships enabled.** The deterministic generator (Step 3) bakes the OTEL + Pushgateway env vars into the copied `settings.json` **and** `settings.auto.json`, so Claude Code exports metrics and the `record-run` hook pushes harness metrics from the first run — in both `/build` and headless `/build --auto`. Until the dashboard stack is up, the push no-ops on a 2s timeout (no errors, no crash), so a project with telemetry on but no stack running behaves exactly like one with it off.
+Telemetry is opt-in. The deterministic generator bakes OTEL + Pushgateway env vars into `settings.json` and `settings.auto.json` only when `--telemetry` or `"telemetry": true` is used. Without that flag, the `record-run` hook still writes local harness memory, but Claude Code does not export OTEL metrics and the hook does not push to a Pushgateway.
 
-To actually **see** data, the user starts the stack — the one step scaffold cannot automate:
+When telemetry is enabled, the user still starts the stack — the one step scaffold cannot automate:
 
 ```bash
 docker compose -f telemetry_docker_compose.yml up -d
 # OTEL collector :4317 · Prometheus :9090 · Pushgateway :9091 · Grafana :3001 (admin/harness)
 ```
 
-The stack (`telemetry_docker_compose.yml`, `telemetry/` configs, dashboards) is already copied in Step 3. After starting it, restart the Claude session so the env block is picked up. Each teammate can set `HARNESS_USER` to label their metrics; left unset, the `record-run` hook derives it from git `user.name` / the OS user. Full setup, the metric catalog, and PromQL queries: **`docs/telemetry.md`** (copied into the project). To turn telemetry **off** for a project, remove the `CLAUDE_CODE_ENABLE_TELEMETRY` / `OTEL_*` / `HARNESS_PUSHGATEWAY_URL` keys from its `settings.json`.
+The stack (`telemetry_docker_compose.yml`, `telemetry/` configs, dashboards) is copied only in telemetry mode. After starting it, restart the Claude session so the env block is picked up. Each teammate can set `HARNESS_USER` to label their metrics; left unset, the `record-run` hook derives it from git `user.name` / the OS user. Full setup, the metric catalog, and PromQL queries: **`docs/telemetry.md`** (copied into the project). To turn telemetry off again, remove the `CLAUDE_CODE_ENABLE_TELEMETRY` / `OTEL_*` / `HARNESS_PUSHGATEWAY_URL` keys from settings.
 
 Write `.gitignore` by copying the template:
 
@@ -712,17 +716,18 @@ Tailor the "Next steps" ordering based on the project-type decision:
 ✓ Claude Harness Engine v5 scaffolded successfully.
 
 Installed:
-  agents        → .claude/agents/
-  skills        → .claude/skills/
+  scaffold      → {core|brownfield|full} profile
+  agents        → .claude/agents/ (profile-selected)
+  skills        → .claude/skills/ (profile-selected)
   hooks         → .claude/hooks/ (per-event gates + lib/)
   templates     → .claude/templates/ (+ state-seeds/)
-  workflows/    → .claude/workflows/  (no built-ins; author your own)
+  workflows/    → .claude/workflows/  (full profile only)
   state seeds   → .claude/state/ (from templates/state-seeds/)
   1 manifest    → .claude/.claude-plugin/plugin.json
 
 Telemetry (OFF by default — opt-in):
-  telemetry_docker_compose.yml    → dormant OTEL Collector + Prometheus + Pushgateway stack
-  Enable: see docs/telemetry.md (set OTEL env vars in .claude/settings.json, then start the stack)
+  Enable with /scaffold --telemetry or profile.telemetry=true
+  When enabled: telemetry_docker_compose.yml + telemetry/ stack files are copied
 
 LSP servers (auto-detected from stack):
   {for each lsp.servers entry, run `command -v {binary}` and print one of:}
@@ -747,17 +752,16 @@ Next steps:
 ✓ Claude Harness Engine v5 scaffolded successfully (minimal project mode).
 
 Installed:
-  agents        → .claude/agents/
-  skills        → .claude/skills/
+  scaffold      → core profile
+  agents        → .claude/agents/ (core set)
+  skills        → .claude/skills/ (core set)
   hooks         → .claude/hooks/ (per-event gates + lib/)
   templates     → .claude/templates/ (+ state-seeds/)
-  workflows/    → .claude/workflows/  (no built-ins; author your own)
   state seeds   → .claude/state/ (from templates/state-seeds/)
   1 manifest    → .claude/.claude-plugin/plugin.json
 
 Telemetry (OFF by default — opt-in):
-  telemetry_docker_compose.yml    → dormant OTEL Collector + Prometheus + Pushgateway stack
-  Enable: see docs/telemetry.md (set OTEL env vars in .claude/settings.json, then start the stack)
+  Enable with /scaffold --telemetry or profile.telemetry=true
 
 LSP servers (auto-detected from stack):
   {for each lsp.servers entry, run `command -v {binary}` and print ✓ or ✗ — same format as default report}

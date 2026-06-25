@@ -22,6 +22,7 @@ Full software development lifecycle pipeline. Orchestrates BRD creation, story s
 /build path/to/prd.md --autonomous --plan-only     # produce specs/ for inspection, then stop
 /build path/to/prd.md --autonomous --pod 3         # pod: each cluster raises its own PR
 /build path/to/prd.md --auto --pod 3               # full-auto: PRD -> per-cluster PRs, zero gates
+/build --auto --finalize                           # build-chain terminal link: Phases 9, 9.5, 10, 11 only
 ```
 
 The `--mode` flag controls which ratchet gates `/auto` enforces. Default: `full`.
@@ -41,6 +42,8 @@ This is the in-session human trigger. The tracker-driven equivalent (Jira/Linear
 **PRD grounding (required for headless autonomy).** In `--autonomous` and `--auto` mode the input requirements document is treated as a **PRD** and passed to `/brd --prd <path>` — the deterministic grounding path, **not** the interactive Socratic interview. An interview cannot run headless, so these modes never use it; the PRD (see `docs/prd-format.md`) plus any pre-recorded clarifications are the only sanctioned content. If no usable PRD is supplied, stop and say so rather than inventing requirements — this is especially important in `--auto`, where there is no plan gate to catch a hallucinated scope.
 
 **`--plan-only`.** Run the architect phases only — Phases 0–3 (`/brd --prd → /spec → /design → /test --plan-only`) — then **stop before Phase 3.5**, writing all `specs/` artifacts (BRD, stories + dependency graph, design, test plan) for inspection. No approval gate, no code generation, no PR. Use it to validate the plan locally (e.g. eyeball `specs/stories/dependency-graph.md` and its Mermaid cluster graph) before committing to a semi-auto or full-auto run. End by printing an inventory of what was written under `specs/`.
+
+**`--finalize`.** Internal build-chain terminal link. Run only Phases 9, 9.5, 10, and 11 against an already-complete autonomous build, then raise the PR only if the final verify and `/gate` are green. Do not run planning, do not run `/auto`, and do not accept a PRD path here; the state must already show all groups complete.
 
 **`--budget <spec>`.** Cap the compute the autonomous loop may spend before halting at a clean checkpoint: `--budget 2h` (wall-clock), `--budget 150agents` (agent spawns), `--budget '$20'` (estimated cost), or `--budget off`. Without the flag, a per-tier default applies (cost ≈ 30 min, balanced ≈ 90 min, max-quality ≈ 180 min; see `.claude/scripts/budget-state.js`). A `project-manifest.json#execution.budget` object overrides the default; `--budget` overrides both. The halt is enforced by `/auto` and `build-chain.js` at iteration/link boundaries — committed work is always preserved, and raising the cap resumes the run. **Wall-clock and agent-count are exact; estimated cost is a surfaced estimate** (the harness makes no direct API calls, so it cannot meter tokens exactly in-loop). Budget caps compute, never the verification gates.
 

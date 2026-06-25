@@ -176,7 +176,13 @@ const PROJECT_TYPE_LABELS = {
 // the manifest was stamped with.
 function isLiteShaped(profile) {
   const stack = profile.stack || {};
-  return profile.projectType === 'D' || (!stack.frontend && !stack.backend);
+  if (profile.projectType === 'D') return true;
+  if (profile.projectType === 'C') return false;
+  if (stack.frontend || stack.database) return false;
+  if (!stack.backend) return true;
+  const text = `${profile.name || ''} ${profile.description || ''}`.toLowerCase();
+  const hasSmallSurface = /\b(cli|library|script|tool|utility|agent)\b/.test(text);
+  return hasSmallSurface || !stack.backend.framework;
 }
 
 // Values for the project-tailored SCAFFOLD_README.md (project-readme.template.md).
