@@ -69,7 +69,7 @@ Not sure? Describe the request plainly. The harness should classify the lane bef
 | `/vibe` | Very small safe edit | Controlled fast lane for tiny changes |
 | `/change` | Behavior change in existing code | Test-first change route; use `--issue N` for a GitHub bug |
 | `/refactor` | No behavior change | Behavior-preserving cleanup with coverage and refactor-purity gates |
-| `/gate` | Before merge or after manual edits | Evaluator + security review; renamed from old harness `/review` to avoid native `/review` collision |
+| `/gate` | Before merge or after manual edits | Evaluator + diff review, with security review only when the diff crosses a security/data/API boundary; renamed from old harness `/review` to avoid native `/review` collision |
 | `/status` | See progress | Reads current pipeline state; also available as `npm run status` |
 
 ## Approval Modes
@@ -80,7 +80,7 @@ Not sure? Describe the request plainly. The harness should classify the lane bef
 | Semi-auto | `/build <prd> --autonomous` | One plan approval gate |
 | Full-auto | `/build <prd> --auto` | Zero human gates |
 
-Machine gates always stay on: tests, lint/types, coverage, architecture, evaluator, design critic when enabled, security, and diff review. The generator does not grade itself, and the harness does not merge for you.
+Machine gates always stay on: tests, lint/types, coverage, architecture, evaluator, design critic when enabled, adaptive review, and diff review. The generator does not grade itself, and the harness does not merge for you.
 
 For long unattended PRD-to-PR runs, prefer the resilient chain launcher from a scaffolded project:
 
@@ -115,7 +115,7 @@ Rule: native commands own atomic actions; the harness owns orchestration, ratche
 - TDD before production edits
 - Coverage ratchet and per-diff coverage checks
 - Lint/type/layer gates
-- Security review before PR
+- Security review before PR when the diff touches security/data/API boundaries
 - Fresh-context diff review
 - Brownfield discipline: architecture claims cite `code-graph.json`
 - Human review before merge
@@ -135,7 +135,8 @@ Rule: native commands own atomic actions; the harness owns orchestration, ratche
 ```bash
 npm test                 # fast unit/contract suite, no live Claude
 npm run test:e2e:fast    # e2e contracts + safe helper tests
-npm run test:e2e:live    # plan -> semi -> auto -> smoke (live Claude, costs tokens)
+npm run test:routes      # scaffold + lite-auto + full-auto + gated + feature routes (live Claude)
+npm run test:e2e:live    # all live route/smoke checks (live Claude, costs tokens)
 npm run test:e2e:cert    # certification stack
 npm run test:e2e:all     # fast -> live -> cert
 ```

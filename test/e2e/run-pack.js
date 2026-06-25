@@ -23,7 +23,10 @@ const CERT_LAYERS = [
 const LIVE_LAYERS = [
   layer('plan', 'Plan-only Build', 1320, ['node', '--test', '--test-force-exit', '--test-timeout=1200000', 'test/e2e/harness-plan-only.test.js']),
   layer('semi', 'Semi-auto Build', 2820, ['node', '--test', '--test-force-exit', '--test-timeout=2700000', 'test/e2e/harness-semi-auto-run.test.js']),
-  layer('auto', 'Full-auto Build', 2820, ['node', '--test', '--test-force-exit', '--test-timeout=2700000', 'test/e2e/harness-auto-run.test.js']),
+  layer('auto', 'Lite Full-auto Build', 2820, ['node', '--test', '--test-force-exit', '--test-timeout=2700000', 'test/e2e/harness-auto-run.test.js']),
+  layer('full-auto', 'Full-auto Build', 3420, ['node', '--test', '--test-force-exit', '--test-timeout=3300000', 'test/e2e/harness-full-auto-run.test.js']),
+  layer('gated', 'Gated Build', 1020, ['node', '--test', '--test-force-exit', '--test-timeout=900000', 'test/e2e/harness-gated-build.test.js']),
+  layer('feature', 'Brownfield Feature Route', 1620, ['node', '--test', '--test-force-exit', '--test-timeout=1500000', 'test/e2e/harness-feature-route.test.js']),
   layer('smoke', 'Self-healing Browser Smoke', 1320, ['node', '--test', '--test-force-exit', '--test-timeout=1200000', 'test/e2e/harness-selfheal-smoke.test.js'], { needsBrowser: true }),
 ];
 
@@ -37,6 +40,7 @@ const FAST_FILES = [
   'test/adversarial-fixtures-contract.test.js',
   'test/adversarial-live-e2e-contract.test.js',
   'test/pipeline-telemetry-e2e-contract.test.js',
+  'test/e2e-route-matrix-contract.test.js',
   ...fs.readdirSync(path.join(ROOT, 'test', 'e2e', 'helpers'))
     .filter((name) => name.endsWith('.test.js'))
     .filter((name) => name !== 'app-runtime.test.js')

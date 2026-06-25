@@ -53,7 +53,7 @@ One-way dependencies only. See `.claude/architecture.md` for full rules.
 | `/auto` | Autonomous ratcheting loop |
 | `/implement` | Code gen with agent teams |
 | `/evaluate` | Run app, verify contract |
-| `/gate` | Evaluator + security review (pre-merge quality gate; not Claude Code's native `/review` PR review) |
+| `/gate` | Evaluator + diff review, with security review only for security/data/API boundaries (pre-merge quality gate; not Claude Code's native `/review` PR review) |
 | `/deploy` | Docker Compose + init.sh |
 
 ## Dynamic Workflows

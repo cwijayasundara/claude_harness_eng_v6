@@ -127,7 +127,7 @@ Read `project-manifest.json#execution.ceremony` (default `full`). At `trimmed`:
 
 - A group containing a **single story** skips sprint decomposition — negotiate the contract (Steps 2–3 above, unchanged) and go straight to implementation with one teammate. Multi-story groups keep the full decomposition regardless of profile.
 - The design-critic GAN loop (SECTION 9) caps at **3 iterations** instead of 10.
-- Nothing else changes. The evaluator, the security review, the diff review, and every deterministic gate run identically in both profiles — ceremony trims coordination overhead, never verification.
+- Nothing else changes. The evaluator, adaptive review policy, and every deterministic gate run identically in both profiles — ceremony trims coordination overhead, never verification.
 
 When a new model generation lands, re-baseline the profile per `docs/adaptive-ceremony.md` instead of carrying forward last generation's settings.
 
@@ -383,10 +383,10 @@ After the agent team completes, run the ratchet gate. The ratchet is monotonic: 
 | 4. Architecture (files exist, schema validation) | Yes | Yes |
 | 5. Evaluator (API + Playwright vs running Docker) | Yes | Yes |
 | 6. Design critic (vision scoring, GAN loop) | Yes | No |
-| 7. Security (security-reviewer, block on critical/high) | Yes | Yes |
+| 7. Adaptive security review (security-reviewer only on security/data/API boundary, block on critical/high) | Yes | Yes |
 | 8. Fresh-context diff review (diff-reviewer, block on correctness defects) | Yes | Yes |
 
-**Lean** differs from **Full** only at Gate 6: it does **not** run the design-critic vision loop at all. Every other gate — including the Gate 7 security review, Gate 8 diff review, and the Gate 5 evaluator — runs in both modes. There is no mode that skips the security gate or the evaluator; that is the whole point of the ratchet.
+**Lean** differs from **Full** only at Gate 6: it does **not** run the design-critic vision loop at all. Every other gate — including the Gate 7 adaptive security policy, Gate 8 diff review, and the Gate 5 evaluator — runs in both modes. There is no mode that skips the evaluator, and there is no mode that can silently bypass a required security review; that is the whole point of the ratchet.
 
 ### Fast Lane (trivial commits)
 
@@ -396,7 +396,7 @@ The Fast Lane is a per-*commit* optimization (not an execution mode): for a comm
 - Type annotation fixes (no logic changes)
 - Learned-rules updates
 
-**Gates 1, 2, 3, and 7 still run** — tests, lint/types, coverage, **and the security review**. The security gate is never skipped, even on the Fast Lane (it is cheap and a no-op on a docs-only diff, but a "trivial" commit that quietly touches a secret or an env file must still be caught).
+**Gates 1, 2, 3, and 7 still run** — tests, lint/types, coverage, **and the adaptive security policy**. On docs/config-only changes the policy records `security_review: skipped_no_boundary`; if a "trivial" commit quietly touches a secret, auth, API, persistence, or env boundary, security review is required and a missing verdict blocks.
 
 Detection: take the Fast Lane only when `git diff --cached --name-only` shows **no** files with a source extension (`.py`/`.ts`/`.tsx`/`.js`/…) — i.e. only `.md`, config, or annotation-only changes — or the commit message starts with `fix: lint`, `style:`, or `docs:`. When in doubt, run the full ratchet.
 
@@ -468,13 +468,17 @@ The evaluator writes its report to `specs/reviews/evaluator-report.md`.
 
 Spawn design-critic on every page listed in the sprint contract's `design_checks`. The critic screenshots each page, scores visual fidelity, and returns PASS/FAIL per check. See SECTION 9 for the full GAN loop if scores are below threshold.
 
-### Gate 7 — Security (Full + Lean)
+### Gate 7 — Adaptive Security (Full + Lean)
 
-Spawn the `security-reviewer` agent against the group's changed files. It writes `specs/reviews/security-verdict.json`. The gate **FAILs** if `security-verdict.json#pass === false` — i.e. any finding whose `severity` is in the contract's `contract.security_checks.block_severities` (default `["critical", "high"]`). Medium/low findings are WARN/INFO and do not fail the gate. A missing verdict file is a FAIL (`failure_layer: "security"`) — a skipped scan is never a pass. This gate does not need the Docker stack and can run concurrently with Gate 5.
+First write `specs/reviews/review-context-pack.md` with the changed files, acceptance criteria, relevant DeepWiki/code-map links, and deterministic test output. Then inspect the changed files for security triggers: auth/authz, secrets, user input handling, uploads/downloads, network fetch/redirect/proxy code, payments/billing, persistence/schema/migrations, API routes/controllers/middleware, or configured security patterns.
+
+If a trigger fires, spawn the `security-reviewer` agent against the group's changed files. It writes `specs/reviews/security-verdict.json`. The gate **FAILs** if `security-verdict.json#pass === false` — i.e. any finding whose `severity` is in the contract's `contract.security_checks.block_severities` (default `["critical", "high"]`). Medium/low findings are WARN/INFO and do not fail the gate. A missing selected verdict file is a FAIL (`failure_layer: "security"`). This gate does not need the Docker stack and can run concurrently with Gate 5.
+
+If no trigger fires, do not spawn `security-reviewer`; record `security_review: skipped_no_boundary` in `review-context-pack.md`. This is an explicit policy decision, not a silent skip.
 
 ### Gate 8 — Fresh-Context Diff Review (Full + Lean)
 
-Spawn the `diff-reviewer` agent on the group's diff (give it the commit range or branch, and the story acceptance criteria — nothing else from this session). It reads the diff cold, hunts correctness defects (logic errors, missing edge cases, contract breaks against existing callers), and writes `specs/reviews/diff-review-verdict.json`. The gate **FAILs** on any BLOCK finding or a missing verdict file. Route BLOCK findings to the generator like any other gate failure (max 3 fix cycles). Runs concurrently with Gates 5 and 7 — it needs only the repo, not the running app. The reviewer's value comes from its empty context: do not paste progress logs or builder reasoning into its spawn prompt.
+Spawn the `diff-reviewer` agent on the group's diff (give it the commit range or branch, acceptance criteria, and `specs/reviews/review-context-pack.md` — nothing else from this session). It reads the diff cold, hunts correctness defects (logic errors, missing edge cases, contract breaks against existing callers), and writes `specs/reviews/diff-review-verdict.json`. The gate **FAILs** on any BLOCK finding or a missing verdict file. Route BLOCK findings to the generator like any other gate failure (max 3 fix cycles). Runs concurrently with Gates 5 and any selected Gate 7 security review — it needs only the repo, not the running app. The reviewer's value comes from its empty context: do not paste progress logs or builder reasoning into its spawn prompt.
 
 ---
 

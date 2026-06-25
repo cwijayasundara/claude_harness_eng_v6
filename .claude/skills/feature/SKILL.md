@@ -40,7 +40,7 @@ The same backbone runs at every scale; only the engine in steps 5–8 differs.
 4. **Publish to Linear** — single issue, or one issue per dependency group.
 5. **Implement** test-first, in place.
 6–7. **Unit + integration tests**, full suite green.
-8. **Verify** against acceptance criteria + clean-code/security review.
+8. **Verify** against acceptance criteria + adaptive review.
 9. **Open PR(s)** linked to the Linear issue(s). → **GATE 3**.
 
 ## Scope classification (the one routing decision)
@@ -107,6 +107,16 @@ wiki; the post-change re-render is part of the implementation output.
 - **GATE 2 — approve plan/design.** Present the DeepWiki-cited plan (single lane)
   or `/design` output (cluster lane). Enforce design-adherence here.
 - **GATE 3 — review PR(s).** Stop at the opened PR(s); the human reviews and merges.
+
+## Token discipline
+
+`/feature` should not spawn the full reviewer set by default. Build one compact
+`specs/reviews/review-context-pack.md` per change and pass that pack, the final
+diff, test output, and directly touched files to reviewers. The default review is
+clean-code/quality only; add `security-reviewer` only when auth/authz, secrets,
+user input, upload/download, network fetch/redirect/proxy, payments/billing,
+persistence/schema/migration, API route/controller/middleware, or configured
+security patterns are touched. Use `/gate` for the final PR-quality pass.
 
 ## Gotchas
 

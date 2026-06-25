@@ -96,9 +96,13 @@ Run the full test suite — all tests must pass. Then run the project's lint and
 
 If `specs/test_artefacts/` exists, update `test-cases.md` and `test-data/` to reflect the changed acceptance criteria — keep the test plan in sync with the actual state of the stories. If Playwright E2E specs exist in `e2e/`, update the affected files to match the new behavior.
 
-### Step S6 — Review
+### Step S6 — Adaptive Review
 
-Spawn the `clean-code-reviewer` agent (harness-provided: `.claude/agents/clean-code-reviewer.md`; recognized by the `review-on-stop` Stop hook) on the full diff. **If the diff touches authentication, authorization, secrets, user input handling, or data persistence, also spawn the `security-reviewer` agent** (run both in parallel in a single message).
+Write or refresh `specs/reviews/review-context-pack.md` with the story, acceptance criteria, changed files, relevant DeepWiki/code-map links, and the exact test/lint/typecheck commands that passed.
+
+Spawn the `clean-code-reviewer` agent (harness-provided: `.claude/agents/clean-code-reviewer.md`; recognized by the `review-on-stop` Stop hook) on the full diff. **Spawn `security-reviewer` only if the diff touches authentication, authorization, secrets, user input handling, uploads/downloads, network fetch/redirect/proxy code, payments/billing, persistence/schema/migrations, API routes/controllers/middleware, or configured security patterns**. Run selected reviewers in parallel in a single message.
+
+Reviewers read only the context pack, final diff, test output, and directly touched files. Do not pass the whole implementation transcript or raw full-suite logs.
 
 Findings: **BLOCK** must be fixed; **WARN** should be fixed (document if deferring); **INFO** optional. Maximum 3 retry cycles for BLOCK findings — if any remain after 3 cycles, stop and report.
 
@@ -158,9 +162,11 @@ Run the affected module's tests and the full suite. Every previously passing tes
 
 Run the project's lint and type checks (`npm run lint`, `mypy`, `tsc --noEmit`, …) and fix anything introduced by the change.
 
-### Step I8 — Review
+### Step I8 — Adaptive Review
 
-Spawn the `clean-code-reviewer` agent (harness-provided: `.claude/agents/clean-code-reviewer.md`; recognized by the `review-on-stop` Stop hook) on the diff. **If the fix touches authentication, authorization, secrets, user input handling, or data persistence, also spawn the `security-reviewer` agent** (run both in parallel in a single message). Resolve BLOCK findings (max 3 cycles).
+Write or refresh `specs/reviews/review-context-pack.md` with the issue, reproduction, root cause, changed files, test proof, and risk triggers.
+
+Spawn the `clean-code-reviewer` agent on the diff. **Spawn `security-reviewer` only if the fix touches authentication, authorization, secrets, user input handling, uploads/downloads, network fetch/redirect/proxy code, payments/billing, persistence/schema/migrations, API routes/controllers/middleware, or configured security patterns**. Run selected reviewers in parallel in a single message. Resolve BLOCK findings (max 3 cycles).
 
 ### Step I9 — Commit and Open a PR
 

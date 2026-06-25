@@ -10,7 +10,8 @@ Run them from the repo root through the e2e pack runner:
 ```bash
 npm install
 npm run test:e2e:fast       # no live Claude and no local server; contracts + safe helper tests
-npm run test:e2e:live       # plan → semi → auto → smoke
+npm run test:routes         # scaffold + lite-auto + full-auto + gated + feature routes
+npm run test:e2e:live       # all live route/smoke checks
 npm run test:e2e:cert       # certification layers (same as ./test/e2e/run.sh)
 npm run test:e2e:all        # fast → live → cert
 ```
@@ -25,7 +26,10 @@ or `-- --skip smoke` to omit known-expensive layers.
 |---|---|---|
 | `harness-plan-only.test.js` | `npm run test:plan` or `npm run test:e2e:live -- --only plan` | `/build --autonomous --plan-only` → `specs/` for inspection, then stop. Cheapest. |
 | `harness-semi-auto-run.test.js` | `npm run test:semi` or `npm run test:e2e:live -- --only semi` | Mode 2: `/build --autonomous` plans then **pauses at the approval gate** (no silent build). |
-| `harness-auto-run.test.js` | `npm run test:auto` or `npm run test:e2e:live -- --only auto` | Mode 1: `/build --auto` runs the full pipeline with **zero human gates**; the generated app's own suite is the oracle. |
+| `harness-auto-run.test.js` | `npm run test:auto` or `npm run test:e2e:live -- --only auto` | Mode 1 over lite scope: `/build --auto --lite` runs with **zero human gates**; the generated app's own suite is the oracle. |
+| `harness-full-auto-run.test.js` | `npm run test:full-auto` or `npm run test:e2e:live -- --only full-auto` | Full non-lite route: `/build --auto prd.md` plans/builds from a PRD and leaves a green project. |
+| `harness-gated-build.test.js` | `npm run test:gated` or `npm run test:e2e:live -- --only gated` | Default `/build prd.md` generates BRD and stops at the human approval gate; it must not silently enter `/auto`. |
+| `harness-feature-route.test.js` | `npm run test:feature` or `npm run test:e2e:live -- --only feature` | Existing repo route: `/scaffold --yes` then `/feature` refreshes brownfield code-map, changes behavior, and keeps tests green. |
 | `harness-selfheal-smoke.test.js` | `npm run test:smoke` or `npm run test:e2e:live -- --only smoke` | Self-healing: build a counter web app → Playwright verify → `/change` add a feature → regression, with a bounded fix loop. Browser is the independent oracle. |
 
 Plus the pre-existing certification layers (`harness-real-workflow`,

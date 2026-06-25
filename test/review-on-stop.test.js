@@ -53,15 +53,29 @@ test('does not block when a reviewer was spawned via the Task tool after the wri
   assert.strictEqual(result.stdout, '', `expected no block, got: ${result.stdout}`);
 });
 
-test('does not block when a reviewer was spawned via the Agent tool after the write', async () => {
+test('does not block when the required low-risk reviewer was spawned via the Agent tool after the write', async () => {
   const projectDir = makeHookProject([HOOK]);
-  writePending(projectDir, [{ file: 'src/api.ts', ts: 1000 }]);
+  writePending(projectDir, [{ file: 'src/view.ts', ts: 1000 }]);
   const transcriptPath = writeTranscript(projectDir, [
-    reviewerToolUse('Agent', 'security-reviewer', new Date(2000).toISOString()),
+    reviewerToolUse('Agent', 'clean-code-reviewer', new Date(2000).toISOString()),
   ]);
   const result = await runHook(projectDir, HOOK, { transcript_path: transcriptPath });
   assert.strictEqual(result.status, 0);
   assert.strictEqual(result.stdout, '', `expected no block, got: ${result.stdout}`);
+});
+
+test('security-sensitive writes require clean-code and security review evidence', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  writePending(projectDir, [{ file: 'src/api.ts', ts: 1000 }]);
+  const transcriptPath = writeTranscript(projectDir, [
+    reviewerToolUse('Agent', 'clean-code-reviewer', new Date(2000).toISOString()),
+  ]);
+  const result = await runHook(projectDir, HOOK, { transcript_path: transcriptPath });
+  assert.strictEqual(result.status, 0);
+  const out = JSON.parse(result.stdout);
+  assert.strictEqual(out.decision, 'block');
+  assert.ok(out.reason.includes('security/data/API boundary touched'), out.reason);
+  assert.ok(out.reason.includes('security-reviewer'), out.reason);
 });
 
 test('still blocks when the only reviewer run predates the pending write', async () => {
@@ -98,7 +112,7 @@ test('stop_hook_active alone does not clear the queue — still blocks without r
   assert.strictEqual(out.decision, 'block');
 });
 
-test('fresh verdict artifacts satisfy the gate without transcript evidence', async () => {
+test('fresh verdict artifacts satisfy the security-sensitive gate without transcript evidence', async () => {
   const projectDir = makeHookProject([HOOK]);
   writePending(projectDir, [{ file: 'src/api.ts', ts: 1000 }]);
   writeVerdicts(projectDir, ['clean-code-verdict.json', 'security-verdict.json']); // mtime = now > ts
@@ -112,6 +126,15 @@ test('fresh verdict artifacts satisfy the gate without transcript evidence', asy
   assert.strictEqual(queue, '');
 });
 
+test('fresh clean-code verdict is enough for low-risk production writes', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  writePending(projectDir, [{ file: 'src/view.ts', ts: 1000 }]);
+  writeVerdicts(projectDir, ['clean-code-verdict.json']); // mtime = now > ts
+  const result = await runHook(projectDir, HOOK, { transcript_path: null });
+  assert.strictEqual(result.status, 0);
+  assert.strictEqual(result.stdout, '', `expected no block, got: ${result.stdout}`);
+});
+
 test('verdict artifacts older than the pending write do not satisfy the gate', async () => {
   const projectDir = makeHookProject([HOOK]);
   const now = Date.now();
@@ -123,7 +146,7 @@ test('verdict artifacts older than the pending write do not satisfy the gate', a
   assert.strictEqual(out.decision, 'block');
 });
 
-test('a single verdict artifact is not enough — both reviewers must have run', async () => {
+test('a single verdict artifact is not enough for security-sensitive writes', async () => {
   const projectDir = makeHookProject([HOOK]);
   writePending(projectDir, [{ file: 'src/api.ts', ts: 1000 }]);
   writeVerdicts(projectDir, ['clean-code-verdict.json']);
@@ -131,6 +154,19 @@ test('a single verdict artifact is not enough — both reviewers must have run',
   assert.strictEqual(result.status, 0);
   const out = JSON.parse(result.stdout);
   assert.strictEqual(out.decision, 'block');
+});
+
+test('writes a compact review context pack for required reviewers', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  writePending(projectDir, [{ file: 'src/api.ts', ts: 1000 }]);
+  const result = await runHook(projectDir, HOOK, { transcript_path: null });
+  assert.strictEqual(result.status, 0);
+  const pack = fs.readFileSync(path.join(projectDir, 'specs', 'reviews', 'review-context-pack.md'), 'utf8');
+  assert.match(pack, /Scope: tiny/);
+  assert.match(pack, /src\/api\.ts/);
+  assert.match(pack, /clean-code-reviewer/);
+  assert.match(pack, /security-reviewer/);
+  assert.match(pack, /Do not summarize the implementation/);
 });
 
 test('fails open loudly after the block budget is exhausted', async () => {
@@ -156,6 +192,7 @@ test('block counter resets once the gate is satisfied', async () => {
   fs.writeFileSync(path.join(projectDir, '.claude', 'state', 'review-block-count'), '2');
   const transcriptPath = writeTranscript(projectDir, [
     reviewerToolUse('Task', 'clean-code-reviewer', new Date(2000).toISOString()),
+    reviewerToolUse('Task', 'security-reviewer', new Date(2000).toISOString()),
   ]);
   const result = await runHook(projectDir, HOOK, { transcript_path: transcriptPath });
   assert.strictEqual(result.status, 0);

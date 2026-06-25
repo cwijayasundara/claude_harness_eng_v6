@@ -43,7 +43,7 @@ Recommended first command for this project:
 | `/vibe` | Very small safe edit | Controlled fast lane for tiny changes |
 | `/change` | Behavior change in existing code | Test-first change route; use `--issue N` for a GitHub bug |
 | `/refactor` | No behavior change | Behavior-preserving cleanup with coverage and refactor-purity gates |
-| `/gate` | Before merge or after manual edits | Evaluator + security review |
+| `/gate` | Before merge or after manual edits | Evaluator + diff review; security review only when the diff crosses a security/data/API boundary |
 | `/status` | See progress | Reads current pipeline state; also available as `npm run status` |
 
 ## Approval Modes
@@ -54,7 +54,7 @@ Recommended first command for this project:
 | Semi-auto | `/build <prd> --autonomous` | One plan approval gate |
 | Full-auto | `/build <prd> --auto` | Zero human gates |
 
-Machine gates always stay on: tests, lint/types, coverage, architecture, evaluator, security, and diff review. The generator does not grade itself, and the harness does not merge for you.
+Machine gates always stay on: tests, lint/types, coverage, architecture, evaluator, adaptive review, and diff review. The generator does not grade itself, and the harness does not merge for you.
 
 ## Existing-Code Flow
 

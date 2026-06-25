@@ -14,6 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 const { resolveProjectDir, readHookInput, reportFailure } = require('./lib/common');
+const { renderContextPack, reviewPolicy } = require('./lib/review-policy');
 
 const REVIEWER_AGENTS = new Set([
   'clean-code-reviewer',
@@ -24,20 +25,15 @@ const REVIEWER_AGENTS = new Set([
   'performance-optimizer',
 ]);
 
-// Verdict artifacts are the strongest review evidence: written by the reviewer
-// agents themselves, checked by mtime against the pending writes. Both must be
-// fresh — the gate asks for clean-code AND security review.
-const REQUIRED_VERDICTS = ['clean-code-verdict.json', 'security-verdict.json'];
-
 // The gate may block this many consecutive stops; after that it fails open
 // LOUDLY (stdout warning + hook-errors.log) instead of looping forever. A
 // silent one-shot clear would let a model bypass review by simply stopping
 // twice; a bounded budget keeps the escape hatch without the free pass.
 const MAX_CONSECUTIVE_BLOCKS = 3;
 
-function verdictTs(projectDir) {
+function verdictTs(projectDir, verdictNames) {
   let oldest = Infinity;
-  for (const name of REQUIRED_VERDICTS) {
+  for (const name of verdictNames) {
     const p = path.join(projectDir, 'specs', 'reviews', name);
     let stat;
     try {
@@ -86,8 +82,8 @@ function readPending(stateFile) {
 }
 
 function lastReviewerTs(transcriptPath) {
-  if (!transcriptPath || !fs.existsSync(transcriptPath)) return 0;
-  let lastTs = 0;
+  if (!transcriptPath || !fs.existsSync(transcriptPath)) return new Map();
+  const lastByAgent = new Map();
   for (const line of fs.readFileSync(transcriptPath, 'utf8').split('\n')) {
     if (!line) continue;
     let msg;
@@ -106,12 +102,31 @@ function lastReviewerTs(transcriptPath) {
         if (sub && REVIEWER_AGENTS.has(sub)) {
           const tsRaw = msg.timestamp || (msg.message && msg.message.timestamp);
           const ts = tsRaw ? Date.parse(tsRaw) : Date.now();
-          if (ts > lastTs) lastTs = ts;
+          if (ts > (lastByAgent.get(sub) || 0)) lastByAgent.set(sub, ts);
         }
       }
     }
   }
-  return lastTs;
+  return lastByAgent;
+}
+
+function requiredReviewTs(projectDir, transcriptPath, policy) {
+  const transcriptTs = lastReviewerTs(transcriptPath);
+  let oldest = Infinity;
+  for (const reviewer of policy.required) {
+    const byTranscript = transcriptTs.get(reviewer.agent) || 0;
+    const byVerdict = verdictTs(projectDir, [reviewer.verdict]);
+    const ts = Math.max(byTranscript, byVerdict);
+    if (!ts) return 0;
+    if (ts < oldest) oldest = ts;
+  }
+  return oldest === Infinity ? 0 : oldest;
+}
+
+function writeContextPack(projectDir, policy) {
+  const reviewsDir = path.join(projectDir, 'specs', 'reviews');
+  fs.mkdirSync(reviewsDir, { recursive: true });
+  fs.writeFileSync(path.join(reviewsDir, 'review-context-pack.md'), renderContextPack(policy));
 }
 
 function readOffset(offsetPath) {
@@ -193,9 +208,13 @@ try {
   if (pending.length === 0) {
     writeBlockCount(stateDir, 0); // no open review cycle — drop any stale counter
   } else {
-    // Review evidence: a reviewer agent spawn recorded in the transcript, or
-    // fresh verdict artifacts on disk (mtime after the pending writes).
-    const reviewedTs = Math.max(lastReviewerTs(input.transcript_path), verdictTs(projectDir));
+    const policy = reviewPolicy(pending);
+    writeContextPack(projectDir, policy);
+    // Review evidence: each required reviewer has either a matching agent spawn
+    // in the transcript or a fresh verdict artifact on disk (mtime after the
+    // pending writes). Security review is required only when the changed files
+    // cross a security/data/API boundary.
+    const reviewedTs = requiredReviewTs(projectDir, input.transcript_path, policy);
     const unreviewed = pending.filter((p) => p.ts > reviewedTs);
     if (unreviewed.length === 0) {
       fs.writeFileSync(stateFile, '');
@@ -210,18 +229,22 @@ try {
         reportFailure('review-on-stop', new Error(`reviewer gate failed open after ${blocks} consecutive blocks; unreviewed files:\n${fileList}`));
         process.stdout.write(
           `WARNING: reviewer gate failed open after ${blocks} consecutive blocks.\n` +
-          `These files were written WITHOUT clean-code/security review:\n${fileList}\n` +
-          `Run the clean-code-reviewer and security-reviewer agents before shipping this work.\n`
+          `These files were written WITHOUT required review:\n${fileList}\n` +
+          `Run the required reviewer agents before shipping this work.\n`
         );
       } else {
         writeBlockCount(stateDir, blocks + 1);
+        const requiredList = policy.required.map((r, i) =>
+          `  ${i + 1}. Agent(subagent_type="${r.agent}", prompt="${r.prompt}")`
+        ).join('\n');
         const reason =
           `Production code was written this turn but not reviewed.\n` +
           `Files awaiting review:\n${fileList}\n\n` +
-          `Before stopping, invoke BOTH of these in a single message (parallel):\n` +
-          `  1. Agent(subagent_type="clean-code-reviewer", prompt="Review the diff for clean-code/SOLID violations in the files above.")\n` +
-          `  2. Agent(subagent_type="security-reviewer", prompt="Scan the diff for OWASP/security issues in the files above.")\n` +
-          `The gate clears when the reviewer agents have run (their verdicts land in specs/reviews/).\n`;
+          `Review policy: ${policy.scope}; ${policy.reasons.join('; ')}.\n` +
+          `Context pack: specs/reviews/review-context-pack.md\n\n` +
+          `Before stopping, invoke the required reviewer agent${policy.required.length === 1 ? '' : 's'} in a single message${policy.required.length === 1 ? '' : ' (parallel)'}:\n` +
+          `${requiredList}\n` +
+          `The gate clears when the required reviewer agents have run or their verdicts land in specs/reviews/.\n`;
         process.stdout.write(JSON.stringify({ decision: 'block', reason }));
         process.exit(0);
       }
