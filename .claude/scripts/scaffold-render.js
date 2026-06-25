@@ -74,7 +74,7 @@ function buildManifest(profile) {
   // cheaper cost posture: Sonnet generation (cost tier), single-story groups skip
   // sprint decomposition (trimmed ceremony), and no Docker deploy phase (local
   // verification). Each default is still overridable by an explicit profile field.
-  const lite = profile.projectType === 'D' || (!stack.frontend && !stack.backend);
+  const lite = isLiteShaped(profile);
   const manifest = {
     name: profile.name || 'untitled-project',
     description: profile.description || '',
@@ -165,6 +165,47 @@ function renderTemplate(body, values) {
     Object.prototype.hasOwnProperty.call(values, key) ? values[key] : '');
 }
 
+const PROJECT_TYPE_LABELS = {
+  A: 'Consumer-facing app (high design bar)',
+  B: 'Internal tool / dashboard',
+  C: 'API-only / backend service (no UI)',
+  D: 'Minimal — CLI / library / single-script',
+};
+
+// Mirrors buildManifest's `lite` signal so the README describes the same posture
+// the manifest was stamped with.
+function isLiteShaped(profile) {
+  const stack = profile.stack || {};
+  return profile.projectType === 'D' || (!stack.frontend && !stack.backend);
+}
+
+// Values for the project-tailored SCAFFOLD_README.md (project-readme.template.md).
+function projectReadmeValues(profile) {
+  const name = profile.name || 'untitled-project';
+  const lite = isLiteShaped(profile);
+  const tier = profile.modelTier || (lite ? 'cost' : 'balanced');
+  const start = lite
+    ? `/build --lite "${name}: ${profile.description || stackSummary(profile)}"   # interactive\n`
+      + '/build --lite --auto docs/prd.md                # headless: small PRD -> PR'
+    : '/build docs/prd.md            # gated: approve BRD, stories, design, then build\n'
+      + '/build docs/prd.md --auto     # headless: PRD -> PR, zero approval gates';
+  const posture = lite
+    ? `${tier} (Sonnet generation) · trimmed ceremony · local verification`
+    : `${tier} (Opus generation) · full ceremony · docker verification`;
+  return {
+    PROJECT_NAME: name,
+    STACK_SUMMARY: stackSummary(profile),
+    PROJECT_TYPE_LABEL: PROJECT_TYPE_LABELS[profile.projectType] || 'Custom project',
+    POSTURE: posture,
+    MODEL_TIER: tier,
+    RECOMMENDED_START: start,
+  };
+}
+
+function renderProjectReadme(templateBody, profile) {
+  return renderTemplate(templateBody, projectReadmeValues(profile));
+}
+
 function calibrationProfile(projectType) {
   if (projectType === 'C' || projectType === 'D') return null;
   const consumer = projectType === 'A';
@@ -182,4 +223,5 @@ function calibrationProfile(projectType) {
 
 module.exports = {
   lspServers, buildManifest, renderClaudeMd, renderTemplate, initShValues, calibrationProfile,
+  renderProjectReadme,
 };

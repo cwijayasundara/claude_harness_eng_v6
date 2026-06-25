@@ -41,7 +41,6 @@ test('/scaffold copies telemetry, docs, and git hook assets into target repos', 
     'cp "$HARNESS_ROOT/telemetry/otel-collector-config.yml" ./telemetry/',
     'cp "$HARNESS_ROOT/telemetry/prometheus.yml" ./telemetry/',
     'cp -r "$HARNESS_ROOT/telemetry/grafana" ./telemetry/',
-    'cp "$HARNESS_ROOT/README.md" ./SCAFFOLD_README.md',
     'cp -r $PLUGIN_SOURCE/scripts/ .claude/scripts/',
     'cp $PLUGIN_SOURCE/git-hooks/prepare-commit-msg .git/hooks/prepare-commit-msg',
   ];

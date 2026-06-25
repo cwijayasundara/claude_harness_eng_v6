@@ -398,7 +398,6 @@ cp "$HARNESS_ROOT/telemetry/prometheus.yml" ./telemetry/
 cp "$HARNESS_ROOT/telemetry/cache-alerts.rules.yml" ./telemetry/
 cp "$HARNESS_ROOT/telemetry/CACHE_MONITORING.md" ./telemetry/
 rm -rf ./telemetry/grafana && cp -r "$HARNESS_ROOT/telemetry/grafana" ./telemetry/
-cp "$HARNESS_ROOT/README.md" ./SCAFFOLD_README.md
 mkdir -p docs
 cp "$HARNESS_ROOT/docs/telemetry.md" "$HARNESS_ROOT/docs/testing.md" "$HARNESS_ROOT/docs/extras.md" "$HARNESS_ROOT/docs/prompting-standards.md" "$HARNESS_ROOT/docs/model-allocation.md" ./docs/
 ```
