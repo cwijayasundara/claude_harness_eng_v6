@@ -14,6 +14,7 @@ const {
   readFeatures,
   countGroupsFromGraph,
   readPendingReviews,
+  readPlanConfidence,
   parseIterationLog,
 } = require('./pipeline-state-readers');
 
@@ -110,6 +111,7 @@ function buildSnapshot(projectDir, { now } = {}) {
     schema_version: 1,
     generated_at: now || new Date().toISOString(),
     run: buildRun(stateDir, progress, last),
+    confidence: readPlanConfidence(projectDir),
     phase: derivePhase(readMarker(stateDir, 'current-lane') || (last && last.lane), progress),
     wave: buildWave(groups, countGroupsFromGraph(projectDir)),
     groups,

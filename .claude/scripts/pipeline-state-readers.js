@@ -121,6 +121,24 @@ function countGroupsFromGraph(projectDir) {
   return names.size;
 }
 
+// Plan-confidence artifact written by plan-confidence.js at the end of planning.
+// Absent (no planning run yet, or older project) → null, so callers omit it.
+function readPlanConfidence(projectDir) {
+  let obj;
+  try {
+    obj = JSON.parse(readText(path.join(projectDir, 'specs', 'plan-confidence.json')));
+  } catch (_) {
+    return null;
+  }
+  if (!obj || typeof obj.band !== 'string') return null;
+  return {
+    band: obj.band,
+    score: typeof obj.score === 'number' ? obj.score : null,
+    threshold: typeof obj.threshold === 'number' ? obj.threshold : null,
+    drivers: Array.isArray(obj.drivers) ? obj.drivers : [],
+  };
+}
+
 function readPendingReviews(stateDir) {
   return readText(path.join(stateDir, 'pending-reviews.jsonl'))
     .split('\n')
@@ -162,5 +180,6 @@ module.exports = {
   readFeatures,
   countGroupsFromGraph,
   readPendingReviews,
+  readPlanConfidence,
   parseIterationLog,
 };
