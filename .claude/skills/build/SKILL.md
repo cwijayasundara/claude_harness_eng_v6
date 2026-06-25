@@ -42,6 +42,8 @@ This is the in-session human trigger. The tracker-driven equivalent (Jira/Linear
 
 **`--plan-only`.** Run the architect phases only — Phases 0–3 (`/brd --prd → /spec → /design → /test --plan-only`) — then **stop before Phase 3.5**, writing all `specs/` artifacts (BRD, stories + dependency graph, design, test plan) for inspection. No approval gate, no code generation, no PR. Use it to validate the plan locally (e.g. eyeball `specs/stories/dependency-graph.md` and its Mermaid cluster graph) before committing to a semi-auto or full-auto run. End by printing an inventory of what was written under `specs/`.
 
+**`--budget <spec>`.** Cap the compute the autonomous loop may spend before halting at a clean checkpoint: `--budget 2h` (wall-clock), `--budget 150agents` (agent spawns), `--budget '$20'` (estimated cost), or `--budget off`. Without the flag, a per-tier default applies (cost ≈ 30 min, balanced ≈ 90 min, max-quality ≈ 180 min; see `.claude/scripts/budget-state.js`). A `project-manifest.json#execution.budget` object overrides the default; `--budget` overrides both. The halt is enforced by `/auto` and `build-chain.js` at iteration/link boundaries — committed work is always preserved, and raising the cap resumes the run. **Wall-clock and agent-count are exact; estimated cost is a surfaced estimate** (the harness makes no direct API calls, so it cannot meter tokens exactly in-loop). Budget caps compute, never the verification gates.
+
 ### `--lite` — compressed greenfield lane
 
 For a **small** new project (single language/runtime, one module, no DB/auth, ≤ ~5 stories — e.g. a CLI tool, single-script utility, or small library), pass `--lite` with a one-line description. Instead of the full phases below, follow the compressed lane in **`.claude/skills/build/references/lite-lane.md`**: a 5-question interview → one-page BRD-lite → ≤5 stories in a single group → minimal design artifacts → one approval gate → hand off to `/auto --group A`. It enforces the same ratchet/gates; it only compresses the planning ceremony. If the project exceeds the lite scope caps (a database, a second service, auth, >5 stories), the lane escalates you to the full pipeline. Everything from Phase 0 below is the full (non-lite) path.
@@ -113,6 +115,7 @@ In `--autonomous` mode this is the **single** human gate. After Phases 1–3 hav
 4. Test plan: case count, story coverage, fixture count.
 5. Deliverable shape detected from `project-manifest.json` (has API? has UI?) and the verification mode — so the human knows which pre-PR checks (Phase 9.5) will run.
 6. **Plan confidence** from `specs/plan-confidence.json`: the band (high/medium/low) and its drivers — so the human approves with the planner's own uncertainty in view, not blind.
+7. **Projected spend** vs the budget cap: a rough estimate from the story/group count (`~N min · ~M agents · ~$K`, same rate table as `budget-state.js`) against the resolved cap — so the human sees the likely cost before approving. In `--auto`, if the projection already exceeds the cap before a single group runs, stop and surface it rather than starting a run that cannot finish in budget.
 
 Ask once: **"Approve this plan to build autonomously through to an open PR?"** On a clear "yes/approved", proceed through Phases 4–11 with **no further human stops** — the machine gates carry the rest. On anything else, fall back to the gated model (treat the remaining phases as gated). In the default (non-`--autonomous`) model, skip Phase 3.5 entirely; the per-phase gates above already ran.
 
@@ -124,6 +127,7 @@ Create the following state files before entering the autonomous loop:
 
 1. `.claude/state/coverage-baseline.txt` — Write `0` (initial baseline).
 2. `.claude/state/iteration-log.md` — Write header: `# Iteration Log\n\nTracking all autonomous build iterations.\n`
+2b. `.claude/state/budget-start` — Write the current epoch-ms (`date +%s%3N`). Stamps the run origin for budget metering (SECTION 11 of `auto/SKILL.md`); overwrite on each fresh `/build` so a new run resets the clock.
 3. `claude-progress.txt` — Write session 0 block:
    ```
    === Session 0 ===

@@ -9,6 +9,7 @@
 
 const { buildSnapshot } = require('./pipeline-snapshot');
 const { readRunReceipts, findProjectDir } = require('./pipeline-state-readers');
+const { fmtBudget } = require('./budget-state');
 
 // ---------- presenters ----------
 
@@ -30,6 +31,7 @@ function renderStatus(s) {
     `Run:       lane=${s.run.lane || '-'}  mode=${s.run.mode || '-'}  session=${s.run.session_id || '-'}`,
   ];
   if (s.confidence) lines.push(fmtConfidence(s.confidence));
+  if (s.budget) lines.push(fmtBudget(s.budget));
   lines.push(
     `Groups:    ${s.wave.current}/${s.wave.total}  done=[${s.groups.completed.join(', ')}]  current=${s.groups.current || 'none'}  remaining=[${s.groups.remaining.join(', ')}]`,
     `Features:  ${s.features.passing} / ${s.features.total} passing`,

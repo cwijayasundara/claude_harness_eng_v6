@@ -93,6 +93,8 @@ At the start of EVERY iteration — including the first — read these files in 
 
 If `claude-progress.txt` indicates a `current_group` (or `current_wave`) that is not yet complete, resume from there. Otherwise, compute a fresh wave per Section 4B.
 
+**Budget metering.** If `.claude/state/budget-start` does not exist, create it now with the current epoch-ms (`date +%s%3N`) — this stamps the run origin so wall-clock metering has a start (`/build` Phase 4 already stamps it; this covers standalone `/auto`). Then read the live budget with `node .claude/scripts/budget-state.js` and honor the result per SECTION 11 criterion 1 — if it reports `[exhausted]`, stop at this iteration boundary before dispatching the group. A `warn` band is non-blocking: note it in the iteration log and keep building.
+
 ---
 
 ## SECTION 3: Sprint Contract Negotiation (Steps 2-3)
@@ -733,7 +735,7 @@ This is the voluntary-yield boundary the chain driver relies on: because the pro
 
 OR logic with priority (check in order):
 
-1. **Hard stop:** An architecture violation that self-healing cannot fix, OR the total iteration count exceeds 50. Stop the entire `/auto` run. Report status and hand off to the user.
+1. **Hard stop:** Any of — an architecture violation that self-healing cannot fix; the total iteration count exceeds 50; **or the per-task budget is exhausted** (the wall-clock / agent-spawn / est-cost cap, read at the top of each iteration via `node .claude/scripts/budget-state.js`). Stop the entire `/auto` run **cleanly at this iteration boundary** (never mid-step — committed work is always preserved). For a budget stop, set `next_action: "BUDGET — {dimension} cap reached; raise --budget or merge what's done"` in `claude-progress.txt`; raising the cap (or `--budget off`) resumes the run. Report status and hand off to the user.
 
 2. **Escalate (per-story):** A story fails 3 consecutive self-heal iterations. Mark it BLOCKED. Log to `failures.md`. Extract learned rule. Skip to the next group. Do NOT stop the entire run.
 

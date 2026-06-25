@@ -15,6 +15,7 @@ const {
   countGroupsFromGraph,
   readPendingReviews,
   readPlanConfidence,
+  readBudget,
   parseIterationLog,
 } = require('./pipeline-state-readers');
 
@@ -98,8 +99,9 @@ function deriveHealth(coverage, groups, stories, iter) {
   return 'on_track';
 }
 
-function buildSnapshot(projectDir, { now } = {}) {
+function buildSnapshot(projectDir, { now, nowMs } = {}) {
   const stateDir = path.join(projectDir, '.claude', 'state');
+  const atMs = nowMs || (now ? Date.parse(now) : undefined);
   const progress = readProgress(projectDir);
   const records = readRunReceipts(projectDir);
   const last = records.length ? records[records.length - 1] : null;
@@ -112,6 +114,7 @@ function buildSnapshot(projectDir, { now } = {}) {
     generated_at: now || new Date().toISOString(),
     run: buildRun(stateDir, progress, last),
     confidence: readPlanConfidence(projectDir),
+    budget: readBudget(projectDir, atMs),
     phase: derivePhase(readMarker(stateDir, 'current-lane') || (last && last.lane), progress),
     wave: buildWave(groups, countGroupsFromGraph(projectDir)),
     groups,
