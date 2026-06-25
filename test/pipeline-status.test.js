@@ -208,6 +208,30 @@ test('renderStatus surfaces the headline fields in plain text', () => {
   assert.match(out, /group B/i, 'current group shown');
 });
 
+test('confidence is null and the Plan line is omitted when no artifact exists', () => {
+  const snap = buildSnapshot(midBuildProject(), { now: NOW });
+  assert.strictEqual(snap.confidence, null);
+  assert.doesNotMatch(renderStatus(snap), /Plan:/);
+});
+
+test('buildSnapshot surfaces plan confidence and renderStatus shows it', () => {
+  const dir = midBuildProject();
+  fs.writeFileSync(path.join(dir, 'specs', 'plan-confidence.json'), JSON.stringify({
+    band: 'low',
+    score: 0.7,
+    threshold: 0.6,
+    drivers: [{ signal: 'openQuestions', detail: '1 unanswered open question(s)', weight: -0.3 }],
+  }));
+  const snap = buildSnapshot(dir, { now: NOW });
+  assert.strictEqual(snap.confidence.band, 'low');
+  assert.strictEqual(snap.confidence.threshold, 0.6);
+
+  const out = renderStatus(snap);
+  assert.match(out, /Plan:\s+confidence=low/);
+  assert.match(out, /1 unanswered open question/);
+  assert.match(out, /threshold=0\.6/);
+});
+
 test('renderTimeline lists steps for the current session with status glyphs', () => {
   const dir = midBuildProject();
   const snap = buildSnapshot(dir, { now: NOW });

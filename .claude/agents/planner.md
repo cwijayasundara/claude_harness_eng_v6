@@ -102,6 +102,10 @@ You are the Planner agent for the Claude Harness Engine. Your role is to transfo
   }
   ```
 
+### Step 6: Compute Plan Confidence
+
+After the BRD, stories, and design are written, run `node .claude/scripts/plan-confidence.js`. It writes `specs/plan-confidence.json` — a band (high/medium/low), a score, and risk drivers — derived deterministically from the open questions and assumptions you recorded in the BRD, the needs-breakdown backlog, the epic count, hollow definitions left in `api-contracts.schema.json` / `data-models.schema.json`, and high/critical seams in `specs/brownfield/risk-map.md` that no `change-strategy.md` mitigates. This is the planner's own uncertainty signal for the downstream approval gate; it gates **planning only** and has no effect on the machine verification gates. Do not hand-edit the JSON — to lower confidence, address the real source (record a BRD Open Question, flesh out the stubbed schema, or write the change-strategy) rather than overwriting the artifact.
+
 ## Quality Gates
 
 Before finishing, verify:
@@ -113,6 +117,7 @@ Before finishing, verify:
 - Every API endpoint in architecture is reflected in `api-contracts.schema.json`
 - Every data entity is reflected in `data-models.schema.json`
 - Every story ID in `features.json` has a corresponding `specs/stories/E{n}-S{n}.md`
+- `specs/plan-confidence.json` exists (Step 6 ran `plan-confidence.js`)
 
 ## Gotchas
 

@@ -18,17 +18,26 @@ function fmtCoverage(c) {
   return `${c.current}%${base}`;
 }
 
+function fmtConfidence(c) {
+  const drivers = c.drivers.map((d) => d.detail).join(', ') || 'no risk drivers';
+  const thr = c.threshold != null ? `  threshold=${c.threshold}` : '';
+  return `Plan:      confidence=${c.band} (${drivers})${thr}`;
+}
+
 function renderStatus(s) {
   const lines = [
     `Pipeline status — ${s.phase}  [${s.health}]`,
     `Run:       lane=${s.run.lane || '-'}  mode=${s.run.mode || '-'}  session=${s.run.session_id || '-'}`,
+  ];
+  if (s.confidence) lines.push(fmtConfidence(s.confidence));
+  lines.push(
     `Groups:    ${s.wave.current}/${s.wave.total}  done=[${s.groups.completed.join(', ')}]  current=${s.groups.current || 'none'}  remaining=[${s.groups.remaining.join(', ')}]`,
     `Features:  ${s.features.passing} / ${s.features.total} passing`,
     `Coverage:  ${fmtCoverage(s.coverage)}`,
     `Iteration: ${s.iteration.current}/${s.iteration.max} (group ${s.iteration.group || '-'})`,
     `Reviews:   ${s.pending_reviews} pending`,
     `Next:      ${s.next_action || '-'}`,
-  ];
+  );
   if (s.stories.blocked.length) lines.push(`Blocked:   ${s.stories.blocked.join(', ')}`);
   return `${lines.join('\n')}\n`;
 }
