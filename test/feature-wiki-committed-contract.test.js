@@ -13,6 +13,9 @@ test('wiki path is NOT excluded by .gitignore or gitignore.template', () => {
     const ig = read(rel);
     assert.doesNotMatch(ig, /specs\/brownfield\/wiki/, `${rel} must not ignore the committed wiki`);
     assert.doesNotMatch(ig, /^\s*specs\/brownfield\/?\s*$/m, `${rel} must not ignore specs/brownfield wholesale`);
+    // Glob ignore forms that would also sweep up the committed wiki, e.g.
+    // `specs/brownfield/**`, `specs/brownfield/*`, `specs/brownfield/*/`.
+    assert.doesNotMatch(ig, /^\s*specs\/brownfield\/\*{1,2}\/?\s*$/m, `${rel} must not ignore specs/brownfield via a glob`);
   }
 });
 
