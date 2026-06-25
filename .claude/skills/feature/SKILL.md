@@ -2,7 +2,6 @@
 name: feature
 description: Brownfield change route — take an existing-code feature request from intent to a reviewed PR, scaling from a single /change to an epic via /spec→/design→/auto. Linear-tracked, backed by a committed DeepWiki.
 argument-hint: "[\"<feature request>\"]"
-context: fork
 ---
 
 # Feature Skill — Brownfield Change Route
@@ -14,6 +13,14 @@ human gates and keeps a committed DeepWiki current. It does **not** reimplement
 `/auto`, or `/gate` — it delegates to them.
 
 For greenfield builds use `/build`. For a discovery-only pass use `/brownfield`.
+
+**Runs in the main session — do not add `context: fork`.** This route owns the
+three interactive human gates and the git workflow (branch → commit → push →
+open PR). A forked skill cannot pause for `AskUserQuestion` gates and returns a
+single result without committing or pushing, so it leaves the change uncommitted
+on the current branch. The conductor must run in the main conversation loop. The
+delegated sub-skills (`/brownfield`, `/auto`, etc.) fork their own work as they
+already do; the conductor itself stays in the main session.
 
 ## Usage
 
