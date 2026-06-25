@@ -1,9 +1,16 @@
 'use strict';
 
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 const { test } = require('node:test');
 
 const { parseBuildInvocation } = require('../.claude/scripts/build-lane.js');
+
+const BUILD_SKILL = fs.readFileSync(
+  path.join(__dirname, '..', '.claude', 'skills', 'build', 'SKILL.md'),
+  'utf8',
+);
 
 test('full auto and lite flags are order-independent', () => {
   const a = parseBuildInvocation('/build --auto --lite docs/prd.md');
@@ -47,4 +54,31 @@ test('finalize is an explicit terminal lane', () => {
   assert.strictEqual(r.lane, 'finalize');
   assert.strictEqual(r.humanGates, 0);
   assert.strictEqual(r.requiresPrd, false);
+});
+
+test('PRD path is extracted when it precedes the flags (regression)', () => {
+  // The exact invocation that was reported as "no requirements came through".
+  const r = parseBuildInvocation('/build docs/todo-cli-brd-prompt.md --lite --auto');
+
+  assert.strictEqual(r.valid, true);
+  assert.strictEqual(r.lane, 'lite-auto');
+  assert.strictEqual(r.prdPath, 'docs/todo-cli-brd-prompt.md');
+  assert.strictEqual(r.requiresPrd, true);
+  assert.strictEqual(r.humanGates, 0);
+});
+
+test('build SKILL wires the parser as a mandatory first step (no dead code)', () => {
+  // The parser only prevents dropped-PRD bugs if the skill actually runs it.
+  // Guard against it silently becoming dead code again.
+  assert.match(BUILD_SKILL, /build-lane\.js/, 'SKILL.md must invoke build-lane.js');
+  assert.match(
+    BUILD_SKILL,
+    /Step 0[\s\S]*build-lane\.js/,
+    'build-lane.js must be invoked as the first step, before phase routing',
+  );
+  assert.match(
+    BUILD_SKILL,
+    /Do not parse the flags or the PRD path by hand/i,
+    'SKILL.md must forbid hand-parsing the invocation',
+  );
 });
