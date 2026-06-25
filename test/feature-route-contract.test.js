@@ -75,3 +75,10 @@ test('C: PR links back to the Linear issue; issue left in Human Review, never au
   assert.match(s, /Human Review/);
   assert.match(s, /never[^\n]*Done|not[^\n]*auto.*Done/i);
 });
+
+test('registration: README and CLAUDE.md reference /feature', () => {
+  const readme = read('README.md');
+  assert.match(readme, /\|\s*`\/feature`\s*\|/);
+  const claude = read('CLAUDE.md');
+  assert.match(claude, /\/feature/);
+});

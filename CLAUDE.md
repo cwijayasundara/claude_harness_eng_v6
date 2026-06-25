@@ -34,7 +34,7 @@ Use `/vibe` for small, low-risk changes where the full SDLC pipeline would be di
 
 ### Brownfield Discovery
 
-Use `/brownfield` before broad planning, refactoring, or feature work in existing codebases. It creates factual architecture, test, risk, and change-strategy maps under `specs/brownfield/` so agents preserve existing contracts and choose the right lane. `/vibe` may still be used for tiny low-risk fixes, but it must respect any brownfield risk map already present.
+Use `/brownfield` before broad planning, refactoring, or feature work in existing codebases. It creates factual architecture, test, risk, and change-strategy maps under `specs/brownfield/` so agents preserve existing contracts and choose the right lane. `/vibe` may still be used for tiny low-risk fixes, but it must respect any brownfield risk map already present. For end-to-end existing-code work (request → reviewed PR), use `/feature`, which runs `/brownfield` discovery, keeps the committed DeepWiki current, and routes to `/change` (single story) or `/spec`→`/design`→`/auto` (epic) behind three human gates.
 
 ### Disposable Artifacts (Non-Product Work)
 
