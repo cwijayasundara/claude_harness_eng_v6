@@ -173,6 +173,7 @@ These are the **entry points you actually type** — one per situation:
 | `/build` | Greenfield (or brownfield-aware) build: runs planning → `/auto` for you, with human gates. `--lite` for small new projects; `--lite --auto <prd>` runs a small project headless to a PR |
 | `/auto` | Resume / steer the autonomous ratcheting loop directly |
 | `/brownfield` | Map an existing codebase before changing it; `--seams "<goal>"` ranks the safest cut-points |
+| `/feature` | Brownfield change route: feature request → reviewed PR, scaling single `/change` to epic `/spec`→`/design`→`/auto`; Linear-tracked, committed DeepWiki |
 | `/vibe` | Controlled small-change lane (≤3 files, <150 lines, no auth/API) |
 | `/change` | Behavior change on existing code (test-first); `--issue N` for a GitHub bug fix |
 | `/refactor` | Behavior-preserving cleanup with ratchet gate; `--sweep` scans the repo for pattern drift |
