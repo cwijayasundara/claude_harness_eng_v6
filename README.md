@@ -315,33 +315,30 @@ gate does — just unattended. Keep it off until the project has a green `main` 
 routine on a red tree is noise. This is a thin convenience over commands you already have, not new
 harness machinery.
 
-### Enable telemetry (off by default)
+### Telemetry (on by default in scaffolded projects)
 
-The harness ships with telemetry **off** — a fresh scaffold sets no OTEL or Pushgateway env vars, Claude Code exports nothing, and the `record-run` hook stays inert (it only pushes when `HARNESS_PUSHGATEWAY_URL` is set). The `record-run` hook and the `telemetry/` config files are still installed, just dormant, so turning it on is a small change. To enable it:
+A **scaffolded project ships with telemetry on**: `/scaffold` bakes the OTEL + Pushgateway env vars into the new project's `.claude/settings.json` and `.claude/settings.auto.json`, so Claude Code exports metrics and the `record-run` hook pushes harness metrics from the first run — in both `/build` and headless `/build --auto`. (The harness's *own* repo stays telemetry-off; only the projects it scaffolds default on.) The env vars baked in:
 
-1. **Add the env vars to `.claude/settings.json`** (Claude Code reads env only from here, not `.env`). Merge into the existing `env` object:
+```json
+"env": {
+  "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+  "OTEL_METRICS_EXPORTER": "otlp",
+  "OTEL_LOGS_EXPORTER": "otlp",
+  "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+  "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
+  "OTEL_LOG_TOOL_DETAILS": "1",
+  "HARNESS_PUSHGATEWAY_URL": "http://localhost:9091"
+}
+```
 
-   ```json
-   "env": {
-     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
-     "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
-     "OTEL_METRICS_EXPORTER": "otlp",
-     "OTEL_LOGS_EXPORTER": "otlp",
-     "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
-     "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
-     "OTEL_LOG_TOOL_DETAILS": "1",
-     "HARNESS_PUSHGATEWAY_URL": "http://localhost:9091",
-     "HARNESS_USER": "Your Name"
-   }
-   ```
+`HARNESS_PUSHGATEWAY_URL` is the master switch the `record-run` hook checks; the `OTEL_*` block feeds the cache-health dashboard. The push has a 2s timeout and swallows connection errors, so until the stack is up it simply no-ops — a project with telemetry on but no stack running behaves like one with it off.
 
-   `HARNESS_PUSHGATEWAY_URL` is the switch the `record-run` hook checks — without it, no metrics are pushed. Give each team member their own `HARNESS_USER`.
+**To actually see data on the dashboards, two steps remain** (scaffold can't automate either):
 
-2. **Start the stack:** `docker compose -f telemetry_docker_compose.yml up -d` (OTEL Collector :4317, Prometheus :9090, Pushgateway :9091, Grafana :3001 — login `admin`/`harness`).
+1. **Start the stack:** `docker compose -f telemetry_docker_compose.yml up -d` (OTEL Collector :4317, Prometheus :9090, Pushgateway :9091, Grafana :3001 — login `admin`/`harness`). The compose file, `telemetry/` configs, and dashboards are already copied into the project.
+2. **Restart the Claude Code session** so it picks up the env block.
 
-3. **Restart the Claude Code session** so it picks up the new env block.
-
-Point `OTEL_EXPORTER_OTLP_ENDPOINT` / `HARNESS_PUSHGATEWAY_URL` at a shared host to aggregate a whole team. Full setup, the metric catalog, and PromQL queries are in [docs/telemetry.md](docs/telemetry.md).
+Each team member can set `HARNESS_USER` in their `settings.json` to label their metrics; left unset, the hook derives it from git `user.name` / the OS username. Point `OTEL_EXPORTER_OTLP_ENDPOINT` / `HARNESS_PUSHGATEWAY_URL` at a shared host to aggregate a whole team. To turn telemetry **off** for a project, remove those env keys. Full setup, the metric catalog, and PromQL queries are in [docs/telemetry.md](docs/telemetry.md).
 
 ---
 

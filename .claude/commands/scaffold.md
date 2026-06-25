@@ -656,11 +656,18 @@ chmod +x .git/hooks/prepare-commit-msg .git/hooks/pre-commit .git/hooks/commit-m
 mkdir -p .claude/runs
 ```
 
-### Optional: Enable telemetry (default: OFF)
+### Telemetry (default: ON)
 
-**Telemetry is off by default.** The copied `settings.json` sets no OTEL/Pushgateway env vars, so Claude Code exports nothing and the `record-run` hook runs inert (it only pushes when `HARNESS_PUSHGATEWAY_URL` is set). **Do NOT enable it unless the user explicitly asks for telemetry dashboards** — if they don't, skip to the `.gitignore` step.
+**Telemetry ships enabled.** The deterministic generator (Step 3) bakes the OTEL + Pushgateway env vars into the copied `settings.json` **and** `settings.auto.json`, so Claude Code exports metrics and the `record-run` hook pushes harness metrics from the first run — in both `/build` and headless `/build --auto`. Until the dashboard stack is up, the push no-ops on a 2s timeout (no errors, no crash), so a project with telemetry on but no stack running behaves exactly like one with it off.
 
-To enable it, follow **`docs/telemetry.md`** (copied into the project): it has the exact `settings.json` env block + `.env` file, the `docker compose -f telemetry_docker_compose.yml up -d` start command, the non-Docker exporters, and what native OTEL covers vs. what the harness adds. The stack (`telemetry_docker_compose.yml`, dashboards) is already copied in Step 3; only the env vars and `docker compose up` remain, and only if asked.
+To actually **see** data, the user starts the stack — the one step scaffold cannot automate:
+
+```bash
+docker compose -f telemetry_docker_compose.yml up -d
+# OTEL collector :4317 · Prometheus :9090 · Pushgateway :9091 · Grafana :3001 (admin/harness)
+```
+
+The stack (`telemetry_docker_compose.yml`, `telemetry/` configs, dashboards) is already copied in Step 3. After starting it, restart the Claude session so the env block is picked up. Each teammate can set `HARNESS_USER` to label their metrics; left unset, the `record-run` hook derives it from git `user.name` / the OS user. Full setup, the metric catalog, and PromQL queries: **`docs/telemetry.md`** (copied into the project). To turn telemetry **off** for a project, remove the `CLAUDE_CODE_ENABLE_TELEMETRY` / `OTEL_*` / `HARNESS_PUSHGATEWAY_URL` keys from its `settings.json`.
 
 Write `.gitignore` by copying the template:
 

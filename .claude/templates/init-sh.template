@@ -42,11 +42,11 @@ fi
 {{DOCKER_COMPOSE_CMD}}
 
 # Telemetry stack (OTEL Collector + Prometheus + Pushgateway + Grafana).
-# Telemetry is opt-in. Scaffold copies the compose file, but init.sh does not
-# start it unless the user follows docs/telemetry.md.
+# Telemetry is ENABLED by default (env vars are in .claude/settings.json), but
+# init.sh does not start the stack — the push no-ops until you bring it up.
 if [ -f "telemetry_docker_compose.yml" ]; then
-  echo "Telemetry stack copied but not started (opt-in)."
-  echo "Enable: set OTEL/Pushgateway env vars in .claude/settings.json; see docs/telemetry.md."
+  echo "Telemetry stack copied but not started."
+  echo "Env is on by default; start the stack per docs/telemetry.md to see data in Grafana (:3001, admin/harness)."
 fi
 
 # LSP server check

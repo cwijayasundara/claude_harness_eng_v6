@@ -1,6 +1,6 @@
 # Telemetry — Setup and Reference
 
-Telemetry is **off by default and opt-in**. Nothing in the build loop depends on it — a fresh scaffold sets no OTEL/Pushgateway env vars, so Claude Code exports nothing and the `record-run.js` hook stays inert (it only pushes when `HARNESS_PUSHGATEWAY_URL` is set). Turn it on when you want team dashboards, cost tracking, or productivity metrics: add the env vars in the **Enable** section below, then start the stack. (The quick version is in the README's "Enable telemetry" section.)
+Telemetry is **on by default in scaffolded projects**. `/scaffold` bakes the OTEL/Pushgateway env vars into the new project's `.claude/settings.json` and `.claude/settings.auto.json`, so Claude Code exports metrics and the `record-run.js` hook pushes harness metrics from the first run. Nothing in the build loop depends on it: the push has a 2s timeout and swallows connection errors, so until you start the stack it simply no-ops. To actually see dashboards you start the stack (below) and restart the session. (The harness's *own* repo stays telemetry-off; only the projects it scaffolds default on.) To turn it **off** for a project, remove the `CLAUDE_CODE_ENABLE_TELEMETRY` / `OTEL_*` / `HARNESS_PUSHGATEWAY_URL` keys from its `settings.json`. (The quick version is in the README's "Telemetry" section.)
 
 ## Start the telemetry stack (one per team)
 
@@ -37,9 +37,9 @@ The pipeline dashboard reads the same `harness_*` metrics the build already push
 
 Anonymous read access is enabled — team members can view dashboards without logging in.
 
-## Enable: add the telemetry env vars to `settings.json`
+## The telemetry env vars in `settings.json`
 
-Claude Code reads env vars from `.claude/settings.json`, not from `.env` files. A fresh scaffold does **not** set these (telemetry is off by default) — add them to turn it on:
+Claude Code reads env vars from `.claude/settings.json`, not from `.env` files. A fresh scaffold **writes these for you** (into both `settings.json` and `settings.auto.json`) — this section is for confirming them, or re-adding them if you turned telemetry off and want it back.
 
 Open `.claude/settings.json` and confirm the `env` block contains:
 
