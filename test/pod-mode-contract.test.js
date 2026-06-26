@@ -31,7 +31,7 @@ test('pod mode raises a PR per cluster via wave-pr.js and does NOT wait for merg
   // PR granularity decided by wave-plan.js
   assert.match(a, /wave-plan\.js/);
   // each cluster gets its own stacked draft PR
-  assert.match(a, /own stacked draft PR|stacked draft PR|own draft PR/i);
+  assert.match(a, /stacked draft PR/i);
   // the parent does NOT merge
   assert.match(a, /does \*\*not\*\* merge|does NOT merge/i);
   // negative: old merge-wait semantics must not appear
