@@ -3,11 +3,12 @@
 'use strict';
 
 // SessionStart — warn when the harness commit-time gates aren't installed.
-// /scaffold copies the pre-commit / commit-msg git hooks (coverage ratchet,
-// sprint-contract, security-verdict, refactor purity) into .git/hooks. A repo
-// created with `git init` but never (re-)scaffolded silently loses that entire
-// gate layer — commits look gated but aren't. We detect the missing pre-commit
-// hook and surface a one-line fix. Advisory only: this never blocks.
+// /scaffold installs the pre-commit / commit-msg git hooks (coverage ratchet,
+// sprint-contract, security-verdict, refactor purity) by pointing core.hooksPath
+// at the copied .claude/git-hooks/ tree. A repo created with `git init` but never
+// (re-)scaffolded silently loses that entire gate layer — commits look gated but
+// aren't. We detect the missing pre-commit hook (honoring core.hooksPath) and
+// surface a one-line fix. Advisory only: this never blocks.
 // Exemptions: the harness repo deliberately runs without these hooks installed,
 // and a foreign (non-harness) pre-commit is left alone to avoid false alarms.
 
@@ -41,8 +42,8 @@ function warn() {
   process.stdout.write(
     'WARNING: harness git hooks are not installed in this repository.\n' +
     'The commit-time gates (coverage ratchet, sprint-contract, security verdict, refactor purity) will NOT run.\n' +
-    'Fix: cp .claude/git-hooks/{pre-commit,commit-msg,prepare-commit-msg} .git/hooks/ && \\\n' +
-    '     chmod +x .git/hooks/{pre-commit,commit-msg,prepare-commit-msg}   (or re-run /scaffold).\n'
+    'Fix: git config core.hooksPath .claude/git-hooks && \\\n' +
+    '     chmod +x .claude/git-hooks/{pre-commit,commit-msg,prepare-commit-msg}   (or re-run /scaffold).\n'
   );
 }
 

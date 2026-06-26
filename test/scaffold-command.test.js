@@ -41,7 +41,7 @@ test('/scaffold keeps telemetry stack copying opt-in while still copying git hoo
     'cp "$HARNESS_ROOT/telemetry/otel-collector-config.yml" ./telemetry/',
     'cp "$HARNESS_ROOT/telemetry/prometheus.yml" ./telemetry/',
     'cp -r "$HARNESS_ROOT/telemetry/grafana" ./telemetry/',
-    'cp $PLUGIN_SOURCE/git-hooks/prepare-commit-msg .git/hooks/prepare-commit-msg',
+    'git config core.hooksPath .claude/git-hooks',
   ];
 
   for (const copy of requiredCopies) {

@@ -649,13 +649,18 @@ If `lsp.servers` is empty, replace `{{LSP_HEALTH_CHECKS}}` with `echo "  (no LSP
 git init
 ```
 
-Install the harness commit-trailer, pre-commit, and commit-msg git hooks (always):
+Wire git to the harness hook set (always). `scaffold-apply.js` already copied the
+`.claude/git-hooks/` tree (`pre-commit`, `commit-msg`, `prepare-commit-msg`, `lib/`);
+point `core.hooksPath` at it so the hooks run from `.claude/git-hooks/` — the only
+location where their `__dirname`-relative `require()`s resolve (`../hooks/lib/...`
+and `lib/refactor-purity`). Do **not** copy them into `.git/hooks/`: there
+`../hooks/lib` resolves to a nonexistent `.git/hooks/lib/` and every commit crashes
+with `MODULE_NOT_FOUND`. `check-git-hooks.js` honors `core.hooksPath`, so the
+installed-hook guard stays green.
 
 ```bash
-cp $PLUGIN_SOURCE/git-hooks/prepare-commit-msg .git/hooks/prepare-commit-msg
-cp $PLUGIN_SOURCE/git-hooks/pre-commit .git/hooks/pre-commit
-cp $PLUGIN_SOURCE/git-hooks/commit-msg .git/hooks/commit-msg
-chmod +x .git/hooks/prepare-commit-msg .git/hooks/pre-commit .git/hooks/commit-msg
+chmod +x .claude/git-hooks/prepare-commit-msg .claude/git-hooks/pre-commit .claude/git-hooks/commit-msg
+git config core.hooksPath .claude/git-hooks
 mkdir -p .claude/runs
 ```
 
