@@ -52,6 +52,17 @@ test('pod mode documents the structural conflict defense (disjoint ownership + f
   assert.match(a, /23%/);
 });
 
+test('/auto documents --single-pr flag and forwards it to wave-plan.js', () => {
+  const a = read(AUTO);
+  assert.match(a, /--single-pr/);
+  assert.match(a, /wave-plan\.js.*--single-pr|--single-pr.*wave-plan\.js/s);
+});
+
+test('/build documents --single-pr forwarding to /auto', () => {
+  const b = read(BUILD);
+  assert.match(b, /--single-pr/);
+});
+
 test('/build surfaces --pod and supersedes the single integrated PR in pod mode', () => {
   const b = read(BUILD);
   assert.match(b, /--pod 3/);

@@ -26,6 +26,7 @@ Autonomous build loop implementing Karpathy's ratcheting pattern with GAN-style 
 /auto --sequential
 /auto --once
 /auto --pod 3
+/auto --single-pr
 ```
 
 - `--mode` controls which ratchet gates are enforced. Default: `full`. Options: `full`, `lean` (`lean` skips only the per-iteration design-critic).
@@ -34,6 +35,7 @@ Autonomous build loop implementing Karpathy's ratcheting pattern with GAN-style 
 - `--sequential` shorthand for `--parallel-groups 1`. Use when you need deterministic group ordering for debugging.
 - `--once` — **single-wave mode** for cross-process chaining: run exactly **one** wave (the next ready group, or up to `--parallel-groups N` ready groups), take it through all ratchet gates, commit, append the session block to `claude-progress.txt`, then **exit cleanly without looping to the next wave**. The driver (`.claude/scripts/build-chain.js`) re-spawns a fresh `claude -p` for the next wave. Use `--once --sequential` to shrink a link to a single group when a full wave is too large to finish under the per-link timeout.
 - `--pod N` — **pod mode**: cross-group concurrency (implies `--parallel-groups N`, default `3`). PR granularity is decided automatically by `.claude/scripts/wave-plan.js` (`pr_mode`): when more than one cluster is unfinished, each cluster raises its **own stacked draft PR** instead of rolling its branch up to the trunk; a single remaining cluster (or `--single-pr`) yields one integrated PR. Each cluster is verified per-cluster (the Phase 9.5 deploy→API→E2E→fix ladder, scoped to that cluster). Dependent clusters **stack on their predecessor's branch** — they do **not** wait for any PR to merge. See Section 4B → *Pod mode*. Surfaced by `/build --autonomous --pod N`; `--single-pr` forces one integrated PR.
+- `--single-pr` — forces **one integrated PR** regardless of cluster count. When `/auto` is invoked with `--single-pr`, it automatically passes the flag through to `.claude/scripts/wave-plan.js` so `pr_mode` resolves to `integrated` — even when multiple clusters are unfinished. In that case the parent merges all group branches into the trunk after the wave and opens a single PR, exactly as non-pod mode does. Overrides the per-cluster PR default. Takes effect ALWAYS — `/build path/to/prd.md --autonomous --pod 3 --single-pr` gives pod concurrency (up to 3 parallel clusters) but ONE integrated PR at the end.
 
 ### Prerequisites
 
@@ -353,7 +355,9 @@ Pod mode keeps everything above (wave selection, branch isolation, state coordin
 1. **Per-cluster verification before the PR.** After a group's ratchet gate passes, the group-orchestrator runs the **Phase 9.5 pre-PR ladder scoped to its cluster** — deploy locally → API tests (if the cluster touches an API) → Playwright E2E (if it touches UI) → bounded defect-repair loop. A cluster that can't go green within the repair budget does **not** open a PR; it returns failed, exactly like a ratchet failure.
 2. **Each engineer opens its own draft PR.** A green group-orchestrator pushes `auto/group-{G}` and opens the stacked draft PR via `wave-pr.js` using the cluster's computed `base` from `wave-plan.js`; body = the cluster's stories + the Phase 9.5 proof + Forbidden-Actions check. It returns the PR URL in its summary. It does **not** merge and does **not** roll up to the trunk.
 3. **The parent does NOT merge branches and does NOT wait for merges.** Run
-   `node .claude/scripts/wave-plan.js` (add `--single-pr` to force integrated) to get
+   `node .claude/scripts/wave-plan.js` (if `/auto` was invoked with `--single-pr`,
+   pass it through automatically — `wave-plan.js --single-pr` — so `pr_mode` resolves
+   to `integrated` regardless of cluster count; this is automatic, not manual) to get
    the deterministic plan: `pr_mode` and, per group, its `branch`, `base`, and
    `mergeIn`. For each cluster `G` in the wave (injecting its computed `base` and `mergeIn` list from the plan directly into the group-orchestrator's spawn prompt, so the subagent uses the planner's values verbatim and does not recompute them):
    - create the cluster's `branch` (`auto/group-{G}`) from its computed `base`: a **root** cluster branches from `main`; a **single-parent** cluster branches from its predecessor's branch — a stacked PR whose `base` is `auto/group-{predecessor}`; a **diamond-join** cluster branches from `main`, then merges each `mergeIn` branch in locally so it builds against all upstream code;
@@ -364,7 +368,7 @@ Pod mode keeps everything above (wave selection, branch isolation, state coordin
    Humans merge the stack bottom-up; GitHub auto-retargets each child PR to `main`
    as its parent merges. If `pr_mode` is `integrated`, skip per-cluster PRs and roll
    the wave up to the trunk exactly as non-pod mode does.
-4. **Conflict avoidance is structural.** Independent clusters in one wave have **disjoint file ownership** (from `component-map.md`) and all branch from the same `WAVE_BASE`, so their PRs don't collide. Cross-cutting/shared files (routing, config, schema) live in **foundation clusters that land in earlier waves** (per `/spec` ordering) and merge before dependent clusters start — so no two concurrent engineers edit a shared file. This is the defense against the ~23% parallel-agent merge-conflict rate.
+4. **Conflict avoidance is structural.** Independent clusters in one wave have **disjoint file ownership** (from `component-map.md`): each cluster owns a non-overlapping set of files, so their PRs don't collide regardless of which branch each one starts from. Root clusters branch from `main`; dependent clusters stack on their predecessor's branch — clusters in one wave can have different computed bases. Cross-cutting/shared files (routing, config, schema) live in **foundation clusters that land in earlier waves** (per `/spec` ordering) so no two concurrent engineers edit a shared file. This is the defense against the ~23% parallel-agent merge-conflict rate.
 
 **Group-orchestrator spawn protocol — pod addendum.** In pod mode, append to the spawn prompt's mandatory steps (after the existing step 5 "commit to branch"):
 
