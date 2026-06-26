@@ -61,9 +61,10 @@ async function runChain(deps) {
 // ---- real deps (used by the CLI entrypoint; not exercised by unit tests) ----
 
 function promptFor(kind, prd, opts = {}) {
-  if (kind === S.STATES.PLAN) return `/build --auto --plan-only ${prd}`;
-  if (kind === S.STATES.FINALIZE) return '/build --auto --finalize';
-  return `/auto --once${opts.sequential ? ' --sequential' : ''}`; // BUILD
+  const single = opts.singlePr ? ' --single-pr' : '';
+  if (kind === S.STATES.PLAN) return `/build --auto --plan-only ${prd}${single}`;
+  if (kind === S.STATES.FINALIZE) return `/build --auto --finalize${single}`;
+  return `/auto --once${opts.sequential ? ' --sequential' : ''}${single}`; // BUILD
 }
 
 function claudeArgsFor(opts = {}) {
@@ -75,7 +76,7 @@ function claudeArgsFor(opts = {}) {
   return args;
 }
 
-function realSpawnLink(cwd, prd) {
+function realSpawnLink(cwd, prd, runOpts = {}) {
   const model = process.env.BUILD_CHAIN_MODEL || 'sonnet';
   const timeout = parseInt(process.env.BUILD_CHAIN_LINK_TIMEOUT_MS || '1800000', 10); // 30 min < wall
   const pluginDir = process.env.HARNESS_PLUGIN_DIR || null;
@@ -87,7 +88,7 @@ function realSpawnLink(cwd, prd) {
   return (kind, opts = {}) => {
     const args = claudeArgsFor({ model, pluginDir, settings, strictMcp, maxBudgetUsd });
     const r = spawnSync('claude', args, {
-      input: promptFor(kind, prd, opts),
+      input: promptFor(kind, prd, { ...opts, singlePr: runOpts.singlePr }),
       cwd, encoding: 'utf8', timeout, killSignal: 'SIGKILL',
       stdio: ['pipe', 'inherit', 'inherit'],
     });
@@ -129,7 +130,8 @@ if (require.main === module) {
   }
   const cwd = process.cwd();
   stampBudgetStart(cwd);
-  runChain({ spawnLink: realSpawnLink(cwd, prd), loadState: realLoadState(cwd), checkBudget: realCheckBudget(cwd), log: (m) => process.stdout.write(`${m}\n`) })
+  const singlePr = process.argv.includes('--single-pr');
+  runChain({ spawnLink: realSpawnLink(cwd, prd, { singlePr }), loadState: realLoadState(cwd), checkBudget: realCheckBudget(cwd), log: (m) => process.stdout.write(`${m}\n`) })
     .then((res) => {
       process.stdout.write(`chain finished: ${res.state} — ${res.reason} (${res.links} build links)\n`);
       process.exit(res.state === S.STATES.DONE ? 0 : 1);
