@@ -35,3 +35,11 @@ test('openPr creates a draft PR with the computed base when none exists', () => 
 test('openPr requires branch and base', () => {
   assert.throws(() => openPr({ branch: 'auto/group-A' }, () => ''), /base/);
 });
+
+test('openPr surfaces a probe failure instead of creating a duplicate', () => {
+  const runner = (cmd, args) => {
+    if (args[1] === 'list') throw new Error('gh: API rate limit exceeded');
+    throw new Error('should not have reached gh pr create');
+  };
+  assert.throws(() => openPr({ branch: 'auto/group-A', base: 'main' }, runner), /rate limit/);
+});

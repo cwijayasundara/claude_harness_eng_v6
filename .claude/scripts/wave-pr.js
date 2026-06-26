@@ -11,13 +11,9 @@ function defaultRunner(cmd, args) {
 }
 
 function existingPrUrl(branch, runner) {
-  try {
-    const out = runner('gh', ['pr', 'list', '--head', branch, '--state', 'open', '--json', 'url', '--jq', '.[0].url']);
-    const url = String(out).trim();
-    return url || null;
-  } catch (_) {
-    return null;
-  }
+  const out = runner('gh', ['pr', 'list', '--head', branch, '--state', 'open', '--json', 'url', '--jq', '.[0].url']);
+  const url = String(out).trim();
+  return url || null;
 }
 
 function openPr(opts, runner = defaultRunner) {
