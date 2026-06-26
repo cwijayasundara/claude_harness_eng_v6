@@ -355,11 +355,8 @@ Pod mode keeps everything above (wave selection, branch isolation, state coordin
 3. **The parent does NOT merge branches and does NOT wait for merges.** Run
    `node .claude/scripts/wave-plan.js` (add `--single-pr` to force integrated) to get
    the deterministic plan: `pr_mode` and, per group, its `branch`, `base`, and
-   `mergeIn`. For each cluster `G` in the wave:
-   - create `branch` (`auto/group-{G}`) from its computed `base` — `main` for a
-     root or single-parent **stacked** PR (`base` = the predecessor's branch), and
-     for a diamond-join group, from `main` then merge each `mergeIn` branch in
-     locally so it builds against all upstream code;
+   `mergeIn`. For each cluster `G` in the wave (injecting its computed `base` and `mergeIn` list from the plan directly into the group-orchestrator's spawn prompt, so the subagent uses the planner's values verbatim and does not recompute them):
+   - create the cluster's `branch` (`auto/group-{G}`) from its computed `base`: a **root** cluster branches from `main`; a **single-parent** cluster branches from its predecessor's branch — a stacked PR whose `base` is `auto/group-{predecessor}`; a **diamond-join** cluster branches from `main`, then merges each `mergeIn` branch in locally so it builds against all upstream code;
    - on green, open the stacked PR with
      `node .claude/scripts/wave-pr.js --branch auto/group-{G} --base <base> --title "<cluster title>" --body "<stories + Phase 9.5 proof + Forbidden-Actions check; for a mergeIn group, list the predecessor PRs as dependencies>"`.
    Then roll up per-group *state* as usual and **compute the next wave immediately** —
