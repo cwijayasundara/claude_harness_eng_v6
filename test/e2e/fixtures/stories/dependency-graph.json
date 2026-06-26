@@ -1,0 +1,6 @@
+{
+  "groups": [
+    { "id": "A", "stories": ["E1-S1", "E1-S2"], "blockedBy": [] },
+    { "id": "B", "stories": ["E1-S3", "E1-S4"], "blockedBy": ["A"] }
+  ]
+}
