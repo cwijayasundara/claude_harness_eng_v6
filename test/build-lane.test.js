@@ -99,3 +99,15 @@ test('build SKILL feeds the real invocation to the parser via $ARGUMENTS (regres
     'build-lane.js must not be invoked with a prose <placeholder> the fork has to substitute by hand',
   );
 });
+
+test('--single-pr is surfaced without changing lane or prd', () => {
+  const r = parseBuildInvocation('/build docs/prd.md --auto --single-pr');
+  assert.strictEqual(r.lane, 'auto');
+  assert.strictEqual(r.prdPath, 'docs/prd.md');
+  assert.strictEqual(r.singlePr, true);
+});
+
+test('singlePr defaults to false', () => {
+  const r = parseBuildInvocation('/build docs/prd.md --auto');
+  assert.strictEqual(r.singlePr, false);
+});

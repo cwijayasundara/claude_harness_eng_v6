@@ -90,31 +90,36 @@ merge** — merge is a separate decision (human, or symphony's `AUTO_MERGE` key)
 
 By default the autonomous tail produces **one integrated PR**. Add `--pod N` to run
 the **architect + engineers pod** instead: the architect plans once (Phases 0–3.5),
-then `/auto --pod N` fans the work out so **each independent cluster is an engineer
-that raises its own draft PR**.
+then `/auto --pod N` fans the work out so **each cluster raises its own stacked draft PR** — opened immediately, with no merge wait between waves. PR granularity is decided by `.claude/scripts/wave-plan.js` (`pr_mode`).
 
 ```
 ARCHITECT (plan once)
-   │  fan out over independent clusters, wave-ordered by the dependency graph
+   │  fan out over clusters, wave-ordered by the dependency graph
    ▼
 engineer A (cluster A)     engineer B (cluster B)     engineer C (cluster C)
- own branch                 own branch                 own branch
+ branch: auto/group-A       branch: auto/group-B       branch: auto/group-C
+ base: main                 base: main (independent)   base: auto/group-A (stacked)
  build (teammates)          build (teammates)          build (teammates)
  Phase 9.5 per cluster      Phase 9.5 per cluster      Phase 9.5 per cluster
- OWN draft PR (base=main)   OWN draft PR               OWN draft PR
-   └──────── dependent clusters wait for predecessor PRs to MERGE, then ────────┘
-             the next wave rebases on the updated main
+ OWN draft PR (base=main)   OWN draft PR (base=main)   OWN stacked draft PR
+                                                        (base=auto/group-A)
+   ← next wave starts immediately; no merge wait — humans merge bottom-up →
 ```
 
-- **Per-cluster PR** — each engineer-orchestrator opens `gh pr create --draft` for its
-  cluster (stories + Phase 9.5 proof + Forbidden-Actions check); never merges.
-- **Merge between waves** — a dependent cluster only starts once its predecessors'
-  PRs merge: a human in semi-auto (`--autonomous`), the `AUTO_MERGE` key in full-auto
-  (`--auto`). The human-as-merge-gate stays the supervision point (Devin's ~5-agent
-  ceiling → keep N small).
+- **Per-cluster stacked PR** — each engineer-orchestrator opens a draft PR via
+  `wave-pr.js` for its cluster (stories + Phase 9.5 proof + Forbidden-Actions check);
+  never merges. Independent clusters base on `main`; a single-parent dependent cluster
+  bases on its predecessor's branch (`auto/group-{predecessor}`) — a stacked PR opened
+  **immediately**. Diamond-join clusters branch from `main` and merge each predecessor
+  branch in locally.
+- **No merge wait** — dependent clusters open their stacked PRs immediately; the next
+  wave starts right away. Humans merge the stack bottom-up; GitHub auto-retargets each
+  child PR to `main` as its parent merges. `AUTO_MERGE` (full-auto) auto-merges per PR
+  when checks pass — it does **not** mean "wait between waves." Waves never block on merge.
 - **Conflict defense** — independent clusters in a wave have disjoint file ownership
-  and share a base, so PRs don't collide; shared/cross-cutting files live in
-  foundation clusters that land in earlier waves. Mechanics: `/auto` Section 4B → Pod mode.
+  and all branch from the same `WAVE_BASE`, so PRs don't collide; shared/cross-cutting
+  files live in foundation clusters that land in earlier waves. Mechanics: `/auto`
+  Section 4B → Pod mode.
 
 ## Relationship to symphony
 

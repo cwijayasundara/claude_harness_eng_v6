@@ -21,6 +21,7 @@ Full software development lifecycle pipeline. Orchestrates BRD creation, story s
 /build path/to/requirements.md --autonomous        # plan-approve once, then run to PR
 /build path/to/prd.md --autonomous --plan-only     # produce specs/ for inspection, then stop
 /build path/to/prd.md --autonomous --pod 3         # pod: each cluster raises its own PR
+/build path/to/prd.md --autonomous --pod 3 --single-pr  # pod concurrency, one integrated PR
 /build path/to/prd.md --auto --pod 3               # full-auto: PRD -> per-cluster PRs, zero gates
 /build --auto --finalize                           # build-chain terminal link: Phases 9, 9.5, 10, 11 only
 ```
@@ -180,9 +181,9 @@ Skip Phase 4.5 for `local` or `stub` verification modes — those reach the app 
 
 ### Phases 5-8 — Autonomous Execution
 
-Run `/auto --mode {mode}` to enter the autonomous build loop. The `/auto` skill handles all remaining execution: sprint contracts, agent teams, ratchet gates, self-healing, and session chaining.
+Run `/auto --mode {mode}` to enter the autonomous build loop. If the resolved lane has `singlePr: true` (i.e. the user passed `--single-pr`), forward it: run `/auto --mode {mode} --single-pr`. The `/auto` skill handles all remaining execution: sprint contracts, agent teams, ratchet gates, self-healing, and session chaining.
 
-**Pod mode (`--pod N`).** Pass `--pod N` through to `/auto` to run the **multi-engineer pod**: each independent cluster (dependency group) is built by its own engineer-orchestrator, verified per-cluster (the Phase 9.5 ladder, scoped to the cluster), and raised as **its own draft PR** — "few PRs, one per independent cluster." Dependent clusters wait for predecessor PRs to merge (human in semi-auto, the `AUTO_MERGE` key in full-auto). In pod mode the per-cluster PRs ARE the deliverable, so Phase 9.5 and Phase 11 below run **inside** `/auto` per cluster rather than once over the whole app — see `.claude/skills/auto/SKILL.md` Section 4B → *Pod mode*. Without `--pod`, the pipeline produces a single integrated PR (Phases 9.5 + 11 below).
+**Pod mode (`--pod N`).** Pass `--pod N` through to `/auto` to run the **multi-engineer pod**: each independent cluster (dependency group) is built by its own engineer-orchestrator, verified per-cluster (the Phase 9.5 ladder, scoped to the cluster), and raised as its own draft PR (stacked on its predecessor's branch when the cluster is dependent) via `wave-pr.js` — one per cluster, opened immediately. Dependent clusters open **stacked** draft PRs whose base is the predecessor's branch (`auto/group-{predecessor}`) — there is no merge wait; the next wave starts right away. Humans merge the stack bottom-up (GitHub auto-retargets each child PR to `main` as its parent merges); `AUTO_MERGE` auto-merges per PR when checks pass. In pod mode the per-cluster PRs ARE the deliverable, so Phase 9.5 and Phase 11 below run **inside** `/auto` per cluster rather than once over the whole app — see `.claude/skills/auto/SKILL.md` Section 4B → *Pod mode*. Without `--pod`, the pipeline produces a single integrated PR (Phases 9.5 + 11 below). **With `--pod N --single-pr`**, you get pod concurrency (up to N parallel cluster builds) but ONE integrated PR at the end — `--single-pr` overrides the per-cluster PR default regardless of cluster count. Pass both flags through: `/auto --mode {mode} --pod N --single-pr`.
 
 **Parallel agent teams:** the full SDLC pipeline runs each dependency group through `/auto`, which parallelizes on two axes:
 - **Within-group:** one teammate per story for any group with **≥ 2 stories** — see `.claude/agents/generator.md` Rule 2.

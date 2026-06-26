@@ -100,6 +100,22 @@ flowchart TD
   E1S2 --> E2S1
 ```
 
+Then write a machine-readable sibling `specs/stories/dependency-graph.json` with the
+exact same groups, for deterministic downstream wave planning (`.claude/scripts/wave-plan.js`):
+
+```json
+{
+  "groups": [
+    { "id": "A", "stories": ["E1-S1", "E1-S2"], "blockedBy": [] },
+    { "id": "B", "stories": ["E1-S3"], "blockedBy": ["A"] }
+  ]
+}
+```
+
+`id` is the group letter, `stories` lists its story IDs, and `blockedBy` lists the
+group IDs it depends on (empty for roots). The `.md` is the human artifact; the
+`.json` is the contract code reads — keep them in sync.
+
 The Mermaid block must stay consistent with the tables — every story and every dependency edge appears in both. The tables remain the machine-checkable source; the diagram is the human-readable view of the same data.
 
 Rules:

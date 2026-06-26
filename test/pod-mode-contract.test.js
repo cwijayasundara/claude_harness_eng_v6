@@ -1,8 +1,9 @@
 'use strict';
 
 // Contract for pod mode (#2): cross-group fan-out where each cluster raises its
-// own PR instead of rolling up to trunk. Pins the prose so the per-cluster-PR
-// behavior, per-cluster verification, and conflict-avoidance rules don't regress.
+// own stacked PR immediately — no merge wait. Pins the prose so the per-cluster-PR
+// behavior (stacked branches, no merge wait), per-cluster verification, and
+// conflict-avoidance rules don't regress.
 
 const assert = require('assert');
 const fs = require('fs');
@@ -23,13 +24,18 @@ test('/auto exposes --pod with a dedicated Pod mode section', () => {
   assert.match(a, /implies `--parallel-groups/);
 });
 
-test('pod mode raises a PR per cluster and does NOT roll up to trunk', () => {
+test('pod mode raises a PR per cluster via wave-pr.js and does NOT wait for merges', () => {
   const a = read(AUTO);
-  assert.match(a, /gh pr create --draft/);
-  assert.match(a, /own draft PR/i);
-  assert.match(a, /does \*\*not\*\* merge|does NOT merge|replaced by/i);
-  // dependent clusters wait for predecessor PRs to merge, then rebase
-  assert.match(a, /wait for this wave's PRs to merge|predecessor PRs to merge/i);
+  // PRs are opened via wave-pr.js (not gh pr create --draft directly)
+  assert.match(a, /wave-pr\.js/);
+  // PR granularity decided by wave-plan.js
+  assert.match(a, /wave-plan\.js/);
+  // each cluster gets its own stacked draft PR
+  assert.match(a, /stacked draft PR/i);
+  // the parent does NOT merge
+  assert.match(a, /does \*\*not\*\* merge|does NOT merge/i);
+  // negative: old merge-wait semantics must not appear
+  assert.doesNotMatch(a, /wait for .*PRs to merge/i);
 });
 
 test('pod mode verifies each cluster (Phase 9.5 scoped) before its PR', () => {
@@ -46,6 +52,19 @@ test('pod mode documents the structural conflict defense (disjoint ownership + f
   assert.match(a, /23%/);
 });
 
+test('/auto documents --single-pr flag and forwards it to wave-plan.js', () => {
+  const a = read(AUTO);
+  assert.match(a, /--single-pr/);
+  assert.match(a, /wave-plan\.js.*--single-pr|--single-pr.*wave-plan\.js/s);
+});
+
+test('/build documents --single-pr forwarding to /auto', () => {
+  const b = read(BUILD);
+  assert.match(b, /--single-pr/);
+  // bite on the forwarding call itself, not just any mention of the flag
+  assert.match(b, /\/auto[^\n]*--single-pr|--single-pr[^\n]*\/auto/);
+});
+
 test('/build surfaces --pod and supersedes the single integrated PR in pod mode', () => {
   const b = read(BUILD);
   assert.match(b, /--pod 3/);
@@ -53,10 +72,13 @@ test('/build surfaces --pod and supersedes the single integrated PR in pod mode'
   assert.match(b, /superseded|per-cluster PRs/i);
 });
 
-test('autonomous-lane documents pod fan-out with merge-between-waves', () => {
+test('autonomous-lane documents pod fan-out with stacked PRs and no merge wait', () => {
   const lane = read(LANE);
   assert.match(lane, /Pod mode/);
-  assert.match(lane, /one PR per cluster|OWN draft PR/i);
-  assert.match(lane, /wait for predecessor PRs to MERGE|merge between waves/i);
+  // documents stacked / per-cluster PRs
+  assert.match(lane, /stacked.*PR|OWN stacked draft PR|one PR per cluster/i);
+  // negative: old merge-between-waves wait must not appear
+  assert.doesNotMatch(lane, /wait for predecessor PRs to MERGE|merge between waves/i);
+  // AUTO_MERGE still mentioned
   assert.match(lane, /AUTO_MERGE/);
 });
