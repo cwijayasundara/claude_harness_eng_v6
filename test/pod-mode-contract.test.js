@@ -61,6 +61,8 @@ test('/auto documents --single-pr flag and forwards it to wave-plan.js', () => {
 test('/build documents --single-pr forwarding to /auto', () => {
   const b = read(BUILD);
   assert.match(b, /--single-pr/);
+  // bite on the forwarding call itself, not just any mention of the flag
+  assert.match(b, /\/auto[^\n]*--single-pr|--single-pr[^\n]*\/auto/);
 });
 
 test('/build surfaces --pod and supersedes the single integrated PR in pod mode', () => {
