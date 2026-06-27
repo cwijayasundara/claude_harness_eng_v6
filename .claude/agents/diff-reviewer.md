@@ -28,6 +28,14 @@ Review the diff you are given (the spawn prompt names a commit range or you deri
 
 Your job is **coverage**: report every finding with severity and confidence; the caller's gate filters. Do not silently drop low-severity findings.
 
+### Brownfield design-adherence lens
+
+When invoked for an autonomous `/feature` run with an adherence context (the cited
+seam + the committed DeepWiki), additionally verify the **diff** honored the plan:
+the change extended the cited seam/module and did **not** drift into a new parallel structure
+during implementation. Flag any file that introduces a parallel structure where the
+plan said it would extend an existing seam — this blocks the PR until corrected.
+
 ## Severity and verification
 
 | Level | Meaning |
