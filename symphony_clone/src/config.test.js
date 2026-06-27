@@ -34,3 +34,11 @@ test('planning config: PLAN_LABEL / PLANNED_STATE with defaults', () => {
   assert.equal(custom.tracker.planLabel, 'prd-ready');
   assert.equal(custom.tracker.plannedState, 'Groomed');
 });
+
+test('featureLabel defaults to agent-feature and honours FEATURE_LABEL', () => {
+  const base = loadConfig(baseEnv(), { loadDotEnv: false });
+  assert.equal(base.tracker.featureLabel, 'agent-feature');
+
+  const overridden = loadConfig({ ...baseEnv(), FEATURE_LABEL: 'agent-brownfield' }, { loadDotEnv: false });
+  assert.equal(overridden.tracker.featureLabel, 'agent-brownfield');
+});

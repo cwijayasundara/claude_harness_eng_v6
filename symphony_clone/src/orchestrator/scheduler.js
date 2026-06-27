@@ -1,6 +1,6 @@
 'use strict';
 
-const { buildHarnessPrompt, groupFromIssue } = require('./prompt-builder');
+const { buildHarnessPrompt, groupFromIssue, buildFeaturePrompt } = require('./prompt-builder');
 const { buildPlanningPrompt } = require('./planning-prompt');
 const { readResult } = require('./result-reader');
 const { enableAutoMerge } = require('./pr');
@@ -73,11 +73,13 @@ class Scheduler {
   }
 
   // Route by issue kind: a PRD (plan label) runs the architect planning pipeline;
-  // a groomed group (ready label) runs execution. Same claim/workspace/run spine.
+  // a brownfield change (feature label) runs /feature --auto; a groomed group
+  // (ready label) runs execution. Same claim/workspace/run spine.
   dispatchIssue(issue) {
-    return issueKind(issue, this.config) === 'plan'
-      ? this.runPlanningIssue(issue)
-      : this.runIssue(issue);
+    const kind = issueKind(issue, this.config);
+    if (kind === 'plan') return this.runPlanningIssue(issue);
+    if (kind === 'feature') return this.runFeatureIssue(issue);
+    return this.runIssue(issue);
   }
 
   runIssue(issue) {
@@ -100,6 +102,18 @@ class Scheduler {
       claimedComment: 'Claude Harness orchestrator claimed PRD for planning.',
       buildPrompt: (iss) => buildPlanningPrompt(iss),
       finish: (iss, grp, ws, rr) => finishPlanning(this, iss, grp, ws, rr)
+    });
+  }
+
+  // Brownfield stage: a raw change ticket -> /feature "<title>" --auto. One issue,
+  // one symphony-opened PR; no PRD, no grooming, no group parsing.
+  runFeatureIssue(issue) {
+    return this.claimAndRun(issue, {
+      group: { id: issue.key, stories: [] },
+      startedEvent: 'feature_started',
+      claimedComment: 'Claude Harness orchestrator claimed a brownfield feature request.',
+      buildPrompt: (iss) => buildFeaturePrompt(iss),
+      finish: (iss, grp, ws, rr) => finishExecution(this, iss, grp, ws, rr)
     });
   }
 

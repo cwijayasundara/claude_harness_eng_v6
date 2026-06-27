@@ -7,10 +7,11 @@ function normalize(value) {
   return String(value || '').trim().toLowerCase();
 }
 
-// 'plan' (PRD, plan label) | 'execute' (groomed group, ready label) | null.
+// 'plan' (PRD, plan label) | 'feature' (brownfield feature label) | 'execute' (groomed group, ready label) | null.
 function issueKind(issue, config) {
   const labels = (issue.labels || []).map((label) => normalize(label));
   if (config.tracker.planLabel && labels.includes(normalize(config.tracker.planLabel))) return 'plan';
+  if (config.tracker.featureLabel && labels.includes(normalize(config.tracker.featureLabel))) return 'feature';
   if (labels.includes(normalize(config.tracker.readyLabel))) return 'execute';
   return null;
 }

@@ -10,7 +10,8 @@
     "review_state": "Human Review",
     "blocked_state": "Blocked",
     "terminal_states": ["Done", "Closed", "Canceled", "Cancelled", "Duplicate"],
-    "ready_label": "agent-ready"
+    "ready_label": "agent-ready",
+    "feature_label": "agent-feature"
   },
   "orchestrator": {
     "repo_url": "git@github.com:your-org/your-repo.git",
