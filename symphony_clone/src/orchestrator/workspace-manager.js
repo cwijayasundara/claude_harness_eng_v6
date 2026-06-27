@@ -21,28 +21,28 @@ class WorkspaceManager {
 
     const isFreshClone = !(await exists(path.join(workspacePath, '.git')));
     if (isFreshClone) {
-      await this.runner('git', ['clone', this.config.repoUrl, workspacePath], { cwd: this.config.workspaceRoot });
+      await runGit(this.runner, this.config.workspaceRoot, ['clone', this.config.repoUrl, workspacePath]);
     }
 
-    await this.runner('git', ['fetch', 'origin', this.config.github.baseBranch], { cwd: workspacePath });
+    await runGit(this.runner, workspacePath, ['fetch', 'origin', this.config.github.baseBranch]);
 
     const localBranchExists = !isFreshClone && await branchExists(this.runner, workspacePath, branchName);
     if (localBranchExists) {
       const commitsAhead = await countCommitsAhead(this.runner, workspacePath, branchName, baseRef);
       if (commitsAhead > 0) {
         const backupRef = buildRecoveryTag(branchName, runMeta);
-        await this.runner('git', ['checkout', branchName], { cwd: workspacePath });
-        await this.runner('git', ['tag', backupRef, branchName], { cwd: workspacePath });
+        await runGit(this.runner, workspacePath, ['checkout', branchName]);
+        await runGit(this.runner, workspacePath, ['tag', backupRef, branchName]);
         return { workspacePath, branchName, workspaceKey, resumed: true, commitsAhead, backupRef };
       }
     }
 
-    await this.runner('git', ['checkout', '-B', branchName, baseRef], { cwd: workspacePath });
+    await runGit(this.runner, workspacePath, ['checkout', '-B', branchName, baseRef]);
     return { workspacePath, branchName, workspaceKey, resumed: false };
   }
 
   async pushBranch(workspacePath, branchName) {
-    await this.runner('git', ['push', '-u', 'origin', branchName, '--force-with-lease'], { cwd: workspacePath });
+    await runGit(this.runner, workspacePath, ['push', '-u', 'origin', branchName, '--force-with-lease']);
   }
 
   async cleanup(workspacePath) {
@@ -56,6 +56,10 @@ class WorkspaceManager {
 
     await fs.rm(target, { recursive: true, force: true });
   }
+}
+
+function runGit(runner, cwd, args) {
+  return runner('git', ['-c', 'core.hooksPath=/dev/null', ...args], { cwd });
 }
 
 async function exists(filePath) {
