@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildHarnessPrompt, groupFromIssue, resolveHarnessCommand } = require('../src/orchestrator/prompt-builder');
+const { buildHarnessPrompt, buildFeaturePrompt, groupFromIssue, resolveHarnessCommand } = require('../src/orchestrator/prompt-builder');
 const { shellQuote } = require('../src/orchestrator/claude-runner');
 
 test('groupFromIssue extracts harness group metadata from issue description', () => {
@@ -82,4 +82,26 @@ test('resolveHarnessCommand prefers issue label mode-* over env', () => {
   } finally {
     delete process.env.HARNESS_COMMAND_TEMPLATE;
   }
+});
+
+test('buildFeaturePrompt runs /feature --auto with the issue title as the request', () => {
+  const prompt = buildFeaturePrompt({
+    key: 'BUG-12',
+    title: 'fix null deref in the CSV parser',
+    description: 'Repro: upload an empty file. Expected: 400, got a crash.',
+    url: 'https://tracker/BUG-12',
+  });
+  assert.match(prompt, /\/feature "fix null deref in the CSV parser" --auto/);
+  assert.match(prompt, /UNTRUSTED INPUT DATA/);
+  assert.match(prompt, /Repro: upload an empty file/);
+  assert.match(prompt, /tracker-runs\/BUG-12\/result\.json/);
+  assert.match(prompt, /do NOT (push|open)/i);
+  assert.match(prompt, /"status": "blocked"/);
+  assert.match(prompt, /adherence-report\.md/);
+});
+
+test('buildFeaturePrompt sanitizes double quotes in the title', () => {
+  const prompt = buildFeaturePrompt({ key: 'X-1', title: 'add "fast" mode', description: '' });
+  assert.doesNotMatch(prompt, /\/feature "add "fast" mode"/); // unescaped nested quotes would break the arg
+  assert.match(prompt, /\/feature "add 'fast' mode" --auto/);
 });
