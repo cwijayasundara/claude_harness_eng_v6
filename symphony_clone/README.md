@@ -18,6 +18,7 @@ Linear issue (Todo + label)
 ## What It Does
 
 - **Planning (architect stage):** an issue carrying `PLAN_LABEL` (default `agent-plan`) is treated as a **PRD**. Claiming it runs the planning pipeline — `/brd → /spec → /design → /test → /tracker-publish` (plan only, no application code) — which **publishes the per-cluster group issues** the execution path then claims, and advances the PRD issue to `PLANNED_STATE`. This makes the flow genuinely PRD-in → PRs-out with no human grooming.
+- **Brownfield change (feature stage):** an issue carrying `FEATURE_LABEL` (default `agent-feature`) is a **brownfield change request**. Symphony runs `/feature "<title>" --auto` against the existing codebase — DeepWiki discovery, seam-confidence gate, machine adherence — commits the branch, and opens one tracker-linked PR. No PRD, no grooming. Low seam-confidence moves the issue to Blocked with the adherence report attached.
 - Polls Linear for group issues in the configured ready state.
 - Requires the configured ready label (default `agent-ready`).
 - Skips issues with unfinished blockers.

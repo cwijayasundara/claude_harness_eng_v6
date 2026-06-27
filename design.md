@@ -511,6 +511,8 @@ When the team wants a visible queue and parallel execution across machines, the 
    - reads `.claude/state/tracker-runs/<group>/result.json`,
    - pushes the branch, opens a GitHub PR, comments proof back, moves the issue to `Human Review` (or `Blocked`).
 
+   The orchestrator routes each eligible issue by label: `agent-plan` issues follow the PRD planning path; `agent-ready` issues follow the groomed-group execute path; a third label, `agent-feature` (configurable via `FEATURE_LABEL`), routes a raw brownfield change ticket to `/feature "<title>" --auto` — one issue → one PR — distinct from the `plan` and `execute` paths.
+
 The orchestrator's safety boundaries:
 
 - Reads secrets from `.env`, never from committed files.
