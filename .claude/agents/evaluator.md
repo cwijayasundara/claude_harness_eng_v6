@@ -273,6 +273,21 @@ All fields are required. `failing_criteria` is an empty array when verdict is PA
 
 **Deploy** — Check for: Dockerfile(s), `docker-compose.yml`, environment config, `init.sh`, health checks, volume mounts. Every service from the architecture needs a container definition. Environment variable names must match application code. `docker compose up` must succeed with no manual steps.
 
+### Brownfield-adherence rubric (artifact mode)
+
+When scoring a brownfield plan/design for an autonomous `/feature` run, score it
+against design-adherence — this is the machine replacement for the human GATE 2:
+
+1. **Cites the wiki.** Every planned edit cites a specific committed DeepWiki
+   page/symbol for the code it touches.
+2. **Extends a seam.** Each edit names the existing module/seam/layer it extends,
+   consistent with `specs/brownfield/code-graph.json`.
+3. **No parallel structure.** Reject any plan that introduces a new parallel
+   structure where an existing seam already fits.
+
+Verdict: PASS only if all three hold; otherwise FAIL with the offending edits and
+the seam each should have extended. A FAIL sends the plan back for a re-plan.
+
 ## Learned Rules (artifact mode)
 
 When the same criterion fails across 2 or more consecutive iterations, extract a learned rule:
