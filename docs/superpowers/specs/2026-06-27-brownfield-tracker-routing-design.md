@@ -70,7 +70,8 @@ description. It does **not** parse `Group:`/`Stories:`.
   `/feature "<request>" --auto` (or follow `.claude/skills/feature/SKILL.md`
   directly if slash commands are unavailable non-interactively) through
   discovery, decomposition, implementation, verification, and adherence; **commit
-  and push the branch but do NOT open the PR**; write `result.json`.
+  the branch but do NOT push and do NOT open the PR** (symphony's `finishExecution`
+  pushes the branch and opens the PR); write `result.json`.
 - **Who opens the PR.** `/feature`'s spine ends at "Open PR(s)", but in the tracker
   context **symphony owns PR creation** (uniformly for all three kinds — its
   `finishExecution` already does `gh pr create` with the tracker-linked body and
