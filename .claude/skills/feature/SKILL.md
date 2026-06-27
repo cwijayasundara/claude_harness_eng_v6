@@ -32,9 +32,9 @@ already do; the conductor itself stays in the main session.
 ```
 
 Lane resolution is deterministic — `node .claude/scripts/feature-lane.js "<args>"`
-returns `{ lane, humanGates, request }` (`gated`=3, `autonomous`=1, `auto`=0;
-`--auto` implies the autonomous tail). All lanes stop at the open PR; merge stays
-human.
+returns `{ valid, lane, humanGates, request, auto, autonomous }` (`gated`=3,
+`autonomous`=1, `auto`=0; `--auto` implies the autonomous tail). All lanes stop
+at the open PR; merge stays human.
 
 ## The spine
 
@@ -59,7 +59,9 @@ The same backbone runs at every scale; only the engine in steps 5–8 differs.
   decomposition, GATE 2 design-adherence, GATE 3 PR review.
 - **`--autonomous` (1 gate):** one consolidated **seam-cited plan** gate (folds
   decomposition + design-adherence + the seam-confidence band), then autonomous
-  through to the PR.
+  through to the PR. Present at the gate: the decomposition (story or
+  epics+stories+dependency-graph), the target seam + seam-confidence band, and
+  the design-adherence plan citing the DeepWiki.
 - **`--auto` (0 gates):** request → PR(s) with no human stops; machine
   enforcement replaces the human GATE 2.
 
@@ -91,6 +93,27 @@ Classify scope automatically (reuse the single-vs-epic size thresholds + the
 classification in autonomous lanes.
 
 Every lane stops at the open PR(s); the human owns merge.
+
+### Sub-skill gate collapse in autonomous lanes
+
+In `--autonomous` and `--auto`, `/feature` is the **conductor** and the
+delegated sub-skills (`/brownfield`, `/brd` if used, `/spec`, `/design`,
+`/change`) run as **artifact-producers**: their own interactive approval prompts
+— e.g. `/spec`'s "approve the decomposition", `/design`'s "approve the
+architecture" — are **collapsed into this lane's gate model, not honored as
+separate stops**. In `--autonomous` they fold into the single consolidated plan
+gate; in `--auto` they are skipped entirely. The conductor drives sub-skills
+through to completion without pausing at their internal checkpoints.
+
+This mirrors `/build`'s approval model (`humanGates: 0` ⇒ no sub-phase stops)
+— the same mechanism greenfield uses: the conductor instruction supersedes the
+sub-skill's own interactive prompt.
+
+**Machine gates are never collapsed.** The deterministic seam-confidence gate,
+the evaluator brownfield-adherence rubric (artifact mode), the diff-reviewer
+design-adherence lens, `/auto`'s ratchet, and `/gate` all run regardless of
+lane — only the human approval prompts inside delegated sub-skills are
+suppressed.
 
 ## Scope classification (the one routing decision)
 
