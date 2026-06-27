@@ -128,7 +128,10 @@ function runCommand(command, args, options = {}) {
       if (code === 0) {
         resolve({ stdout, stderr });
       } else {
-        reject(new Error(`${command} ${args.join(' ')} failed with ${code}: ${stderr || stdout}`));
+        const error = new Error(`${command} ${args.join(' ')} failed with ${code}: ${stderr || stdout}`);
+        error.code = code;
+        error.stderr = stderr;
+        reject(error);
       }
     });
   });

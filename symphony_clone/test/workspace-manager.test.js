@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { WorkspaceManager, safeWorkspaceKey } = require('../src/orchestrator/workspace-manager');
+const { WorkspaceManager, safeWorkspaceKey, runCommand } = require('../src/orchestrator/workspace-manager');
 
 function makeTempRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'symphony-ws-'));
@@ -185,4 +185,11 @@ test('prepare on retry with no local branch (branch was deleted) resets normally
 
   const checkoutCall = calls.find((c) => c.args[0] === 'checkout' && c.args.includes('-B'));
   assert.ok(checkoutCall, 'missing branch should be created via checkout -B');
+});
+
+test('runCommand rejects with the exit code on the error', async () => {
+  await assert.rejects(
+    () => runCommand('node', ['-e', 'process.exit(3)']),
+    (err) => err.code === 3 && /failed with 3/.test(err.message),
+  );
 });
