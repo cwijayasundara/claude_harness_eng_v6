@@ -114,7 +114,7 @@ test('prepare on retry preserves local branch commits and creates recovery tag',
   fs.mkdirSync(path.join(workspacePath, '.git'), { recursive: true });
 
   const { calls, runner } = recordingRunner({
-    'git rev-parse': async () => ({ stdout: 'abc123\n', stderr: '' }),
+    'git show-ref': async () => ({ stdout: '', stderr: '' }),
     'git rev-list': async () => ({ stdout: '3\n', stderr: '' })
   });
 
@@ -147,7 +147,7 @@ test('prepare on retry with no local commits resets branch as on first attempt',
   fs.mkdirSync(path.join(workspacePath, '.git'), { recursive: true });
 
   const { calls, runner } = recordingRunner({
-    'git rev-parse': async () => ({ stdout: 'abc123\n', stderr: '' }),
+    'git show-ref': async () => ({ stdout: '', stderr: '' }),
     'git rev-list': async () => ({ stdout: '0\n', stderr: '' })
   });
 
@@ -214,4 +214,60 @@ test('every symphony git command disables hooks via -c core.hooksPath=/dev/null'
       `git call missing hook-disable prefix: ${c.args.join(' ')}`,
     );
   }
+});
+
+function gitError(code, message) {
+  const e = new Error(message || `git failed with ${code}`);
+  e.code = code;
+  return e;
+}
+
+test('prepare treats branch-absent (show-ref exit 1) as a fresh reset', async () => {
+  const workspaceRoot = makeTempRoot();
+  const workspacePath = path.join(workspaceRoot, 'ENG-7');
+  fs.mkdirSync(path.join(workspacePath, '.git'), { recursive: true });
+  const { calls, runner } = recordingRunner({
+    'git show-ref': async () => { throw gitError(1, 'absent'); },
+  });
+  const wm = new WorkspaceManager({
+    workspaceRoot, repoUrl: 'git@example.com:org/repo.git',
+    github: { branchPrefix: 'agent', baseBranch: 'main' }
+  }, runner);
+
+  const result = await wm.prepare({ key: 'ENG-7' }, { id: 'A' }, { attempt: 2 });
+  assert.equal(result.resumed, false);
+  assert.ok(calls.find((c) => c.args.includes('checkout') && c.args.includes('-B')), 'absent branch resets to base');
+});
+
+test('prepare propagates a real branchExists failure instead of resetting', async () => {
+  const workspaceRoot = makeTempRoot();
+  const workspacePath = path.join(workspaceRoot, 'ENG-8');
+  fs.mkdirSync(path.join(workspacePath, '.git'), { recursive: true });
+  const { calls, runner } = recordingRunner({
+    'git show-ref': async () => { throw gitError(128, 'fatal: not a git repository'); },
+  });
+  const wm = new WorkspaceManager({
+    workspaceRoot, repoUrl: 'git@example.com:org/repo.git',
+    github: { branchPrefix: 'agent', baseBranch: 'main' }
+  }, runner);
+
+  await assert.rejects(() => wm.prepare({ key: 'ENG-8' }, { id: 'A' }, { attempt: 2 }), /128|not a git/);
+  assert.equal(calls.find((c) => c.args.includes('checkout') && c.args.includes('-B')), undefined, 'must NOT reset on a real error');
+});
+
+test('prepare propagates a countCommitsAhead failure instead of resetting', async () => {
+  const workspaceRoot = makeTempRoot();
+  const workspacePath = path.join(workspaceRoot, 'ENG-9');
+  fs.mkdirSync(path.join(workspacePath, '.git'), { recursive: true });
+  const { calls, runner } = recordingRunner({
+    'git show-ref': async () => ({ stdout: '', stderr: '' }),     // branch exists
+    'git rev-list': async () => { throw gitError(128, 'fatal: bad revision'); },
+  });
+  const wm = new WorkspaceManager({
+    workspaceRoot, repoUrl: 'git@example.com:org/repo.git',
+    github: { branchPrefix: 'agent', baseBranch: 'main' }
+  }, runner);
+
+  await assert.rejects(() => wm.prepare({ key: 'ENG-9' }, { id: 'A' }, { attempt: 2 }), /128|bad revision/);
+  assert.equal(calls.find((c) => c.args.includes('checkout') && c.args.includes('-B')), undefined, 'must NOT reset on a real error');
 });

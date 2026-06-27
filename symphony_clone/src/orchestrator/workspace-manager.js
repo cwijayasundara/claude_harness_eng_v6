@@ -73,21 +73,18 @@ async function exists(filePath) {
 
 async function branchExists(runner, cwd, branchName) {
   try {
-    await runner('git', ['rev-parse', '--verify', '--end-of-options', `refs/heads/${branchName}`], { cwd });
-    return true;
-  } catch (_) {
-    return false;
+    await runGit(runner, cwd, ['show-ref', '--verify', '--quiet', `refs/heads/${branchName}`]);
+    return true;                       // exit 0 → exists
+  } catch (error) {
+    if (error && error.code === 1) return false;   // exit 1 → genuinely absent
+    throw error;                       // any other code → real failure, propagate
   }
 }
 
 async function countCommitsAhead(runner, cwd, branch, base) {
-  try {
-    const { stdout } = await runner('git', ['rev-list', '--count', '--end-of-options', `${base}..${branch}`], { cwd });
-    const n = Number.parseInt((stdout || '').trim(), 10);
-    return Number.isFinite(n) ? n : 0;
-  } catch (_) {
-    return 0;
-  }
+  const { stdout } = await runGit(runner, cwd, ['rev-list', '--count', '--end-of-options', `${base}..${branch}`]);
+  const n = Number.parseInt((stdout || '').trim(), 10);
+  return Number.isFinite(n) ? n : 0;   // only a non-numeric stdout maps to 0; a thrown error propagates
 }
 
 function buildRecoveryTag(branchName, runMeta) {
