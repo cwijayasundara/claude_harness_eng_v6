@@ -159,6 +159,7 @@ function buildTracker(env) {
     blockedStateCandidates: splitList(env.BLOCKED_STATE_CANDIDATES, ['Blocked', 'Canceled', 'Cancelled']),
     readyLabel: env.READY_LABEL || 'agent-ready',
     planLabel: env.PLAN_LABEL || 'agent-plan',
+    featureLabel: env.FEATURE_LABEL || 'agent-feature',
     plannedState: env.PLANNED_STATE || 'Planned',
     plannedStateCandidates: splitList(env.PLANNED_STATE_CANDIDATES, ['Planned', 'Ready for Agent']),
     terminalStates: splitList(env.TERMINAL_STATES, DEFAULT_TERMINAL_STATES)
