@@ -14,10 +14,10 @@ test('symphony README documents the agent-feature label and brownfield routing',
   assert.match(readme, /brownfield/i);
 });
 
-test('the tracker-config template carries the optional featureLabel field', () => {
+test('the tracker-config template carries the optional feature_label field', () => {
   const tpl = fs.readFileSync(
     path.join(__dirname, '..', '..', '.claude', 'templates', 'tracker-config.template.json'), 'utf8',
   );
-  assert.match(tpl, /featureLabel/);
+  assert.match(tpl, /feature_label/);
   JSON.parse(tpl.replace(/\/\/.*$/gm, '')); // tolerate // comments; must still be JSON-ish
 });

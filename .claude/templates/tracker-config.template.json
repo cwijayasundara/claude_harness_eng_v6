@@ -11,7 +11,7 @@
     "blocked_state": "Blocked",
     "terminal_states": ["Done", "Closed", "Canceled", "Cancelled", "Duplicate"],
     "ready_label": "agent-ready",
-    "featureLabel": "agent-feature"
+    "feature_label": "agent-feature"
   },
   "orchestrator": {
     "repo_url": "git@github.com:your-org/your-repo.git",
