@@ -16,7 +16,7 @@ that separates the lane from Devin's self-judged verification.
 
 Same lane, one difference: **does the single plan gate run?**
 - `--autonomous` (semi-auto): the Phase 3.5 plan gate runs — approve once, then hands-off.
-- `--auto` (full-auto): Phase 3.5 is **skipped** — PRD straight through to PR(s), **zero** build-time human gates. The human re-appears only at merge (or the `AUTO_MERGE` key removes even that).
+- `--auto` (full-auto): Phase 3.5 is **skipped** — PRD straight through to PR(s), **zero** build-time human gates. The human re-appears only at merge (or the `AUTO_MERGE` key removes even that — activated locally via the `--auto-merge` flag or `AUTO_MERGE=true` env through `.claude/scripts/auto-merge.js`, not only symphony).
 
 Everything else below — PRD grounding, the Phases 4–11 tail, the machine gates, pod fan-out — is identical for both.
 
@@ -84,7 +84,9 @@ Reachable only when the applicable Phase 9.5 suites and `/gate` (evaluator +
 security) are green. Push the branch, `gh pr create` with a body covering:
 stories delivered, Phase 9.5 proof (suites + results), `/gate` verdict,
 Forbidden-Actions check, and a link to the source PRD/requirement. **Do not
-merge** — merge is a separate decision (human, or symphony's `AUTO_MERGE` key).
+merge** — merge is a separate decision (human, or `AUTO_MERGE` — activated locally via
+`--auto-merge` flag / `AUTO_MERGE=true` env through `.claude/scripts/auto-merge.js`,
+or via symphony's `AUTO_MERGE` key).
 
 ## Pod mode (`--pod N`) — one PR per cluster
 
@@ -127,4 +129,7 @@ Symphony (Jira/Linear-driven) is the *other trigger* for the same tail. Where
 `/build --autonomous` is one developer pressing go in-session, symphony polls a
 tracker and launches this same Phases 4–11 flow per issue in an isolated
 workspace. Both end at an open PR; neither merges without the explicit
-`AUTO_MERGE` activation key.
+`AUTO_MERGE` activation key — set locally via `/build --auto --auto-merge` (the
+`--auto-merge` flag or `AUTO_MERGE=true` env, resolved by `.claude/scripts/auto-merge.js`),
+or via symphony's `AUTO_MERGE` key. In both cases GitHub merges only once the repo's
+required status checks pass.
