@@ -534,7 +534,7 @@ These were flagged during review and intentionally deferred — none are exploit
 
 ## Current Limitations
 
-- Linear is implemented; Jira is a stub.
+- Linear is fully implemented. The Jira runtime adapter is also fully implemented; Jira issue-creation now exists via `.claude/skills/tracker-publish/scripts/publish-to-jira.js` (the prior "stub" referred only to the missing publisher, which is now shipped).
 - No webhook receiver yet; polling only.
 - No dynamic workflow reload — `.env` changes require container recreate.
 - File-based `state.json` is fine for `MAX_CONCURRENT_RUNS <= ~5`; SQLite would be needed at larger scales.

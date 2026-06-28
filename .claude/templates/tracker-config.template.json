@@ -11,7 +11,10 @@
     "blocked_state": "Blocked",
     "terminal_states": ["Done", "Closed", "Canceled", "Cancelled", "Duplicate"],
     "ready_label": "agent-ready",
-    "feature_label": "agent-feature"
+    "feature_label": "agent-feature",
+    "base_url": "replace-with-https://your-domain.atlassian.net",
+    "project_key": "replace-with-jira-project-key",
+    "issue_type": "Task"
   },
   "orchestrator": {
     "repo_url": "git@github.com:your-org/your-repo.git",

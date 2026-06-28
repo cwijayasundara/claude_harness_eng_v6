@@ -258,6 +258,29 @@ node .claude/skills/tracker-publish/scripts/publish-to-linear.js --dry-run
 node .claude/skills/tracker-publish/scripts/publish-to-linear.js --env-file /path/to/.env
 ```
 
+### Provider-aware routing: `--provider jira`
+
+When `provider` is `jira`, the skill runs `node .claude/skills/tracker-publish/scripts/publish-to-jira.js` instead of the Linear publisher. The Jira publisher uses the same `tracker-map.json` shape and `--granularity` semantics — one Jira issue is created per `groups` entry. Each issue body is formatted as Atlassian Document Format (ADF) and, after creation, the issue is transitioned into the configured ready state. A group whose ready-state transition cannot be found is created but left in its default status; the run summary flags it as a warning (not an error).
+
+**Auth:** set `JIRA_EMAIL` and `JIRA_API_TOKEN` in the project `.env` or the shell. The script uses HTTP Basic auth (`email:token` base-64 encoded) — no OAuth flow required.
+
+**Config fields** (in `.claude/tracker-config.json` under `tracker`):
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `base_url` | yes | e.g. `https://your-org.atlassian.net` |
+| `project_key` | yes | e.g. `ENG` |
+| `issue_type` | no | defaults to `Task` |
+| `ready_state` | no | workflow transition name for the ready state (e.g. `Ready for Agent`); also read from the tracker-map's `config_snapshot.ready_state`; defaults to `To Do`. A group whose ready-state transition isn't found is created and left in its default status (the summary flags it). |
+
+```bash
+# from the project root
+node .claude/skills/tracker-publish/scripts/publish-to-jira.js
+
+# dry run (no remote calls, no file writes)
+node .claude/skills/tracker-publish/scripts/publish-to-jira.js --dry-run
+```
+
 Prerequisites:
 - `LINEAR_API_KEY` in `<project-root>/.env` (the file is git-ignored by the scaffold) or in the shell.
 - `tracker.project_slug` in `.claude/tracker-config.json` set to a real Linear project slug — the placeholder `replace-with-linear-project-slug` is rejected.
