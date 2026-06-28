@@ -177,8 +177,11 @@ Stay stack-neutral by default. Detect the stack from `project-manifest.json` and
 | `stack.backend.framework` is FastAPI / `stack.backend.language` is python | `references/stack-python-fastapi.md` |
 | `stack.frontend.framework` is React (Vite/Next) + TypeScript | `references/stack-react-typescript.md` |
 | any other stack (Go, Django, Express, Vue, …) | no reference ships yet — apply the generic principles above and in `code-gen/SKILL.md`; add a `references/stack-<name>.md` following the same pattern to make the harness expert in it |
+| `observability.enabled` is true and the project exposes an HTTP server | also `references/observability-conventions.md` + the matching `references/observability-<stack>.md` (e.g. `observability-python-fastapi.md`) |
 
 The generic Quality Principles above always apply; the stack reference is additive depth, not a replacement. This keeps the agent generic and makes new-stack support a drop-in file, not an agent edit.
+
+When `project-manifest.json#observability.enabled` is true and the project serves HTTP, emit the RED-metrics + `/metrics` + log-correlation baseline as part of the API layer, following `observability-conventions.md`. Treat the conventions reference the same way as a stack reference: additive depth, applied to the files you own.
 
 ## Gotchas
 

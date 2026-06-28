@@ -32,3 +32,32 @@ test('G9: buildManifest defaults observability off for a lite (CLI/library) shap
   assert.ok(m.observability, 'observability block present even when disabled');
   assert.strictEqual(m.observability.enabled, false);
 });
+
+const CONV = '.claude/skills/code-gen/references/observability-conventions.md';
+const FASTAPI = '.claude/skills/code-gen/references/observability-python-fastapi.md';
+
+test('G9: stack-neutral observability conventions reference documents the contract', () => {
+  const c = read(CONV);
+  assert.ok(/http_requests_total/.test(c) && /http_request_duration_seconds/.test(c),
+    'must name the two RED metrics');
+  assert.ok(/\/metrics/.test(c), 'must document the /metrics endpoint');
+  assert.ok(/route template/i.test(c) && /cardinalit/i.test(c),
+    'must state the route-template cardinality guardrail');
+  assert.ok(/observability\.enabled/.test(c), 'must document the opt-out');
+  assert.ok(/trace_id|request_id/.test(c), 'must require log correlation');
+});
+
+test('G9: FastAPI observability reference carries a concrete implementation', () => {
+  const f = read(FASTAPI);
+  assert.ok(/prometheus[_-]client/.test(f), 'must name the prometheus-client dependency');
+  assert.ok(/generate_latest/.test(f) && /CONTENT_TYPE_LATEST/.test(f),
+    'must show the /metrics response');
+  assert.ok(/Middleware/.test(f), 'must show the request middleware');
+  assert.ok(/ContextVar|contextvars/.test(f), 'must show the contextvar log correlation');
+});
+
+test('G9: generator is triggered to read the observability references', () => {
+  const g = read('.claude/agents/generator.md');
+  assert.ok(/observability-conventions\.md/.test(g), 'generator must point at the conventions reference');
+  assert.ok(/observability\.enabled/.test(g), 'trigger must be gated on observability.enabled');
+});
