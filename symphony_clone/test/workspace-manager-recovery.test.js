@@ -15,7 +15,8 @@ function recordingRunner(handlers = {}) {
   const calls = [];
   const runner = async (cmd, args, options = {}) => {
     calls.push({ cmd, args, cwd: options.cwd });
-    const key = `${cmd} ${args[0] || ''}`;
+    const sub = args[0] === '-c' ? args[2] : args[0];
+    const key = `${cmd} ${sub || ''}`;
     if (handlers[key]) return handlers[key]({ cmd, args, cwd: options.cwd, calls });
     return { stdout: '', stderr: '' };
   };
@@ -38,7 +39,7 @@ function seedExistingWorkspace(workspaceRoot, key = 'ENG-101') {
 
 test('recovery tag includes a random suffix to prevent ms-level collisions', async () => {
   const handlers = {
-    'git rev-parse': async () => ({ stdout: 'abc\n', stderr: '' }),
+    'git show-ref': async () => ({ stdout: '', stderr: '' }),
     'git rev-list': async () => ({ stdout: '1\n', stderr: '' })
   };
   const rootA = makeTempRoot(); seedExistingWorkspace(rootA);
@@ -58,7 +59,7 @@ test('recovery tag preserves attempt=0 instead of rendering "unknown"', async ()
   const root = makeTempRoot();
   seedExistingWorkspace(root);
   const { runner } = recordingRunner({
-    'git rev-parse': async () => ({ stdout: 'abc\n', stderr: '' }),
+    'git show-ref': async () => ({ stdout: '', stderr: '' }),
     'git rev-list': async () => ({ stdout: '1\n', stderr: '' })
   });
   const result = await makeWm(root, runner).prepare({ key: 'ENG-101' }, { id: 'A' }, { attempt: 0 });
@@ -69,7 +70,7 @@ test('prepare with no runMeta still renders attempt-unknown gracefully', async (
   const root = makeTempRoot();
   seedExistingWorkspace(root);
   const { runner } = recordingRunner({
-    'git rev-parse': async () => ({ stdout: 'abc\n', stderr: '' }),
+    'git show-ref': async () => ({ stdout: '', stderr: '' }),
     'git rev-list': async () => ({ stdout: '1\n', stderr: '' })
   });
   const result = await makeWm(root, runner).prepare({ key: 'ENG-101' }, { id: 'A' });
@@ -80,33 +81,33 @@ test('prepare on resume checks out branch BEFORE tagging (no orphan tag if check
   const root = makeTempRoot();
   seedExistingWorkspace(root);
   const { calls, runner } = recordingRunner({
-    'git rev-parse': async () => ({ stdout: 'abc\n', stderr: '' }),
+    'git show-ref': async () => ({ stdout: '', stderr: '' }),
     'git rev-list': async () => ({ stdout: '2\n', stderr: '' })
   });
   await makeWm(root, runner).prepare({ key: 'ENG-101' }, { id: 'A' }, { attempt: 2 });
 
-  const checkoutIdx = calls.findIndex((c) => c.args[0] === 'checkout' && !c.args.includes('-B'));
-  const tagIdx = calls.findIndex((c) => c.args[0] === 'tag');
+  const checkoutIdx = calls.findIndex((c) => c.args.includes('checkout') && !c.args.includes('-B'));
+  const tagIdx = calls.findIndex((c) => c.args.includes('tag'));
   assert.ok(checkoutIdx > -1 && tagIdx > -1, 'both checkout and tag must run');
   assert.ok(checkoutIdx < tagIdx, `checkout (idx ${checkoutIdx}) must run before tag (idx ${tagIdx})`);
 });
 
-test('rev-parse and rev-list use --end-of-options to harden against future config drift', async () => {
+test('show-ref uses --verify/--quiet and rev-list uses --end-of-options to harden against config drift', async () => {
   const root = makeTempRoot();
   seedExistingWorkspace(root);
   const { calls, runner } = recordingRunner({
-    'git rev-parse': async () => ({ stdout: 'abc\n', stderr: '' }),
+    'git show-ref': async () => ({ stdout: '', stderr: '' }),
     'git rev-list': async () => ({ stdout: '1\n', stderr: '' })
   });
   await makeWm(root, runner).prepare({ key: 'ENG-101' }, { id: 'A' }, { attempt: 2 });
 
-  const revParse = calls.find((c) => c.args[0] === 'rev-parse');
-  const revList = calls.find((c) => c.args[0] === 'rev-list');
-  assert.ok(revParse.args.includes('--end-of-options'), 'rev-parse must use --end-of-options');
+  const showRef = calls.find((c) => c.args.includes('show-ref'));
+  const revList = calls.find((c) => c.args.includes('rev-list'));
+  assert.ok(showRef.args.includes('--verify'), 'show-ref must use --verify');
+  assert.ok(showRef.args.includes('--quiet'), 'show-ref must use --quiet');
+  const refIdx = showRef.args.findIndex((a) => a.startsWith('refs/heads/'));
+  assert.ok(refIdx > -1, 'show-ref must target a refs/heads/ ref');
   assert.ok(revList.args.includes('--end-of-options'), 'rev-list must use --end-of-options');
-  const epoIdx = revParse.args.indexOf('--end-of-options');
-  const refIdx = revParse.args.findIndex((a) => a.startsWith('refs/heads/'));
-  assert.ok(epoIdx < refIdx, '--end-of-options must come before the ref in rev-parse');
 });
 
 test('safeWorkspaceKey collapses .. and strips leading/trailing dots', () => {
