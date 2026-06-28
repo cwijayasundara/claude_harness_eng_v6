@@ -60,7 +60,7 @@ Status: ✅ active · 🟡 partial (limited/opt-in/report-only) · ⛔ planned (
 
 | | Guides | Sensors |
 |---|---|---|
-| | `architecture.md` · `project-manifest.json#architecture` (layer config) · ✅ **observability conventions** (RED metrics + /metrics scaffolded into generated server apps, G9) | ✅ layered-import check (every write) — *horizontal only* · ✅ API schema validation · ✅ perf ratchet (p95) · ✅ **drift: new cycles / unstable hubs** (`drift-report.js`) · ✅ **drift: design-vs-code** (Canvas `Governs` vs disk, G4) · ✅ **vertical bounded-context rules** (`contexts.js`, opt-in, G8) · ✅ **import-cycle ratchet** (`cycle-gate.js`, G8) · ⛔ API contract-drift `oasdiff` gate (G12) |
+| | `architecture.md` · `project-manifest.json#architecture` (layer config) · ✅ **observability conventions** (RED metrics + /metrics scaffolded into generated server apps, G9) · ✅ **topology-templates** (per-topology manifest-knob presets, G10) | ✅ layered-import check (every write) — *horizontal only* · ✅ API schema validation · ✅ perf ratchet (p95) · ✅ **drift: new cycles / unstable hubs** (`drift-report.js`) · ✅ **drift: design-vs-code** (Canvas `Governs` vs disk, G4) · ✅ **vertical bounded-context rules** (`contexts.js`, opt-in, G8) · ✅ **import-cycle ratchet** (`cycle-gate.js`, G8) · ⛔ API contract-drift `oasdiff` gate (G12) |
 
 ### Behaviour
 
@@ -92,7 +92,8 @@ The point of a registry is that gaps are explicit. Open items, by priority (full
 - ~~**G6 (P1)** — no inferential modularity review on top of the coupling report.~~ ✅ **done** — `modularity-pack.js` grounds a `modularity-reviewer` agent (pre-classifying legit hubs so it doesn't flag factories/schemas); runs in `/brownfield --full`.
 - ~~**G7 (P1)** — `mutation-smoke` exists but isn't a `/auto` ratchet gate.~~ ✅ **done** — diff-scoped mutation gate enforced by pre-commit during `/auto`; survivors below threshold BLOCK with file:line + the exact flip. "tests pass" now implies "tests bite."
 - ~~**G8 (P2)**~~ ✅ **done** — vertical bounded-context rules (`contexts.js`) + import-cycle ratchet (`cycle-gate.js`).
-- ~~**G9**~~ ✅ **done** (both halves) — the guide scaffolds /metrics into generated apps; the `runtime-slo` sensor reads it and FAILs on 5xx error-rate over SLO. Remaining: **G10–G12 (P2)** — harness templates per topology, a harness-coverage metric, behaviour extras.
+- ~~**G9**~~ ✅ **done** (both halves) — the guide scaffolds /metrics into generated apps; the `runtime-slo` sensor reads it and FAILs on 5xx error-rate over SLO.
+- ~~**G10**~~ ✅ **done** — `/scaffold` resolves a named topology (web-app / api-service / cli-or-library) and presets the manifest-knob bundle via `topologies.js` (Ashby's-Law variety reduction). Remaining: **G11–G12 (P2)** — a harness-coverage metric and behaviour extras.
 - ~~**G13–G14** *(Anthropic long-running-agent principles)*~~ ✅ **done** — distinct first-context-window initialization (`first-window-init` guide) and a session-start **resume smoke check** (`resume-smoke` sensor) in `/auto` SECTION 2. Sourced from Anthropic's *Effective harnesses for long-running agents* + autonomous-coding quickstart (the multi-context-window split and the "run a basic test on the dev server at session start" failure-mode fix), not the Fowler/SPDD roadmap.
 
 ## How to extend the harness

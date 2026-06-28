@@ -81,3 +81,16 @@ test('buildManifest: explicit profile fields still override the preset', () => {
   assert.strictEqual(m.execution.model_tier, 'max-quality');
   assert.strictEqual(m.execution.ceremony, 'full');
 });
+
+test('G10: topology-templates guide is registered active and wired', () => {
+  const m = JSON.parse(read('harness-manifest.json'));
+  const g = m.guides.find((x) => x.id === 'topology-templates');
+  assert.ok(g, 'topology-templates guide must exist');
+  assert.strictEqual(g.status, 'active');
+  assert.strictEqual(g.gap_ref, 'G10');
+  assert.ok(g.wired_at && fs.existsSync(path.join(ROOT, g.wired_at)), 'wired_at must resolve');
+});
+
+test('G10: scaffold.md surfaces the detected topology', () => {
+  assert.ok(/topology/i.test(read('.claude/commands/scaffold.md')), 'scaffold.md must mention topology');
+});
