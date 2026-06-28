@@ -138,6 +138,16 @@ node .claude/scripts/perf-baseline.js          # → specs/brownfield/perf-basel
 
 Both are heuristic extractions — spot-check anything load-bearing against the source files. If a script reports nothing (no CI config, no flags), note that in the relevant map; absence is itself a finding.
 
+## Step 3.6 — Modularity Review (`--full` only, gap G6)
+
+The deterministic `coupling-report.md` says *where* the coupling is; it cannot say whether a high-fan-in module is a god module or a legitimate factory, or whether two similar files are real duplication. Add the inferential layer, grounded in the coupling data so it does not flag intentional patterns:
+
+```bash
+node .claude/scripts/modularity-pack.js     # → specs/brownfield/modularity-pack.md (+ .json)
+```
+
+Then spawn the `modularity-reviewer` agent (artifact/maintainability sensor — inferential) against the pack. It judges semantic duplication, misplaced responsibility, argument clumps, and cycles against the source, confirms which `likely-legitimate` hubs are genuinely fine, and writes `specs/reviews/modularity-review.md` + `modularity-verdict.json`. This is a maintainability *sensor*, not a gate — it informs `change-strategy.md` and prioritizes refactoring; it never blocks. Skip in lean mode.
+
 ---
 
 ## Step 4 — Map Risks

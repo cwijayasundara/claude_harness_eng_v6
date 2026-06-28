@@ -27,10 +27,14 @@ test('package.json exposes the drift script', () => {
 
 test('manifest registers the three active drift sensors at the drift cadence', () => {
   const m = JSON.parse(read('harness-manifest.json'));
-  const driftSensors = m.sensors.filter((s) => s.cadence === 'drift' && s.status === 'active');
+  // Sensors the drift *monitor* itself registers (other drift-cadence sensors,
+  // e.g. the inferential modularity review, are wired elsewhere).
+  const driftSensors = m.sensors.filter(
+    (s) => s.status === 'active' && s.wired_at === '.claude/scripts/drift-report.js'
+  );
   const ids = driftSensors.map((s) => s.id).sort();
   assert.deepStrictEqual(ids, ['drift-architecture', 'drift-dead-code', 'drift-deps', 'drift-design-code']);
-  assert.ok(driftSensors.every((s) => s.wired_at === '.claude/scripts/drift-report.js'));
+  assert.ok(driftSensors.every((s) => s.cadence === 'drift'));
 });
 
 test('security-scan.js is require-safe (does not run main on import)', () => {
