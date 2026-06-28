@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { WorkspaceManager, safeWorkspaceKey, runCommand } = require('../src/orchestrator/workspace-manager');
+const { WorkspaceManager, safeWorkspaceKey, runCommand, scrubbedGitEnv } = require('../src/orchestrator/workspace-manager');
 
 function makeTempRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'symphony-ws-'));
@@ -77,7 +77,7 @@ test('cleanup is a no-op when path does not exist', async () => {
 function recordingRunner(handlers = {}) {
   const calls = [];
   const runner = async (cmd, args, options = {}) => {
-    calls.push({ cmd, args, cwd: options.cwd });
+    calls.push({ cmd, args, cwd: options.cwd, env: options.env });
     const sub = args[0] === '-c' ? args[2] : args[0];
     const key = `${cmd} ${sub || ''}`;
     if (handlers[key]) return handlers[key]({ cmd, args, cwd: options.cwd, calls });
@@ -172,7 +172,7 @@ test('prepare on retry with no local branch (branch was deleted) resets normally
   fs.mkdirSync(path.join(workspacePath, '.git'), { recursive: true });
 
   const { calls, runner } = recordingRunner({
-    'git rev-parse': async () => { throw new Error('fatal: ambiguous argument'); }
+    'git show-ref': async () => { throw gitError(1, 'absent'); },
   });
 
   const wm = new WorkspaceManager({

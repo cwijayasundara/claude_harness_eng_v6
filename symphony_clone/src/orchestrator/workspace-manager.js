@@ -58,8 +58,28 @@ class WorkspaceManager {
   }
 }
 
+// Env allowlist for git child processes. git config-exec vectors
+// (core.sshCommand, filter.*.clean/smudge, core.fsmonitor) run with this env, so
+// it must NOT carry orchestrator secrets (GITHUB_TOKEN, LINEAR_API_KEY, LLM keys).
+// Keep only what git/ssh legitimately need. repoUrl is SSH, so no token is required.
+const GIT_ENV_ALLOW = [
+  /^PATH$/, /^HOME$/, /^USER$/, /^LOGNAME$/, /^SHELL$/, /^TERM$/,
+  /^TMPDIR$/, /^TEMP$/, /^TMP$/,
+  /^SSH_AUTH_SOCK$/, /^SSH_AGENT_PID$/,
+  /^GIT_/, /^LANG$/, /^LANGUAGE$/, /^LC_/,
+  /^https?_proxy$/i, /^all_proxy$/i, /^no_proxy$/i,
+];
+
+function scrubbedGitEnv(env = process.env) {
+  const out = {};
+  for (const key of Object.keys(env)) {
+    if (GIT_ENV_ALLOW.some((re) => re.test(key))) out[key] = env[key];
+  }
+  return out;
+}
+
 function runGit(runner, cwd, args) {
-  return runner('git', ['-c', 'core.hooksPath=/dev/null', ...args], { cwd });
+  return runner('git', ['-c', 'core.hooksPath=/dev/null', ...args], { cwd, env: scrubbedGitEnv(process.env) });
 }
 
 async function exists(filePath) {
@@ -74,10 +94,10 @@ async function exists(filePath) {
 async function branchExists(runner, cwd, branchName) {
   try {
     await runGit(runner, cwd, ['show-ref', '--verify', '--quiet', `refs/heads/${branchName}`]);
-    return true;                       // exit 0 → exists
+    return true;                       // exit 0 -> exists
   } catch (error) {
-    if (error && error.code === 1) return false;   // exit 1 → genuinely absent
-    throw error;                       // any other code → real failure, propagate
+    if (error && error.code === 1) return false;   // exit 1 -> genuinely absent
+    throw error;                       // any other code -> real failure, propagate
   }
 }
 
@@ -101,7 +121,7 @@ function safeWorkspaceKey(value) {
     .replace(/^[.-]+|[.-]+$/g, '')
     .slice(0, 80);
   // Reject outputs that would produce malformed git refs:
-  // - missing any alphanumeric → '.' or '-' or empty
+  // - missing any alphanumeric -> '.' or '-' or empty
   // - trailing '.lock' (forbidden by git check-ref-format)
   if (!/[a-zA-Z0-9]/.test(cleaned) || cleaned.endsWith('.lock')) return 'group';
   return cleaned;
@@ -111,7 +131,7 @@ function runCommand(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd: options.cwd,
-      env: process.env,
+      env: options.env || process.env,
       stdio: ['ignore', 'pipe', 'pipe']
     });
 
@@ -138,4 +158,4 @@ function runCommand(command, args, options = {}) {
   });
 }
 
-module.exports = { WorkspaceManager, safeWorkspaceKey, runCommand };
+module.exports = { WorkspaceManager, safeWorkspaceKey, runCommand, scrubbedGitEnv };
