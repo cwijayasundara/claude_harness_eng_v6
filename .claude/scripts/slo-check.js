@@ -52,7 +52,9 @@ function finish(outPath, verdict, code) {
   try {
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
     fs.writeFileSync(outPath, JSON.stringify(verdict, null, 2));
-  } catch { /* best effort */ }
+  } catch (e) {
+    process.stderr.write(`slo-check: could not write verdict file: ${e.message}\n`);
+  }
   process.stdout.write(JSON.stringify({ ...verdict, exit: code }) + '\n');
   process.exit(code);
 }
@@ -89,11 +91,11 @@ async function main() {
   const obs = manifest.observability || {};
   const outPath = path.join(root, 'specs', 'reviews', 'slo-verdict.json');
 
-  if (obs.enabled === false) return finish(outPath, { verdict: 'disabled', breaches: [] }, 0);
+  if (obs.enabled === false) return finish(outPath, { verdict: 'disabled', error_rate_pct: null, p95_ms: null, breaches: [] }, 0);
 
   const slo = obs.slo || { error_rate_pct: 1.0, p95_ms: 500 };
   const got = await scrapeMetrics(argv, manifest, obs);
-  if (got.text == null) return finish(outPath, { verdict: 'unreachable', scraped: got.scraped, breaches: [] }, 2);
+  if (got.text == null) return finish(outPath, { verdict: 'unreachable', error_rate_pct: null, p95_ms: null, scraped: got.scraped, breaches: [] }, 2);
 
   const series = parseProm(got.text);
   const { er, p95, breaches, code, verdict } = evalSlo(series, slo);

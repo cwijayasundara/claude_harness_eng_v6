@@ -53,3 +53,25 @@ test('within budget -> exit 0 (pass)', () => {
   assert.strictEqual(code, 0);
   assert.strictEqual(verdict.verdict, 'pass');
 });
+
+test('p95-only breach -> exit 2 (WARN)', () => {
+  const HIGH_LATENCY = [
+    'http_requests_total{method="GET",route="/x",status="200"} 100',
+    'http_request_duration_seconds_bucket{method="GET",route="/x",le="0.1"} 0',
+    'http_request_duration_seconds_bucket{method="GET",route="/x",le="0.5"} 0',
+    'http_request_duration_seconds_bucket{method="GET",route="/x",le="1.0"} 0',
+    'http_request_duration_seconds_bucket{method="GET",route="/x",le="+Inf"} 100',
+    'http_request_duration_seconds_count{method="GET",route="/x"} 100',
+  ].join('\n') + '\n';
+  const { code, verdict } = runSlo({ enabled: true, slo: { error_rate_pct: 1.0, p95_ms: 500 } }, HIGH_LATENCY);
+  assert.strictEqual(code, 2);
+  assert.strictEqual(verdict.verdict, 'warn');
+  assert.ok(verdict.breaches.includes('p95'));
+  assert.ok(!verdict.breaches.includes('error_rate'));
+});
+
+test('no traffic -> exit 2 (WARN)', () => {
+  const { code, verdict } = runSlo({ enabled: true, slo: { error_rate_pct: 1.0, p95_ms: 500 } }, '# no metrics yet\n');
+  assert.strictEqual(code, 2);
+  assert.strictEqual(verdict.verdict, 'warn');
+});
