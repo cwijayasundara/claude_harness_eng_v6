@@ -44,11 +44,11 @@ test('normalizeState defaults malformed input to empty', () => {
   assert.deepStrictEqual(normalizeState({ active: [1, 'x', 2] }), { active: [1, 2] });
 });
 
-test('resolveCap precedence: manifest > env > default 15', () => {
+test('resolveCap precedence: manifest > env > default 18', () => {
   assert.strictEqual(resolveCap({ execution: { max_concurrent_agents: 8 } }, {}), 8);
   assert.strictEqual(resolveCap(null, { CLAUDE_MAX_CONCURRENT_AGENTS: '6' }), 6);
-  assert.strictEqual(resolveCap(null, {}), 15);
-  assert.strictEqual(resolveCap({ execution: {} }, { CLAUDE_MAX_CONCURRENT_AGENTS: '0' }), 15);
+  assert.strictEqual(resolveCap(null, {}), 18);
+  assert.strictEqual(resolveCap({ execution: {} }, { CLAUDE_MAX_CONCURRENT_AGENTS: '0' }), 18);
 });
 
 // ---- wrapper integration (spawn the hook with a stdin payload) ----

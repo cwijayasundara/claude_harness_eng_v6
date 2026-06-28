@@ -342,7 +342,7 @@ The parent dispatches all group-orchestrators in the wave in a single message (m
 |---|---|---|
 | Concurrent group-orchestrators per wave | 3 (default, override with `--parallel-groups N`) | Below most rate limits; leaves headroom for within-group teams |
 | Concurrent teammates per group-orchestrator | 5 (Section 4 mandate) | Existing within-group cap |
-| Peak total subagents | 15 (3 × 5) | Safety ceiling; raise only after observing actual usage |
+| Peak total subagents | 18 (3 orchestrators + 3×5 teammates) | Gate counts ALL Task subagents including group-orchestrators; 18 fits the documented peak |
 
 If `--parallel-groups N > 3`, accept it but emit a warning to the iteration log. The 3-default is conservative; teams with higher API throughput can raise it.
 
@@ -350,11 +350,15 @@ If `--parallel-groups N > 3`, accept it but emit a warning to the iteration log.
 ceiling: the `PreToolUse(Task)` hook `.claude/hooks/concurrency-gate.js` counts
 in-flight subagents and **denies** a spawn that would exceed
 `max_concurrent_agents` (`project-manifest.json#execution.max_concurrent_agents`
-→ env `CLAUDE_MAX_CONCURRENT_AGENTS` → default 15), decrementing on
-`SubagentStop`. A denied spawn is **backpressure, not a failure** — wait for
-in-flight subagents to finish, then retry; do not treat it as a ratchet failure.
-The gate fails open (a gate error never blocks spawns) and TTL-prunes a leaked
-count.
+→ env `CLAUDE_MAX_CONCURRENT_AGENTS` → default 18), decrementing on
+`SubagentStop`. The gate counts **ALL** Task subagents, including the
+group-orchestrators themselves (which are also Task spawns). At the documented
+3-group × 5-teammate peak that is 3 orchestrators + 15 teammates = 18 concurrent
+subagents — the default of 18 accommodates that peak without throttling. Below
+the default, or with a tighter configured cap, spawns past the ceiling receive
+**backpressure, not a failure** — wait for in-flight subagents to finish, then
+retry; do not treat backpressure as a ratchet failure. The gate fails open (a
+gate error never blocks spawns) and TTL-prunes a leaked count.
 
 ### Pod mode (`--pod N`) — per-cluster PRs
 

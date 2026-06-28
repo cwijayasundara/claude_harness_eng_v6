@@ -10,7 +10,11 @@ const fs = require('fs');
 const path = require('path');
 
 const TTL_MS = 30 * 60 * 1000;
-const DEFAULT_CAP = 15;
+// DEFAULT_CAP = 18: the documented /auto peak is 3 group-orchestrators + 3×5 teammates = 18
+// concurrent Task subagents. The gate counts orchestrators too (they are Task spawns), so 18
+// accommodates the full peak without throttling. Configure down via
+// project-manifest.json#execution.max_concurrent_agents or CLAUDE_MAX_CONCURRENT_AGENTS.
+const DEFAULT_CAP = 18;
 
 function normalizeState(raw) {
   if (raw && Array.isArray(raw.active)) {
@@ -41,6 +45,9 @@ function decideSpawn(state, { cap, now, ttlMs }) {
 
 function decideStop(state, { now, ttlMs }) {
   const active = normalizeState(state).active.filter((ts) => ts > now - ttlMs).sort((a, b) => a - b);
+  // Late-decrement edge: if a subagent outlived the TTL its timestamp was already pruned above,
+  // so a late SubagentStop drops the oldest LIVE entry — deliberate best-effort loosening
+  // (only ever over-allows, never blocks).
   active.shift();
   return { state: { active } };
 }
