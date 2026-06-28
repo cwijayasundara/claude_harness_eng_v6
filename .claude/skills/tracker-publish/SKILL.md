@@ -271,7 +271,7 @@ When `provider` is `jira`, the skill runs `node .claude/skills/tracker-publish/s
 | `base_url` | yes | e.g. `https://your-org.atlassian.net` |
 | `project_key` | yes | e.g. `ENG` |
 | `issue_type` | no | defaults to `Task` |
-| `ready_state` | yes | workflow transition name for the ready state (e.g. `Ready for Agent`) |
+| `ready_state` | no | workflow transition name for the ready state (e.g. `Ready for Agent`); also read from the tracker-map's `config_snapshot.ready_state`; defaults to `To Do`. A group whose ready-state transition isn't found is created and left in its default status (the summary flags it). |
 
 ```bash
 # from the project root
