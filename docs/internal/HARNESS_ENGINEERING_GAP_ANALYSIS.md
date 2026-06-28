@@ -48,7 +48,7 @@ Legend: **P0** = closes an enterprise-readiness hole; **P1** = high-leverage; **
 |---|---|---|---|---|
 | G1 | **No explicit "guides vs sensors" harness model / sensor registry.** Pieces exist but aren't organised or discoverable as a control system; no way to answer "what governs maintainability vs architecture vs behaviour?" | Harness Eng. (the central matrix: {Maintainability, Architecture, Behaviour} × {Guides, Sensors}) | Implicit only | **P0** |
 | G2 | **No continuous/drift sensors outside the change lifecycle.** All sensors fire per-change. Nothing runs coupling-drift, dead-code accumulation, dependency freshness, or SLO degradation on a *cadence*. | Both articles' "Repeatedly — slower cadence" column | Missing (cron infra exists, unused for this) | **P0** |
-| G3 | **No computational security sensors.** Security is inferential-only (`security-reviewer` + checklists). No Semgrep/Bandit (SAST), GitLeaks/trufflehog (secrets), `npm audit`/`pip-audit` (deps). | Sensors article (Semgrep, GitLeaks named explicitly) | Missing | **P0** |
+| G3 | **No computational security sensors.** Security is inferential-only (`security-reviewer` + checklists). No Semgrep/Bandit (SAST), GitLeaks/trufflehog (secrets), `npm audit`/`pip-audit` (deps). | Sensors article (Semgrep, GitLeaks named explicitly) | ✅ **DONE** — baseline secrets at pre-write+commit; gitleaks/semgrep/npm+pip-audit via `security-scan.js`, boundary-gated in `/gate`, graceful degradation | ~~P0~~ |
 | G4 | **No structured-prompt artifact, and no prompt↔code sync.** We emit BRD/spec/design once; they can silently drift from code. No REASONS Canvas, no `/prompt-update` (requirements→prompt→code) or `/sync` (code→prompt). | SPDD core | Missing | **P1** |
 | G5 | **Linter/sensor messages are generic, not LLM-optimised.** `verify-on-save` blocks with "Fix: resolve the lint errors above" — not the article's per-rule self-correction guidance ("positive prompt injection"), and no "raise-threshold-with-justification" escape valve. | Sensors article (custom ESLint formatter is the headline technique) | Generic messages | **P1** |
 | G6 | **No inferential modularity review.** We have the computational `coupling-report.md` but no LLM modularity skill *on top* of it (semantic duplication, misplaced responsibility, argument-clump detection) grounded in that CLI output. | Sensors article (Khononov "Modularity Skills") | Missing | **P1** |
@@ -132,9 +132,9 @@ The sensors article's single most actionable technique: rewrite linter/sensor ou
 ## 5. Recommended roadmap
 
 **Phase 1 — Frame + close enterprise holes (P0)**
-- G1: `HARNESS.md` + `harness-manifest.json` registry (guides×sensors×{maintainability,architecture,behaviour}). *Frames the rest; pure docs/manifest.*
-- G3: computational security sensors — GitLeaks (inner loop), Semgrep + dep-audit (boundary-gated in `gate`).
-- G2: scheduled `drift-report` job over coupling/dead-code/dep-freshness (+ SLO if telemetry on), reusing existing runners + `/schedule`.
+- ✅ G1: `HARNESS.md` + `harness-manifest.json` registry (guides×sensors×{maintainability,architecture,behaviour,traceability}) + manifest honesty validator. *Shipped.*
+- ✅ G3: computational security sensors — baseline secrets (pre-write + pre-commit); gitleaks + Semgrep + npm/pip-audit via `security-scan.js`, boundary-gated in `/gate`, graceful degradation. *Shipped.*
+- G2: scheduled `drift-report` job over coupling/dead-code/dep-freshness (+ SLO if telemetry on), reusing existing runners + `/schedule`. *Next.*
 
 **Phase 2 — SPDD artifact discipline (P1)**
 - G4a: extend `design`/`spec` to emit a REASONS Canvas (Entities/Approach/Structure/Operations/Norms/Safeguards), grounding "existing-vs-new" in `code-graph`.

@@ -45,7 +45,9 @@ Use the Agent tool to spawn the selected agents **in a single call**:
 - **diff-reviewer** — always for `/gate`. Fresh-context correctness review of the diff only; writes `specs/reviews/diff-review-verdict.json`.
 - **security-reviewer** — only when the changed files touch auth/authz, secrets, user input handling, uploads/downloads, network fetch/redirect/proxy code, payments/billing, persistence/schema/migrations, API routes/controllers/middleware, or configured security patterns. Writes `specs/reviews/security-review.md` and `specs/reviews/security-verdict.json`.
 
-If no security trigger fired, do not run `security-reviewer`; record `security_review: skipped_no_boundary` in the context pack instead.
+When a security trigger fires, also run the **computational security scan** (gap G3) as the deterministic complement to the inferential `security-reviewer` — the two are partners, not substitutes: `node .claude/scripts/security-scan.js --all --staged --boundary-only`. It runs gitleaks (secrets), semgrep (SAST), and `npm audit`/`pip-audit` (dependency CVEs) where those tools are provisioned, skipping each one loudly otherwise (never silently). It writes `specs/reviews/security-scan.json`; a non-zero exit (findings at or above the `--threshold`, default `high`) is a **BLOCK** under the same semantics as the reviewers. Always-available baseline secrets are already enforced at commit by the pre-commit hook; this step adds the external-tool tiers.
+
+If no security trigger fired, run neither `security-reviewer` nor the computational scan; record `security_review: skipped_no_boundary` in the context pack instead.
 
 ### Step 3 — Apply the Canonical Gate Semantics
 
@@ -56,6 +58,7 @@ Severity levels (BLOCK/WARN/INFO), the BLOCK self-healing loop (generator fix �
 - `specs/reviews/evaluator-report.md` — PASS/FAIL with per-check detail
 - `specs/reviews/diff-review.md` and `specs/reviews/diff-review-verdict.json` — fresh-context correctness review
 - `specs/reviews/security-review.md` and `specs/reviews/security-verdict.json` — only when a security trigger fired
+- `specs/reviews/security-scan.json` — computational security scan (secrets/SAST/deps) result; only when a security trigger fired
 - `specs/reviews/review-context-pack.md` — compact shared review input
 
 Every selected output must exist before the review is complete; a missing selected output is itself a BLOCK finding.

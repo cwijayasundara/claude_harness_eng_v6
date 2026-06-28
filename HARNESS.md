@@ -66,7 +66,7 @@ Status: ✅ active · 🟡 partial (limited/opt-in/report-only) · ⛔ planned (
 
 | | Guides | Sensors |
 |---|---|---|
-| | BRD/spec/design + acceptance criteria + sprint contracts · legacy-preservation skills · ⛔ REASONS Canvas living artifact (G4) | ✅ unit tests · ✅ evaluator Layer 1 API · ✅ evaluator Layer 2 Playwright · ✅ evaluator Layer 3 vision · ✅ `diff-reviewer` (correctness) · ✅ `security-reviewer` (OWASP + `npm audit`) · 🟡 pre-write secret scan — no GitLeaks/Semgrep (G3) · 🟡 axe/WCAG *(opt-in only, G12)* |
+| | BRD/spec/design + acceptance criteria + sprint contracts · legacy-preservation skills · ⛔ REASONS Canvas living artifact (G4) | ✅ unit tests · ✅ evaluator Layer 1 API · ✅ evaluator Layer 2 Playwright · ✅ evaluator Layer 3 vision · ✅ `diff-reviewer` (correctness) · ✅ `security-reviewer` (OWASP) · ✅ secret scan (baseline regex, pre-write + commit; gitleaks tier at /gate) · ✅ SAST (semgrep, /gate) · ✅ dep-audit (npm/pip, /gate) · 🟡 axe/WCAG *(opt-in only, G12)* |
 
 ### Traceability *(harness extension — a strength)*
 
@@ -86,7 +86,7 @@ The point of a registry is that gaps are explicit. Open items, by priority (full
 
 - **G1** *(this file)* — make the harness legible. ✅ done by `HARNESS.md` + `harness-manifest.json`.
 - **G2 (P0)** — no continuous **drift** sensors. The third cadence column is empty.
-- **G3 (P0)** — no computational security sensors (Semgrep SAST, GitLeaks secrets, dep audit); security is inferential-only.
+- ~~**G3 (P0)** — no computational security sensors.~~ ✅ **done** — baseline secrets enforced at pre-write + commit; gitleaks/semgrep/npm+pip-audit wired into `/gate` via `security-scan.js`, degrading loudly when a tool is unprovisioned.
 - **G4 (P1)** — no SPDD-style living, code-synced design artifact (REASONS Canvas + `sync`).
 - **G5 (P1)** — sensor messages are generic, not per-rule LLM-optimised ("positive prompt injection").
 - **G6 (P1)** — no inferential modularity review on top of the coupling report.

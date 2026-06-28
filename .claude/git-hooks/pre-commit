@@ -19,6 +19,8 @@ const { checkContentViolations, loadLayerConfig, getLayer } = require(path.join(
 const { run, output, shouldBlock, skipped } = require(path.join(__dirname, '..', 'hooks', 'lib', 'toolchain'));
 const { findImpureFiles } = require(path.join(__dirname, 'lib', 'refactor-purity'));
 const { validate: validateSchema } = require(path.join(__dirname, '..', 'hooks', 'lib', 'contract-schema'));
+const { baselineSecretFindings } = require(path.join(__dirname, '..', 'hooks', 'lib', 'security-scan'));
+const { secretScanExempt } = require(path.join(__dirname, '..', 'hooks', 'lib', 'secrets'));
 
 const SOURCE_EXTS = new Set(['.py', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
 const FLOOR = 80;
@@ -44,6 +46,23 @@ function stagedFiles() {
     encoding: 'utf8',
   });
   return out.split('\n').filter(Boolean);
+}
+
+// Computational secrets sensor (gap G3), always-available baseline tier: regex
+// scan over staged file contents. Runs on ALL staged files (not just source —
+// credentials hide in config/yaml too), minus the same exemptions the pre-write
+// gate honors (.md, .env.example, harness fixture dirs). gitleaks is the
+// enhanced tier, run at /gate via security-scan.js where it can be provisioned.
+function checkSecrets(projectDir, staged) {
+  const targets = staged.filter((f) => !secretScanExempt(f, projectDir));
+  const findings = baselineSecretFindings(targets, (f) => fs.readFileSync(path.join(projectDir, f), 'utf8'));
+  if (findings.length === 0) return;
+  const lines = findings.map((x) => `  ${x.file} — ${x.message}`);
+  fail(
+    `BLOCKED: potential secrets in staged files:\n${lines.join('\n')}\n` +
+    'Fix: move the secret to .env (gitignored) and reference it via an env var; never commit credentials. ' +
+    'If this is a non-secret fixture, place it under an exempt path or rename it.\n'
+  );
 }
 
 function checkLayers(projectDir, stagedSource) {
@@ -278,8 +297,9 @@ function checkCoverageJs(projectDir, stagedJs) {
 try {
   const projectDir = process.cwd();
   const staged = stagedFiles();
+  checkSecrets(projectDir, staged); // before the source-only exit: secrets hide in config/yaml too
   const stagedSource = staged.filter((f) => SOURCE_EXTS.has(path.extname(f).toLowerCase()));
-  if (stagedSource.length === 0) process.exit(0); // docs-only commit: nothing to gate
+  if (stagedSource.length === 0) process.exit(0); // docs-only commit: nothing else to gate
 
   const stagedPy = stagedSource.filter((f) => f.endsWith('.py'));
   const stagedTs = stagedSource.filter((f) => f.endsWith('.ts') || f.endsWith('.tsx'));
