@@ -7,6 +7,8 @@
 // Kept separate from scaffold-apply.js to honour the one-responsibility rule
 // and the per-file line cap. See scaffold-apply.js for the profile schema.
 
+const { resolveTopology, topologyPreset } = require('./topologies.js');
+
 const LSP_TABLE = {
   python: { server: 'pyright', binary: 'pyright', install: 'npm i -g pyright' },
   typescript: {
@@ -67,12 +69,11 @@ function evaluationBlock() {
   };
 }
 
-// G9: app-level observability baseline. Default ON for server/API shapes
-// (a backend that isn't lite-shaped), OFF for CLI/library/static projects.
-// Opt out per project with observability.enabled = false.
-function observabilityBlock(lite, stack) {
+// G9: app-level observability baseline. `enabled` is decided by the topology
+// preset (G10) AND-ed with the presence of a backend to instrument.
+function observabilityBlock(enabled) {
   return {
-    enabled: !lite && !!stack.backend,
+    enabled: !!enabled,
     metrics_path: '/metrics',
     red_labels: ['method', 'route', 'status'],
     slo: { error_rate_pct: 1.0, p95_ms: 500 },
@@ -81,12 +82,9 @@ function observabilityBlock(lite, stack) {
 
 function buildManifest(profile) {
   const stack = profile.stack || {};
-  // Lite-shaped = CLI / library / single-script (projectType D) or any non-web
-  // stack. These projects don't earn full-stack ceremony, so default them to the
-  // cheaper cost posture: Sonnet generation (cost tier), single-story groups skip
-  // sprint decomposition (trimmed ceremony), and no Docker deploy phase (local
-  // verification). Each default is still overridable by an explicit profile field.
   const lite = isLiteShaped(profile);
+  const topology = resolveTopology(profile, lite);
+  const preset = topologyPreset(topology);
   const manifest = {
     name: profile.name || 'untitled-project',
     description: profile.description || '',
@@ -94,18 +92,20 @@ function buildManifest(profile) {
     lsp: { servers: lspServers(profile) },
     evaluation: evaluationBlock(),
     execution: {
-      default_mode: 'full', model_tier: profile.modelTier || (lite ? 'cost' : 'balanced'),
-      ceremony: profile.ceremony || (lite ? 'trimmed' : 'full'),
+      default_mode: 'full',
+      model_tier: profile.modelTier || preset.model_tier,
+      ceremony: profile.ceremony || preset.ceremony,
       session_chaining: true, teammate_model: 'sonnet',
     },
-    verification: verificationBlock(profile.verificationMode || (lite ? 'B' : undefined)),
+    verification: verificationBlock(profile.verificationMode || preset.verification_mode),
+    topology,
   };
-  manifest.observability = observabilityBlock(lite, stack);
+  manifest.observability = observabilityBlock(preset.observability_enabled && !!stack.backend);
   if (Array.isArray(profile.frameworkPacks) && profile.frameworkPacks.length) {
     manifest.framework_skill_packs = profile.frameworkPacks;
   }
-  if (lite) {
-    manifest.architecture = { enabled: false };
+  if (preset.architecture) {
+    manifest.architecture = preset.architecture;
   }
   return manifest;
 }
