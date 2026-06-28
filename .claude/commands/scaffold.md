@@ -193,6 +193,10 @@ Based on their answers, write `project-manifest.json` to the project root. Fill 
 }
 ```
 
+- observability (optional): `"observability": { "enabled": bool, "metrics_path": "/metrics", "red_labels": ["method","route","status"], "slo": {"error_rate_pct", "p95_ms"} } | omitted for lite shapes,`
+
+`observability` (G9): default-on for server shapes; the generator reads the observability code-gen references when `enabled` and the project exposes an HTTP server. Set `enabled:false` to opt out.
+
 ### LSP Config (auto-detected from stack)
 
 Infer the recommended LSP servers from the stack chosen in Step 1. Write an `lsp` block into `project-manifest.json`:

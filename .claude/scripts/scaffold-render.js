@@ -67,6 +67,18 @@ function evaluationBlock() {
   };
 }
 
+// G9: app-level observability baseline. Default ON for server/API shapes
+// (a backend that isn't lite-shaped), OFF for CLI/library/static projects.
+// Opt out per project with observability.enabled = false.
+function observabilityBlock(lite, stack) {
+  return {
+    enabled: !lite && !!stack.backend,
+    metrics_path: '/metrics',
+    red_labels: ['method', 'route', 'status'],
+    slo: { error_rate_pct: 1.0, p95_ms: 500 },
+  };
+}
+
 function buildManifest(profile) {
   const stack = profile.stack || {};
   // Lite-shaped = CLI / library / single-script (projectType D) or any non-web
@@ -88,6 +100,7 @@ function buildManifest(profile) {
     },
     verification: verificationBlock(profile.verificationMode || (lite ? 'B' : undefined)),
   };
+  manifest.observability = observabilityBlock(lite, stack);
   if (Array.isArray(profile.frameworkPacks) && profile.frameworkPacks.length) {
     manifest.framework_skill_packs = profile.frameworkPacks;
   }
