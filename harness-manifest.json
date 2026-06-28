@@ -1,0 +1,91 @@
+{
+  "version": "1",
+  "purpose": "Registry of the harness control system: guides (feedforward) and sensors (feedback) across the quality axes, plus the cadence each runs at and whether it is active, partial, or planned. This file is the machine-readable companion to HARNESS.md and the single source of truth for 'what governs what' and 'where the holes are'. Keep it faithful to reality: every active/partial entry must point at a real wired_at path.",
+  "model": {
+    "definition": "Agent = Model + Harness. The harness is everything around the model: guides that steer it before it acts, sensors that detect after it acts, and a human steering loop that improves both over time.",
+    "axes": {
+      "maintainability": "Internal quality — keep the codebase easy and low-risk to change.",
+      "architecture": "Architecture fitness — structural constraints, layering, module boundaries, performance budgets.",
+      "behaviour": "Functional correctness — does it do what was asked, verified against a running system.",
+      "traceability": "Harness extension beyond the source articles: deterministic grounding of every artifact against its upstream (FRD -> BRD -> spec -> test). This is a strength we have that the articles' examples lack."
+    },
+    "kinds": {
+      "feedforward": "A guide. Prevents or steers behaviour before the agent acts.",
+      "computational": "A sensor that is deterministic, fast, CPU-based (linters, type checkers, structural rules, tests).",
+      "inferential": "A sensor that uses an LLM for semantic judgement (review agents). Slower, probabilistic, semantically rich.",
+      "hybrid": "A sensor that combines a deterministic runner with inferential interpretation."
+    },
+    "cadences": {
+      "planning": "Runs during BRD/spec/design, before code exists.",
+      "session": "Runs inside the agent's inner loop, on every write (PostToolUse / PreToolUse hooks). Fast self-correction.",
+      "commit": "Runs at commit time (git pre-commit hook) or in the on-demand /gate.",
+      "integration": "Runs against a running application (the evaluator / /evaluate) or in CI.",
+      "drift": "Runs repeatedly on a slower cadence, OUTSIDE the change lifecycle, to catch accumulated decay. This column is mostly empty today (gap G2)."
+    },
+    "statuses": {
+      "active": "Wired and enforced.",
+      "partial": "Exists but limited in scope, opt-in, or report-only rather than enforced.",
+      "planned": "Identified in the gap analysis, not yet built. gap_ref points at the gap id."
+    }
+  },
+  "steering_loop": [
+    { "id": "program", "name": "program.md", "wired_at": ".claude/program.md", "description": "Karpathy human<->agent bridge; the steering input that biases /auto." },
+    { "id": "learned-rules", "name": "learned-rules.md", "wired_at": ".claude/state/learned-rules.md", "description": "Monotonically growing failure-derived rules, injected into future agent prompts. The harness improving itself." },
+    { "id": "review-on-stop-suggestions", "name": "CLAUDE.md update suggestions", "wired_at": ".claude/hooks/review-on-stop.js", "description": "Stop hook surfaces session learnings as suggested CLAUDE.md edits (applied between sessions, never mid-run)." }
+  ],
+  "guides": [
+    { "id": "code-gen", "axis": "maintainability", "kind": "feedforward", "wired_at": ".claude/skills/code-gen/SKILL.md", "description": "10 quality principles injected into every generator teammate: TDD, static typing, 30-line function cap, deep modules, explicit errors, latency budgets." },
+    { "id": "clarify", "axis": "maintainability", "kind": "feedforward", "wired_at": ".claude/skills/clarify/SKILL.md", "description": "Bounded clarification gate — resolve ambiguity before code, consuming local context first." },
+    { "id": "architecture-doc", "axis": "architecture", "kind": "feedforward", "wired_at": ".claude/architecture.md", "description": "Architecture reference copied into target projects." },
+    { "id": "layer-config", "axis": "architecture", "kind": "feedforward", "wired_at": ".claude/hooks/lib/layers.js", "description": "Default layer order + roots that the layer sensor enforces; overridden per target project via project-manifest.json#architecture (opt-out for non-layered shapes)." },
+    { "id": "brd-spec-design", "axis": "behaviour", "kind": "feedforward", "wired_at": ".claude/skills/design/SKILL.md", "description": "BRD -> spec -> design artifacts + acceptance criteria + sprint contracts: the functional specification the agent builds against." },
+    { "id": "reasons-canvas", "axis": "behaviour", "kind": "feedforward", "wired_at": null, "status": "planned", "gap_ref": "G4", "description": "SPDD REASONS Canvas as a living, code-synced design artifact (Entities/Approach/Structure/Operations/Norms/Safeguards)." },
+    { "id": "legacy-discipline", "axis": "behaviour", "kind": "feedforward", "wired_at": ".claude/skills/checking-coverage-before-change/SKILL.md", "description": "Behaviour-preservation skills (checking-coverage, pinning-down-behavior, sprouting, keeping-refactors-pure) that steer brownfield edits." },
+    { "id": "observability-conventions", "axis": "architecture", "kind": "feedforward", "wired_at": null, "status": "planned", "gap_ref": "G9", "description": "OTEL + structured-log conventions scaffolded INTO the generated app so runtime sensors have signal." }
+  ],
+  "sensors": [
+    { "id": "eslint-ruff", "axis": "maintainability", "type": "computational", "cadence": "session", "status": "active", "wired_at": ".claude/hooks/verify-on-save.js", "signal": "lint violations (complexity, length, style)", "description": "ruff/eslint on the saved file (report-only on save, blocking at /auto Gate 2 and pre-commit). Messages are generic — not yet per-rule LLM-optimised (gap G5)." },
+    { "id": "type-check", "axis": "maintainability", "type": "computational", "cadence": "session", "status": "active", "wired_at": ".claude/hooks/verify-on-save.js", "signal": "type errors", "description": "mypy per-file on save; tsc --noEmit project-wide at pre-commit." },
+    { "id": "length-caps", "axis": "maintainability", "type": "computational", "cadence": "session", "status": "active", "wired_at": ".claude/hooks/lib/length.js", "signal": "30-line function / 300-line file violations", "description": "Pre-disk caps enforced by pre-write-gate." },
+    { "id": "coverage-ratchet", "axis": "maintainability", "type": "computational", "cadence": "commit", "status": "active", "wired_at": ".claude/git-hooks/pre-commit", "signal": "coverage below baseline or 80% floor", "description": "Repo-wide coverage ratchet (monotonic) at pre-commit and /auto Gate 3." },
+    { "id": "coverage-diff", "axis": "maintainability", "type": "computational", "cadence": "integration", "status": "active", "wired_at": ".claude/scripts/coverage-diff.js", "signal": "per-diff coverage below floor", "description": "Coverage floor applied to only the files a group changed." },
+    { "id": "clean-code-review", "axis": "maintainability", "type": "inferential", "cadence": "commit", "status": "active", "wired_at": ".claude/agents/clean-code-reviewer.md", "signal": "SOLID breaks, god functions, duplication, swallowed errors", "description": "Inferential structure review on changed files." },
+    { "id": "mutation-smoke", "axis": "maintainability", "type": "computational", "cadence": "commit", "status": "partial", "wired_at": ".claude/scripts/mutation-smoke.js", "gap_ref": "G7", "signal": "surviving mutants (tests that do not bite)", "description": "Single-mutant smoke gate. Runs only inside pinning-down-behavior and the brownfield CR lane — NOT a standard /auto ratchet gate, so a group can pass with tests that assert nothing." },
+    { "id": "coupling-report", "axis": "maintainability", "type": "computational", "cadence": "planning", "status": "partial", "wired_at": ".claude/skills/code-map/SKILL.md", "signal": "hubs, cycles, instability, dead-code candidates", "description": "AST-derived coupling/dead-code report. Discovery-only — informational, not enforced." },
+    { "id": "modularity-review", "axis": "maintainability", "type": "inferential", "cadence": "drift", "status": "planned", "wired_at": null, "gap_ref": "G6", "signal": "semantic duplication, misplaced responsibility, argument clumps", "description": "Khononov-style inferential modularity review grounded in coupling-report output." },
+    { "id": "layer-imports", "axis": "architecture", "type": "computational", "cadence": "session", "status": "active", "wired_at": ".claude/hooks/lib/layers.js", "signal": "upward layer-import violations", "description": "One-way layered import enforcement on every write and at pre-commit. Horizontal layers only — no vertical bounded-context rule (gap G8)." },
+    { "id": "cycle-detection", "axis": "architecture", "type": "computational", "cadence": "planning", "status": "partial", "wired_at": ".claude/skills/code-map/SKILL.md", "gap_ref": "G8", "signal": "import cycles (SCCs)", "description": "Cycles are reported in coupling-report.md but not enforced as a build failure." },
+    { "id": "bounded-context-rules", "axis": "architecture", "type": "computational", "cadence": "session", "status": "planned", "wired_at": null, "gap_ref": "G8", "signal": "cross-module boundary violations", "description": "dependency-cruiser/ArchUnit-style vertical boundary rules (e.g. billing/ may not import user/)." },
+    { "id": "api-schema-validation", "axis": "architecture", "type": "computational", "cadence": "integration", "status": "active", "wired_at": ".claude/scripts/validate-contract.js", "signal": "API response/shape violations", "description": "Sprint-contract + api-contracts.schema.json validation; evaluator Layer 1 checks live responses." },
+    { "id": "api-contract-drift", "axis": "architecture", "type": "computational", "cadence": "commit", "status": "planned", "wired_at": null, "gap_ref": "G12", "signal": "breaking changes to existing API consumers", "description": "oasdiff between before/after OpenAPI specs. Referenced in keeping-refactors-pure but never wired as a gate." },
+    { "id": "perf-ratchet", "axis": "architecture", "type": "hybrid", "cadence": "integration", "status": "active", "wired_at": ".claude/scripts/perf-baseline.js", "signal": "p95 latency regression vs baseline", "description": "Read-endpoint p95 ratchet; regression FAILs, absolute-budget overrun WARNs." },
+    { "id": "unit-tests", "axis": "behaviour", "type": "computational", "cadence": "commit", "status": "active", "wired_at": ".claude/git-hooks/pre-commit", "signal": "failing tests", "description": "pytest/vitest/jest at /auto Gate 1 and pre-commit." },
+    { "id": "eval-api", "axis": "behaviour", "type": "computational", "cadence": "integration", "status": "active", "wired_at": ".claude/agents/evaluator.md", "signal": "API contract failures against running app", "description": "Evaluator Layer 1: curl + jsonschema against the live application." },
+    { "id": "eval-playwright", "axis": "behaviour", "type": "hybrid", "cadence": "integration", "status": "active", "wired_at": ".claude/agents/evaluator.md", "signal": "broken user flows", "description": "Evaluator Layer 2: Playwright browser interaction with semantic selectors." },
+    { "id": "eval-design-critic", "axis": "behaviour", "type": "inferential", "cadence": "integration", "status": "active", "wired_at": ".claude/agents/design-critic.md", "signal": "weak frontend quality (design/originality/craft/functionality)", "description": "Evaluator Layer 3 vision scoring (Full mode); secondary GAN loop with plateau detection." },
+    { "id": "diff-review", "axis": "behaviour", "type": "inferential", "cadence": "commit", "status": "active", "wired_at": ".claude/agents/diff-reviewer.md", "signal": "logic errors, missing edge cases, contract breaks", "description": "Fresh-context correctness review (reads only the diff, never the builder's conversation)." },
+    { "id": "security-review", "axis": "behaviour", "type": "inferential", "cadence": "commit", "status": "active", "wired_at": ".claude/agents/security-reviewer.md", "signal": "OWASP Top 10 findings + dependency CVEs", "description": "Adversarial find-then-refute review + npm audit. Boundary-gated in /gate. Inferential only — no computational SAST (gap G3)." },
+    { "id": "secret-scan", "axis": "behaviour", "type": "computational", "cadence": "session", "status": "partial", "wired_at": ".claude/hooks/lib/secrets.js", "gap_ref": "G3", "signal": "credential-shaped strings in inserted content", "description": "Pre-write secret scan of inserted content. No full-history secrets scan (GitLeaks) and no Semgrep SAST." },
+    { "id": "sast", "axis": "behaviour", "type": "computational", "cadence": "commit", "status": "planned", "wired_at": null, "gap_ref": "G3", "signal": "known vulnerable code patterns", "description": "Semgrep/Bandit computational SAST, boundary-gated, on top of the inferential security review." },
+    { "id": "accessibility", "axis": "behaviour", "type": "computational", "cadence": "integration", "status": "partial", "wired_at": ".claude/skills/evaluate/SKILL.md", "gap_ref": "G12", "signal": "axe/WCAG violations", "description": "axe-core via Playwright, but only when the sprint contract opts in — not a default gate on UI stories." },
+    { "id": "grounding-check", "axis": "traceability", "type": "computational", "cadence": "planning", "status": "active", "wired_at": ".claude/skills/brd/scripts/grounding-check.js", "signal": "net-new or dropped requirements vs FRD", "description": "Deterministic hard block: the BRD may only contain content traced to the FRD or the clarification log." },
+    { "id": "trace-check", "axis": "traceability", "type": "computational", "cadence": "planning", "status": "active", "wired_at": ".claude/scripts/trace-check.js", "signal": "untraced stories, dropped BRs, orphan/uncovered tests", "description": "Deterministic hard block at spec (story vs BRD) and test (case vs AC + obligation)." },
+    { "id": "constraints-extract", "axis": "traceability", "type": "computational", "cadence": "planning", "status": "active", "wired_at": ".claude/scripts/constraints-extract.js", "signal": "schema obligations without a negative test", "description": "Mines minLength/required/enum from design schemas into test obligations." },
+    { "id": "plan-confidence", "axis": "traceability", "type": "hybrid", "cadence": "planning", "status": "active", "wired_at": ".claude/scripts/plan-confidence.js", "signal": "low-confidence plan band", "description": "Confidence-gated planning before execution." },
+    { "id": "seam-confidence", "axis": "traceability", "type": "computational", "cadence": "planning", "status": "active", "wired_at": ".claude/scripts/seam-confidence.js", "signal": "no clean cut-point for a brownfield change", "description": "Stops or surfaces at a gate when no safe seam exists for the goal." }
+  ],
+  "drift_sensors_planned": {
+    "gap_ref": "G2",
+    "note": "The 'drift' cadence is the article's third column (repeatedly, slower, outside the change lifecycle). Almost entirely empty today. Runners exist (coupling-report, mutation-smoke, dead-code candidates) and scheduling primitives exist (/schedule, /loop, scheduled_tasks.lock); they are simply not wired into a recurring drift job.",
+    "candidates": [
+      "coupling/hub/cycle delta vs last snapshot",
+      "dead-code accumulation delta",
+      "dependency freshness + advisory audit (npm/pip)",
+      "design-vs-code drift (needs REASONS Canvas sync, G4)",
+      "runtime SLO / error-rate / latency regression (needs app observability, G9)"
+    ],
+    "existing_drift_like": [
+      { "id": "upstream-watch", "wired_at": ".claude/scripts/upstream-watch.js", "note": "Watches the harness's OWN upstream (anthropics/claude-code), not the product codebase." }
+    ]
+  }
+}
