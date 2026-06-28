@@ -75,3 +75,20 @@ test('no traffic -> exit 2 (WARN)', () => {
   assert.strictEqual(code, 2);
   assert.strictEqual(verdict.verdict, 'warn');
 });
+
+// Wiring assertions (Task 3 / G9)
+const rd = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+
+test('G9: evaluate documents the SLO step P4 and slo failure_layer', () => {
+  const e = rd('.claude/skills/evaluate/SKILL.md');
+  assert.ok(/slo-check\.js/.test(e), 'evaluate must invoke slo-check.js');
+  assert.ok(/failure_layer:\s*"?slo"?/.test(e), 'evaluate must define the slo failure layer');
+  const ev = rd('.claude/agents/evaluator.md');
+  assert.ok(/slo/i.test(ev) && /error-rate|error_rate/i.test(ev),
+    'evaluator KEY RULES must mention the SLO error-rate gate');
+});
+
+test('G9: slo npm script is wired', () => {
+  const pkg = JSON.parse(rd('package.json'));
+  assert.strictEqual(pkg.scripts.slo, 'node .claude/scripts/slo-check.js');
+});
