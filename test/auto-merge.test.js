@@ -64,3 +64,16 @@ test('enableAutoMerge: runner error falls back to not-enabled (no throw)', () =>
   assert.strictEqual(r.enabled, false);
   assert.match(r.reason, /not allowed/);
 });
+
+test('isRealPrUrl recognizes canonical PR URLs only', () => {
+  assert.strictEqual(isRealPrUrl('https://github.com/owner/repo/pull/7'), true);
+  assert.strictEqual(isRealPrUrl('https://github.com/owner/repo'), false);
+  assert.strictEqual(isRealPrUrl('not-a-url'), false);
+});
+
+test('enableAutoMerge refuses an unparseable PR slug when expectedSlug is set (no gh call)', () => {
+  const calls = [];
+  const r = enableAutoMerge('https://h:x/o/r/pull/1', { runner: (c, a) => { calls.push(a); }, expectedSlug: 'h/o/r' });
+  assert.strictEqual(r.enabled, false);
+  assert.strictEqual(calls.length, 0);
+});

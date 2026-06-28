@@ -49,8 +49,8 @@ function enableAutoMerge(prUrl, opts = {}) {
   const { runner = defaultRunner, expectedSlug = null, method = 'merge' } = opts;
   if (!isRealPrUrl(prUrl)) return { enabled: false, reason: 'no PR to merge' };
   const prSlug = repoSlugFromPrUrl(prUrl);
-  if (expectedSlug && prSlug && prSlug !== expectedSlug) {
-    return { enabled: false, reason: `PR repo ${prSlug} does not match ${expectedSlug}` };
+  if (expectedSlug && prSlug !== expectedSlug) {
+    return { enabled: false, reason: `PR repo ${prSlug || 'unknown'} does not match ${expectedSlug}` };
   }
   try {
     runner('gh', ['pr', 'merge', '--auto', `--${method}`, '--', prUrl]);
