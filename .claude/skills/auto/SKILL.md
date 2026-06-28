@@ -494,6 +494,14 @@ Spawn evaluator to verify `architecture_checks` from the sprint contract:
 - All files in `files_must_exist` must be present on disk.
 - Schema validation against `specs/design/api-contracts.schema.json` if specified.
 
+Also run the **import-cycle ratchet** (gap G8) when a code-graph exists (it does in brownfield builds; `/code-map` or the graph-refresh hook keeps it fresh):
+
+```bash
+node .claude/scripts/cycle-gate.js   # exit 1 if the group ADDED an import cycle
+```
+
+Cycles are a monotonic ratchet like coverage — the count may only stay equal or drop. A new cycle **BLOCKS** with the offending cycle named; removing cycles ratchets the baseline (`.claude/state/cycle-baseline.txt`) down. No graph → skipped loudly, never silently passed.
+
 ### Gate 5 — Evaluator (API + Playwright)
 
 Spawn evaluator with the full sprint contract. The evaluator runs:

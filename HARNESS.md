@@ -60,7 +60,7 @@ Status: ✅ active · 🟡 partial (limited/opt-in/report-only) · ⛔ planned (
 
 | | Guides | Sensors |
 |---|---|---|
-| | `architecture.md` · `project-manifest.json#architecture` (layer config) | ✅ layered-import check (every write) — *horizontal only* · ✅ API schema validation · ✅ perf ratchet (p95) · ✅ **drift: new cycles / unstable hubs** (`drift-report.js`) · ✅ **drift: design-vs-code** (Canvas `Governs` vs disk, G4) · ✅ **vertical bounded-context rules** (`contexts.js`, opt-in, G8) · 🟡 cycle detection *(reported at change-time, not enforced — G8 cycle-fail pending)* · ⛔ API contract-drift `oasdiff` gate (G12) · ⛔ observability conventions in generated app (G9) |
+| | `architecture.md` · `project-manifest.json#architecture` (layer config) | ✅ layered-import check (every write) — *horizontal only* · ✅ API schema validation · ✅ perf ratchet (p95) · ✅ **drift: new cycles / unstable hubs** (`drift-report.js`) · ✅ **drift: design-vs-code** (Canvas `Governs` vs disk, G4) · ✅ **vertical bounded-context rules** (`contexts.js`, opt-in, G8) · ✅ **import-cycle ratchet** (`cycle-gate.js`, G8) · ⛔ API contract-drift `oasdiff` gate (G12) · ⛔ observability conventions in generated app (G9) |
 
 ### Behaviour
 
@@ -91,7 +91,7 @@ The point of a registry is that gaps are explicit. Open items, by priority (full
 - ~~**G5 (P1)** — sensor messages are generic, not per-rule LLM-optimised.~~ ✅ **done** — `lib/sensor-guidance` enriches `verify-on-save` lint/type blocks with a per-rule fix line + the threshold-bump-with-justification valve.
 - ~~**G6 (P1)** — no inferential modularity review on top of the coupling report.~~ ✅ **done** — `modularity-pack.js` grounds a `modularity-reviewer` agent (pre-classifying legit hubs so it doesn't flag factories/schemas); runs in `/brownfield --full`.
 - ~~**G7 (P1)** — `mutation-smoke` exists but isn't a `/auto` ratchet gate.~~ ✅ **done** — diff-scoped mutation gate enforced by pre-commit during `/auto`; survivors below threshold BLOCK with file:line + the exact flip. "tests pass" now implies "tests bite."
-- **G8 (P2)** — ✅ vertical bounded-context rules shipped (`contexts.js`, opt-in); cycle-fail enforcement still pending.
+- ~~**G8 (P2)**~~ ✅ **done** — vertical bounded-context rules (`contexts.js`) + import-cycle ratchet (`cycle-gate.js`).
 - **G9–G12 (P2)** — app observability, harness templates per topology, a harness-coverage metric, and behaviour extras (default a11y, contract-drift, flake detection).
 
 ## How to extend the harness
