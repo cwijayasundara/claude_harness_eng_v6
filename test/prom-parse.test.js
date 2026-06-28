@@ -42,3 +42,28 @@ test('histogramP95 returns ms via bucket quantile', () => {
 test('histogramP95 returns null with no buckets', () => {
   assert.strictEqual(histogramP95([]), null);
 });
+
+const MULTI = `http_request_duration_seconds_bucket{route="/a",le="0.1"} 10
+http_request_duration_seconds_bucket{route="/a",le="0.5"} 30
+http_request_duration_seconds_bucket{route="/a",le="1.0"} 50
+http_request_duration_seconds_bucket{route="/a",le="+Inf"} 50
+http_request_duration_seconds_count{route="/a"} 50
+http_request_duration_seconds_bucket{route="/b",le="0.1"} 0
+http_request_duration_seconds_bucket{route="/b",le="0.5"} 30
+http_request_duration_seconds_bucket{route="/b",le="1.0"} 50
+http_request_duration_seconds_bucket{route="/b",le="+Inf"} 50
+http_request_duration_seconds_count{route="/b"} 50`;
+
+test('histogramP95 aggregates buckets by le across label sets (fractional interp)', () => {
+  // aggregated cumulative: le0.1=10, le0.5=60, le1.0=100, count=100; rank=95
+  // crosses in (0.5,1.0]: frac=(95-60)/(100-60)=0.875 -> (0.5+0.5*0.875)*1000 = 937.5 ms
+  const p95 = histogramP95(parseProm(MULTI));
+  assert.ok(Math.abs(p95 - 937.5) < 1, `expected ~937.5ms, got ${p95}`);
+});
+
+test('parseProm ignores optional trailing timestamp token', () => {
+  const ts = 'http_requests_total{status="200"} 42 1699999999';
+  const s = parseProm(ts);
+  assert.strictEqual(s.length, 1);
+  assert.strictEqual(s[0].value, 42);
+});

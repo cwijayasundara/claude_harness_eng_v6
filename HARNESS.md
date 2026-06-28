@@ -44,7 +44,7 @@ planning ──► session ──► commit ──► integration ──► drif
 - **session** — fast computational sensors on every write (`verify-on-save`, `pre-write-gate`); self-correction inside one agent loop.
 - **commit** — `git pre-commit` + the on-demand `/gate`; the expensive inferential reviews run here, boundary-gated.
 - **integration** — the GAN evaluator runs the app: API · Playwright · vision · security · perf.
-- **drift** — recurring checks *outside* the change lifecycle that catch accumulated decay. The architecture / dead-code / dependency-CVE signals are live via `drift-report.js` (`npm run drift`; wire to `/schedule` or CI); two more (design-vs-code, runtime SLO) remain blocked on G4/G9.
+- **drift** — recurring checks *outside* the change lifecycle that catch accumulated decay. The architecture / dead-code / dependency-CVE signals are live via `drift-report.js` (`npm run drift`; wire to `/schedule` or CI); one more (design-vs-code) remains blocked on G4.
 
 ## The matrix — guides × sensors, by axis
 
@@ -60,7 +60,7 @@ Status: ✅ active · 🟡 partial (limited/opt-in/report-only) · ⛔ planned (
 
 | | Guides | Sensors |
 |---|---|---|
-| | `architecture.md` · `project-manifest.json#architecture` (layer config) · ✅ **observability conventions** (RED metrics + /metrics scaffolded into generated server apps, G9) | ✅ layered-import check (every write) — *horizontal only* · ✅ API schema validation · ✅ perf ratchet (p95) · ✅ **drift: new cycles / unstable hubs** (`drift-report.js`) · ✅ **drift: design-vs-code** (Canvas `Governs` vs disk, G4) · ✅ **vertical bounded-context rules** (`contexts.js`, opt-in, G8) · ✅ **import-cycle ratchet** (`cycle-gate.js`, G8) · ⛔ API contract-drift `oasdiff` gate (G12) · ⛔ runtime SLO/error-rate drift sensor (G9 sensor-half) |
+| | `architecture.md` · `project-manifest.json#architecture` (layer config) · ✅ **observability conventions** (RED metrics + /metrics scaffolded into generated server apps, G9) | ✅ layered-import check (every write) — *horizontal only* · ✅ API schema validation · ✅ perf ratchet (p95) · ✅ **drift: new cycles / unstable hubs** (`drift-report.js`) · ✅ **drift: design-vs-code** (Canvas `Governs` vs disk, G4) · ✅ **vertical bounded-context rules** (`contexts.js`, opt-in, G8) · ✅ **import-cycle ratchet** (`cycle-gate.js`, G8) · ⛔ API contract-drift `oasdiff` gate (G12) |
 
 ### Behaviour
 
@@ -85,7 +85,7 @@ The harness improves itself between runs: `.claude/program.md` (the steering inp
 The point of a registry is that gaps are explicit. Open items, by priority (full detail in the gap analysis):
 
 - **G1** *(this file)* — make the harness legible. ✅ done by `HARNESS.md` + `harness-manifest.json`.
-- ~~**G2 (P0)** — no continuous **drift** sensors.~~ ✅ **done** — `drift-report.js` diffs architecture (cycles/hubs), dead-code (orphans), and dependency CVEs against a committed snapshot, flagging only *new* regressions; exit 1 on drift for cron/CI/`/schedule`. (Design-vs-code and runtime-SLO drift remain blocked on G4/G9.)
+- ~~**G2 (P0)** — no continuous **drift** sensors.~~ ✅ **done** — `drift-report.js` diffs architecture (cycles/hubs), dead-code (orphans), and dependency CVEs against a committed snapshot, flagging only *new* regressions; exit 1 on drift for cron/CI/`/schedule`. (Design-vs-code drift remains blocked on G4.)
 - ~~**G3 (P0)** — no computational security sensors.~~ ✅ **done** — baseline secrets enforced at pre-write + commit; gitleaks/semgrep/npm+pip-audit wired into `/gate` via `security-scan.js`, degrading loudly when a tool is unprovisioned.
 - ~~**G4 (P1)** — no SPDD-style living, code-synced design artifact.~~ ✅ **done (v1)** — `/design` emits a REASONS Canvas (`reasons-canvas.md`) with a machine-read `Governs` list; a structure gate validates it, and the drift monitor flags Canvas↔code drift. Full bidirectional regeneration (`/sync`) deferred by choice — detection + "fix-prompt-first" discipline shipped.
 - ~~**G5 (P1)** — sensor messages are generic, not per-rule LLM-optimised.~~ ✅ **done** — `lib/sensor-guidance` enriches `verify-on-save` lint/type blocks with a per-rule fix line + the threshold-bump-with-justification valve.
