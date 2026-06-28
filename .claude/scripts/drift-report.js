@@ -14,10 +14,12 @@
 const fs = require('fs');
 const path = require('path');
 const drift = require('../hooks/lib/drift');
+const canvas = require('../hooks/lib/canvas');
 const { runDeps } = require('./security-scan');
 
 const REPO = process.cwd();
 const GRAPH = path.join(REPO, 'specs', 'brownfield', 'code-graph.json');
+const CANVAS = path.join(REPO, 'specs', 'design', 'reasons-canvas.md');
 const OUT_DIR = path.join(REPO, 'specs', 'drift');
 const SNAPSHOT = path.join(OUT_DIR, 'drift-snapshot.json');
 
@@ -33,6 +35,16 @@ function depCveKeys(cwd) {
   }
 }
 
+// Governed paths the REASONS Canvas still claims but that no longer exist.
+function canvasMissing(cwd) {
+  try {
+    const governs = canvas.extractGoverns(fs.readFileSync(CANVAS, 'utf8'));
+    return canvas.canvasMissingPaths(governs, (rel) => fs.existsSync(path.join(cwd, rel)));
+  } catch (_) {
+    return [];
+  }
+}
+
 function writeOutputs(report, payload, snapshot) {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   fs.writeFileSync(path.join(OUT_DIR, 'drift-report.md'), report);
@@ -43,7 +55,7 @@ function writeOutputs(report, payload, snapshot) {
 function currentMetrics(graph, prev) {
   let metrics = drift.extractMetrics(graph || {});
   if (!graph) metrics = drift.carryForwardArch(metrics, prev); // don't reset arch baseline on a graphless run
-  return drift.withDepCves(metrics, depCveKeys(REPO));
+  return drift.withCanvasDrift(drift.withDepCves(metrics, depCveKeys(REPO)), canvasMissing(REPO));
 }
 
 function main() {

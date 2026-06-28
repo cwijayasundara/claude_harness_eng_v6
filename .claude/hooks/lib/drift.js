@@ -42,6 +42,12 @@ function withDepCves(metrics, keys) {
   return { ...metrics, depCves: [...new Set(keys || [])].sort() };
 }
 
+// Design-vs-code drift (gap G4): governed source paths the REASONS Canvas still
+// claims but that no longer exist on disk — the design references vanished code.
+function withCanvasDrift(metrics, missing) {
+  return { ...metrics, canvasDrift: [...new Set(missing || [])].sort() };
+}
+
 // When the graph is unavailable this run, keep the prior architecture baseline
 // instead of resetting it to zero (which would flag everything as new drift
 // once the graph returns). Dependency signals still update.
@@ -68,6 +74,7 @@ function diffSnapshots(prev, curr) {
     newUnstableHubs: newItems(prev && prev.unstableHubs, curr.unstableHubs),
     newOrphans: newItems(prev && prev.orphans, curr.orphans),
     newDepCves: newItems(prev && prev.depCves, curr.depCves),
+    newCanvasDrift: newItems(prev && prev.canvasDrift, curr.canvasDrift),
     fileDelta: curr.files - ((prev && prev.files) || 0),
     edgeDelta: curr.edges - ((prev && prev.edges) || 0),
   };
@@ -76,7 +83,8 @@ function diffSnapshots(prev, curr) {
 function hasRegressed(diff) {
   if (diff.baseline) return false; // a first run is a baseline, never drift
   return diff.newCycles.length > 0 || diff.newUnstableHubs.length > 0 ||
-    diff.newOrphans.length > 0 || diff.newDepCves.length > 0;
+    diff.newOrphans.length > 0 || diff.newDepCves.length > 0 ||
+    diff.newCanvasDrift.length > 0;
 }
 
 function section(title, items) {
@@ -95,13 +103,15 @@ function renderDriftReport(diff, curr) {
     .concat(section('Newly-unstable hubs', diff.newUnstableHubs))
     .concat(section('New dead-code candidates', diff.newOrphans))
     .concat(section('New dependency CVEs', diff.newDepCves))
+    .concat(section('New design-vs-code drift (Canvas governs missing files)', diff.newCanvasDrift))
     .concat([`_Totals: ${curr.files} files, ${curr.edges} edges, ${curr.cycles.length} cycles, ` +
-      `${curr.orphans.length} orphans, ${curr.depCves.length} dep-alerts ` +
+      `${curr.orphans.length} orphans, ${curr.depCves.length} dep-alerts, ` +
+      `${(curr.canvasDrift || []).length} canvas-drift ` +
       `(Δfiles ${diff.fileDelta}, Δedges ${diff.edgeDelta})._`, ''])
     .join('\n');
 }
 
 module.exports = {
-  extractMetrics, withDepCves, carryForwardArch, diffSnapshots,
+  extractMetrics, withDepCves, withCanvasDrift, carryForwardArch, diffSnapshots,
   hasRegressed, renderDriftReport, cycleKey, unstableHubIds,
 };

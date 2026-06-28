@@ -29,7 +29,7 @@ test('manifest registers the three active drift sensors at the drift cadence', (
   const m = JSON.parse(read('harness-manifest.json'));
   const driftSensors = m.sensors.filter((s) => s.cadence === 'drift' && s.status === 'active');
   const ids = driftSensors.map((s) => s.id).sort();
-  assert.deepStrictEqual(ids, ['drift-architecture', 'drift-dead-code', 'drift-deps']);
+  assert.deepStrictEqual(ids, ['drift-architecture', 'drift-dead-code', 'drift-deps', 'drift-design-code']);
   assert.ok(driftSensors.every((s) => s.wired_at === '.claude/scripts/drift-report.js'));
 });
 

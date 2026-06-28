@@ -101,6 +101,8 @@ In a single message, invoke both agents using the Agent tool. Do not wait for th
 > 7. **component-map.md** — A table mapping every ready story ID (from specs/stories/) to the specific files that will be created or modified to implement it. Include `Produces:` and `Consumes:` notes for cross-story interfaces, and identify the owning story for every shared file.
 >
 > 8. **deployment.md** — Deployment architecture: environments (dev/staging/prod), CI/CD pipeline steps, infrastructure-as-code approach, secrets management strategy, rollback procedure.
+>
+> 9. **reasons-canvas.md** — The SPDD **REASONS Canvas**: the design's single narrative spine, consolidating the above into eight sections — **R**equirements, **E**ntities, **A**pproach, **S**tructure, **O**perations, **N**orms, **S**afeguards, and **Governs**. Follow `.claude/skills/design/references/reasons-canvas-template.md` exactly. The `Entities` section marks each entity **existing** (citing a `specs/brownfield/code-graph.json` node) or **new** when that graph is present, so the design extends real code. The `Governs` section is a machine-read bullet list of every source path this design creates or modifies (derive it from `component-map.md`) — the drift monitor uses it to detect Canvas↔code drift, so it must be accurate.
 
 ---
 
@@ -147,6 +149,16 @@ node .claude/scripts/trace-check.js \
 
 `specs/reviews/design-grounding.json` is a **hard gate independent of the rubric**: any `net_new` (component tracing to no story) or `dropped` (story no component realizes) blocks. Resolve before Step 2. (Skip when `story-traces.json` does not exist.)
 
+Also run the **Canvas structure gate** (deterministic, always — the Canvas ships in every design):
+
+```bash
+node .claude/scripts/validate-canvas.js specs/design/reasons-canvas.md
+```
+
+A non-zero exit (a missing REASONS section, or a `Governs` list with no source paths) **BLOCKS** — fix the Canvas before Step 2. The `Governs` list must be non-empty so the drift monitor can detect Canvas↔code drift later.
+
+> **Living artifact — fix the prompt first (gap G4).** The Canvas is not write-once. When a later `/change` or `/refactor` alters behavior or moves code, update `reasons-canvas.md` *with the same change* — change the design, then the code — and keep its `Governs` list accurate. The G2 drift monitor (`drift-report.js`) flags governed paths that vanished as **design-vs-code drift**, so a Canvas left to rot will surface in the next drift run rather than silently misleading the next reader.
+
 ### Step 2 — Phase Evaluation Gate
 
 After both agents (planner + generator) complete, spawn the `evaluator` agent (artifact mode). This replaces and extends the previous field-shape validation.
@@ -155,7 +167,7 @@ After both agents (planner + generator) complete, spawn the `evaluator` agent (a
 
 Spawn Agent with subagent_type="evaluator" and prompt:
 - Phase: design
-- Artifacts: specs/design/architecture.md, specs/design/api-contracts.md, specs/design/api-contracts.schema.json, specs/design/data-models.md, specs/design/data-models.schema.json, specs/design/folder-structure.md, specs/design/component-map.md, specs/design/deployment.md, all specs/design/mockups/*.html files
+- Artifacts: specs/design/architecture.md, specs/design/api-contracts.md, specs/design/api-contracts.schema.json, specs/design/data-models.md, specs/design/data-models.schema.json, specs/design/folder-structure.md, specs/design/component-map.md, specs/design/deployment.md, specs/design/reasons-canvas.md, all specs/design/mockups/*.html files
 - Upstream: specs/stories/ (all story files; and specs/stories/story-traces.json when present)
 - Grounding verdict: specs/reviews/design-grounding.json when present (already PASS from Step 1.9 — anchor the traceability criterion to it)
 - Rubric: Read .claude/templates/phase-eval-rubrics.json, key "design"
@@ -197,6 +209,7 @@ The `.schema.json` files enable automated validation in later pipeline stages (t
 | `specs/design/data-models.schema.json` | JSON Schema for all data entities |
 | `specs/design/folder-structure.md` | Proposed directory tree with annotations |
 | `specs/design/component-map.md` | Story ID → implementation files mapping |
+| `specs/design/reasons-canvas.md` | SPDD REASONS Canvas — the design's narrative spine + machine-read `Governs` list (drift source of truth) |
 | `specs/design/design-traces.json` | Trace spine: each component → story id(s) |
 | `specs/reviews/design-grounding.json` | (when story-traces exists) deterministic story-coverage verdict |
 | `specs/design/deployment.md` | Deployment architecture and CI/CD plan |

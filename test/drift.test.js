@@ -76,6 +76,16 @@ test('carryForwardArch preserves the architecture baseline when the graph is abs
   assert.deepStrictEqual(carried.cycles, prev.cycles);
 });
 
+test('a governed path that vanished is flagged as design-vs-code drift (G4)', () => {
+  const base = drift.extractMetrics(graph());
+  const prev = drift.withCanvasDrift(drift.withDepCves(base, []), []);
+  const curr = drift.withCanvasDrift(drift.withDepCves(base, []), ['src/billing/models.py']);
+  const d = drift.diffSnapshots(prev, curr);
+  assert.deepStrictEqual(d.newCanvasDrift, ['src/billing/models.py']);
+  assert.strictEqual(drift.hasRegressed(d), true);
+  assert.match(drift.renderDriftReport(d, curr), /design-vs-code drift.*1/s);
+});
+
 test('renderDriftReport is legible and reflects regression state', () => {
   const prev = drift.withDepCves(drift.extractMetrics(graph()), []);
   const g2 = graph();

@@ -60,13 +60,13 @@ Status: ✅ active · 🟡 partial (limited/opt-in/report-only) · ⛔ planned (
 
 | | Guides | Sensors |
 |---|---|---|
-| | `architecture.md` · `project-manifest.json#architecture` (layer config) | ✅ layered-import check (every write) — *horizontal only* · ✅ API schema validation · ✅ perf ratchet (p95) · ✅ **drift: new cycles / unstable hubs** (`drift-report.js`) · 🟡 cycle detection *(reported at change-time, not enforced)* · ⛔ vertical bounded-context rules (G8) · ⛔ API contract-drift `oasdiff` gate (G12) · ⛔ observability conventions in generated app (G9) |
+| | `architecture.md` · `project-manifest.json#architecture` (layer config) | ✅ layered-import check (every write) — *horizontal only* · ✅ API schema validation · ✅ perf ratchet (p95) · ✅ **drift: new cycles / unstable hubs** (`drift-report.js`) · ✅ **drift: design-vs-code** (Canvas `Governs` vs disk, G4) · 🟡 cycle detection *(reported at change-time, not enforced)* · ⛔ vertical bounded-context rules (G8) · ⛔ API contract-drift `oasdiff` gate (G12) · ⛔ observability conventions in generated app (G9) |
 
 ### Behaviour
 
 | | Guides | Sensors |
 |---|---|---|
-| | BRD/spec/design + acceptance criteria + sprint contracts · legacy-preservation skills · ⛔ REASONS Canvas living artifact (G4) | ✅ unit tests · ✅ evaluator Layer 1 API · ✅ evaluator Layer 2 Playwright · ✅ evaluator Layer 3 vision · ✅ `diff-reviewer` (correctness) · ✅ `security-reviewer` (OWASP) · ✅ secret scan (baseline regex, pre-write + commit; gitleaks tier at /gate) · ✅ SAST (semgrep, /gate) · ✅ dep-audit (npm/pip, /gate) · ✅ **drift: new dependency CVEs** (`drift-report.js`) · 🟡 axe/WCAG *(opt-in only, G12)* |
+| | BRD/spec/design + acceptance criteria + sprint contracts · legacy-preservation skills · ✅ **REASONS Canvas** (living artifact + `Governs`, G4) | ✅ unit tests · ✅ evaluator Layer 1 API · ✅ evaluator Layer 2 Playwright · ✅ evaluator Layer 3 vision · ✅ `diff-reviewer` (correctness) · ✅ `security-reviewer` (OWASP) · ✅ secret scan (baseline regex, pre-write + commit; gitleaks tier at /gate) · ✅ SAST (semgrep, /gate) · ✅ dep-audit (npm/pip, /gate) · ✅ **drift: new dependency CVEs** (`drift-report.js`) · 🟡 axe/WCAG *(opt-in only, G12)* |
 
 ### Traceability *(harness extension — a strength)*
 
@@ -87,7 +87,7 @@ The point of a registry is that gaps are explicit. Open items, by priority (full
 - **G1** *(this file)* — make the harness legible. ✅ done by `HARNESS.md` + `harness-manifest.json`.
 - ~~**G2 (P0)** — no continuous **drift** sensors.~~ ✅ **done** — `drift-report.js` diffs architecture (cycles/hubs), dead-code (orphans), and dependency CVEs against a committed snapshot, flagging only *new* regressions; exit 1 on drift for cron/CI/`/schedule`. (Design-vs-code and runtime-SLO drift remain blocked on G4/G9.)
 - ~~**G3 (P0)** — no computational security sensors.~~ ✅ **done** — baseline secrets enforced at pre-write + commit; gitleaks/semgrep/npm+pip-audit wired into `/gate` via `security-scan.js`, degrading loudly when a tool is unprovisioned.
-- **G4 (P1)** — no SPDD-style living, code-synced design artifact (REASONS Canvas + `sync`).
+- ~~**G4 (P1)** — no SPDD-style living, code-synced design artifact.~~ ✅ **done (v1)** — `/design` emits a REASONS Canvas (`reasons-canvas.md`) with a machine-read `Governs` list; a structure gate validates it, and the drift monitor flags Canvas↔code drift. Full bidirectional regeneration (`/sync`) deferred by choice — detection + "fix-prompt-first" discipline shipped.
 - **G5 (P1)** — sensor messages are generic, not per-rule LLM-optimised ("positive prompt injection").
 - **G6 (P1)** — no inferential modularity review on top of the coupling report.
 - ~~**G7 (P1)** — `mutation-smoke` exists but isn't a `/auto` ratchet gate.~~ ✅ **done** — diff-scoped mutation gate enforced by pre-commit during `/auto`; survivors below threshold BLOCK with file:line + the exact flip. "tests pass" now implies "tests bite."
