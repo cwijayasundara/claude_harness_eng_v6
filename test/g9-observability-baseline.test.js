@@ -54,6 +54,10 @@ test('G9: FastAPI observability reference carries a concrete implementation', ()
     'must show the /metrics response');
   assert.ok(/Middleware/.test(f), 'must show the request middleware');
   assert.ok(/ContextVar|contextvars/.test(f), 'must show the contextvar log correlation');
+  assert.ok(/route\.matches/.test(f) && /Match\.FULL/.test(f),
+    'route template must be captured by re-matching app.routes (Match.FULL), not scope["route"]');
+  assert.ok(!/scope\.get\(['"]route['"]\)/.test(f),
+    'must not rely on scope["route"] (unset under BaseHTTPMiddleware)');
 });
 
 test('G9: generator is triggered to read the observability references', () => {

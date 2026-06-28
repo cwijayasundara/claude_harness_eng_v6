@@ -12,6 +12,7 @@ from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
+from starlette.routing import Match
 
 request_id_var: ContextVar[str] = ContextVar("request_id", default="-")
 
@@ -24,10 +25,12 @@ LATENCY = Histogram(
 
 
 def _route_template(request: Request) -> str:
-    # Route matching happens during call_next; the matched route is on the scope
-    # afterwards. Fall back to the raw path only if no route matched (404).
-    route = request.scope.get("route")
-    return getattr(route, "path", request.url.path)
+    # scope["route"] is not set by BaseHTTPMiddleware; re-match against the
+    # app's routes to recover the template (/users/{id}), never the raw path.
+    for route in request.app.routes:
+        if route.matches(request.scope)[0] == Match.FULL:
+            return route.path
+    return request.url.path  # no match (e.g. 404) — raw path is the only label available
 
 
 class MetricsMiddleware(BaseHTTPMiddleware):
@@ -43,6 +46,8 @@ class MetricsMiddleware(BaseHTTPMiddleware):
 async def metrics_endpoint(_request: Request) -> Response:
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 ```
+
+> **Note:** The `/metrics` route is itself instrumented by `MetricsMiddleware`, so scraping it will self-increment the request counters. This is a known, tolerable effect.
 
 Wire it in the app factory (`backend/app/main.py`):
 
