@@ -53,6 +53,7 @@ function parseBuildInvocation(input) {
   const result = resolveLane(input);
   if (result && result.valid !== false) {
     result.singlePr = tokenize(input).includes('--single-pr');
+    result.autoMerge = tokenize(input).includes('--auto-merge');
   }
   return result;
 }

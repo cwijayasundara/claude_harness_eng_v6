@@ -111,3 +111,15 @@ test('singlePr defaults to false', () => {
   const r = parseBuildInvocation('/build docs/prd.md --auto');
   assert.strictEqual(r.singlePr, false);
 });
+
+test('--auto-merge is surfaced without changing lane or prd', () => {
+  const r = parseBuildInvocation('/build docs/prd.md --auto --auto-merge');
+  assert.strictEqual(r.lane, 'auto');
+  assert.strictEqual(r.prdPath, 'docs/prd.md');
+  assert.strictEqual(r.autoMerge, true);
+});
+
+test('autoMerge defaults to false', () => {
+  const r = parseBuildInvocation('/build docs/prd.md --auto');
+  assert.strictEqual(r.autoMerge, false);
+});
