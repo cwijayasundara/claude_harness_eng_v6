@@ -61,3 +61,10 @@ test('G9: generator is triggered to read the observability references', () => {
   assert.ok(/observability-conventions\.md/.test(g), 'generator must point at the conventions reference');
   assert.ok(/observability\.enabled/.test(g), 'trigger must be gated on observability.enabled');
 });
+
+test('G9: deploy wires Prometheus scrape discovery when observability is enabled', () => {
+  const d = read('.claude/skills/deploy/SKILL.md');
+  assert.ok(/prometheus\.io\/scrape/.test(d), 'must document the scrape annotation');
+  assert.ok(/observability\.enabled/.test(d), 'scrape wiring must be gated on observability.enabled');
+  assert.ok(/metrics_path/.test(d), 'must point the scrape at the configured metrics_path');
+});

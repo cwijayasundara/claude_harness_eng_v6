@@ -60,6 +60,7 @@ Requirements:
 - No hardcoded passwords — all secrets come from environment variables.
 - Each service must have a `healthcheck` block with a realistic `test`, `interval`, `timeout`, and `retries`.
 - Use specific image tags (e.g., `postgres:16-alpine`), never `latest`.
+- **Observability (G9):** when `project-manifest.json#observability.enabled` is true, add Prometheus scrape-discovery labels to the backend service so any Prometheus can scrape it — `prometheus.io/scrape: "true"`, `prometheus.io/path: "<observability.metrics_path>"`, `prometheus.io/port: "<backend port>"`. Do not modify application source here; deploy only wires the service so the app's existing `/metrics` endpoint is discoverable.
 
 ### Step 4 — Generate Dockerfiles
 
