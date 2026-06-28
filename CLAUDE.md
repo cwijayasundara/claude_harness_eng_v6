@@ -105,5 +105,6 @@ Monitor cache hit rate like uptime. Telemetry is **off by default** (opt-in) —
 - `.claude/settings.json` — Hook config, permissions, enabled plugins
 - `.claude/workflows/` — Slot for dynamic workflows you author (each `.js` you add becomes a `/<name>` command). Ships empty; `/scaffold` copies the slot to target projects. See `.claude/workflows/README.md`
 - `design.md` — Full architecture reference (copied to target projects)
+- `HARNESS.md` + `harness-manifest.json` — Registry of the control system (guides × sensors across maintainability/architecture/behaviour/traceability). Read before adding or changing any gate/sensor/reviewer so the new control gets registered, not orphaned; keep the manifest honest (`node .claude/scripts/validate-harness-manifest.js`, enforced by `npm test`)
 - `README.md` — Installation and usage guide
 - `docs/prompting-standards.md` — How to author agent/skill prompts for the current models (read before editing any `.claude/agents/*` or `.claude/skills/*` prompt)
