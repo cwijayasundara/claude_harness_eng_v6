@@ -21,6 +21,7 @@ const { findImpureFiles } = require(path.join(__dirname, 'lib', 'refactor-purity
 const { validate: validateSchema } = require(path.join(__dirname, '..', 'hooks', 'lib', 'contract-schema'));
 const { baselineSecretFindings } = require(path.join(__dirname, '..', 'hooks', 'lib', 'security-scan'));
 const { secretScanExempt } = require(path.join(__dirname, '..', 'hooks', 'lib', 'secrets'));
+const { runMutationOnFiles, renderSurvivors } = require(path.join(__dirname, '..', 'hooks', 'lib', 'mutation-gate'));
 
 const SOURCE_EXTS = new Set(['.py', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
 const FLOOR = 80;
@@ -260,6 +261,38 @@ function detectJsRunner(projectDir) {
 const JS_TEST_RE = /\.(test|spec)\.[cm]?[jt]sx?$/;
 const JS_TEST_DIR_RE = /(^|\/)__tests__\/|(^|\/)tests?\//;
 
+// True when a sprint group is active — the mutation gate is a /auto ratchet
+// gate (gap G7), scoped to autonomous builds so it never surprises a manual
+// commit with N test-suite runs. Same signal the sprint-contract gate uses.
+function inAutoBuild(projectDir) {
+  try {
+    const progress = fs.readFileSync(path.join(projectDir, 'claude-progress.txt'), 'utf8');
+    const m = progress.match(/^current_group:\s*(.+)$/m);
+    return !!(m && m[1].trim());
+  } catch (_) {
+    return false;
+  }
+}
+
+// Mutation-smoke gate (gap G7): coverage proves lines ran; this proves a test
+// would FAIL if the changed logic broke. Diff-scoped to staged production source,
+// bounded by max-mutants. HARNESS_MUTATION_GATE=off disables.
+function checkMutation(projectDir, stagedSource) {
+  if ((process.env.HARNESS_MUTATION_GATE || '').toLowerCase() === 'off') return;
+  if (!inAutoBuild(projectDir)) return;
+  const { results, blocked } = runMutationOnFiles(stagedSource, projectDir, {});
+  for (const r of results) {
+    if (r.skipped) noteSkip(`Mutation-smoke (${r.lang})`, r.reason);
+  }
+  if (blocked.length === 0) return;
+  const detail = blocked.map((r) => renderSurvivors(r.survived)).filter(Boolean).join('\n');
+  fail(
+    `BLOCKED: mutation-smoke found tests that pass but don't bite (survivors):\n${detail}\n` +
+    'Fix: add an assertion that fails when the flipped operator above is applied — test the boundary ' +
+    '(off-by-one) or the false branch — then re-commit. HARNESS_MUTATION_GATE=off acknowledges the skip.\n'
+  );
+}
+
 function checkCoverageJs(projectDir, stagedJs) {
   if ((process.env.HARNESS_COVERAGE_GATE || '').toLowerCase() === 'off') return;
   // Only staged production JS/TS files trigger the gate (not test files).
@@ -314,6 +347,7 @@ try {
   checkTypescript(projectDir, stagedTs);
   checkCoverage(projectDir, stagedPy);
   checkCoverageJs(projectDir, stagedJs);
+  checkMutation(projectDir, stagedSource);
 } catch (err) {
   // A broken gate must not brick committing — but it must never fail open
   // silently either: a disabled gate is indistinguishable from a passing one.

@@ -7,6 +7,7 @@
     "certification": "node .claude/scripts/certification-report.js",
     "status": "node .claude/scripts/pipeline-status.js",
     "drift": "node .claude/scripts/drift-report.js",
+    "mutation": "node .claude/scripts/mutation-gate.js --staged",
     "test": "node --test test/*.test.js test/e2e/helpers/*.test.js",
     "build:chain": "node .claude/scripts/build-chain.js",
     "test:e2e": "node test/e2e/run-pack.js cert",

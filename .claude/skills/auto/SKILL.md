@@ -409,7 +409,7 @@ After the agent team completes, run the ratchet gate. The ratchet is monotonic: 
 |------|------|------|
 | 1. Unit tests (pytest, vitest) | Yes | Yes |
 | 2. Lint + types (ruff, mypy, tsc) | Yes | Yes |
-| 3. Coverage >= baseline | Yes | Yes |
+| 3. Coverage >= baseline + mutation-smoke (test adequacy) | Yes | Yes |
 | 4. Architecture (files exist, schema validation) | Yes | Yes |
 | 5. Evaluator (API + Playwright vs running Docker) | Yes | Yes |
 | 6. Design critic (vision scoring, GAN loop) | Yes | No |
@@ -479,6 +479,14 @@ Exit 1 (per-diff coverage below the floor) **FAILS the gate** even when the repo
 - **Floor: 80%.** No commit may drop below this — repo-wide AND on the group's diff. The ratchet gate BLOCKS.
 - **Target: 100%.** Every line the agent wrote must be verified by a test. At 100%, any uncovered line is an unambiguous signal of missing verification.
 - **TDD enforced:** Tests are written BEFORE implementation. The generator and teammates must follow the red-green-refactor cycle: write failing test → implement → verify pass → commit.
+
+**Mutation smoke — does the suite actually *bite*? (gap G7).** Coverage proves a line ran; it does not prove a test would fail if that line broke. AI-generated suites routinely hit 100% coverage while asserting nothing at the boundary. So the test-adequacy gate also runs a bounded, **diff-scoped** mutation smoke over the group's changed production files:
+
+```bash
+node .claude/scripts/mutation-gate.js --staged   # or pass explicit changed files
+```
+
+It applies one high-signal operator mutation at a time (`>`↔`>=`, `==`↔`!=`, `&&`↔`||`, boolean literals) to the changed code and re-runs the project test command; a **survivor** is a mutation no test killed — behavior the suite does not verify. Below the threshold (default 0.8 of mutants killed) the gate **BLOCKS**, naming each survivor's file:line and the exact flip so the generator adds the missing boundary/false-branch assertion. The gate is enforced deterministically by the pre-commit hook during `/auto` builds (scoped to an active sprint group; bounded by `--max-mutants`), and is disabled with `HARNESS_MUTATION_GATE=off`. A language whose test command can't be discovered is skipped loudly, never silently passed.
 
 ### Gate 4 — Architecture Checks
 
