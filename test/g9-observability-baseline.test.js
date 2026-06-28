@@ -68,3 +68,13 @@ test('G9: deploy wires Prometheus scrape discovery when observability is enabled
   assert.ok(/observability\.enabled/.test(d), 'scrape wiring must be gated on observability.enabled');
   assert.ok(/metrics_path/.test(d), 'must point the scrape at the configured metrics_path');
 });
+
+test('G9: observability-conventions guide is active and wired in the manifest', () => {
+  const manifest = JSON.parse(read('harness-manifest.json'));
+  const guide = manifest.guides.find((g) => g.id === 'observability-conventions');
+  assert.ok(guide, 'observability-conventions guide must exist');
+  assert.strictEqual(guide.status, 'active');
+  assert.strictEqual(guide.gap_ref, 'G9');
+  assert.ok(guide.wired_at && fs.existsSync(path.join(ROOT, guide.wired_at)),
+    'wired_at must resolve on disk');
+});
