@@ -43,12 +43,13 @@ test('Phase 9.5 deploys locally then runs API tests BEFORE E2E, shape-aware, wit
   assert.match(b, /fix the \*\*implementation\*\*|not the test/i);
 });
 
-test('Phase 11 raises a PR only when green and never merges', () => {
+test('Phase 11 raises a PR only when green; merge stays human unless AUTO_MERGE', () => {
   const b = read(BUILD);
   assert.match(b, /Phase 11 — Raise PR/);
   assert.match(b, /gh pr create/);
   assert.match(b, /only.*green|gated on all-green/i);
-  assert.match(b, /Do not merge/i);
+  // "Do not merge." absolute replaced by AUTO_MERGE opt-out (Task 4)
+  assert.match(b, /merge stays human|unless.*AUTO_MERGE|AUTO_MERGE.*unless/i);
 });
 
 test('the lane keeps verification independent of the generator (anti-self-approval)', () => {

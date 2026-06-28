@@ -118,7 +118,10 @@ The harness is now an **agent factory**: one scaffold, optional framework skill 
 │  Local mode    : commits on main branch (or /commit-push-pr).             │
 │  Factory mode  : agent/<issue-key> branch + GitHub PR + Linear proof.     │
 │                                                                            │
-│  Humans always own merge and "Done." The orchestrator never closes.       │
+│  Humans always own merge and "Done." The orchestrator never closes —       │
+│  except via the AUTO_MERGE opt-out (local: /build --auto --auto-merge or   │
+│  AUTO_MERGE=true env; symphony: AUTO_MERGE key), which lets GitHub auto-   │
+│  merge once the repo's required status checks pass (both runtimes).        │
 └───────────────────────────────────────────────────────────────────────────┘
 ```
 

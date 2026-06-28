@@ -24,6 +24,7 @@ Full software development lifecycle pipeline. Orchestrates BRD creation, story s
 /build path/to/prd.md --autonomous --pod 3 --single-pr  # pod concurrency, one integrated PR
 /build path/to/prd.md --auto --pod 3               # full-auto: PRD -> per-cluster PRs, zero gates
 /build --auto --finalize                           # build-chain terminal link: Phases 9, 9.5, 10, 11 only
+/build path/to/prd.md --auto --auto-merge        # full-auto, and auto-merge the PR when CI is green
 ```
 
 The `--mode` flag controls which ratchet gates `/auto` enforces. Default: `full`.
@@ -54,7 +55,7 @@ Three approval models, selected by `--autonomous` / `--auto`:
 
 - **Gated (default).** Humans approve at Phases 1, 2, and 3 (BRD, stories, design+tests) before the autonomous build runs. The pipeline stops at each and waits for explicit approval. Best for new workflows, public APIs, security/privacy work, or anything ambiguous.
 - **Semi-auto (`--autonomous`) — Devin-style plan-approve-once.** The Phase 1/2/3 stops are **collapsed into a single consolidated Plan Approval gate** (Phase 3.5): the human approves the whole plan — BRD + stories + design + test plan — **once**, and the pipeline then runs Phases 4–11 to an **open PR with no further human stops**.
-- **Full-auto (`--auto`) — PRD straight to PR(s), zero build-time gates.** Exactly the semi-auto lane **minus** the Phase 3.5 plan gate: the human supplies only the PRD and the pipeline runs Phases 0–11 with **no human stops at all**. The human re-appears only as the **merge gate** on the resulting PR(s) — which is the one human touchpoint you keep by design (the `AUTO_MERGE` activation key removes even that, see the autonomous-engineer roadmap). `--auto` implies `--autonomous`'s tail; pair it with `--pod N` for one PR per cluster.
+- **Full-auto (`--auto`) — PRD straight to PR(s), zero build-time gates.** Exactly the semi-auto lane **minus** the Phase 3.5 plan gate: the human supplies only the PRD and the pipeline runs Phases 0–11 with **no human stops at all**. The human re-appears only as the **merge gate** on the resulting PR(s) — which is the one human touchpoint you keep by design (the `--auto-merge` flag or `AUTO_MERGE=true` env removes even that — GitHub merges once required checks pass; see Phase 11). `--auto` implies `--autonomous`'s tail; pair it with `--pod N` for one PR per cluster.
 
 After approval (or immediately, for `--auto`), the only barriers are machine gates that are **independent of the generator** — `/auto`'s ratchet, `/gate` (evaluator + adaptive review), and the Phase 9.5 pre-PR verify gate — so the code is never self-approved by the agent that wrote it, and **no PR is ever opened over a red build** regardless of model. Full lane detail: **`.claude/skills/build/references/autonomous-lane.md`**.
 
@@ -317,7 +318,18 @@ The pipeline's terminal step. **Only reachable when Phase 9.5 passed** (applicab
 
 1. Run `/gate` if it has not already run on the final integrated state; abort the PR on any block-level finding.
 2. Push the build branch and open the PR with `gh pr create`, body summarizing: stories delivered, the Phase 9.5 proof (which suites ran + results), `/gate` verdict, and any Forbidden-Actions checks. Link the source requirement/PRD.
-3. **Do not merge.** Raising the PR is the autonomous boundary; merge is a separate decision (a human, or the symphony `AUTO_MERGE` activation key — see the autonomous-engineer roadmap).
+3. **Merge.** Raising the PR is the autonomous boundary, and merge stays human
+   **unless** AUTO_MERGE is active — the `--auto-merge` flag or `AUTO_MERGE=true`
+   env (method from `MERGE_METHOD`, default `merge`). When active, run
+   `node .claude/scripts/auto-merge.js <prUrl> --auto-merge`: it pins the PR to
+   the current repo (`git remote get-url origin`) and runs `gh pr merge --auto
+   --<method>`, so **GitHub merges only once the repo's required status checks
+   pass** — never a red build. If auto-merge can't be enabled (the repo lacks
+   "Allow auto-merge", a `gh` error, or a repo-slug mismatch), it leaves the PR
+   open and surfaces the reason; the run never fails over auto-merge. **Caveat:**
+   on a repo with no required status checks, `gh pr merge --auto` merges
+   immediately, so AUTO_MERGE there merges right after the harness gates — assume
+   "Allow auto-merge" + branch protection with required checks.
 
 In the **gated** model, offer to raise the PR rather than doing it unprompted. In **`--autonomous`** mode, raise it automatically once green — that is the point of the run. **In `--pod` mode this phase is superseded:** the per-cluster PRs were already raised by the engineer-orchestrators inside `/auto` (Section 4B → Pod mode), so there is no single integrated PR to open here — instead, confirm every cluster's PR is open and green and report the set. Detail: `.claude/skills/build/references/autonomous-lane.md`.
 
