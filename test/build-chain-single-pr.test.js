@@ -20,3 +20,18 @@ test('promptFor still appends --sequential for BUILD links', () => {
   const p = promptFor('BUILD', 'prd.md', { sequential: true, singlePr: true });
   assert.ok(p.includes('--sequential') && p.includes('--single-pr'));
 });
+
+test('promptFor forwards --auto-merge to FINALIZE only', () => {
+  assert.ok(promptFor('FINALIZE', 'prd.md', { autoMerge: true }).includes('--auto-merge'));
+  assert.ok(!promptFor('PLAN', 'prd.md', { autoMerge: true }).includes('--auto-merge'));
+  assert.ok(!promptFor('BUILD', 'prd.md', { autoMerge: true }).includes('--auto-merge'));
+});
+
+test('promptFor omits --auto-merge by default', () => {
+  assert.ok(!promptFor('FINALIZE', 'prd.md', {}).includes('--auto-merge'));
+});
+
+test('FINALIZE can carry both --single-pr and --auto-merge', () => {
+  const p = promptFor('FINALIZE', 'prd.md', { singlePr: true, autoMerge: true });
+  assert.ok(p.includes('--single-pr') && p.includes('--auto-merge'));
+});

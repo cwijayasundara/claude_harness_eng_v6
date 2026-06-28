@@ -62,8 +62,9 @@ async function runChain(deps) {
 
 function promptFor(kind, prd, opts = {}) {
   const single = opts.singlePr ? ' --single-pr' : '';
+  const autoMerge = opts.autoMerge ? ' --auto-merge' : '';
   if (kind === S.STATES.PLAN) return `/build --auto --plan-only ${prd}${single}`;
-  if (kind === S.STATES.FINALIZE) return `/build --auto --finalize${single}`;
+  if (kind === S.STATES.FINALIZE) return `/build --auto --finalize${single}${autoMerge}`;
   return `/auto --once${opts.sequential ? ' --sequential' : ''}${single}`; // BUILD
 }
 
@@ -88,7 +89,7 @@ function realSpawnLink(cwd, prd, runOpts = {}) {
   return (kind, opts = {}) => {
     const args = claudeArgsFor({ model, pluginDir, settings, strictMcp, maxBudgetUsd });
     const r = spawnSync('claude', args, {
-      input: promptFor(kind, prd, { ...opts, singlePr: runOpts.singlePr }),
+      input: promptFor(kind, prd, { ...opts, singlePr: runOpts.singlePr, autoMerge: runOpts.autoMerge }),
       cwd, encoding: 'utf8', timeout, killSignal: 'SIGKILL',
       stdio: ['pipe', 'inherit', 'inherit'],
     });
@@ -131,7 +132,8 @@ if (require.main === module) {
   const cwd = process.cwd();
   stampBudgetStart(cwd);
   const singlePr = process.argv.includes('--single-pr');
-  runChain({ spawnLink: realSpawnLink(cwd, prd, { singlePr }), loadState: realLoadState(cwd), checkBudget: realCheckBudget(cwd), log: (m) => process.stdout.write(`${m}\n`) })
+  const autoMerge = process.argv.includes('--auto-merge');
+  runChain({ spawnLink: realSpawnLink(cwd, prd, { singlePr, autoMerge }), loadState: realLoadState(cwd), checkBudget: realCheckBudget(cwd), log: (m) => process.stdout.write(`${m}\n`) })
     .then((res) => {
       process.stdout.write(`chain finished: ${res.state} — ${res.reason} (${res.links} build links)\n`);
       process.exit(res.state === S.STATES.DONE ? 0 : 1);
