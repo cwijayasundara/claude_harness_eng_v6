@@ -44,7 +44,7 @@ planning ──► session ──► commit ──► integration ──► drif
 - **session** — fast computational sensors on every write (`verify-on-save`, `pre-write-gate`); self-correction inside one agent loop.
 - **commit** — `git pre-commit` + the on-demand `/gate`; the expensive inferential reviews run here, boundary-gated.
 - **integration** — the GAN evaluator runs the app: API · Playwright · vision · security · perf.
-- **drift** — recurring checks *outside* the change lifecycle that catch accumulated decay. The architecture / dead-code / dependency-CVE signals are live via `drift-report.js` (`npm run drift`; wire to `/schedule` or CI); two more (design-vs-code, runtime SLO) remain blocked on G4/G9.
+- **drift** — recurring checks *outside* the change lifecycle that catch accumulated decay. The architecture / dead-code / dependency-CVE signals are live via `drift-report.js` (`npm run drift`; wire to `/schedule` or CI); one more (design-vs-code) remains blocked on G4.
 
 ## The matrix — guides × sensors, by axis
 
@@ -60,13 +60,13 @@ Status: ✅ active · 🟡 partial (limited/opt-in/report-only) · ⛔ planned (
 
 | | Guides | Sensors |
 |---|---|---|
-| | `architecture.md` · `project-manifest.json#architecture` (layer config) · ✅ **observability conventions** (RED metrics + /metrics scaffolded into generated server apps, G9) | ✅ layered-import check (every write) — *horizontal only* · ✅ API schema validation · ✅ perf ratchet (p95) · ✅ **drift: new cycles / unstable hubs** (`drift-report.js`) · ✅ **drift: design-vs-code** (Canvas `Governs` vs disk, G4) · ✅ **vertical bounded-context rules** (`contexts.js`, opt-in, G8) · ✅ **import-cycle ratchet** (`cycle-gate.js`, G8) · ⛔ API contract-drift `oasdiff` gate (G12) · ⛔ runtime SLO/error-rate drift sensor (G9 sensor-half) |
+| | `architecture.md` · `project-manifest.json#architecture` (layer config) · ✅ **observability conventions** (RED metrics + /metrics scaffolded into generated server apps, G9) | ✅ layered-import check (every write) — *horizontal only* · ✅ API schema validation · ✅ perf ratchet (p95) · ✅ **drift: new cycles / unstable hubs** (`drift-report.js`) · ✅ **drift: design-vs-code** (Canvas `Governs` vs disk, G4) · ✅ **vertical bounded-context rules** (`contexts.js`, opt-in, G8) · ✅ **import-cycle ratchet** (`cycle-gate.js`, G8) · ⛔ API contract-drift `oasdiff` gate (G12) |
 
 ### Behaviour
 
 | | Guides | Sensors |
 |---|---|---|
-| | BRD/spec/design + acceptance criteria + sprint contracts · legacy-preservation skills · ✅ **REASONS Canvas** (living artifact + `Governs`, G4) · ✅ **first-window init split** (`/auto` SECTION 2, G13) | ✅ unit tests · ✅ evaluator Layer 1 API · ✅ evaluator Layer 2 Playwright · ✅ evaluator Layer 3 vision · ✅ `diff-reviewer` (correctness) · ✅ `security-reviewer` (OWASP) · ✅ secret scan (baseline regex, pre-write + commit; gitleaks tier at /gate) · ✅ SAST (semgrep, /gate) · ✅ dep-audit (npm/pip, /gate) · ✅ **drift: new dependency CVEs** (`drift-report.js`) · ✅ **resume smoke check** (boots app on fresh-process resume before building, G14) · 🟡 axe/WCAG *(opt-in only, G12)* |
+| | BRD/spec/design + acceptance criteria + sprint contracts · legacy-preservation skills · ✅ **REASONS Canvas** (living artifact + `Governs`, G4) · ✅ **first-window init split** (`/auto` SECTION 2, G13) | ✅ unit tests · ✅ evaluator Layer 1 API · ✅ evaluator Layer 2 Playwright · ✅ evaluator Layer 3 vision · ✅ `diff-reviewer` (correctness) · ✅ `security-reviewer` (OWASP) · ✅ secret scan (baseline regex, pre-write + commit; gitleaks tier at /gate) · ✅ SAST (semgrep, /gate) · ✅ dep-audit (npm/pip, /gate) · ✅ **drift: new dependency CVEs** (`drift-report.js`) · ✅ **resume smoke check** (boots app on fresh-process resume before building, G14) · ✅ **runtime-SLO** (5xx error-rate vs SLO, scrapes product /metrics, G9) · 🟡 axe/WCAG *(opt-in only, G12)* |
 
 ### Traceability *(harness extension — a strength)*
 
@@ -85,14 +85,14 @@ The harness improves itself between runs: `.claude/program.md` (the steering inp
 The point of a registry is that gaps are explicit. Open items, by priority (full detail in the gap analysis):
 
 - **G1** *(this file)* — make the harness legible. ✅ done by `HARNESS.md` + `harness-manifest.json`.
-- ~~**G2 (P0)** — no continuous **drift** sensors.~~ ✅ **done** — `drift-report.js` diffs architecture (cycles/hubs), dead-code (orphans), and dependency CVEs against a committed snapshot, flagging only *new* regressions; exit 1 on drift for cron/CI/`/schedule`. (Design-vs-code and runtime-SLO drift remain blocked on G4/G9.)
+- ~~**G2 (P0)** — no continuous **drift** sensors.~~ ✅ **done** — `drift-report.js` diffs architecture (cycles/hubs), dead-code (orphans), and dependency CVEs against a committed snapshot, flagging only *new* regressions; exit 1 on drift for cron/CI/`/schedule`. (Design-vs-code drift remains blocked on G4.)
 - ~~**G3 (P0)** — no computational security sensors.~~ ✅ **done** — baseline secrets enforced at pre-write + commit; gitleaks/semgrep/npm+pip-audit wired into `/gate` via `security-scan.js`, degrading loudly when a tool is unprovisioned.
 - ~~**G4 (P1)** — no SPDD-style living, code-synced design artifact.~~ ✅ **done (v1)** — `/design` emits a REASONS Canvas (`reasons-canvas.md`) with a machine-read `Governs` list; a structure gate validates it, and the drift monitor flags Canvas↔code drift. Full bidirectional regeneration (`/sync`) deferred by choice — detection + "fix-prompt-first" discipline shipped.
 - ~~**G5 (P1)** — sensor messages are generic, not per-rule LLM-optimised.~~ ✅ **done** — `lib/sensor-guidance` enriches `verify-on-save` lint/type blocks with a per-rule fix line + the threshold-bump-with-justification valve.
 - ~~**G6 (P1)** — no inferential modularity review on top of the coupling report.~~ ✅ **done** — `modularity-pack.js` grounds a `modularity-reviewer` agent (pre-classifying legit hubs so it doesn't flag factories/schemas); runs in `/brownfield --full`.
 - ~~**G7 (P1)** — `mutation-smoke` exists but isn't a `/auto` ratchet gate.~~ ✅ **done** — diff-scoped mutation gate enforced by pre-commit during `/auto`; survivors below threshold BLOCK with file:line + the exact flip. "tests pass" now implies "tests bite."
 - ~~**G8 (P2)**~~ ✅ **done** — vertical bounded-context rules (`contexts.js`) + import-cycle ratchet (`cycle-gate.js`).
-- **G9 sensor-half, G10–G12 (P2)** — the runtime-SLO drift sensor that reads the new app metrics (G9's guide-half shipped: `observability-conventions`), harness templates per topology, a harness-coverage metric, and behaviour extras.
+- ~~**G9**~~ ✅ **done** (both halves) — the guide scaffolds /metrics into generated apps; the `runtime-slo` sensor reads it and FAILs on 5xx error-rate over SLO. Remaining: **G10–G12 (P2)** — harness templates per topology, a harness-coverage metric, behaviour extras.
 - ~~**G13–G14** *(Anthropic long-running-agent principles)*~~ ✅ **done** — distinct first-context-window initialization (`first-window-init` guide) and a session-start **resume smoke check** (`resume-smoke` sensor) in `/auto` SECTION 2. Sourced from Anthropic's *Effective harnesses for long-running agents* + autonomous-coding quickstart (the multi-context-window split and the "run a basic test on the dev server at session start" failure-mode fix), not the Fowler/SPDD roadmap.
 
 ## How to extend the harness

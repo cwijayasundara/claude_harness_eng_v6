@@ -162,6 +162,17 @@ node .claude/scripts/perf-baseline.js --measure \
 ```
 Parse the `p95` from the `MEASURE:` line. If it exceeds the endpoint's resolved budget, record a **WARN** — never a FAIL. Writes are not ratcheted because a single sample has no meaningful p95 distribution and repeated sampling would mutate state. (A plain `curl -s -o /dev/null -w "%{time_total}"` is an acceptable fallback if invoking the script per write endpoint is awkward.)
 
+### Step P4 — SLO check (when observability.enabled)
+
+After the app is booted (no new boot), run the runtime-SLO sensor:
+
+`node .claude/scripts/slo-check.js`
+
+It scrapes `{api_base_url}{observability.metrics_path}` and compares against `observability.slo`, writing `specs/reviews/slo-verdict.json`. Fold the verdict:
+- `verdict: "fail"` (5xx error-rate over `slo.error_rate_pct`, counting only 5xx) → **FAIL** with `failure_layer: "slo"` in Full mode; **WARN** in Lean.
+- `verdict: "warn"` (p95 over `slo.p95_ms`, or no traffic, or `/metrics` unreachable) → WARN, never FAIL. p95 *regression* is owned by the perf ratchet (Step P2), not this check.
+- `verdict: "disabled"` (observability off) → skip silently.
+
 ---
 
 ## Layer 2 — Playwright Checks
