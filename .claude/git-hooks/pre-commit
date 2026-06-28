@@ -16,6 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { checkContentViolations, loadLayerConfig, getLayer } = require(path.join(__dirname, '..', 'hooks', 'lib', 'layers'));
+const { checkContextContent, loadContextConfig } = require(path.join(__dirname, '..', 'hooks', 'lib', 'contexts'));
 const { run, output, shouldBlock, skipped } = require(path.join(__dirname, '..', 'hooks', 'lib', 'toolchain'));
 const { findImpureFiles } = require(path.join(__dirname, 'lib', 'refactor-purity'));
 const { validate: validateSchema } = require(path.join(__dirname, '..', 'hooks', 'lib', 'contract-schema'));
@@ -93,6 +94,26 @@ function checkLayers(projectDir, stagedSource) {
       `in project-manifest.json if it should be layer-checked.\n`
     );
   }
+}
+
+// Vertical bounded-context rules (gap G8) — opt-in; a no-op unless the project
+// declares architecture.contexts. A context may not reach into another's
+// internals except via its public surface or a declared allow-edge.
+function checkContexts(projectDir, stagedSource) {
+  const cfg = loadContextConfig(projectDir);
+  if (!cfg) return;
+  const violations = [];
+  for (const file of stagedSource) {
+    let content;
+    try { content = fs.readFileSync(file, 'utf8'); } catch (_) { continue; }
+    violations.push(...checkContextContent(file, content, cfg));
+  }
+  if (violations.length === 0) return;
+  const lines = violations.map((v) => `  ${v.filePath}:${v.line} — "${v.from}" reaches into "${v.to}" internals (${v.importPath})`);
+  fail(
+    `BLOCKED: Bounded-context violations — fix before committing:\n${lines.join('\n')}\n` +
+    'Fix: import the other context only through its public surface (root/index), or add the edge to architecture.contexts.allow in project-manifest.json.\n'
+  );
 }
 
 // keeping-refactors-pure: a refactor commit changes no behavior, so it may not
@@ -343,6 +364,7 @@ try {
 
   checkRefactorPurity(staged);
   checkLayers(projectDir, stagedSource);
+  checkContexts(projectDir, stagedSource);
   checkSprintContract(projectDir);
   checkTypescript(projectDir, stagedTs);
   checkCoverage(projectDir, stagedPy);

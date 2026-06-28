@@ -16,6 +16,7 @@ const path = require('path');
 const { TRACKED_EXTS, resolveProjectDir, readHookInput, reportFailure } = require('./lib/common');
 const { isTestFile } = require('./lib/tdd');
 const { checkContentViolations, loadLayerConfig } = require('./lib/layers');
+const { checkContextContent, loadContextConfig } = require('./lib/contexts');
 const { run, output, shouldBlock, detectCwd } = require('./lib/toolchain');
 const { enrich } = require('./lib/sensor-guidance');
 
@@ -75,11 +76,21 @@ function checkLayers(projectDir, filePath, n, ext) {
     return;
   }
   const violations = checkContentViolations(n, content, loadLayerConfig(projectDir));
-  if (violations.length === 0) return;
-  const lines = violations.map((v) =>
-    `BLOCKED: Architecture violation in ${filePath}:${v.line} — ${v.layer} cannot import from ${v.imported}`
+  if (violations.length > 0) {
+    const lines = violations.map((v) =>
+      `BLOCKED: Architecture violation in ${filePath}:${v.line} — ${v.layer} cannot import from ${v.imported}`
+    );
+    block(lines.join('\n') + '\nFix: Move the import to the correct layer, or extract the shared type to src/types/.\n');
+  }
+  // Vertical bounded-context rules (gap G8) — opt-in; a no-op unless the project
+  // declares architecture.contexts. Runs after the layer check (which exits on a
+  // violation), so layer issues surface first.
+  const ctxViolations = checkContextContent(n, content, loadContextConfig(projectDir));
+  if (ctxViolations.length === 0) return;
+  const ctxLines = ctxViolations.map((v) =>
+    `BLOCKED: Bounded-context violation in ${filePath}:${v.line} — "${v.from}" reaches into "${v.to}" internals (${v.importPath})`
   );
-  block(lines.join('\n') + '\nFix: Move the import to the correct layer, or extract the shared type to src/types/.\n');
+  block(ctxLines.join('\n') + '\nFix: import the other context only through its public surface (root/index), or add the edge to architecture.contexts.allow in project-manifest.json.\n');
 }
 
 function readManifest(projectDir) {
