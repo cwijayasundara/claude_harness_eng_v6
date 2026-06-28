@@ -92,3 +92,12 @@ test('G9: slo npm script is wired', () => {
   const pkg = JSON.parse(rd('package.json'));
   assert.strictEqual(pkg.scripts.slo, 'node .claude/scripts/slo-check.js');
 });
+
+test('G9: runtime-slo sensor is registered active and wired', () => {
+  const m = JSON.parse(rd('harness-manifest.json'));
+  const s = m.sensors.find((x) => x.id === 'runtime-slo');
+  assert.ok(s, 'runtime-slo sensor must exist');
+  assert.strictEqual(s.status, 'active');
+  assert.strictEqual(s.gap_ref, 'G9');
+  assert.ok(s.wired_at && fs.existsSync(path.join(ROOT, s.wired_at)), 'wired_at must resolve');
+});

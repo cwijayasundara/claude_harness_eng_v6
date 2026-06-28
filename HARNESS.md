@@ -66,7 +66,7 @@ Status: ✅ active · 🟡 partial (limited/opt-in/report-only) · ⛔ planned (
 
 | | Guides | Sensors |
 |---|---|---|
-| | BRD/spec/design + acceptance criteria + sprint contracts · legacy-preservation skills · ✅ **REASONS Canvas** (living artifact + `Governs`, G4) · ✅ **first-window init split** (`/auto` SECTION 2, G13) | ✅ unit tests · ✅ evaluator Layer 1 API · ✅ evaluator Layer 2 Playwright · ✅ evaluator Layer 3 vision · ✅ `diff-reviewer` (correctness) · ✅ `security-reviewer` (OWASP) · ✅ secret scan (baseline regex, pre-write + commit; gitleaks tier at /gate) · ✅ SAST (semgrep, /gate) · ✅ dep-audit (npm/pip, /gate) · ✅ **drift: new dependency CVEs** (`drift-report.js`) · ✅ **resume smoke check** (boots app on fresh-process resume before building, G14) · 🟡 axe/WCAG *(opt-in only, G12)* |
+| | BRD/spec/design + acceptance criteria + sprint contracts · legacy-preservation skills · ✅ **REASONS Canvas** (living artifact + `Governs`, G4) · ✅ **first-window init split** (`/auto` SECTION 2, G13) | ✅ unit tests · ✅ evaluator Layer 1 API · ✅ evaluator Layer 2 Playwright · ✅ evaluator Layer 3 vision · ✅ `diff-reviewer` (correctness) · ✅ `security-reviewer` (OWASP) · ✅ secret scan (baseline regex, pre-write + commit; gitleaks tier at /gate) · ✅ SAST (semgrep, /gate) · ✅ dep-audit (npm/pip, /gate) · ✅ **drift: new dependency CVEs** (`drift-report.js`) · ✅ **resume smoke check** (boots app on fresh-process resume before building, G14) · ✅ **runtime-SLO** (5xx error-rate vs SLO, scrapes product /metrics, G9) · 🟡 axe/WCAG *(opt-in only, G12)* |
 
 ### Traceability *(harness extension — a strength)*
 
@@ -92,7 +92,7 @@ The point of a registry is that gaps are explicit. Open items, by priority (full
 - ~~**G6 (P1)** — no inferential modularity review on top of the coupling report.~~ ✅ **done** — `modularity-pack.js` grounds a `modularity-reviewer` agent (pre-classifying legit hubs so it doesn't flag factories/schemas); runs in `/brownfield --full`.
 - ~~**G7 (P1)** — `mutation-smoke` exists but isn't a `/auto` ratchet gate.~~ ✅ **done** — diff-scoped mutation gate enforced by pre-commit during `/auto`; survivors below threshold BLOCK with file:line + the exact flip. "tests pass" now implies "tests bite."
 - ~~**G8 (P2)**~~ ✅ **done** — vertical bounded-context rules (`contexts.js`) + import-cycle ratchet (`cycle-gate.js`).
-- **G9 sensor-half, G10–G12 (P2)** — the runtime-SLO drift sensor that reads the new app metrics (G9's guide-half shipped: `observability-conventions`), harness templates per topology, a harness-coverage metric, and behaviour extras.
+- ~~**G9**~~ ✅ **done** (both halves) — the guide scaffolds /metrics into generated apps; the `runtime-slo` sensor reads it and FAILs on 5xx error-rate over SLO. Remaining: **G10–G12 (P2)** — harness templates per topology, a harness-coverage metric, behaviour extras.
 - ~~**G13–G14** *(Anthropic long-running-agent principles)*~~ ✅ **done** — distinct first-context-window initialization (`first-window-init` guide) and a session-start **resume smoke check** (`resume-smoke` sensor) in `/auto` SECTION 2. Sourced from Anthropic's *Effective harnesses for long-running agents* + autonomous-coding quickstart (the multi-context-window split and the "run a basic test on the dev server at session start" failure-mode fix), not the Fowler/SPDD roadmap.
 
 ## How to extend the harness
