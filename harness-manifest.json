@@ -73,17 +73,18 @@
     { "id": "trace-check", "axis": "traceability", "type": "computational", "cadence": "planning", "status": "active", "wired_at": ".claude/scripts/trace-check.js", "signal": "untraced stories, dropped BRs, orphan/uncovered tests", "description": "Deterministic hard block at spec (story vs BRD) and test (case vs AC + obligation)." },
     { "id": "constraints-extract", "axis": "traceability", "type": "computational", "cadence": "planning", "status": "active", "wired_at": ".claude/scripts/constraints-extract.js", "signal": "schema obligations without a negative test", "description": "Mines minLength/required/enum from design schemas into test obligations." },
     { "id": "plan-confidence", "axis": "traceability", "type": "hybrid", "cadence": "planning", "status": "active", "wired_at": ".claude/scripts/plan-confidence.js", "signal": "low-confidence plan band", "description": "Confidence-gated planning before execution." },
-    { "id": "seam-confidence", "axis": "traceability", "type": "computational", "cadence": "planning", "status": "active", "wired_at": ".claude/scripts/seam-confidence.js", "signal": "no clean cut-point for a brownfield change", "description": "Stops or surfaces at a gate when no safe seam exists for the goal." }
+    { "id": "seam-confidence", "axis": "traceability", "type": "computational", "cadence": "planning", "status": "active", "wired_at": ".claude/scripts/seam-confidence.js", "signal": "no clean cut-point for a brownfield change", "description": "Stops or surfaces at a gate when no safe seam exists for the goal." },
+    { "id": "drift-architecture", "axis": "architecture", "type": "computational", "cadence": "drift", "status": "active", "wired_at": ".claude/scripts/drift-report.js", "signal": "new import cycles or newly-unstable hubs vs last snapshot", "description": "Continuous monitor (gap G2): diffs code-graph cycle/hub metrics against specs/drift/drift-snapshot.json and flags regressions. Run by any cadence (npm run drift, /schedule, /loop, CI); exit 1 on new drift." },
+    { "id": "drift-dead-code", "axis": "maintainability", "type": "computational", "cadence": "drift", "status": "active", "wired_at": ".claude/scripts/drift-report.js", "signal": "newly-orphaned (dead-code) files vs last snapshot", "description": "Continuous monitor (gap G2): diffs the code-map orphan set so dead code that accumulates outside the change lifecycle is surfaced, not silently grown." },
+    { "id": "drift-deps", "axis": "behaviour", "type": "computational", "cadence": "drift", "status": "active", "wired_at": ".claude/scripts/drift-report.js", "signal": "new dependency CVEs in unchanged code", "description": "Continuous monitor (gap G2): re-runs npm/pip audit (reusing security-scan runDeps) and flags CVEs newly disclosed against dependencies the change lifecycle never touched." }
   ],
   "drift_sensors_planned": {
     "gap_ref": "G2",
-    "note": "The 'drift' cadence is the article's third column (repeatedly, slower, outside the change lifecycle). Almost entirely empty today. Runners exist (coupling-report, mutation-smoke, dead-code candidates) and scheduling primitives exist (/schedule, /loop, scheduled_tasks.lock); they are simply not wired into a recurring drift job.",
-    "candidates": [
-      "coupling/hub/cycle delta vs last snapshot",
-      "dead-code accumulation delta",
-      "dependency freshness + advisory audit (npm/pip)",
-      "design-vs-code drift (needs REASONS Canvas sync, G4)",
-      "runtime SLO / error-rate / latency regression (needs app observability, G9)"
+    "note": "The 'drift' cadence is the article's third column (repeatedly, slower, outside the change lifecycle). The architecture / dead-code / dependency-CVE signals are now SHIPPED via drift-report.js (see the drift-* sensors above). Two drift signals remain planned because they depend on other gaps.",
+    "shipped": ["drift-architecture", "drift-dead-code", "drift-deps"],
+    "still_planned": [
+      { "signal": "design-vs-code drift", "blocked_on": "G4 (REASONS Canvas sync)" },
+      { "signal": "runtime SLO / error-rate / latency regression", "blocked_on": "G9 (app observability)" }
     ],
     "existing_drift_like": [
       { "id": "upstream-watch", "wired_at": ".claude/scripts/upstream-watch.js", "note": "Watches the harness's OWN upstream (anthropics/claude-code), not the product codebase." }

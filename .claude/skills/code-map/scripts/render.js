@@ -136,4 +136,4 @@ function renderCouplingReport(graph) {
   return lines.join('\n') + '\n';
 }
 
-module.exports = { renderMermaid, renderCouplingReport };
+module.exports = { renderMermaid, renderCouplingReport, findOrphans };

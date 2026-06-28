@@ -1,0 +1,68 @@
+#!/usr/bin/env node
+
+'use strict';
+
+// CLI: node .claude/scripts/drift-report.js
+// Continuous drift monitor (gap G2) — the "repeatedly, slower cadence" sensor
+// that runs OUTSIDE the change lifecycle. Reads the latest code-graph (kept
+// fresh by the graph-refresh hook) plus a fresh dependency audit, diffs against
+// the last snapshot, writes specs/drift/drift-report.md|json, and updates the
+// snapshot. Reuses lib/drift (pure) and security-scan's runDeps (no clobber of
+// the /gate report). Exit 0 = no new drift or baseline established, 1 = new
+// drift detected (so cron/CI/`/schedule` can surface it).
+
+const fs = require('fs');
+const path = require('path');
+const drift = require('../hooks/lib/drift');
+const { runDeps } = require('./security-scan');
+
+const REPO = process.cwd();
+const GRAPH = path.join(REPO, 'specs', 'brownfield', 'code-graph.json');
+const OUT_DIR = path.join(REPO, 'specs', 'drift');
+const SNAPSHOT = path.join(OUT_DIR, 'drift-snapshot.json');
+
+function readJson(file) {
+  try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (_) { return null; }
+}
+
+function depCveKeys(cwd) {
+  try {
+    return runDeps(cwd).map((f) => `${f.tool}:${f.rule}`);
+  } catch (_) {
+    return [];
+  }
+}
+
+function writeOutputs(report, payload, snapshot) {
+  fs.mkdirSync(OUT_DIR, { recursive: true });
+  fs.writeFileSync(path.join(OUT_DIR, 'drift-report.md'), report);
+  fs.writeFileSync(path.join(OUT_DIR, 'drift-report.json'), JSON.stringify(payload, null, 2) + '\n');
+  fs.writeFileSync(SNAPSHOT, JSON.stringify(snapshot, null, 2) + '\n');
+}
+
+function currentMetrics(graph, prev) {
+  let metrics = drift.extractMetrics(graph || {});
+  if (!graph) metrics = drift.carryForwardArch(metrics, prev); // don't reset arch baseline on a graphless run
+  return drift.withDepCves(metrics, depCveKeys(REPO));
+}
+
+function main() {
+  const graph = readJson(GRAPH);
+  if (!graph) {
+    process.stderr.write(
+      'WARNING: drift monitor — no code-graph at specs/brownfield/code-graph.json. ' +
+      'Architecture/dead-code drift is unavailable until /brownfield or /code-map runs; ' +
+      'dependency drift still reported.\n'
+    );
+  }
+  const prev = readJson(SNAPSHOT);
+  const curr = currentMetrics(graph, prev);
+  const diff = drift.diffSnapshots(prev, curr);
+  const report = drift.renderDriftReport(diff, curr);
+  writeOutputs(report, { diff, snapshot: curr }, curr);
+
+  process.stdout.write(report);
+  process.exit(drift.hasRegressed(diff) ? 1 : 0);
+}
+
+main();

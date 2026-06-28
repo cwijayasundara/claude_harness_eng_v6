@@ -44,7 +44,7 @@ planning ──► session ──► commit ──► integration ──► drif
 - **session** — fast computational sensors on every write (`verify-on-save`, `pre-write-gate`); self-correction inside one agent loop.
 - **commit** — `git pre-commit` + the on-demand `/gate`; the expensive inferential reviews run here, boundary-gated.
 - **integration** — the GAN evaluator runs the app: API · Playwright · vision · security · perf.
-- **drift** — **mostly empty today (gap G2).** The articles' third column: recurring checks *outside* the change lifecycle that catch accumulated decay. This is the biggest maintenance-harness hole.
+- **drift** — recurring checks *outside* the change lifecycle that catch accumulated decay. The architecture / dead-code / dependency-CVE signals are live via `drift-report.js` (`npm run drift`; wire to `/schedule` or CI); two more (design-vs-code, runtime SLO) remain blocked on G4/G9.
 
 ## The matrix — guides × sensors, by axis
 
@@ -54,19 +54,19 @@ Status: ✅ active · 🟡 partial (limited/opt-in/report-only) · ⛔ planned (
 
 | | Guides (feedforward) | Sensors (feedback) |
 |---|---|---|
-| | `code-gen` skill (10 principles) · `clarify` | ✅ ruff/eslint (session+commit) · ✅ mypy/tsc · ✅ length caps (30-line fn / 300-line file) · ✅ coverage ratchet + per-diff coverage · ✅ `clean-code-reviewer` (inferential) · ✅ coupling/dead-code report *(report-only)* · 🟡 `mutation-smoke` **not a ratchet gate (G7)** · ⛔ inferential modularity review (G6) |
+| | `code-gen` skill (10 principles) · `clarify` | ✅ ruff/eslint (session+commit) · ✅ mypy/tsc · ✅ length caps (30-line fn / 300-line file) · ✅ coverage ratchet + per-diff coverage · ✅ `clean-code-reviewer` (inferential) · ✅ coupling/dead-code report *(report-only)* · ✅ **drift: dead-code accumulation** (`drift-report.js`) · 🟡 `mutation-smoke` **not a ratchet gate (G7)** · ⛔ inferential modularity review (G6) |
 
 ### Architecture
 
 | | Guides | Sensors |
 |---|---|---|
-| | `architecture.md` · `project-manifest.json#architecture` (layer config) | ✅ layered-import check (every write) — *horizontal only* · ✅ API schema validation · ✅ perf ratchet (p95) · 🟡 cycle detection *(reported, not enforced)* · ⛔ vertical bounded-context rules (G8) · ⛔ API contract-drift `oasdiff` gate (G12) · ⛔ observability conventions in generated app (G9) |
+| | `architecture.md` · `project-manifest.json#architecture` (layer config) | ✅ layered-import check (every write) — *horizontal only* · ✅ API schema validation · ✅ perf ratchet (p95) · ✅ **drift: new cycles / unstable hubs** (`drift-report.js`) · 🟡 cycle detection *(reported at change-time, not enforced)* · ⛔ vertical bounded-context rules (G8) · ⛔ API contract-drift `oasdiff` gate (G12) · ⛔ observability conventions in generated app (G9) |
 
 ### Behaviour
 
 | | Guides | Sensors |
 |---|---|---|
-| | BRD/spec/design + acceptance criteria + sprint contracts · legacy-preservation skills · ⛔ REASONS Canvas living artifact (G4) | ✅ unit tests · ✅ evaluator Layer 1 API · ✅ evaluator Layer 2 Playwright · ✅ evaluator Layer 3 vision · ✅ `diff-reviewer` (correctness) · ✅ `security-reviewer` (OWASP) · ✅ secret scan (baseline regex, pre-write + commit; gitleaks tier at /gate) · ✅ SAST (semgrep, /gate) · ✅ dep-audit (npm/pip, /gate) · 🟡 axe/WCAG *(opt-in only, G12)* |
+| | BRD/spec/design + acceptance criteria + sprint contracts · legacy-preservation skills · ⛔ REASONS Canvas living artifact (G4) | ✅ unit tests · ✅ evaluator Layer 1 API · ✅ evaluator Layer 2 Playwright · ✅ evaluator Layer 3 vision · ✅ `diff-reviewer` (correctness) · ✅ `security-reviewer` (OWASP) · ✅ secret scan (baseline regex, pre-write + commit; gitleaks tier at /gate) · ✅ SAST (semgrep, /gate) · ✅ dep-audit (npm/pip, /gate) · ✅ **drift: new dependency CVEs** (`drift-report.js`) · 🟡 axe/WCAG *(opt-in only, G12)* |
 
 ### Traceability *(harness extension — a strength)*
 
@@ -85,7 +85,7 @@ The harness improves itself between runs: `.claude/program.md` (the steering inp
 The point of a registry is that gaps are explicit. Open items, by priority (full detail in the gap analysis):
 
 - **G1** *(this file)* — make the harness legible. ✅ done by `HARNESS.md` + `harness-manifest.json`.
-- **G2 (P0)** — no continuous **drift** sensors. The third cadence column is empty.
+- ~~**G2 (P0)** — no continuous **drift** sensors.~~ ✅ **done** — `drift-report.js` diffs architecture (cycles/hubs), dead-code (orphans), and dependency CVEs against a committed snapshot, flagging only *new* regressions; exit 1 on drift for cron/CI/`/schedule`. (Design-vs-code and runtime-SLO drift remain blocked on G4/G9.)
 - ~~**G3 (P0)** — no computational security sensors.~~ ✅ **done** — baseline secrets enforced at pre-write + commit; gitleaks/semgrep/npm+pip-audit wired into `/gate` via `security-scan.js`, degrading loudly when a tool is unprovisioned.
 - **G4 (P1)** — no SPDD-style living, code-synced design artifact (REASONS Canvas + `sync`).
 - **G5 (P1)** — sensor messages are generic, not per-rule LLM-optimised ("positive prompt injection").

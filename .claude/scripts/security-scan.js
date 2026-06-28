@@ -154,4 +154,9 @@ function main() {
   process.exit(0);
 }
 
-main();
+// Export the tier runners so other harness tools (e.g. the drift monitor) can
+// reuse the dependency audit without re-running the whole CLI or clobbering its
+// report. Only run as a CLI when invoked directly.
+module.exports = { runSecrets, runSast, runDeps, collect, parseArgs };
+
+if (require.main === module) main();
