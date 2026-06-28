@@ -54,7 +54,7 @@ Status: ✅ active · 🟡 partial (limited/opt-in/report-only) · ⛔ planned (
 
 | | Guides (feedforward) | Sensors (feedback) |
 |---|---|---|
-| | `code-gen` skill (10 principles) · `clarify` | ✅ ruff/eslint (session+commit) · ✅ mypy/tsc · ✅ length caps (30-line fn / 300-line file) · ✅ coverage ratchet + per-diff coverage · ✅ `clean-code-reviewer` (inferential) · ✅ coupling/dead-code report *(report-only)* · ✅ **drift: dead-code accumulation** (`drift-report.js`) · ✅ **mutation-smoke gate** (diff-scoped, /auto, `mutation-gate.js`) · ⛔ inferential modularity review (G6) |
+| | `code-gen` skill (10 principles) · `clarify` | ✅ ruff/eslint (session+commit; **per-rule self-correction guidance**, G5) · ✅ mypy/tsc · ✅ length caps (30-line fn / 300-line file) · ✅ coverage ratchet + per-diff coverage · ✅ `clean-code-reviewer` (inferential) · ✅ coupling/dead-code report *(report-only)* · ✅ **drift: dead-code accumulation** (`drift-report.js`) · ✅ **mutation-smoke gate** (diff-scoped, /auto, `mutation-gate.js`) · ⛔ inferential modularity review (G6) |
 
 ### Architecture
 
@@ -88,7 +88,7 @@ The point of a registry is that gaps are explicit. Open items, by priority (full
 - ~~**G2 (P0)** — no continuous **drift** sensors.~~ ✅ **done** — `drift-report.js` diffs architecture (cycles/hubs), dead-code (orphans), and dependency CVEs against a committed snapshot, flagging only *new* regressions; exit 1 on drift for cron/CI/`/schedule`. (Design-vs-code and runtime-SLO drift remain blocked on G4/G9.)
 - ~~**G3 (P0)** — no computational security sensors.~~ ✅ **done** — baseline secrets enforced at pre-write + commit; gitleaks/semgrep/npm+pip-audit wired into `/gate` via `security-scan.js`, degrading loudly when a tool is unprovisioned.
 - ~~**G4 (P1)** — no SPDD-style living, code-synced design artifact.~~ ✅ **done (v1)** — `/design` emits a REASONS Canvas (`reasons-canvas.md`) with a machine-read `Governs` list; a structure gate validates it, and the drift monitor flags Canvas↔code drift. Full bidirectional regeneration (`/sync`) deferred by choice — detection + "fix-prompt-first" discipline shipped.
-- **G5 (P1)** — sensor messages are generic, not per-rule LLM-optimised ("positive prompt injection").
+- ~~**G5 (P1)** — sensor messages are generic, not per-rule LLM-optimised.~~ ✅ **done** — `lib/sensor-guidance` enriches `verify-on-save` lint/type blocks with a per-rule fix line + the threshold-bump-with-justification valve.
 - **G6 (P1)** — no inferential modularity review on top of the coupling report.
 - ~~**G7 (P1)** — `mutation-smoke` exists but isn't a `/auto` ratchet gate.~~ ✅ **done** — diff-scoped mutation gate enforced by pre-commit during `/auto`; survivors below threshold BLOCK with file:line + the exact flip. "tests pass" now implies "tests bite."
 - **G8–G12 (P2)** — vertical boundary rules, app observability, harness templates per topology, a harness-coverage metric, and behaviour extras (default a11y, contract-drift, flake detection).

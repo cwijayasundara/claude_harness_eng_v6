@@ -17,6 +17,7 @@ const { TRACKED_EXTS, resolveProjectDir, readHookInput, reportFailure } = requir
 const { isTestFile } = require('./lib/tdd');
 const { checkContentViolations, loadLayerConfig } = require('./lib/layers');
 const { run, output, shouldBlock, detectCwd } = require('./lib/toolchain');
+const { enrich } = require('./lib/sensor-guidance');
 
 const QUEUE_SKIP_DIRS = new Set([
   'migrations', 'fixtures', 'node_modules', 'dist', 'build',
@@ -99,14 +100,14 @@ function checkToolchain(projectDir, filePath, ext) {
     if (linter === 'ruff') {
       const res = run(['uv', 'run', 'ruff', 'check', filePath], cwd, 12000);
       if (shouldBlock(res)) {
-        block(`BLOCKED: lint errors in ${filePath}:\n${output(res)}\nFix: resolve the lint errors above.\n`);
+        block(`BLOCKED: lint errors in ${filePath}:\n${output(res)}\nFix: resolve the lint errors above.${enrich(output(res))}\n`);
       }
     }
     const typechecker = (manifest && manifest.typechecker) || 'mypy';
     if (typechecker === 'mypy') {
       const res = run(['uv', 'run', 'mypy', filePath], cwd, 12000);
       if (shouldBlock(res)) {
-        block(`BLOCKED: type errors in ${filePath}:\n${output(res)}\nFix: Add type annotations or fix the type mismatch shown above.\n`);
+        block(`BLOCKED: type errors in ${filePath}:\n${output(res)}\nFix: Add type annotations or fix the type mismatch shown above.${enrich(output(res))}\n`);
       }
     }
   } else if (ext === '.ts' || ext === '.tsx' || ext === '.js' || ext === '.jsx' || ext === '.mjs' || ext === '.cjs') {
@@ -114,7 +115,7 @@ function checkToolchain(projectDir, filePath, ext) {
     if (linter === 'eslint') {
       const res = run(['npx', '--no-install', 'eslint', filePath], cwd, 25000);
       if (shouldBlock(res)) {
-        block(`BLOCKED: lint errors in ${filePath}:\n${output(res)}\nFix: resolve the lint errors above.\n`);
+        block(`BLOCKED: lint errors in ${filePath}:\n${output(res)}\nFix: resolve the lint errors above.${enrich(output(res))}\n`);
       }
     }
     // tsc is project-scoped — handled once per commit by the pre-commit gate.
