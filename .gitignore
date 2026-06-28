@@ -28,6 +28,7 @@ symphony_clone/logs/
 .claude/state/review-block-count
 .claude/state/auto-continue-count
 .claude/state/auto-continue-progress
+.claude/state/inflight-agents.json
 !.claude/templates/state-seeds/pending-reviews.jsonl
 test/e2e/results/*
 !test/e2e/results/.gitkeep
