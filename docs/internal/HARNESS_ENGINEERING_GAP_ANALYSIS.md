@@ -5,6 +5,7 @@
 - Fowler/Thoughtworks — *Harness Engineering for Coding Agents* (the control-system framing: guides + sensors + steering loop)
 - Fowler/Thoughtworks — *Maintainability Sensors for Coding Agents* (the feedback half, with concrete tools: ESLint w/ custom messages, dependency-cruiser, coupling CLI, Stryker mutation testing, Khononov modularity skill, GitLeaks/Semgrep)
 - Fowler — *Structured Prompt-Driven Development (SPDD)* + `open-spdd` + the `token-billing` worked example (REASONS Canvas, prompt-as-artifact, bidirectional sync)
+- Anthropic — *Effective harnesses for long-running agents* + the *autonomous-coding* quickstart + multi-context-window prompting guidance (the coding-agent failure-mode table; added 2026-06-28 for the **§7 G13–G14 addendum** — a different source axis from Fowler/SPDD)
 
 **Verdict in one line:** This scaffold is **already ~70% of the harness the articles describe** — and is *ahead* of them on the behaviour harness (GAN evaluator + three-layer runtime verification) and on brownfield discipline. The gaps are real but mostly **organisational** (no explicit guides-vs-sensors model), **continuous** (sensors fire per-change, not on a drift cadence), and **front-of-pipeline** (no SPDD-style versioned, code-synced design prompt). None of the three frameworks conflict; they compose.
 
@@ -58,6 +59,8 @@ Legend: **P0** = closes an enterprise-readiness hole; **P1** = high-leverage; **
 | G10 | **No harness templates per topology.** `/scaffold` detects stack but doesn't ship per-topology *bundles* of guides+sensors ("CRUD-on-JVM", "event-processor-in-Go"). | Harness Eng. (Ashby's Law / variety reduction) | Missing | **P2** |
 | G11 | **No harness-coverage metric.** The articles' open question: "how do we know our sensors are adequate?" We have no report of which code is/isn't under which sensor. | Harness Eng. (open question) | Missing | **P2** |
 | G12 | **Behaviour-harness extras absent:** approved-fixtures pattern, default-on accessibility (axe/WCAG only fires when the contract opts in), flake detection, and **API contract-drift** across builds (`oasdiff` is *referenced* in `keeping-refactors-pure` but never wired as a gate). | Sensors article + our own `TESTING_AGENT_PROPOSAL.md` | Missing (already on our radar) | **P2** |
+| G13 | **No distinct first-context-window prompt.** `/auto` ran identical recovery logic on window 1 and window N; the initializer/continuation split lived only *across commands* (`/scaffold`→`/auto`), not inside the loop. | Anthropic — *Effective harnesses* + multi-context-window prompting ("a different prompt for the very first context window") | ✅ **DONE** — SECTION 2 first-window vs continuation split (`first-window-init` guide): verifies initializer artifacts (populated `features.json`, executable `init.sh`, `specs/` prerequisites) before the first wave. See §7. | P1 |
+| G14 | **No session-start smoke test.** Health-checking was deferred to the post-implementation evaluator; a fresh-process resume could build on a crash-broken tree with no startup sanity check. | Anthropic — autonomous-coding quickstart ("run a basic test on the dev server to catch undocumented bugs" at session start) | ✅ **DONE** — SECTION 2 `resume-smoke` sensor boots the app + evaluator Health-Check Retry on a fresh-process resume, before selecting work; failure routes to self-healing as `failure_layer: infrastructure`. See §7. | P1 |
 
 ---
 
@@ -160,3 +163,35 @@ The sensors article's single most actionable technique: rewrite linter/sensor ou
 - **Greenfield:** already strong. Phase-1 G1 (framing) + G3 (computational security) + Phase-2 SPDD Canvas as the design format make it enterprise-grade rather than POC-grade.
 - **Brownfield/maintenance:** the biggest unlock is the **drift cadence (G2)** + **prompt↔code sync (G4c)** — together they turn a build harness into a *maintenance* harness, which is exactly the "hardest where most needed" problem the lead article calls out.
 - **SPDD vs harness engineering:** complementary, not conflicting. Harness engineering governs the loop; SPDD governs the artifact at the front of it. Adopt SPDD's **Canvas schema** and **sync discipline**; keep our GAN/ratchet/three-layer engine, which already exceeds what the articles describe for behaviour.
+
+---
+
+## 7. Addendum — Anthropic long-running-agent principles (G13–G14)
+
+This section is on a **different source axis** from the rest of the document. Sections 1–6 measure the harness against Fowler/Thoughtworks (control-system framing) and SPDD (front-of-pipeline artifact). This addendum measures it against **Anthropic's own coding-agent guidance** — *Effective harnesses for long-running agents*, the *autonomous-coding* quickstart, and the multi-context-window prompting docs. That guidance frames quality as an **initializer-agent + coding-agent** loop and lists four failure modes with prescribed fixes.
+
+### Adherence audit (verified against the harness, 2026-06-28)
+
+| Anthropic failure mode | Prescribed fix | Harness | Verdict |
+|---|---|---|---|
+| Declares whole project done too early | Structured feature-list JSON | `features.json` (seeded by `/scaffold`, filled by `/spec`); each feature `passes:false` until verified | ✅ adheres |
+| Leaves a buggy / undocumented environment | Initial git repo + progress notes; read them at session start | `claude-progress.txt` Session 0 + `git init`; `/auto` SECTION 2 reads progress/features/`program.md` every iteration | ✅ adheres (state-read) — *but see G14 for the missing startup test* |
+| Marks features done prematurely | Self-verify; only mark passing after careful testing | Evaluator sets `passes:true` only after all three layers (API + Playwright + schema) pass — GAN separation, no self-grading | ✅ adheres (exceeds) |
+| Wastes time figuring out how to run the app | `init.sh` that starts the dev server | `init.sh` generated from template; evaluator runs `bash init.sh` | ✅ adheres |
+| *(multi-context best practice)* | **A different prompt for the very first context window** | Was identical for window 1 and window N inside `/auto` | ❌ → **G13** |
+
+**Net:** the harness already satisfied 4 of the 5 Anthropic points and *exceeds* them on self-verification (the GAN evaluator is stronger than the quickstart's self-grading). Two real deltas remained, and neither was tracked by the Fowler/SPDD roadmap (G1–G12) — they are a separate axis, recorded here as G13–G14.
+
+### G13 — distinct first-context-window initialization
+
+Anthropic's multi-context-window guidance calls for *a different prompt for the very first context window*: the first window initializes (scaffold, author the feature list, write `init.sh`) while continuation windows recover-and-execute. The harness *did* separate these across **commands** (`/scaffold` → `/brd` → `/spec` → `/auto`), but `/auto` itself ran identical SECTION 2 recovery logic on window 1 and window N.
+
+**Shipped:** `/auto` SECTION 2 now branches on the state it reads. A **first window** (Session 0 only, no completed groups, `current_group: none`) runs an initialization preflight — verify `features.json` is populated, `init.sh` exists and is executable, and the `specs/` prerequisites are present — and refuses to build against a half-scaffolded project. A **continuation window** runs the G14 smoke check and resumes. Registered as the `first-window-init` feedforward guide.
+
+### G14 — session-start smoke test on resume
+
+The quickstart's fix for *"leaves the environment with undocumented bugs"* is to **run a basic test on the dev server at session start**. The harness deferred all health-checking to the post-implementation evaluator, so a fresh process resuming after a mid-group SIGKILL could start building on a broken or half-built tree — exactly the state the append-only progress log cannot record.
+
+**Shipped:** the first time `/auto` enters SECTION 2 in a fresh process *with prior committed work*, it boots the app the way the evaluator does (`project-manifest.json#verification.mode`) and runs the evaluator's **Health-Check Retry** loop *before* selecting work; a failure routes to the SECTION 6 self-healing loop as `failure_layer: "infrastructure"`. It is deliberately skipped on the first window (nothing built yet) and on later in-process iterations (the previous PASS already booted the app), and its boot output is redirected to keep the orchestrator context lean. Registered as the `resume-smoke` computational sensor. This is the same `init.sh` + health-probe machinery the evaluator already owns, relocated to the recovery boundary where the crash-resume risk actually lives.
+
+> **Why P1, not P2:** both close a *correctness-of-the-loop* hole on the autonomous path (the riskiest lane), not a slow-cadence maintainability concern. They are cheap (prompt-level changes reusing existing machinery) and high-leverage on long multi-window builds. The remaining G9–G12 stay P2.
