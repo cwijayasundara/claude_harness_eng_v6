@@ -346,6 +346,16 @@ The parent dispatches all group-orchestrators in the wave in a single message (m
 
 If `--parallel-groups N > 3`, accept it but emit a warning to the iteration log. The 3-default is conservative; teams with higher API throughput can raise it.
 
+**Enforced, not advisory.** The concurrency caps above are now backed by a hard
+ceiling: the `PreToolUse(Task)` hook `.claude/hooks/concurrency-gate.js` counts
+in-flight subagents and **denies** a spawn that would exceed
+`max_concurrent_agents` (`project-manifest.json#execution.max_concurrent_agents`
+→ env `CLAUDE_MAX_CONCURRENT_AGENTS` → default 15), decrementing on
+`SubagentStop`. A denied spawn is **backpressure, not a failure** — wait for
+in-flight subagents to finish, then retry; do not treat it as a ratchet failure.
+The gate fails open (a gate error never blocks spawns) and TTL-prunes a leaked
+count.
+
 ### Pod mode (`--pod N`) — per-cluster PRs
 
 Pod mode keeps everything above (wave selection, branch isolation, state coordination, concurrency caps) and changes **only the wave's terminal step**: instead of the parent merging group branches into `WAVE_BASE`, **each cluster raises its own draft PR**. The architect (planning + parent) hands each independent cluster to an "engineer" (group-orchestrator) that delivers a reviewable PR — matching how a real pod assigns clusters to developers.
