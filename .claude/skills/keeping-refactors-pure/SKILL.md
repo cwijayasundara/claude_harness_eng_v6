@@ -19,7 +19,7 @@ A REFACTOR COMMIT CHANGES NO BEHAVIOR; A BEHAVIOR COMMIT REFACTORS NOTHING
 2. **In a refactor commit:**
    - All existing tests and pin-down snapshots pass **byte-identical** — no snapshot updates, no test edits, no assertion changes.
    - Every renamed/moved symbol: enumerate its callers from `specs/brownfield/code-graph.json` (`edges` targeting the symbol's file) and verify each call site updated. No orphaned imports or dead copies left behind.
-   - If an OpenAPI spec exists: `oasdiff` between the before/after specs must report zero breaking changes.
+   - If an OpenAPI spec exists: run `npm run contract-drift` (it also fires automatically in `/gate` when the OpenAPI spec changes). It runs `oasdiff breaking` against the git-base spec and must report zero breaking changes; a breaking verdict blocks.
 3. **In a behavior commit:** a test may be *updated* (not deleted) only with the authorizing story/issue cited in the commit message.
 4. **Ratchet:** test count and changed-line coverage (`diff-cover --fail-under`) may not decrease in either commit type.
 
