@@ -15,14 +15,19 @@
 const fs = require('fs');
 const path = require('path');
 
-function normalizeContract(contract, opts) {
+function normalizeContract(doc, opts) {
   const enabled = !(opts && opts.enabled === false);
-  if (!enabled) return contract;
-  if (contract.accessibility_checks) return contract;
-  if (Array.isArray(contract.playwright_checks) && contract.playwright_checks.length > 0) {
-    return { ...contract, accessibility_checks: { required: true, block_impacts: ['serious', 'critical'] } };
+  if (!enabled) return doc;
+  const inner = doc && doc.contract;
+  if (!inner || typeof inner !== 'object') return doc;
+  if ('accessibility_checks' in inner) return doc;
+  if (Array.isArray(inner.playwright_checks) && inner.playwright_checks.length > 0) {
+    return {
+      ...doc,
+      contract: { ...inner, accessibility_checks: { required: true, block_impacts: ['serious', 'critical'] } },
+    };
   }
-  return contract;
+  return doc;
 }
 
 function parse(argv) {
@@ -58,7 +63,8 @@ function main() {
     fs.writeFileSync(contractPath, JSON.stringify(out, null, 2) + '\n');
     process.stdout.write('contract-accessibility-default: added accessibility_checks (UI story)\n');
   } else {
-    const reason = !enabled ? 'disabled' : contract.accessibility_checks ? 'already set' : 'no playwright_checks';
+    const inner = contract && contract.contract;
+    const reason = !enabled ? 'disabled' : (inner && 'accessibility_checks' in inner) ? 'already set' : 'no playwright_checks';
     process.stdout.write(`contract-accessibility-default: unchanged (${reason})\n`);
   }
   process.exit(0);
