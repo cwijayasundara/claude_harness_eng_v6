@@ -82,7 +82,7 @@ The harness improves itself between runs: `.claude/program.md` (the steering inp
 
 ## The current holes (so they're not invisible)
 
-The point of a registry is that gaps are explicit. Open items, by priority (full detail in the gap analysis):
+The point of a registry is that gaps are explicit. As of 2026-06 **every gap below (G1–G14) is closed** — the section is kept as the shipped-control record, not a backlog. The registry's only forward edge is a P3 flake-history trend (cross-run flake aggregation on top of the `flake-detection` sensor).
 
 - **G1** *(this file)* — make the harness legible. ✅ done by `HARNESS.md` + `harness-manifest.json`.
 - ~~**G2 (P0)** — no continuous **drift** sensors.~~ ✅ **done** — `drift-report.js` diffs architecture (cycles/hubs), dead-code (orphans), and dependency CVEs against a committed snapshot, flagging only *new* regressions; exit 1 on drift for cron/CI/`/schedule`. (Design-vs-code drift remains blocked on G4.)
@@ -94,7 +94,7 @@ The point of a registry is that gaps are explicit. Open items, by priority (full
 - ~~**G8 (P2)**~~ ✅ **done** — vertical bounded-context rules (`contexts.js`) + import-cycle ratchet (`cycle-gate.js`).
 - ~~**G9**~~ ✅ **done** (both halves) — the guide scaffolds /metrics into generated apps; the `runtime-slo` sensor reads it and FAILs on 5xx error-rate over SLO.
 - ~~**G10**~~ ✅ **done** — `/scaffold` resolves a named topology (web-app / api-service / cli-or-library) and presets the manifest-knob bundle via `topologies.js` (Ashby's-Law variety reduction). ~~**G11**~~ ✅ **done** — `harness-coverage.js` reports per-axis coverage from the sensors' `scope` field (`npm run harness-coverage`).
-- ~~**G12 (P2)**~~ ✅ **done** (all 4 slices) — API contract-drift (`oasdiff`), default-on axe/WCAG, approved-fixtures (snapshot-oracle lock), and flake detection (N× re-run). **G1–G12 are now all closed** (open follow-ons: the recorded approved-fixtures minors + a P3 flake-history trend).
+- ~~**G12 (P2)**~~ ✅ **done** (all 4 slices) — API contract-drift (`oasdiff`), default-on axe/WCAG, approved-fixtures (snapshot-oracle lock), and flake detection (N× re-run). **G1–G12 are now all closed.** (The approved-fixtures review minors — `.approved.*` matcher coverage, build-dir walk ignores, friendlier missing-file error — have since been fixed; the only forward item is a P3 flake-history trend.)
 - ~~**G13–G14** *(Anthropic long-running-agent principles)*~~ ✅ **done** — distinct first-context-window initialization (`first-window-init` guide) and a session-start **resume smoke check** (`resume-smoke` sensor) in `/auto` SECTION 2. Sourced from Anthropic's *Effective harnesses for long-running agents* + autonomous-coding quickstart (the multi-context-window split and the "run a basic test on the dev server at session start" failure-mode fix), not the Fowler/SPDD roadmap.
 
 ## Harness coverage (G11)

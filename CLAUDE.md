@@ -71,6 +71,10 @@ These lanes skip contracts, ratcheting, and reviewer enforcement **by design** �
 - Plan multi-step work with clear checkpoints. Loop toward measurable outcomes.
 - Tests verify public behavior through API routes, UI flows, CLIs, or exported module interfaces. Do not couple tests to private helpers or internal call order.
 
+### 5. Verify Independently, at the Branch Level
+- The final whole-branch review on the most capable model is load-bearing, not a formality: per-task reviews tend to inherit the builder's mental model and miss the defects it encodes. Run an independent whole-branch review before merging non-trivial work — it has repeatedly caught Criticals the per-task pass cleared.
+- Integration/contract tests must round-trip the **real** artifact through its **real** validator/schema, never hand-built fixtures. A fixture that encodes the wrong shape keeps every test green while the feature is inert — "tests pass" ≠ "feature works." (A gate once shipped reading a *flat* contract while real sprint contracts nest checks under a `contract` key; flat-fixture tests hid it until the whole-branch review + a `validate-contract` round-trip caught it.)
+
 > These guidelines bias toward caution over speed. Success = fewer unnecessary diffs, simpler code on first attempt, clarifying questions before implementation.
 
 ## Large Codebase Best Practices
@@ -86,6 +90,7 @@ The harness follows [Anthropic's guidance for large codebases](https://claude.co
 - **LSP integration** — `/scaffold` auto-detects LSP servers from the stack (pyright, typescript-language-server, gopls, etc.), writes them to `project-manifest.json`, and checks availability in `init.sh`
 - **MCP servers** — `.mcp.json` template for connecting to internal tools, databases, and documentation
 - **Subdirectory commands** — Scope test/lint commands per module to avoid running full suites on minor changes
+- **Working-tree hygiene (this checkout)** — the repo lives under an iCloud-synced `Documents/` path; concurrent writes (parallel subagents) can spawn `<name> 2.<ext>` duplicate files that hang the `scaffold-copy` / `scaffold-apply` / `skills-consistency` tests. If `npm test` hangs, kill orphaned `node --test` processes and delete the ` 2.`-suffixed dupes, then re-run. Moving the clone outside the synced path prevents it.
 
 ## Prompt Caching
 
