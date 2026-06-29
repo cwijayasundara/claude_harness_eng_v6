@@ -93,8 +93,12 @@ The point of a registry is that gaps are explicit. Open items, by priority (full
 - ~~**G7 (P1)** — `mutation-smoke` exists but isn't a `/auto` ratchet gate.~~ ✅ **done** — diff-scoped mutation gate enforced by pre-commit during `/auto`; survivors below threshold BLOCK with file:line + the exact flip. "tests pass" now implies "tests bite."
 - ~~**G8 (P2)**~~ ✅ **done** — vertical bounded-context rules (`contexts.js`) + import-cycle ratchet (`cycle-gate.js`).
 - ~~**G9**~~ ✅ **done** (both halves) — the guide scaffolds /metrics into generated apps; the `runtime-slo` sensor reads it and FAILs on 5xx error-rate over SLO.
-- ~~**G10**~~ ✅ **done** — `/scaffold` resolves a named topology (web-app / api-service / cli-or-library) and presets the manifest-knob bundle via `topologies.js` (Ashby's-Law variety reduction). Remaining: **G11–G12 (P2)** — a harness-coverage metric and behaviour extras.
+- ~~**G10**~~ ✅ **done** — `/scaffold` resolves a named topology (web-app / api-service / cli-or-library) and presets the manifest-knob bundle via `topologies.js` (Ashby's-Law variety reduction). ~~**G11**~~ ✅ **done** — `harness-coverage.js` reports per-axis coverage from the sensors' `scope` field (`npm run harness-coverage`). Remaining: **G12 (P2)** — behaviour extras (oasdiff contract-drift, default a11y, flake detection).
 - ~~**G13–G14** *(Anthropic long-running-agent principles)*~~ ✅ **done** — distinct first-context-window initialization (`first-window-init` guide) and a session-start **resume smoke check** (`resume-smoke` sensor) in `/auto` SECTION 2. Sourced from Anthropic's *Effective harnesses for long-running agents* + autonomous-coding quickstart (the multi-context-window split and the "run a basic test on the dev server at session start" failure-mode fix), not the Fowler/SPDD roadmap.
+
+## Harness coverage (G11)
+
+`harness-coverage.js` (`npm run harness-coverage`) makes this registry measurable: it maps each source file in a project's `code-graph.json` against the active sensors' `scope` field and reports per-axis coverage % + the ungoverned holes (files with no scoped sensor on an axis). Runtime / dependency / artifact / repo-wide sensors are reported separately. Report-only; run it on a cadence via `/schedule`.
 
 ## How to extend the harness
 
