@@ -80,6 +80,23 @@ test('without --check, 0%-covered axis still exits 0', () => {
   assert.strictEqual(code, 0);
 });
 
+test('--check exits 0 when the only 0%-axis has no file-mapping sensor (e.g. traceability with artifacts scope only)', () => {
+  // Manifest: maintainability=universal (100%), traceability=artifacts-scoped only (not file-mapping).
+  // All file-mapping-eligible axes are fully covered; traceability is structurally 0% but has no
+  // file-mapping sensors, so --check must NOT exit 1.
+  const manifestUniversalOnly = {
+    version: '1', guides: [], sensors: [
+      { id: 'lint', axis: 'maintainability', type: 'computational', cadence: 'session', status: 'active', scope: 'universal' },
+      { id: 'changelog', axis: 'traceability', type: 'computational', cadence: 'commit', status: 'active', scope: 'artifacts' },
+    ],
+  };
+  const { code, report } = run(['src/a.js'], manifestUniversalOnly, {}, {}, ['--check']);
+  assert.strictEqual(report.perAxis.maintainability.pct, 100, 'maintainability should be 100% via universal sensor');
+  assert.strictEqual(report.perAxis.traceability.sensors.length, 0, 'traceability should have zero file-mapping sensors');
+  assert.strictEqual(report.perAxis.traceability.pct, 0, 'traceability pct is structurally 0');
+  assert.strictEqual(code, 0, '--check must exit 0 when only 0%-axes have no file-mapping sensors');
+});
+
 test('tolerant coverage path matching: absolute coverage key matches relative code-graph file', () => {
   // istanbul emits absolute keys like /tmp/proj/src/a.js; code-graph stores src/a.js
   const { code, report } = run(

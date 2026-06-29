@@ -112,7 +112,7 @@ function main() {
   fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(path.join(outDir, 'harness-coverage.json'), JSON.stringify(report, null, 2));
   fs.writeFileSync(path.join(outDir, 'harness-coverage.md'), renderMd(report));
-  const zeroAxis = AXES.find((a) => report.perAxis[a].total > 0 && report.perAxis[a].pct === 0);
+  const zeroAxis = AXES.find((a) => report.perAxis[a].sensors.length > 0 && report.perAxis[a].total > 0 && report.perAxis[a].pct === 0);
   process.stdout.write(`harness-coverage: ${report.files} files; ` + AXES.map((a) => `${a} ${report.perAxis[a].pct}%`).join(', ') + '\n');
   process.exit(argv.includes('--check') && zeroAxis ? 1 : 0);
 }
