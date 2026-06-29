@@ -60,3 +60,16 @@ test('CLI on a deterministic-pass command -> exit 0, no flakes', () => {
   assert.strictEqual(r.flakes.length, 0);
   assert.strictEqual(r.all_consistent, true);
 });
+
+const rd = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+
+test('G12: flake-detection is scripted + registered active (drift cadence)', () => {
+  assert.strictEqual(JSON.parse(rd('package.json')).scripts.flakes, 'node .claude/scripts/flake-detector.js');
+  const m = JSON.parse(rd('harness-manifest.json'));
+  const s = m.sensors.find((x) => x.id === 'flake-detection');
+  assert.ok(s, 'flake-detection sensor must exist');
+  assert.strictEqual(s.status, 'active');
+  assert.strictEqual(s.cadence, 'drift');
+  assert.strictEqual(s.scope, 'repo');
+  assert.ok(s.wired_at && fs.existsSync(path.join(ROOT, s.wired_at)), 'wired_at must resolve');
+});
