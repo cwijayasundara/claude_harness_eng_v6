@@ -31,7 +31,13 @@ function entriesFor(root, baselinePath, argv, meta) {
   const mk = (rel) => ({ path: rel, checksum: lib.checksumOf(root, rel), approved_by: meta.approver, date: meta.date });
   if (argv.includes('--all')) return lib.findSnapshots(root, patterns).map(mk);
   const map = new Map(lib.readBaseline(baselinePath).map((e) => [e.path, e]));
-  for (const rel of selected(argv) || []) map.set(rel, mk(rel));
+  for (const rel of selected(argv) || []) {
+    if (!fs.existsSync(path.join(root, rel))) {
+      process.stderr.write(`approve-fixtures: snapshot not found: ${rel} (relative to ${root})\n`);
+      process.exit(1);
+    }
+    map.set(rel, mk(rel));
+  }
   return [...map.values()];
 }
 
