@@ -18,15 +18,21 @@ function arg(argv, name, fb) { const i = argv.indexOf(name); return i === -1 ? f
 function toFwd(p) { return String(p).replace(/\\/g, '/'); }
 function readJson(p) { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; } }
 
-function coveredSet(covJson) {
-  const out = new Set();
+function coveredKeys(covJson) {
+  const out = [];
   if (!covJson) return out;
   for (const [f, s] of Object.entries(covJson)) {
     if (f === 'total' || !s) continue;
     const c = (s.lines && s.lines.covered) || (s.summary && s.summary.covered_lines) || 0;
-    if (c > 0) out.add(toFwd(f));
+    if (c > 0) out.push(toFwd(f));
   }
   return out;
+}
+
+// Tolerant match: handles absolute coverage keys vs relative code-graph paths
+// (mirrors coverage-diff.js matchKey logic).
+function isCovered(file, covKeys) {
+  return covKeys.some((k) => k === file || k.endsWith('/' + file) || file.endsWith('/' + k));
 }
 
 function sourceFiles(graph) {
@@ -40,7 +46,7 @@ function underRoots(file, roots) {
 
 function inScope(scope, file, ctx) {
   if (scope === 'universal') return true;
-  if (scope === 'test-covered') return ctx.covered.has(file);
+  if (scope === 'test-covered') return isCovered(file, ctx.covered);
   if (scope === 'layer-roots') return underRoots(file, ctx.layerRoots);
   if (scope === 'contexts') return underRoots(file, ctx.ctxRoots);
   return false;
@@ -90,13 +96,14 @@ function main() {
   const argv = process.argv.slice(2);
   const root = arg(argv, '--root', process.cwd());
   const manifest = readJson(arg(argv, '--manifest', path.join(__dirname, '..', '..', 'harness-manifest.json')));
+  if (!manifest) { process.stdout.write('harness-coverage: harness-manifest not found — pass --manifest to specify its path.\n'); process.exit(0); }
   const graphPath = arg(argv, '--graph', path.join(root, 'specs', 'brownfield', 'code-graph.json'));
   const graph = readJson(graphPath);
   if (!graph) { process.stdout.write(`harness-coverage: no code-graph.json at ${graphPath} — run /code-map first.\n`); process.exit(0); }
   const projManifest = readJson(path.join(root, 'project-manifest.json')) || {};
   const arch = projManifest.architecture || {};
   const ctx = {
-    covered: coveredSet(readJson(arg(argv, '--coverage', path.join(root, 'coverage', 'coverage-summary.json')))),
+    covered: coveredKeys(readJson(arg(argv, '--coverage', path.join(root, 'coverage', 'coverage-summary.json')))),
     layerRoots: arch.layer_roots || [],
     ctxRoots: (arch.contexts && arch.contexts.roots) || [],
   };

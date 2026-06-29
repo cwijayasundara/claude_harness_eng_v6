@@ -10,7 +10,7 @@ const { execFileSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
 const SCRIPT = path.join(ROOT, '.claude', 'scripts', 'harness-coverage.js');
 
-function run(files, scopedManifest, coverage, arch) {
+function run(files, scopedManifest, coverage, arch, extraArgs) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hc-'));
   fs.mkdirSync(path.join(dir, 'specs', 'brownfield'), { recursive: true });
   fs.writeFileSync(path.join(dir, 'specs', 'brownfield', 'code-graph.json'),
@@ -22,7 +22,7 @@ function run(files, scopedManifest, coverage, arch) {
   fs.writeFileSync(manPath, JSON.stringify(scopedManifest));
   let code = 0;
   try {
-    execFileSync('node', [SCRIPT, '--root', dir, '--manifest', manPath, '--coverage', covPath], { stdio: 'pipe' });
+    execFileSync('node', [SCRIPT, '--root', dir, '--manifest', manPath, '--coverage', covPath, ...(extraArgs || [])], { stdio: 'pipe' });
   } catch (e) { code = e.status; }
   const report = JSON.parse(fs.readFileSync(path.join(dir, 'specs', 'harness-coverage', 'harness-coverage.json'), 'utf8'));
   return { code, report };
@@ -66,4 +66,28 @@ test('graceful exit 0 with message when no code-graph', () => {
   catch (e) { code = e.status; }
   assert.strictEqual(code, 0);
   assert.ok(/code-graph/i.test(out), 'should mention the missing code-graph');
+});
+
+test('--check exits 1 when a file-based axis is 0%-covered', () => {
+  // behaviour has only a test-covered sensor; no coverage → 0% → --check must exit 1
+  const { code } = run(['src/a.js'], MANIFEST, {}, { layer_roots: ['src'] }, ['--check']);
+  assert.strictEqual(code, 1);
+});
+
+test('without --check, 0%-covered axis still exits 0', () => {
+  // same scenario as above but no --check flag
+  const { code } = run(['src/a.js'], MANIFEST, {}, { layer_roots: ['src'] });
+  assert.strictEqual(code, 0);
+});
+
+test('tolerant coverage path matching: absolute coverage key matches relative code-graph file', () => {
+  // istanbul emits absolute keys like /tmp/proj/src/a.js; code-graph stores src/a.js
+  const { code, report } = run(
+    ['src/a.js'],
+    MANIFEST,
+    { '/tmp/proj/src/a.js': { lines: { covered: 5, total: 5 } } },
+    {});
+  assert.strictEqual(code, 0);
+  assert.strictEqual(report.perAxis.behaviour.covered, 1, 'absolute coverage key should match relative file');
+  assert.strictEqual(report.perAxis.behaviour.holes.length, 0);
 });
