@@ -91,3 +91,10 @@ test('tolerant coverage path matching: absolute coverage key matches relative co
   assert.strictEqual(report.perAxis.behaviour.covered, 1, 'absolute coverage key should match relative file');
   assert.strictEqual(report.perAxis.behaviour.holes.length, 0);
 });
+
+const rd = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+
+test('G11: harness-coverage is surfaced + scripted', () => {
+  assert.strictEqual(JSON.parse(rd('package.json')).scripts['harness-coverage'], 'node .claude/scripts/harness-coverage.js');
+  assert.ok(/harness-coverage/.test(rd('HARNESS.md')), 'HARNESS.md must document harness coverage');
+});
