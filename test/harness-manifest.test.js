@@ -18,6 +18,8 @@ function loadManifest() {
   return JSON.parse(fs.readFileSync(DEFAULT_MANIFEST, 'utf8'));
 }
 
+const manifest = loadManifest();
+
 test('harness-manifest.json is valid and every wired_at resolves', () => {
   const { errors, counts } = validate(loadManifest());
   assert.deepStrictEqual(errors, [], `manifest errors:\n${errors.join('\n')}`);
@@ -54,4 +56,21 @@ test('validator requires planned entries to name a gap', () => {
 test('HARNESS.md exists and references the manifest', () => {
   const md = fs.readFileSync(path.join(REPO_ROOT, 'HARNESS.md'), 'utf8');
   assert.ok(md.includes('harness-manifest.json'), 'HARNESS.md must reference the manifest');
+});
+
+test('every active or partial sensor declares a valid scope (G11)', () => {
+  const SCOPES = new Set(['universal', 'test-covered', 'layer-roots', 'contexts', 'runtime', 'dependencies', 'artifacts', 'repo']);
+  const offenders = manifest.sensors
+    .filter((s) => (s.status || 'active') !== 'planned')
+    .filter((s) => !SCOPES.has(s.scope))
+    .map((s) => s.id);
+  assert.deepStrictEqual(offenders, [], `sensors missing/invalid scope: ${offenders.join(', ')}`);
+});
+
+test('validate() rejects an active sensor with no scope (G11)', () => {
+  const bad = { version: '1', guides: [], sensors: [
+    { id: 'x', axis: 'behaviour', type: 'computational', cadence: 'commit', status: 'active', wired_at: 'package.json' },
+  ] };
+  const { errors } = validate(bad);
+  assert.ok(errors.some((e) => /scope/i.test(e)), 'expected a scope error');
 });

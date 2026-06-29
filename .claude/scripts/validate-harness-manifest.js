@@ -21,6 +21,7 @@ const AXES = new Set(['maintainability', 'architecture', 'behaviour', 'traceabil
 const SENSOR_TYPES = new Set(['computational', 'inferential', 'hybrid']);
 const CADENCES = new Set(['planning', 'session', 'commit', 'integration', 'drift']);
 const STATUSES = new Set(['active', 'partial', 'planned']);
+const SCOPES = new Set(['universal', 'test-covered', 'layer-roots', 'contexts', 'runtime', 'dependencies', 'artifacts', 'repo']);
 const GAP_RE = /^G\d+$/;
 
 // A wired_at may carry a JSON-pointer-ish fragment (file.json#path); the file is
@@ -79,6 +80,9 @@ function validate(manifest) {
     checkEntry(s, 'sensor', seen, errors);
     if (!SENSOR_TYPES.has(s.type)) errors.push(`sensor ${s.id}: invalid type "${s.type}"`);
     if (!CADENCES.has(s.cadence)) errors.push(`sensor ${s.id}: invalid cadence "${s.cadence}"`);
+    if ((s.status || 'active') !== 'planned' && !SCOPES.has(s.scope)) {
+      errors.push(`sensor ${s.id}: active/partial sensor needs a scope in {${[...SCOPES].join(', ')}}`);
+    }
   }
 
   return { errors, counts: { guides: guides.length, sensors: sensors.length } };
