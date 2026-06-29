@@ -76,3 +76,17 @@ test('no breaking (fake oasdiff exit 0) -> exit 0, verdict pass', () => {
   assert.strictEqual(code, 0);
   assert.strictEqual(v.verdict, 'pass');
 });
+
+const rd = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+
+test('G12: contract-drift is wired + scripted + registered active', () => {
+  assert.strictEqual(JSON.parse(rd('package.json')).scripts['contract-drift'], 'node .claude/scripts/contract-drift-gate.js');
+  assert.ok(/contract-drift-gate\.js|contract-drift/.test(rd('.claude/skills/gate/SKILL.md')), '/gate must run contract-drift');
+  assert.ok(/contract-drift/.test(rd('.claude/skills/keeping-refactors-pure/SKILL.md')), 'keeping-refactors-pure must point at the gate');
+  const m = JSON.parse(rd('harness-manifest.json'));
+  const s = m.sensors.find((x) => x.id === 'api-contract-drift');
+  assert.ok(s, 'api-contract-drift sensor must exist');
+  assert.strictEqual(s.status, 'active');
+  assert.strictEqual(s.scope, 'runtime');
+  assert.ok(s.wired_at && fs.existsSync(path.join(ROOT, s.wired_at)), 'wired_at must resolve');
+});
