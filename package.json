@@ -7,6 +7,7 @@
     "certification": "node .claude/scripts/certification-report.js",
     "status": "node .claude/scripts/pipeline-status.js",
     "drift": "node .claude/scripts/drift-report.js",
+    "harness-coverage": "node .claude/scripts/harness-coverage.js",
     "slo": "node .claude/scripts/slo-check.js",
     "mutation": "node .claude/scripts/mutation-gate.js --staged",
     "cycles": "node .claude/scripts/cycle-gate.js",
