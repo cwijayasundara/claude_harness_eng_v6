@@ -8,13 +8,18 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const DEFAULT_PATTERNS = ['__snapshots__/', '.snap', '.ambr', '.approved.txt', '.approved.json'];
-const IGNORE = new Set(['node_modules', '.git']);
+// '.approved.' is a substring marker so any ApprovalTests output (.approved.txt,
+// .approved.json, .approved.png, .approved.xml, ...) is covered.
+const DEFAULT_PATTERNS = ['__snapshots__/', '.snap', '.ambr', '.approved.'];
+// Build/output/cache dirs never hold authored test snapshots; skipping them
+// keeps the walk cheap on large trees (not a full .gitignore parse — a P3 item).
+const IGNORE = new Set(['node_modules', '.git', 'dist', 'build', 'coverage', '.next', 'venv', '.venv', '__pycache__']);
 
-// A pattern ending in '/' is a path substring (e.g. __snapshots__/); otherwise a suffix.
+// A pattern ending in '/' or '.' is a path substring (e.g. __snapshots__/, .approved.);
+// otherwise a suffix.
 function matches(rel, patterns) {
   const p = rel.replace(/\\/g, '/');
-  return patterns.some((pat) => (pat.endsWith('/') ? p.includes(pat) : p.endsWith(pat)));
+  return patterns.some((pat) => (pat.endsWith('/') || pat.endsWith('.') ? p.includes(pat) : p.endsWith(pat)));
 }
 
 function walk(root, rel, patterns, acc) {

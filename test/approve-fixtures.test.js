@@ -42,3 +42,13 @@ test('approve --snapshots upserts only the named file, preserving others', () =>
   assert.ok(byPath['b.snap'], 'b.snap added');
   assert.strictEqual(byPath['a.snap'].checksum, 'sha256:STALE', 'a.snap entry preserved untouched');
 });
+
+test('approve --snapshots <missing> -> friendly error, exit 1 (minors fix)', () => {
+  const dir = tmp();
+  let code = 0;
+  let stderr = '';
+  try { execFileSync('node', [APPROVE, '--root', dir, '--snapshots', 'nope.snap'], { stdio: 'pipe' }); }
+  catch (e) { code = e.status; stderr = (e.stderr || '').toString(); }
+  assert.strictEqual(code, 1);
+  assert.ok(/not found/.test(stderr), `expected a friendly 'not found' message, got: ${stderr}`);
+});

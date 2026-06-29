@@ -111,3 +111,19 @@ test('G12: gate is dormant on the harness repo (no snapshot files -> exit 0)', (
   catch (e) { code = e.status; }
   assert.strictEqual(code, 0); // the harness uses node:test assertions, not snapshot files
 });
+
+test('matcher: .approved.* (png/xml) covered + build/output dirs ignored (minors fix)', () => {
+  const dir = tmp();
+  fs.writeFileSync(path.join(dir, 'ui.approved.png'), 'x');
+  fs.writeFileSync(path.join(dir, 'ui.approved.txt'), 'x');
+  fs.writeFileSync(path.join(dir, 'real.snap'), 'x');
+  for (const d of ['dist', 'coverage', '__pycache__']) {
+    fs.mkdirSync(path.join(dir, d), { recursive: true });
+    fs.writeFileSync(path.join(dir, d, 'x.snap'), 'x');
+  }
+  const found = lib.findSnapshots(dir, lib.DEFAULT_PATTERNS);
+  assert.ok(found.includes('ui.approved.png'), '.approved.png detected');
+  assert.ok(found.includes('ui.approved.txt'), '.approved.txt detected');
+  assert.ok(found.includes('real.snap'));
+  assert.ok(!found.some((f) => /^(dist|coverage|__pycache__)\//.test(f)), 'build/output dirs ignored');
+});
