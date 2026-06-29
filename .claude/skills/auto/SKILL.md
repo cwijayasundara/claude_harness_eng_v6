@@ -130,6 +130,14 @@ Rules:
 - **Contract is immutable after negotiation.** Once the evaluator writes the final version, no one edits it.
 - **Validate before it freezes.** After the evaluator writes the final contract, run `node .claude/scripts/validate-contract.js sprint-contracts/{group}.json`. A non-zero exit means the contract is structurally malformed — re-run Step 3 once with the validator output attached. Do not proceed to execution with an invalid contract: the pre-commit hook repeats this check deterministically and will block every commit until it is fixed.
 
+### Step 3.5 — Default-on accessibility (G12)
+
+After the sprint contract is finalized and validated, run the accessibility normalizer on it:
+
+`node .claude/scripts/contract-accessibility-default.js sprint-contracts/{group}.json`
+
+When the contract has `playwright_checks` (a UI story) and the project has not set `accessibility.enabled:false`, this deterministically injects a default `accessibility_checks` block so the evaluator's axe-core gate runs (Full FAIL / Lean WARN on serious/critical impacts). A contract that already defines `accessibility_checks` is left untouched. This makes accessibility a default for UI work instead of something the generator must remember to request. (In parallel mode, run it per group on each `sprint-contracts/{group}.json`.)
+
 ### Ceremony profile
 
 Read `project-manifest.json#execution.ceremony` (default `full`). At `trimmed`:

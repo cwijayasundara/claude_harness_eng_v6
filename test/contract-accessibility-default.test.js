@@ -61,3 +61,16 @@ test('CLI leaves the contract alone when accessibility.enabled is false', () => 
   const out = runCli({ enabled: false }, { playwright_checks: [{ action: 'click' }] });
   assert.strictEqual(out.accessibility_checks, undefined);
 });
+
+const rd = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+
+test('G12: default-on a11y is wired into /auto + registered active', () => {
+  assert.ok(/contract-accessibility-default\.js/.test(rd('.claude/skills/auto/SKILL.md')),
+    '/auto must run the accessibility normalizer');
+  const m = JSON.parse(rd('harness-manifest.json'));
+  const s = m.sensors.find((x) => x.id === 'accessibility');
+  assert.ok(s, 'accessibility sensor must exist');
+  assert.strictEqual(s.status, 'active');
+  assert.strictEqual(s.scope, 'runtime');
+  assert.ok(s.wired_at && fs.existsSync(path.join(ROOT, s.wired_at)), 'wired_at must resolve');
+});

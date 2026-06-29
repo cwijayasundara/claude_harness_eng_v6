@@ -197,6 +197,10 @@ Based on their answers, write `project-manifest.json` to the project root. Fill 
 
 `observability` (G9): default-on for server shapes; the generator reads the observability code-gen references when `enabled` and the project exposes an HTTP server. Set `enabled:false` to opt out.
 
+- accessibility (optional): `"accessibility": { "enabled": bool } | omitted (default on),`
+
+`accessibility` (G12): default-on axe/WCAG gate for UI stories (contracts with `playwright_checks`). Set `enabled:false` to opt out.
+
 - **Topology:** the manifest records a detected `topology` (`web-app` / `api-service` / `cli-or-library`) and applies its preset bundle of harness knobs (architecture, observability, verification mode, ceremony, model tier). Print the detected topology and its `summary` (from `.claude/scripts/topologies.js`) in the scaffold report, e.g. "Detected topology: web-app → layered architecture · observability · docker verify · full ceremony · balanced model tier." Every field stays overridable in `project-manifest.json`.
 
 ### LSP Config (auto-detected from stack)
