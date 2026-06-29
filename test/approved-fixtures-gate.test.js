@@ -91,3 +91,23 @@ test('removed approved snapshot -> WARN, exit 0', () => {
   assert.strictEqual(v.verdict, 'pass');
   assert.ok(v.removed.includes('gone.snap'));
 });
+
+const rd = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+
+test('G12: approved-fixtures is wired + registered active', () => {
+  assert.ok(/approved-fixtures-gate\.js|approved-fixtures/.test(rd('.claude/skills/gate/SKILL.md')), '/gate must run the gate');
+  assert.strictEqual(JSON.parse(rd('package.json')).scripts['approved-fixtures'], 'node .claude/scripts/approved-fixtures-gate.js');
+  const m = JSON.parse(rd('harness-manifest.json'));
+  const s = m.sensors.find((x) => x.id === 'approved-fixtures-gate');
+  assert.ok(s, 'approved-fixtures-gate sensor must exist');
+  assert.strictEqual(s.status, 'active');
+  assert.strictEqual(s.scope, 'repo');
+  assert.ok(s.wired_at && fs.existsSync(path.join(ROOT, s.wired_at)), 'wired_at must resolve');
+});
+
+test('G12: gate is dormant on the harness repo (no snapshot files -> exit 0)', () => {
+  let code = 0;
+  try { execFileSync('node', [SCRIPT, '--root', ROOT, '--out', path.join(os.tmpdir(), `af-harness-${process.pid}.json`)], { stdio: 'pipe' }); }
+  catch (e) { code = e.status; }
+  assert.strictEqual(code, 0); // the harness uses node:test assertions, not snapshot files
+});
