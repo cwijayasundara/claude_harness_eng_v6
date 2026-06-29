@@ -11,6 +11,7 @@
     "slo": "node .claude/scripts/slo-check.js",
     "mutation": "node .claude/scripts/mutation-gate.js --staged",
     "cycles": "node .claude/scripts/cycle-gate.js",
+    "approved-fixtures": "node .claude/scripts/approved-fixtures-gate.js",
     "contract-drift": "node .claude/scripts/contract-drift-gate.js",
     "test": "node --test test/*.test.js test/e2e/helpers/*.test.js",
     "build:chain": "node .claude/scripts/build-chain.js",
