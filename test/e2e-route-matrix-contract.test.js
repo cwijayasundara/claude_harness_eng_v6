@@ -13,9 +13,27 @@ test('live e2e route matrix covers scaffold plus build and feature routes', () =
   const runner = require('./e2e/run-pack.js');
   const ids = runner.LIVE_LAYERS.map((l) => l.id);
 
-  for (const id of ['plan', 'semi', 'auto', 'full-auto', 'gated', 'feature', 'smoke']) {
+  for (const id of ['plan', 'semi', 'auto', 'full-auto', 'gated', 'feature', 'vibe', 'brownfield-run', 'smoke']) {
     assert.ok(ids.includes(id), `missing live route layer: ${id}`);
   }
+});
+
+test('brownfield live route runs the real /brownfield --seams and asserts its artifacts', () => {
+  const file = read('test/e2e/harness-brownfield-run.test.js');
+  assert.match(file, /runClaude\('\/scaffold --yes existing/);
+  assert.match(file, /runClaude\('\/brownfield --seams/);
+  assert.match(file, /'code-graph\.json'/);
+  assert.match(file, /'wiki', 'WIKI\.md'/);
+  assert.match(file, /'change-strategy\.md'/);
+  assert.match(file, /\^seams-/);
+});
+
+test('vibe live route scaffolds an existing repo and runs /vibe with a vibe-log assertion', () => {
+  const file = read('test/e2e/harness-vibe-run.test.js');
+  assert.match(file, /runClaude\('\/scaffold --yes existing/);
+  assert.match(file, /runClaude\('\/vibe /);
+  assert.match(file, /state', 'vibe-log\.md/);
+  assert.match(file, /runProjectSuite/);
 });
 
 test('full-auto live route uses /build --auto without --lite', () => {
