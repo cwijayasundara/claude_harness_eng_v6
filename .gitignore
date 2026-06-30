@@ -43,8 +43,6 @@ test/e2e/feature-output/
 test/e2e/vibe-output/
 test/e2e/brownfield-run-output/
 test/e2e/screenshots/
-# Generated artifacts — build_matrices_deck.py output
-matrices.pptx
 # Runtime output: review/eval agents (clean-code, security, diff) write reports + verdict
 # JSON here each run; the pre-commit gate reads them. Regenerated every time, never shipped.
 **/specs/reviews/

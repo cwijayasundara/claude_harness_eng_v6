@@ -2,7 +2,6 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { test } = require('node:test');
-const { execFileSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
 
@@ -79,24 +78,4 @@ test('Phase Quality panels query harness_phase_eval_score or harness_phase_eval_
       `panel "${panel.title}" does not query phase eval metrics`
     );
   }
-});
-
-// ── 3. PPTX deck generation ─────────────────────────────────────────────────
-
-test('build_matrices_deck.py runs without errors', () => {
-  const result = execFileSync('python3', [path.join(ROOT, 'build_matrices_deck.py')], {
-    cwd: ROOT,
-    encoding: 'utf8',
-    timeout: 30000,
-  });
-  assert.match(result, /wrote matrices\.pptx/);
-});
-
-test('generated deck has 12 slides', () => {
-  const result = execFileSync('python3', [path.join(ROOT, 'build_matrices_deck.py')], {
-    cwd: ROOT,
-    encoding: 'utf8',
-    timeout: 30000,
-  });
-  assert.match(result, /12 slides/);
 });
