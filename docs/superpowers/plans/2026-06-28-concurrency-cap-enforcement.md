@@ -410,7 +410,7 @@ Expected: PASS (1 test).
 - [ ] **Step 5: Run the full suite + commit**
 
 Run: `npm test`
-Expected: PASS (all suites, including the three new concurrency-gate test files). (If the root suite shows 2 `pptx_util` failures in `phase-eval-integration`, that is a known local working-tree issue — `git restore pptx_util/` and re-run; not your change.)
+Expected: PASS (all suites, including the three new concurrency-gate test files).
 
 ```bash
 git add .claude/skills/auto/SKILL.md test/concurrency-gate-doc-contract.test.js
