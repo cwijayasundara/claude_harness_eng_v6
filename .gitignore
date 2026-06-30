@@ -39,6 +39,8 @@ test/e2e/smoke-output/
 test/e2e/plan-output/
 test/e2e/auto-output/
 test/e2e/semi-auto-output/
+test/e2e/vibe-output/
+test/e2e/brownfield-run-output/
 test/e2e/screenshots/
 # Generated artifacts — build_matrices_deck.py output
 matrices.pptx

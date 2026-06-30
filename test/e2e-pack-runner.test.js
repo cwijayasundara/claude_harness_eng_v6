@@ -26,7 +26,7 @@ test('e2e pack supports --only and --skip selection', () => {
   assert.deepStrictEqual(only.map((l) => l.id), ['plan', 'auto']);
 
   const skip = runner.selectedLayers(runner.parseArgs(['live', '--skip=semi,smoke']));
-  assert.deepStrictEqual(skip.map((l) => l.id), ['install-browser', 'plan', 'auto', 'full-auto', 'gated', 'feature']);
+  assert.deepStrictEqual(skip.map((l) => l.id), ['install-browser', 'plan', 'auto', 'full-auto', 'gated', 'feature', 'vibe', 'brownfield-run']);
 });
 
 test('e2e pack preserves dependency layers for targeted runs', () => {

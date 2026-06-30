@@ -27,6 +27,8 @@ const LIVE_LAYERS = [
   layer('full-auto', 'Full-auto Build', 3420, ['node', '--test', '--test-force-exit', '--test-timeout=3300000', 'test/e2e/harness-full-auto-run.test.js']),
   layer('gated', 'Gated Build', 1020, ['node', '--test', '--test-force-exit', '--test-timeout=900000', 'test/e2e/harness-gated-build.test.js']),
   layer('feature', 'Brownfield Feature Route', 1620, ['node', '--test', '--test-force-exit', '--test-timeout=1500000', 'test/e2e/harness-feature-route.test.js']),
+  layer('vibe', 'Controlled Vibe Lane', 1020, ['node', '--test', '--test-force-exit', '--test-timeout=900000', 'test/e2e/harness-vibe-run.test.js']),
+  layer('brownfield-run', 'Real /brownfield --seams Discovery', 1200, ['node', '--test', '--test-force-exit', '--test-timeout=1080000', 'test/e2e/harness-brownfield-run.test.js']),
   layer('smoke', 'Self-healing Browser Smoke', 1320, ['node', '--test', '--test-force-exit', '--test-timeout=1200000', 'test/e2e/harness-selfheal-smoke.test.js'], { needsBrowser: true }),
 ];
 
@@ -121,20 +123,16 @@ function commandExists(command) {
   return spawnSync(probe, [command], { stdio: 'ignore' }).status === 0;
 }
 
-function runLayer(l, opts = {}) {
-  fs.mkdirSync(LOG_DIR, { recursive: true });
-  const startedAt = new Date().toISOString();
-  const started = Date.now();
-  const stdoutPath = path.join(LOG_DIR, `${l.id}.stdout.log`);
-  const stderrPath = path.join(LOG_DIR, `${l.id}.stderr.log`);
-  const outFd = fs.openSync(stdoutPath, 'w');
-  const errFd = fs.openSync(stderrPath, 'w');
+// spawnSync the layer command with its stdout/stderr captured to the open fds,
+// honoring the watchdog timeout, then SIGKILL the whole detached process group so
+// a node:test that never force-exits can't keep the pipes (and this runner) alive.
+function spawnDetached(command, timeoutSec, outFd, errFd) {
   let result;
   try {
-    result = spawnSync(l.command[0], l.command.slice(1), {
+    result = spawnSync(command[0], command.slice(1), {
       cwd: ROOT,
       env: process.env,
-      timeout: l.timeoutSec * 1000,
+      timeout: timeoutSec * 1000,
       killSignal: 'SIGKILL',
       detached: true,
       stdio: ['ignore', outFd, errFd],
@@ -146,6 +144,16 @@ function runLayer(l, opts = {}) {
   if (result.pid) {
     try { process.kill(-result.pid, 'SIGKILL'); } catch (_) { /* process group already exited */ }
   }
+  return result;
+}
+
+function runLayer(l, opts = {}) {
+  fs.mkdirSync(LOG_DIR, { recursive: true });
+  const startedAt = new Date().toISOString();
+  const started = Date.now();
+  const stdoutPath = path.join(LOG_DIR, `${l.id}.stdout.log`);
+  const stderrPath = path.join(LOG_DIR, `${l.id}.stderr.log`);
+  const result = spawnDetached(l.command, l.timeoutSec, fs.openSync(stdoutPath, 'w'), fs.openSync(stderrPath, 'w'));
   const timedOut = result.error && result.error.code === 'ETIMEDOUT';
   const exitCode = typeof result.status === 'number' ? result.status : (timedOut ? 137 : 1);
   const passed = exitCode === 0 && !result.signal && !result.error;
@@ -191,21 +199,23 @@ function writeSummary(summary) {
   return file;
 }
 
+function prereqFailure(opts, prereqErrors) {
+  const summary = {
+    profile: opts.profile,
+    startedAt: new Date().toISOString(),
+    passed: false,
+    prereqErrors,
+    results: [],
+  };
+  const file = writeSummary(summary);
+  process.stderr.write(`Prerequisite failure: ${prereqErrors.join('; ')}\nSummary: ${file}\n`);
+  return { summary, file, exitCode: 2 };
+}
+
 function runPack(opts) {
   const layers = selectedLayers(opts);
   const prereqErrors = checkPrerequisites(layers);
-  if (prereqErrors.length) {
-    const summary = {
-      profile: opts.profile,
-      startedAt: new Date().toISOString(),
-      passed: false,
-      prereqErrors,
-      results: [],
-    };
-    const file = writeSummary(summary);
-    process.stderr.write(`Prerequisite failure: ${prereqErrors.join('; ')}\nSummary: ${file}\n`);
-    return { summary, file, exitCode: 2 };
-  }
+  if (prereqErrors.length) return prereqFailure(opts, prereqErrors);
 
   const summary = { profile: opts.profile, startedAt: new Date().toISOString(), passed: true, results: [] };
   for (const l of layers) {
