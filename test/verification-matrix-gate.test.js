@@ -234,6 +234,19 @@ test('plan phase fails when a required layer has no planned check', () => {
   assert.ok(verdict.failures.some((f) => f.code === 'missing_planned_layer' && f.matrix_id === 'VM-001' && f.layer === 'api'));
 });
 
+test('plan phase fails when matrix BRD and story trace do not match the AC', () => {
+  const root = baseProject();
+  const matrix = JSON.parse(fs.readFileSync(path.join(root, 'specs', 'test_artefacts', 'verification-matrix.json'), 'utf8'));
+  matrix.requirements[0].brd_id = 'BR-999';
+  matrix.requirements[1].story_id = 'E1-S999';
+  writeJson(root, 'specs/test_artefacts/verification-matrix.json', matrix);
+
+  const verdict = gate.runGate({ root, phase: 'plan' });
+  assert.strictEqual(verdict.pass, false);
+  assert.ok(verdict.failures.some((f) => f.code === 'invalid_brd_trace' && f.matrix_id === 'VM-001'));
+  assert.ok(verdict.failures.some((f) => f.code === 'invalid_story_trace' && f.matrix_id === 'VM-002'));
+});
+
 test('contract phase fails when required API coverage has no contract check', () => {
   const root = baseProject();
   writeJson(root, 'sprint-contracts/A.json', {

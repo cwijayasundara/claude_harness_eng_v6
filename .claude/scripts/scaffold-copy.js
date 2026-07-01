@@ -67,6 +67,7 @@ const CORE_SCRIPTS = [
   'trace-check.js',
   'validate-sensor-waivers.js',
   'validate-contract.js',
+  'verification-matrix-gate.js',
 ];
 const BROWNFIELD_SCRIPTS = [
   ...CORE_SCRIPTS,

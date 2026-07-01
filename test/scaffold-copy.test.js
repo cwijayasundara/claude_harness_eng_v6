@@ -65,3 +65,17 @@ for (const profile of ['core', 'full']) {
     }
   });
 }
+
+for (const profile of ['core', 'brownfield', 'full']) {
+  test(`scaffold (${profile}) copies scripts required by copied prompt wiring`, () => {
+    const { workDir, target } = scaffoldInto(profile);
+    try {
+      assert.ok(
+        fs.existsSync(path.join(target, '.claude', 'scripts', 'verification-matrix-gate.js')),
+        'verification-matrix-gate.js must be copied because /test and /auto call it',
+      );
+    } finally {
+      fs.rmSync(workDir, { recursive: true, force: true });
+    }
+  });
+}

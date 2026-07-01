@@ -57,8 +57,25 @@ function storyAcIds(root, rows, group) {
   );
 }
 
+function storyTraceMap(root, rows, group) {
+  const traces = readJson(path.join(root, 'specs', 'stories', 'story-traces.json'), []);
+  const storyIds = group ? new Set(rows.map((row) => row.story_id).filter(Boolean)) : null;
+  const map = new Map();
+  for (const story of asArray(traces)) {
+    if (storyIds && !storyIds.has(story.id)) continue;
+    for (const ac_id of asArray(story.acs)) {
+      map.set(ac_id, {
+        story_id: story.id,
+        brd_ids: new Set(asArray(story.traces)),
+      });
+    }
+  }
+  return map;
+}
+
 function validatePlan(root, rows, failures, group) {
   const acIds = storyAcIds(root, rows, group);
+  const tracesByAc = storyTraceMap(root, rows, group);
   const coveredAcs = new Set();
 
   for (const row of rows) {
@@ -67,6 +84,23 @@ function validatePlan(root, rows, failures, group) {
       add(failures, 'invalid_ac_trace', { matrix_id: row.id || null, ac_id: row.ac_id || null });
     } else {
       coveredAcs.add(row.ac_id);
+      const trace = tracesByAc.get(row.ac_id);
+      if (trace && row.story_id !== trace.story_id) {
+        add(failures, 'invalid_story_trace', {
+          matrix_id: row.id || null,
+          ac_id: row.ac_id,
+          story_id: row.story_id || null,
+          expected_story_id: trace.story_id,
+        });
+      }
+      if (trace && !trace.brd_ids.has(row.brd_id)) {
+        add(failures, 'invalid_brd_trace', {
+          matrix_id: row.id || null,
+          ac_id: row.ac_id,
+          brd_id: row.brd_id || null,
+          expected_brd_ids: Array.from(trace.brd_ids),
+        });
+      }
     }
     if (asArray(row.required_layers).length === 0) {
       add(failures, 'missing_required_layers', { matrix_id: row.id || null });

@@ -563,7 +563,15 @@ This blocks if the group's evaluator report or trace sidecars failed to execute 
 
 ### Phase 9.5 — Pre-PR Executed Matrix Gate
 
-Before a Phase 9.5 pre-PR proof, draft PR, or final completion claim, run:
+Before a Phase 9.5 pre-PR proof or draft PR for one group/cluster, run the
+executed matrix gate scoped to that group:
+
+```bash
+node .claude/scripts/verification-matrix-gate.js --phase executed --group "$GROUP_ID"
+```
+
+Before an integrated PR or final completion claim for the whole wave/product,
+run the full executed matrix gate:
 
 ```bash
 node .claude/scripts/verification-matrix-gate.js --phase executed
