@@ -50,7 +50,7 @@ Read `sprint-contracts/{group}.json`. The contract contains:
 - `architecture_checks.files_must_exist`: list of file paths that must be present on disk.
 - `features`: list of feature IDs this group satisfies.
 
-Every runtime check should include `matrix_ids` from `specs/test_artefacts/verification-matrix.json`. Missing required matrix coverage is a hard verification failure.
+Every runtime check should include `matrix_ids` from `specs/test_artefacts/verification-matrix.json`. Missing required matrix coverage is a hard verification failure. When a matrix row declares `implementation_paths`, regenerate evidence after those production files change; stale evidence older than an `implementation_paths` file must not clear the executed gate.
 
 ### Step 3 — Load Project Manifest
 

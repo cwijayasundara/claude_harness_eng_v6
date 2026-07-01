@@ -187,6 +187,7 @@ test('verification matrix gate is wired through test, auto, generator, evaluator
   assert.match(files.testSkill, /unit-traces\.json/);
   assert.match(files.testSkill, /integration-traces\.json/);
   assert.match(files.testSkill, /e2e-traces\.json/);
+  assert.match(files.testSkill, /implementation_paths/);
   assert.match(files.testSkill, /HARD (?:BLOCK|gate)[\s\S]*verification-matrix-verdict\.json/);
   assert.match(files.testSkill, /generate[\s\S]*unit-traces\.json[\s\S]*integration-traces\.json[\s\S]*e2e-traces\.json/);
 
@@ -197,8 +198,11 @@ test('verification matrix gate is wired through test, auto, generator, evaluator
 
   assert.match(files.generator, /unit-traces\.json/);
   assert.match(files.generator, /matrix_id/);
+  assert.match(files.generator, /implementation_paths/);
   assert.match(files.evaluator, /matrix_ids/);
+  assert.match(files.evaluator, /implementation_paths/);
   assert.match(files.evaluateSkill, /matrix_ids/);
+  assert.match(files.evaluateSkill, /implementation_paths/);
   assert.match(files.evaluateSkill, /Submit button not clickable.*matrix_ids/);
   assert.match(files.evaluateSkill, /Success message visible after form submit.*matrix_ids/);
 });

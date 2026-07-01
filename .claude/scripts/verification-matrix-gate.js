@@ -31,6 +31,22 @@ function evidencePath(check) {
   return check && (check.evidence_path || check.evidencePath || check.evidence);
 }
 
+function implementationPaths(row, check) {
+  return [
+    ...asArray(row && (row.implementation_paths || row.implementationPaths || row.source_paths || row.sourcePaths)),
+    ...asArray(check && (check.implementation_paths || check.implementationPaths || check.source_paths || check.sourcePaths)),
+  ];
+}
+
+function relMtime(root, rel) {
+  if (typeof rel !== 'string' || rel.length === 0) return null;
+  try {
+    return fs.statSync(path.join(root, rel)).mtimeMs;
+  } catch (_) {
+    return null;
+  }
+}
+
 function loadMatrix(root, matrixPath) {
   const file = path.resolve(root, matrixPath || DEFAULT_MATRIX);
   const matrix = readJson(file, null);
@@ -252,6 +268,21 @@ function validateExecuted(root, rows, failures, allRows) {
             check_id: check.id || null,
             path: evidence || null,
           });
+          continue;
+        }
+
+        const evidenceMtime = relMtime(root, evidence);
+        for (const implementationPath of implementationPaths(row, check)) {
+          const implementationMtime = relMtime(root, implementationPath);
+          if (evidenceMtime !== null && implementationMtime !== null && evidenceMtime < implementationMtime) {
+            add(failures, 'stale_executed_evidence', {
+              matrix_id: row.id,
+              layer,
+              check_id: check.id || null,
+              path: evidence,
+              stale_against: implementationPath,
+            });
+          }
         }
       }
     }

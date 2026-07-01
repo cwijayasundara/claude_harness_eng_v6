@@ -101,7 +101,7 @@ Every test case must trace to at least one `{story}-AC{n}` id from `specs/storie
 { "id": "TC-3", "text": "username under 3 chars rejected with 422", "traces": ["E1-S1-AC2", "OBL-User.username-minLength"] }
 ```
 
-**`specs/test_artefacts/verification-matrix.json`** — one requirement row per AC, with stable matrix ids, story/AC references, required layers (`unit`, `api`, `e2e`), group, and planned checks. This is the shared oracle for `/auto`, generator teammates, and evaluator runtime checks.
+**`specs/test_artefacts/verification-matrix.json`** — one requirement row per AC, with stable matrix ids, story/AC references, required layers (`unit`, `api`, `e2e`), group, `implementation_paths` (the production files expected to satisfy the AC, empty during pure plan-only work if unknown), and planned checks. This is the shared oracle for `/auto`, generator teammates, and evaluator runtime checks. The executed gate treats evidence older than any declared `implementation_paths` file as stale and blocks.
 
 **Trace sidecars** — `/test` must generate these files alongside the plan. Empty arrays are acceptable when no concrete test artifacts exist yet; as implementation and E2E tests are authored, record the executed matrix coverage in:
 - `specs/test_artefacts/unit-traces.json`

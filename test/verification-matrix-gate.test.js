@@ -33,6 +33,11 @@ function writeText(root, rel, text) {
   return file;
 }
 
+function setMtime(root, rel, ms) {
+  const when = new Date(ms);
+  fs.utimesSync(path.join(root, rel), when, when);
+}
+
 function baseProject() {
   const root = tmpProject();
   writeJson(root, 'specs/stories/story-traces.json', [
@@ -405,6 +410,27 @@ test('executed phase fails when required checks lack executed evidence', () => {
   assert.strictEqual(verdict.pass, false);
   assert.ok(verdict.failures.some((f) => f.code === 'missing_executed_evidence' && f.matrix_id === 'VM-001' && f.layer === 'api'));
   assert.ok(verdict.failures.some((f) => f.code === 'missing_executed_evidence' && f.matrix_id === 'VM-001' && f.layer === 'e2e'));
+});
+
+test('executed phase fails when evidence is older than declared implementation paths', () => {
+  const root = baseProject();
+  const matrix = JSON.parse(fs.readFileSync(path.join(root, 'specs', 'test_artefacts', 'verification-matrix.json'), 'utf8'));
+  matrix.requirements[0].implementation_paths = ['src/todo.js'];
+  writeJson(root, 'specs/test_artefacts/verification-matrix.json', matrix);
+  writeText(root, 'src/todo.js', 'module.exports = {};\n');
+
+  setMtime(root, 'specs/reviews/evidence/api-vm-001.txt', 1_000);
+  setMtime(root, 'src/todo.js', 2_000);
+
+  const verdict = gate.runGate({ root, phase: 'executed' });
+  assert.strictEqual(verdict.pass, false);
+  assert.ok(verdict.failures.some((f) => (
+    f.code === 'stale_executed_evidence'
+    && f.matrix_id === 'VM-001'
+    && f.layer === 'api'
+    && f.path === 'specs/reviews/evidence/api-vm-001.txt'
+    && f.stale_against === 'src/todo.js'
+  )));
 });
 
 test('CLI writes verdict JSON and exits 0 on pass', () => {

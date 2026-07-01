@@ -184,7 +184,7 @@ node .claude/scripts/verification-matrix-gate.js --phase executed
 Executed mode blocks when:
 
 - any required matrix row lacks executed evidence;
-- an evidence path is missing or stale relative to the latest implementation commit;
+- an evidence path is missing or stale relative to any declared `implementation_paths` / `source_paths` file;
 - `specs/reviews/evaluator-report.md` is not `PASS` for matrix rows covered by API/E2E;
 - unit/integration test reports do not include the traced tests;
 - a required accessibility/security/performance row has no corresponding verdict.
@@ -298,7 +298,7 @@ node --test test/verification-matrix-gate.test.js
 - **Matrix false confidence:** a test can claim a matrix ID but assert weakly. Mitigation: keep coverage and mutation smoke as separate hard gates; matrix is traceability, not assertion strength.
 - **Over-constraining small projects:** a tiny CLI may not need API or E2E. Mitigation: required layers are derived from topology and story layer; CLI/library stories can require `unit` and optional `integration` only.
 - **Schema churn in sprint contracts:** adding `matrix_ids` should be additive and optional at schema level; the semantic gate enforces only when a matrix exists.
-- **Stale evidence complexity:** first implementation can require evidence paths to exist; commit-staleness checks may start with best-effort `mtime`/git hash and tighten later.
+- **Stale evidence complexity:** executed mode enforces best-effort file freshness by comparing evidence mtimes to declared `implementation_paths` / `source_paths`; future hardening can add git-commit hashes or test-run manifests for stronger provenance.
 - **Agent sidecar drift:** generated tests and sidecars can disagree. Mitigation: the gate verifies sidecar paths exist and, for supported stacks, later can parse test titles for matrix IDs.
 
 ## Out of Scope
