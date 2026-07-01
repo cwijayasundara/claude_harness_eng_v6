@@ -551,6 +551,16 @@ If no trigger fires, do not spawn `security-reviewer`; record `security_review: 
 
 Spawn the `diff-reviewer` agent on the group's diff (give it the commit range or branch, acceptance criteria, and `specs/reviews/review-context-pack.md` — nothing else from this session). It reads the diff cold, hunts correctness defects (logic errors, missing edge cases, contract breaks against existing callers), and writes `specs/reviews/diff-review-verdict.json`. The gate **FAILs** on any BLOCK finding or a missing verdict file. Route BLOCK findings to the generator like any other gate failure (max 3 fix cycles). Runs concurrently with Gates 5 and any selected Gate 7 security review — it needs only the repo, not the running app. The reviewer's value comes from its empty context: do not paste progress logs or builder reasoning into its spawn prompt.
 
+### Gate 9 — Executed Matrix Gate
+
+Before entering PASS handling for the group, run:
+
+```bash
+node .claude/scripts/verification-matrix-gate.js --phase executed --group "$GROUP_ID"
+```
+
+This blocks if the group's evaluator report or trace sidecars failed to execute required matrix rows.
+
 ### Phase 9.5 — Pre-PR Executed Matrix Gate
 
 Before a Phase 9.5 pre-PR proof, draft PR, or final completion claim, run:

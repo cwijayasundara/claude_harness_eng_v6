@@ -185,15 +185,20 @@ test('verification matrix gate is wired through test, auto, generator, evaluator
   assert.match(files.testSkill, /verification-matrix\.json/);
   assert.match(files.testSkill, /verification-matrix-gate\.js --phase plan/);
   assert.match(files.testSkill, /unit-traces\.json/);
+  assert.match(files.testSkill, /integration-traces\.json/);
   assert.match(files.testSkill, /e2e-traces\.json/);
+  assert.match(files.testSkill, /HARD (?:BLOCK|gate)[\s\S]*verification-matrix-verdict\.json/);
+  assert.match(files.testSkill, /generate[\s\S]*unit-traces\.json[\s\S]*integration-traces\.json[\s\S]*e2e-traces\.json/);
 
   assert.match(files.autoSkill, /verification-matrix\.json/);
   assert.match(files.autoSkill, /verification-matrix-gate\.js --phase contract/);
   assert.match(files.autoSkill, /verification-matrix-gate\.js --phase implementation/);
-  assert.match(files.autoSkill, /verification-matrix-gate\.js --phase executed/);
+  assert.match(files.autoSkill, /verification-matrix-gate\.js --phase executed --group "\$GROUP_ID"/);
 
   assert.match(files.generator, /unit-traces\.json/);
   assert.match(files.generator, /matrix_id/);
   assert.match(files.evaluator, /matrix_ids/);
   assert.match(files.evaluateSkill, /matrix_ids/);
+  assert.match(files.evaluateSkill, /Submit button not clickable.*matrix_ids/);
+  assert.match(files.evaluateSkill, /Success message visible after form submit.*matrix_ids/);
 });

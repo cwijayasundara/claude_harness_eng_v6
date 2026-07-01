@@ -290,18 +290,18 @@ VERDICT: PASS | FAIL
 ## Playwright Checks
 
 - [PASS] Upload page renders ✓ (`matrix_ids`: [`VM-004`])
-- [FAIL] Submit button not clickable
-- [PASS] Success message visible after form submit ✓
+- [FAIL] Submit button not clickable (`matrix_ids`: [`VM-005`])
+- [PASS] Success message visible after form submit ✓ (`matrix_ids`: [`VM-006`])
 
 ## Design Checks
 
-- [PASS] Button uses primary color token ✓
+- [PASS] Button uses primary color token ✓ (`matrix_ids`: [`VM-007`])
 - [SKIP] Design checks skipped (Lean mode)
 
 ## Architecture Checks
 
-- [PASS] All expected files exist ✓
-- [FAIL] Missing: src/repository/user-repository.ts
+- [PASS] All expected files exist ✓ (`matrix_ids`: [`VM-008`])
+- [FAIL] Missing: src/repository/user-repository.ts (`matrix_ids`: [`VM-009`])
 
 ## Security Gate
 

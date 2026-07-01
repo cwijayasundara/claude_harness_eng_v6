@@ -103,7 +103,7 @@ Every test case must trace to at least one `{story}-AC{n}` id from `specs/storie
 
 **`specs/test_artefacts/verification-matrix.json`** — one requirement row per AC, with stable matrix ids, story/AC references, required layers (`unit`, `api`, `e2e`), group, and planned checks. This is the shared oracle for `/auto`, generator teammates, and evaluator runtime checks.
 
-**Trace sidecars** — as implementation and E2E tests are authored, record the executed matrix coverage in:
+**Trace sidecars** — `/test` must generate these files alongside the plan. Empty arrays are acceptable when no concrete test artifacts exist yet; as implementation and E2E tests are authored, record the executed matrix coverage in:
 - `specs/test_artefacts/unit-traces.json`
 - `specs/test_artefacts/integration-traces.json`
 - `specs/test_artefacts/e2e-traces.json`
@@ -147,7 +147,7 @@ node .claude/scripts/verification-matrix-gate.js --phase plan
 
 `specs/reviews/test-grounding.json` is a **hard gate**: any `net_new` (test case tracing to no AC or obligation) or `dropped` (an AC or constraint obligation with no test case) blocks. Resolve before reporting the plan. (Skip when `story-traces.json` does not exist; omit the obligation index when Step 4.4 did not run.)
 
-`specs/reviews/verification-matrix-verdict.json` is also a **hard gate**: every implementation-ready AC must have a matrix obligation before the plan can be reported.
+`specs/reviews/verification-matrix-verdict.json` is also a **HARD BLOCK**: every implementation-ready AC must have a matrix obligation before the plan can be reported.
 
 **If `--plan-only`: STOP HERE.** Steps 4–4.5 (plan + cases + fixtures + trace spine + grounding gate) are the complete deliverable for the planning phase. Do not proceed to Playwright generation — source code does not exist yet. Report the generated artifacts and exit.
 
