@@ -24,7 +24,7 @@
         "traceability": "Every story in story-traces.json carries >= 1 BR-n trace; zero net-new stories — anchored to specs/reviews/spec-grounding.json when present, else every story references a BRD goal with zero orphans",
         "specificity": "Acceptance criteria use observable outcomes (HTTP status codes, numeric values, measurable thresholds); reject vague language ('should work', 'handles errors')",
         "consistency": "Story dependency graph is acyclic; layer assignments (frontend/backend/infra) are valid and non-contradictory",
-        "actionability": "All stories are implementation-ready with 3-6 acceptance criteria, groups assigned, every AC maps to a features.json entry, and every AC has a stable {story}-AC{n} id in story-traces.json"
+        "actionability": "All stories are implementation-ready with 3-6 acceptance criteria, groups assigned, story points on the 1/2/3/5/8/13 scale, estimation confidence and drivers, every AC maps to a features.json entry, and every AC has a stable {story}-AC{n} id in story-traces.json"
       }
     },
     "test": {

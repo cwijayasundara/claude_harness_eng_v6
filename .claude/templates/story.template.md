@@ -7,6 +7,14 @@
 - Depends On: []
 - Readiness: ready
 - Breakdown Reason: null
+- Story Points: 3
+- Estimation Confidence: medium
+- Estimation Drivers:
+  - Functional scope: 1 — one bounded capability
+  - Technical complexity: 1 — known implementation pattern
+  - Data/state impact: 1 — simple persistence or configuration impact
+  - Integration surface: 1 — one internal or external boundary
+  - Uncertainty/risk: 1 — minor assumptions only
 
 ## User Story
 As a <persona>, I want <capability> so that <value>.

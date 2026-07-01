@@ -51,10 +51,12 @@ You are the Planner agent for the Claude Harness Engine. Your role is to transfo
   ```
 - If existing stories already exist in `specs/stories/`, preserve their product intent and normalize them to the harness format instead of duplicating them.
 - Group stories into epics with IDs `E1`, `E2`, `E3`, then write `specs/stories/epics.md`.
-- Assign each story: ID (`E1-S1`, `E1-S2`...), layer (`Types`, `Config`, `Repository`, `Service`, `API`, `UI`), dependency group (`A`, `B`, `C`...), dependencies, and readiness.
+- Assign each story: ID (`E1-S1`, `E1-S2`...), layer (`Types`, `Config`, `Repository`, `Service`, `API`, `UI`), dependency group (`A`, `B`, `C`...), dependencies, readiness, story points, estimation confidence, and estimation drivers.
 - Write acceptance criteria — at least 3 per story, testable and specific
 - Mark a story `Readiness: ready` only if one teammate can implement it without further product decomposition.
 - Mark a story `Readiness: needs_breakdown` when it contains multiple independent workflows, vague criteria, unresolved product decisions, or scope that should become multiple stories. Put these in `specs/stories/backlog-needs-breakdown.md`, not the dependency graph.
+- Assign Story Points deterministically on the `1, 2, 3, 5, 8, 13` scale. Score functional scope, technical complexity, data/state impact, integration surface, and uncertainty/risk from 0-3 each, then map totals: 0-2 -> 1, 3-4 -> 2, 5-6 -> 3, 7-9 -> 5, 10-12 -> 8, 13-15 -> 13. Anything above 13 or blocked by unresolved product decisions is `needs_breakdown`, not a ready story.
+- Set Estimation Confidence to `high`, `medium`, or `low`, and list the dimension scores plus short evidence as Estimation Drivers.
 - Write each ready story to `specs/stories/E{n}-S{n}.md`
 
 ### Step 3: Build Dependency Graph
@@ -111,6 +113,8 @@ After the BRD, stories, and design are written, run `node .claude/scripts/plan-c
 Before finishing, verify:
 - Every story has at least 3 acceptance criteria
 - Every story has a `layer` and `group` assignment
+- Every ready story has Story Points on the `1, 2, 3, 5, 8, 13` scale
+- Every ready story has Estimation Confidence and Estimation Drivers
 - Every story in `dependency-graph.md` is marked `Readiness: ready`
 - No `needs_breakdown` story appears in `features.json` or `component-map.md`
 - No circular dependencies exist in the dependency graph

@@ -22,7 +22,7 @@ Pass the path to the approved BRD as the argument. Produces epics, stories, a de
 
 ## Overview
 
-This is the second gate in the SDLC pipeline. The planner agent reads an approved BRD, or an existing set of user stories, and normalizes them into structured, independently executable units of work. Every implementation-ready story gets testable acceptance criteria, a layer assignment, a dependency group, and a readiness marker. A machine-readable root `features.json` is generated from those criteria so the evaluator can track pass/fail state across sessions.
+This is the second gate in the SDLC pipeline. The planner agent reads an approved BRD, or an existing set of user stories, and normalizes them into structured, independently executable units of work. Every implementation-ready story gets testable acceptance criteria, a layer assignment, a dependency group, a readiness marker, and deterministic story-point metadata. A machine-readable root `features.json` is generated from those criteria so the evaluator can track pass/fail state across sessions.
 
 ---
 
@@ -78,10 +78,50 @@ For each story:
 - `depends_on`: List of story IDs this story depends on (empty list if group A)
 - `readiness`: `ready` | `needs_breakdown`
 - `breakdown_reason`: Required when readiness is `needs_breakdown`; otherwise `null`
+- `story_points`: One of `1`, `2`, `3`, `5`, `8`, `13` for ready stories; `null` for `needs_breakdown`
+- `estimation_confidence`: `high` | `medium` | `low`
+- `estimation_drivers`: Rubric dimension scores and short evidence for the chosen point value
 
 **Readiness rule:** A story is `ready` only when it can be implemented by one teammate without further product decomposition and has 3-6 concrete acceptance criteria. Mark it `needs_breakdown` when it combines unrelated workflows, has multiple independent user goals, lacks verifiable criteria, requires unresolved product decisions, or would force multiple teammates to own the same broad scope.
 
 Do not assign `needs_breakdown` stories to an implementation group. Either break them into smaller ready stories before writing the dependency graph, or place them in `specs/stories/backlog-needs-breakdown.md` for human review.
+
+**Story point rubric:** Assign points deterministically from the story evidence, not from intuition. Use only the scale `1, 2, 3, 5, 8, 13`. Anything above `13` must be marked `needs_breakdown` and excluded from implementation artifacts.
+
+Score each story from `0` to `3` on these dimensions:
+
+| Dimension | 0 | 1 | 2 | 3 |
+|---|---|---|---|---|
+| Functional scope | tiny behavior, one path | one bounded capability | several states or variants | multiple workflows |
+| Technical complexity | known pattern | minor new logic | new integration, model, or API | novel architecture or algorithm |
+| Data/state impact | no persistence | simple CRUD or config | schema/state migration | cross-entity consistency or concurrency |
+| Integration surface | isolated unit | one internal boundary | external API, UI/backend, or storage boundary | multi-service, auth, payments, or async |
+| Uncertainty/risk | fully specified | minor assumptions | unclear edge cases | unresolved product, security, or performance risk |
+
+Map the total score to points:
+
+| Rubric total | Story Points | Meaning |
+|---:|---:|---|
+| 0-2 | 1 | trivial, localized change |
+| 3-4 | 2 | small, known pattern |
+| 5-6 | 3 | normal story, one clear slice |
+| 7-9 | 5 | moderately complex story |
+| 10-12 | 8 | large but still implementable by one teammate |
+| 13-15 | 13 | very large, high risk, should be rare |
+| >15 or any hard blocker | `needs_breakdown` | do not implement yet |
+
+Hard estimation rules:
+- If a story has fewer than 3 concrete acceptance criteria, do not estimate it as ready.
+- If a story has more than 6 acceptance criteria, first try to split it.
+- If it spans more than one independent user goal, mark `needs_breakdown`.
+- If it needs unresolved product decisions, mark `needs_breakdown`.
+- If it touches auth, billing, security, migrations, external APIs, concurrency, or irreversible data changes, add at least +1 risk unless the BRD or design already resolves it.
+- Cap implementation-ready stories at `13`; larger work belongs at epic level.
+
+Set `estimation_confidence` this way:
+- `high`: all acceptance criteria are concrete, dependencies are known, and no unresolved assumptions affect scope.
+- `medium`: minor assumptions or familiar integration risk remain, but the story is implementable.
+- `low`: ambiguity, missing design detail, risky integration, or weak criteria remain. Prefer clarify or breakdown before `/auto`.
 
 ### Step 4 — Build the Dependency Graph
 
@@ -91,7 +131,7 @@ Write `specs/stories/dependency-graph.md` with:
 - Group C: stories that depend on Group B (and/or A)
 - ... and so on
 
-Format each group as a table showing Story ID, Title, Layer, and Dependencies.
+Format each group as a table showing Story ID, Title, Layer, Story Points, Estimation Confidence, and Dependencies.
 
 Then, directly below the tables, render the same graph visually as a Mermaid `flowchart TD` so reviewers see the parallelism and critical path at a glance (not just rows). One node per story (label `E{n}-S{n}`), one edge per `depends_on` (`dependency --> story`), and group the nodes with `subgraph Group A`/`Group B`/… blocks matching the tables. Example:
 
@@ -136,7 +176,7 @@ Rules:
 
 Write each story to: `specs/stories/E{n}-S{n}.md`
 
-Each file includes: ID, title, description, user_story, acceptance criteria, layer, group, depends_on, readiness, and breakdown_reason.
+Each file includes: ID, title, description, user_story, acceptance criteria, layer, group, depends_on, readiness, breakdown_reason, story_points, estimation_confidence, and estimation_drivers.
 
 Use this shape:
 
@@ -150,6 +190,14 @@ Use this shape:
 - Depends On: []
 - Readiness: ready
 - Breakdown Reason: null
+- Story Points: 5
+- Estimation Confidence: medium
+- Estimation Drivers:
+  - Functional scope: 2 — registration has success and validation paths
+  - Technical complexity: 1 — known endpoint pattern
+  - Data/state impact: 1 — persists one user record
+  - Integration surface: 1 — API to service boundary
+  - Uncertainty/risk: 1 — minor password-policy assumption
 
 ## User Story
 As a visitor, I want to create an account with email and password so that I can access protected features.
@@ -273,8 +321,9 @@ Spawn Agent with subagent_type="evaluator" and prompt:
 Display:
 1. Epic summary table (ID, title, story count, groups covered)
 2. Dependency graph overview
-3. Total story count, total feature count
-4. Ask: "Does this decomposition look correct? Approve to proceed to `/design`, or provide corrections."
+3. Story point summary by epic and dependency group
+4. Total story count, total story points, total feature count
+5. Ask: "Does this decomposition and estimation look correct? Approve to proceed to `/design`, or provide corrections."
 
 ---
 
@@ -308,6 +357,9 @@ Pre-approval checklist (verified by evaluator, confirmed by human):
 - [ ] Every story has 3-6 specific, testable acceptance criteria
 - [ ] Every story has a layer assignment
 - [ ] Every story has a group assignment
+- [ ] Every ready story has Story Points on the `1, 2, 3, 5, 8, 13` scale
+- [ ] Every ready story has Estimation Confidence and Estimation Drivers
+- [ ] Any story estimated above `13` is marked `needs_breakdown` and excluded from implementation artifacts
 - [ ] Every story has `readiness: ready` before it appears in `dependency-graph.md`
 - [ ] No circular dependencies in the graph
 - [ ] Every acceptance criterion maps to at least one feature in `features.json`
