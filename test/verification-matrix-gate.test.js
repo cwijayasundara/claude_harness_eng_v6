@@ -50,9 +50,30 @@ function baseProject() {
         group: 'A',
         required_layers: ['unit', 'api', 'e2e'],
         checks: [
-          { id: 'UT-001', layer: 'unit', kind: 'test', path: 'tests/unit/todo.test.js', status: 'implemented' },
-          { id: 'API-001', layer: 'api', kind: 'sprint-contract-check', path: 'sprint-contracts/A.json', status: 'implemented' },
-          { id: 'E2E-001', layer: 'e2e', kind: 'playwright', path: 'e2e/E1-S1.spec.ts', status: 'implemented' },
+          {
+            id: 'UT-001',
+            layer: 'unit',
+            kind: 'test',
+            path: 'tests/unit/todo.test.js',
+            status: 'executed',
+            evidence_path: 'specs/reviews/evidence/unit-vm-001.txt',
+          },
+          {
+            id: 'API-001',
+            layer: 'api',
+            kind: 'sprint-contract-check',
+            path: 'sprint-contracts/A.json',
+            status: 'executed',
+            evidence_path: 'specs/reviews/evidence/api-vm-001.txt',
+          },
+          {
+            id: 'E2E-001',
+            layer: 'e2e',
+            kind: 'playwright',
+            path: 'e2e/E1-S1.spec.ts',
+            status: 'executed',
+            evidence_path: 'specs/reviews/evidence/e2e-vm-001.txt',
+          },
         ],
       },
       {
@@ -64,7 +85,14 @@ function baseProject() {
         group: 'A',
         required_layers: ['unit'],
         checks: [
-          { id: 'UT-002', layer: 'unit', kind: 'test', path: 'tests/unit/todo.test.js', status: 'implemented' },
+          {
+            id: 'UT-002',
+            layer: 'unit',
+            kind: 'test',
+            path: 'tests/unit/todo.test.js',
+            status: 'executed',
+            evidence_path: 'specs/reviews/evidence/unit-vm-002.txt',
+          },
         ],
       },
     ],
@@ -85,6 +113,10 @@ function baseProject() {
   ]);
   writeText(root, 'tests/unit/todo.test.js', 'test("creates todo", () => {});\n');
   writeText(root, 'e2e/E1-S1.spec.ts', 'test("VM-001 creates todo", async () => {});\n');
+  writeText(root, 'specs/reviews/evidence/unit-vm-001.txt', 'unit VM-001 executed\n');
+  writeText(root, 'specs/reviews/evidence/api-vm-001.txt', 'api VM-001 executed\n');
+  writeText(root, 'specs/reviews/evidence/e2e-vm-001.txt', 'e2e VM-001 executed\n');
+  writeText(root, 'specs/reviews/evidence/unit-vm-002.txt', 'unit VM-002 executed\n');
   writeText(root, 'specs/reviews/evaluator-report.md', '# Evaluator Report\n\nVERDICT: PASS\n');
   return root;
 }
@@ -166,6 +198,42 @@ test('plan phase fails when an AC has no matrix obligation', () => {
   assert.ok(verdict.failures.some((f) => f.code === 'missing_matrix_obligation' && f.ac_id === 'E1-S1-AC3'));
 });
 
+test('plan phase fails when a required layer has no planned check', () => {
+  const root = baseProject();
+  writeJson(root, 'specs/test_artefacts/verification-matrix.json', {
+    version: 1,
+    requirements: [
+      {
+        id: 'VM-001',
+        brd_id: 'BR-1',
+        story_id: 'E1-S1',
+        ac_id: 'E1-S1-AC1',
+        text: 'Create todo',
+        group: 'A',
+        required_layers: ['api'],
+        checks: [
+          { id: 'UT-001', layer: 'unit', kind: 'test', path: 'tests/unit/todo.test.js', status: 'implemented' },
+        ],
+      },
+      {
+        id: 'VM-002',
+        brd_id: 'BR-1',
+        story_id: 'E1-S1',
+        ac_id: 'E1-S1-AC2',
+        text: 'Reject invalid title',
+        group: 'A',
+        required_layers: ['unit'],
+        checks: [
+          { id: 'UT-002', layer: 'unit', kind: 'test', path: 'tests/unit/todo.test.js', status: 'implemented' },
+        ],
+      },
+    ],
+  });
+  const verdict = gate.runGate({ root, phase: 'plan' });
+  assert.strictEqual(verdict.pass, false);
+  assert.ok(verdict.failures.some((f) => f.code === 'missing_planned_layer' && f.matrix_id === 'VM-001' && f.layer === 'api'));
+});
+
 test('contract phase fails when required API coverage has no contract check', () => {
   const root = baseProject();
   writeJson(root, 'sprint-contracts/A.json', {
@@ -217,6 +285,24 @@ test('contract phase reads checks from nested sprint contract shape', () => {
   assert.deepStrictEqual(verdict.failures, []);
 });
 
+test('contract phase fails when a check references another group matrix id', () => {
+  const root = groupedProject();
+  writeJson(root, 'sprint-contracts/A.json', {
+    api_checks: [
+      { id: 'api-a', matrix_ids: ['VM-A'], method: 'GET', path: '/a', expect: { status: 200 } },
+      { id: 'api-b-wrong-group', matrix_ids: ['VM-B'], method: 'GET', path: '/b', expect: { status: 200 } },
+    ],
+    playwright_checks: [],
+    design_checks: [],
+    architecture_checks: { files_must_exist: [] },
+    features: ['F-A'],
+  });
+  const verdict = gate.runGate({ root, phase: 'contract', group: 'A' });
+  assert.strictEqual(verdict.pass, false);
+  assert.ok(verdict.failures.some((f) => f.code === 'out_of_scope_matrix_id' && f.matrix_id === 'VM-B'));
+  assert.ok(!verdict.failures.some((f) => f.code === 'unknown_matrix_id' && f.matrix_id === 'VM-B'));
+});
+
 test('implementation phase fails when a required unit trace is missing', () => {
   const root = baseProject();
   writeJson(root, 'specs/test_artefacts/unit-traces.json', [
@@ -260,6 +346,52 @@ test('executed phase fails when evaluator report is not PASS for API/E2E rows', 
   const verdict = gate.runGate({ root, phase: 'executed' });
   assert.strictEqual(verdict.pass, false);
   assert.ok(verdict.failures.some((f) => f.code === 'evaluator_not_pass'));
+});
+
+test('executed phase passes when required checks have executed evidence', () => {
+  const root = baseProject();
+  const verdict = gate.runGate({ root, phase: 'executed' });
+  assert.strictEqual(verdict.pass, true);
+  assert.deepStrictEqual(verdict.failures, []);
+});
+
+test('executed phase fails when required checks lack executed evidence', () => {
+  const root = baseProject();
+  writeJson(root, 'specs/test_artefacts/verification-matrix.json', {
+    version: 1,
+    requirements: [
+      {
+        id: 'VM-001',
+        brd_id: 'BR-1',
+        story_id: 'E1-S1',
+        ac_id: 'E1-S1-AC1',
+        text: 'Create todo',
+        group: 'A',
+        required_layers: ['unit', 'api', 'e2e'],
+        checks: [
+          { id: 'UT-001', layer: 'unit', kind: 'test', path: 'tests/unit/todo.test.js', status: 'executed', evidence_path: 'specs/reviews/evidence/unit-vm-001.txt' },
+          { id: 'API-001', layer: 'api', kind: 'sprint-contract-check', path: 'sprint-contracts/A.json', status: 'implemented' },
+          { id: 'E2E-001', layer: 'e2e', kind: 'playwright', path: 'e2e/E1-S1.spec.ts' },
+        ],
+      },
+      {
+        id: 'VM-002',
+        brd_id: 'BR-1',
+        story_id: 'E1-S1',
+        ac_id: 'E1-S1-AC2',
+        text: 'Reject invalid title',
+        group: 'A',
+        required_layers: ['unit'],
+        checks: [
+          { id: 'UT-002', layer: 'unit', kind: 'test', path: 'tests/unit/todo.test.js', status: 'executed', evidence_path: 'specs/reviews/evidence/unit-vm-002.txt' },
+        ],
+      },
+    ],
+  });
+  const verdict = gate.runGate({ root, phase: 'executed' });
+  assert.strictEqual(verdict.pass, false);
+  assert.ok(verdict.failures.some((f) => f.code === 'missing_executed_evidence' && f.matrix_id === 'VM-001' && f.layer === 'api'));
+  assert.ok(verdict.failures.some((f) => f.code === 'missing_executed_evidence' && f.matrix_id === 'VM-001' && f.layer === 'e2e'));
 });
 
 test('CLI writes verdict JSON and exits 0 on pass', () => {

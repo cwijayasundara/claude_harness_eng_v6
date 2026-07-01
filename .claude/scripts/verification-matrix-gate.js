@@ -27,6 +27,10 @@ function relExists(root, rel) {
   return typeof rel === 'string' && rel.length > 0 && fs.existsSync(path.join(root, rel));
 }
 
+function evidencePath(check) {
+  return check && (check.evidence_path || check.evidencePath || check.evidence);
+}
+
 function loadMatrix(root, matrixPath) {
   const file = path.resolve(root, matrixPath || DEFAULT_MATRIX);
   const matrix = readJson(file, null);
@@ -66,6 +70,12 @@ function validatePlan(root, rows, failures, group) {
     }
     if (asArray(row.required_layers).length === 0) {
       add(failures, 'missing_required_layers', { matrix_id: row.id || null });
+    }
+    const plannedLayers = new Set(asArray(row.checks).map((check) => check && check.layer).filter(Boolean));
+    for (const layer of asArray(row.required_layers)) {
+      if (!plannedLayers.has(layer)) {
+        add(failures, 'missing_planned_layer', { matrix_id: row.id || null, layer });
+      }
     }
   }
 
@@ -135,7 +145,10 @@ function validateContract(root, rows, group, failures, allRows) {
         add(failures, 'unknown_matrix_id', { layer, matrix_id });
         continue;
       }
-      if (!scopedIds.has(matrix_id)) continue;
+      if (!scopedIds.has(matrix_id)) {
+        add(failures, 'out_of_scope_matrix_id', { layer, matrix_id, group });
+        continue;
+      }
       if (!covered.has(matrix_id)) covered.set(matrix_id, new Set());
       covered.get(matrix_id).add(layer);
     }
@@ -188,6 +201,27 @@ function validateImplementation(root, rows, failures, allRows) {
 function validateExecuted(root, rows, failures, allRows) {
   validateImplementation(root, rows, failures, allRows);
   validateTraceLayer(root, rows, 'e2e', path.join('specs', 'test_artefacts', 'e2e-traces.json'), failures, allRows);
+
+  for (const row of rows) {
+    for (const layer of asArray(row.required_layers)) {
+      const checks = asArray(row.checks).filter((check) => check && check.layer === layer);
+      if (checks.length === 0) {
+        add(failures, 'missing_executed_evidence', { matrix_id: row.id, layer });
+        continue;
+      }
+      for (const check of checks) {
+        const evidence = evidencePath(check);
+        if (check.status !== 'executed' || !relExists(root, evidence)) {
+          add(failures, 'missing_executed_evidence', {
+            matrix_id: row.id,
+            layer,
+            check_id: check.id || null,
+            path: evidence || null,
+          });
+        }
+      }
+    }
+  }
 
   const needsRuntime = rows.some((row) => asArray(row.required_layers).some((layer) => CONTRACT_LAYERS.has(layer)));
   if (!needsRuntime) return;
