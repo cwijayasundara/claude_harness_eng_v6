@@ -79,6 +79,7 @@ function matrixIdsForCheck(check) {
 }
 
 function collectContractChecks(contract) {
+  const checkSource = contract && contract.contract ? contract.contract : contract;
   const checks = [];
   const arrayFields = [
     ['api_checks', 'api'],
@@ -88,14 +89,14 @@ function collectContractChecks(contract) {
   ];
 
   for (const [field, layer] of arrayFields) {
-    for (const check of asArray(contract[field])) checks.push({ layer, check });
+    for (const check of asArray(checkSource[field])) checks.push({ layer, check });
   }
 
   for (const [field, layer] of [
     ['accessibility_checks', 'accessibility'],
     ['security_checks', 'security'],
   ]) {
-    const value = contract[field];
+    const value = checkSource[field];
     if (Array.isArray(value)) {
       for (const check of value) checks.push({ layer, check });
     } else if (value && typeof value === 'object') {

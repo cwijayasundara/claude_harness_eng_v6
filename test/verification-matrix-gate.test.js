@@ -201,6 +201,22 @@ test('contract phase scopes plan AC coverage to the requested group', () => {
   assert.deepStrictEqual(verdict.failures, []);
 });
 
+test('contract phase reads checks from nested sprint contract shape', () => {
+  const root = baseProject();
+  writeJson(root, 'sprint-contracts/A.json', {
+    group: 'A',
+    stories: ['E1-S1'],
+    features: ['F001'],
+    contract: {
+      api_checks: [{ id: 'api-create', matrix_ids: ['VM-001'], method: 'POST', path: '/todos', expected_status: 201 }],
+      playwright_checks: [{ id: 'e2e-create', matrix_ids: ['VM-001'], description: 'create todo flow', steps: [] }],
+    },
+  });
+  const verdict = gate.runGate({ root, phase: 'contract', group: 'A' });
+  assert.strictEqual(verdict.pass, true);
+  assert.deepStrictEqual(verdict.failures, []);
+});
+
 test('implementation phase fails when a required unit trace is missing', () => {
   const root = baseProject();
   writeJson(root, 'specs/test_artefacts/unit-traces.json', [
