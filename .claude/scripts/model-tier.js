@@ -6,36 +6,39 @@
 //
 // The harness runs a GAN: generation is the high-volume output bucket, judgment
 // is lower-volume but quality-sensitive. Judgment (evaluator + reviewers +
-// planner) is pinned to Opus 4.8 across every posture; the cost lever is the
-// generator, which steps Sonnet 4.6 -> Opus 4.7 -> Opus 4.8 across the tiers.
+// planner) is pinned to Opus 4.8 across every posture. Opus 4.7 is retired
+// (superseded by Opus 4.8) and Sonnet 4.6 is retired (superseded by Sonnet 5,
+// which now reaches near-Opus quality on coding/agentic work at Sonnet
+// pricing) — so the old three-step generation ladder (Sonnet 4.6 -> Opus 4.7
+// -> Opus 4.8) collapses to two steps: Sonnet 5 -> Opus 4.8.
 //
-//   cost        (Profile A) — Sonnet 4.6 generation, Opus 4.8 judgment. Lowest bill.
-//   balanced    (Profile B) — the shipped default. Opus 4.7 generation, Opus 4.8 judgment.
-//   max-quality              — Opus 4.8 generation; codebase-explorer stays Sonnet.
+//   cost        (Profile A) — Sonnet 5 generation, Opus 4.8 judgment. Lowest bill.
+//   balanced    (Profile B) — the shipped default. Same generator as cost
+//               (Sonnet 5) now that it covers what Opus 4.7 used to.
+//   max-quality              — Opus 4.8 generation; codebase-explorer stays Sonnet 5.
 
 const fs = require('fs');
 const path = require('path');
 
 // Exact model IDs (not bare aliases) — version-pinned and unambiguous.
-const OPUS = 'claude-opus-4-8';      // judgment: evaluator + reviewers + planner
-const OPUS_47 = 'claude-opus-4-7';   // generation
-const SONNET = 'claude-sonnet-4-6';  // read-only exploration
+const OPUS = 'claude-opus-4-8';     // judgment: evaluator + reviewers + planner
+const SONNET5 = 'claude-sonnet-5';  // generation + read-only exploration
 
 const PRESETS = {
   cost: {
-    planner: OPUS, generator: SONNET, evaluator: OPUS,
+    planner: OPUS, generator: SONNET5, evaluator: OPUS,
     'design-critic': OPUS, 'security-reviewer': OPUS, 'diff-reviewer': OPUS,
-    'clean-code-reviewer': OPUS, 'codebase-explorer': SONNET,
+    'clean-code-reviewer': OPUS, 'codebase-explorer': SONNET5,
   },
   balanced: {
-    planner: OPUS, generator: OPUS_47, evaluator: OPUS,
+    planner: OPUS, generator: SONNET5, evaluator: OPUS,
     'design-critic': OPUS, 'security-reviewer': OPUS, 'diff-reviewer': OPUS,
-    'clean-code-reviewer': OPUS, 'codebase-explorer': SONNET,
+    'clean-code-reviewer': OPUS, 'codebase-explorer': SONNET5,
   },
   'max-quality': {
     planner: OPUS, generator: OPUS, evaluator: OPUS,
     'design-critic': OPUS, 'security-reviewer': OPUS, 'diff-reviewer': OPUS,
-    'clean-code-reviewer': OPUS, 'codebase-explorer': SONNET,
+    'clean-code-reviewer': OPUS, 'codebase-explorer': SONNET5,
   },
 };
 

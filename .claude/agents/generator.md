@@ -1,6 +1,6 @@
 ---
 name: generator
-model: claude-opus-4-7
+model: claude-sonnet-5
 description: Implements code and tests from user stories. Spawns agent teams for parallel execution. Negotiates sprint contracts with evaluator.
 tools:
   - Read

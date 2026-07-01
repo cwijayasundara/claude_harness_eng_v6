@@ -25,9 +25,13 @@ const RATE_USD = Object.freeze({
 });
 
 // Approximate USD per token [input, output] when a receipt carries real counts.
+// claude-opus-4-7 and claude-sonnet-4-6 are retired model pins (superseded by
+// claude-opus-4-8 and claude-sonnet-5) — kept here so historical receipts
+// still price correctly, not because agents emit them anymore.
 const MODEL_PRICE = Object.freeze({
   'claude-opus-4-8': [15e-6, 75e-6],
   'claude-opus-4-7': [15e-6, 75e-6],
+  'claude-sonnet-5': [3e-6, 15e-6],
   'claude-sonnet-4-6': [3e-6, 15e-6],
   'claude-haiku-4-5': [1e-6, 5e-6],
   default: [15e-6, 75e-6],
