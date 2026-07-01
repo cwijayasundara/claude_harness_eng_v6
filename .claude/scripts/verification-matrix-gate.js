@@ -8,6 +8,7 @@ const path = require('path');
 const DEFAULT_MATRIX = path.join('specs', 'test_artefacts', 'verification-matrix.json');
 const VERDICT_PATH = path.join('specs', 'reviews', 'verification-matrix-verdict.json');
 const CONTRACT_LAYERS = new Set(['api', 'e2e', 'accessibility', 'security', 'performance']);
+const VALID_PHASES = new Set(['plan', 'contract', 'implementation', 'executed']);
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -194,6 +195,7 @@ function runGate(options) {
   const opts = options || {};
   const root = path.resolve(opts.root || process.cwd());
   const phase = opts.phase || 'plan';
+  if (!VALID_PHASES.has(phase)) throw new Error(`invalid phase: ${phase}`);
   const rows = scopedRows(loadMatrix(root, opts.matrix || DEFAULT_MATRIX), opts.group);
   const failures = [];
 
@@ -201,7 +203,6 @@ function runGate(options) {
   if (phase === 'contract') validateContract(root, rows, opts.group, failures);
   else if (phase === 'implementation') validateImplementation(root, rows, failures);
   else if (phase === 'executed') validateExecuted(root, rows, failures);
-  else if (phase !== 'plan') add(failures, 'invalid_phase', { phase });
 
   return {
     phase,
@@ -214,14 +215,22 @@ function runGate(options) {
 
 function parseArgs(argv) {
   const out = {};
+  const valueFor = (flag, index) => {
+    const value = argv[index + 1];
+    if (!value || value.startsWith('--')) throw new Error(`missing value for ${flag}`);
+    return value;
+  };
+
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (arg === '--phase') out.phase = argv[++i];
-    else if (arg === '--group') out.group = argv[++i];
-    else if (arg === '--matrix') out.matrix = argv[++i];
-    else if (arg === '--root') out.root = argv[++i];
+    if (arg === '--phase') out.phase = valueFor(arg, i++);
+    else if (arg === '--group') out.group = valueFor(arg, i++);
+    else if (arg === '--matrix') out.matrix = valueFor(arg, i++);
+    else if (arg === '--root') out.root = valueFor(arg, i++);
     else throw new Error(`unknown argument: ${arg}`);
   }
+
+  if (out.phase && !VALID_PHASES.has(out.phase)) throw new Error(`invalid phase: ${out.phase}`);
   return out;
 }
 

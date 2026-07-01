@@ -180,3 +180,34 @@ test('CLI exits 1 on gate failure', () => {
   }
   assert.strictEqual(code, 1);
 });
+
+test('CLI exits 2 on invalid phase', () => {
+  const root = baseProject();
+  let code = 0;
+  try {
+    execFileSync(process.execPath, [SCRIPT, '--phase', 'bogus', '--root', root], { stdio: 'pipe' });
+  } catch (e) {
+    code = e.status;
+  }
+  assert.strictEqual(code, 2);
+});
+
+test('CLI exits 2 when any option value is missing', () => {
+  const root = baseProject();
+  const cases = [
+    ['--phase', '--root', root],
+    ['--matrix', '--root', root],
+    ['--root', '--phase', 'plan'],
+    ['--phase', 'contract', '--group', '--root', root],
+  ];
+
+  for (const args of cases) {
+    let code = 0;
+    try {
+      execFileSync(process.execPath, [SCRIPT, ...args], { stdio: 'pipe' });
+    } catch (e) {
+      code = e.status;
+    }
+    assert.strictEqual(code, 2, args.join(' '));
+  }
+});
