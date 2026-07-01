@@ -44,7 +44,7 @@ planning ──► session ──► commit ──► integration ──► drif
 - **session** — fast computational sensors on every write (`verify-on-save`, `pre-write-gate`); self-correction inside one agent loop.
 - **commit** — `git pre-commit` + the on-demand `/gate`; the expensive inferential reviews run here, boundary-gated.
 - **integration** — the GAN evaluator runs the app: API · Playwright · vision · security · perf.
-- **drift** — recurring checks *outside* the change lifecycle that catch accumulated decay. The architecture / dead-code / dependency-CVE signals are live via `drift-report.js` (`npm run drift`; wire to `/schedule` or CI); one more (design-vs-code) remains blocked on G4.
+- **drift** — recurring checks *outside* the change lifecycle that catch accumulated decay. The architecture / dead-code / dependency-CVE / design-vs-code signals are live via `drift-report.js` (`npm run drift`; wire to `/schedule`, CI, or the optional `harness-drift.yml` workflow template).
 
 ## The matrix — guides × sensors, by axis
 
@@ -72,7 +72,7 @@ Status: ✅ active · 🟡 partial (limited/opt-in/report-only) · ⛔ planned (
 
 | | Guides | Sensors |
 |---|---|---|
-| | FRD/PRD as immutable baseline | ✅ `grounding-check` (BRD vs FRD, hard block) · ✅ `trace-check` (spec vs BRD; test vs AC+obligation) · ✅ `constraints-extract` · ✅ `plan-confidence` · ✅ `seam-confidence` |
+| | FRD/PRD as immutable baseline · ✅ **sensor arbitration policy** (blocking levels + waivers) | ✅ `grounding-check` (BRD vs FRD, hard block) · ✅ `trace-check` (spec vs BRD; test vs AC+obligation) · ✅ `constraints-extract` · ✅ `plan-confidence` · ✅ `seam-confidence` · ✅ `canvas-sync-check` (changed files vs REASONS Canvas) |
 
 > This row is **ahead of the source material**: the deterministic FRD→BRD→spec→test grounding chain has no equivalent in the SPDD example, which leans on human review. Keep it; the SPDD idea to *add* is the living, code-synced design artifact (G4), not its traceability.
 
@@ -82,7 +82,7 @@ The harness improves itself between runs: `.claude/program.md` (the steering inp
 
 ## The current holes (so they're not invisible)
 
-The point of a registry is that gaps are explicit. As of 2026-06 **every gap below (G1–G14) is closed** — the section is kept as the shipped-control record, not a backlog. The registry's only forward edge is a P3 flake-history trend (cross-run flake aggregation on top of the `flake-detection` sensor).
+The point of a registry is that gaps are explicit. As of 2026-06 **every gap below (G1–G14) is closed** — the section is kept as the shipped-control record, not a backlog. The post-gap hardening items now active are: SPDD-grade BRD analysis, sensor arbitration + waiver schema, optional drift workflow template, Canvas sync check, cross-run flake-history trend, and pre-code greenfield modularity assessment.
 
 - **G1** *(this file)* — make the harness legible. ✅ done by `HARNESS.md` + `harness-manifest.json`.
 - ~~**G2 (P0)** — no continuous **drift** sensors.~~ ✅ **done** — `drift-report.js` diffs architecture (cycles/hubs), dead-code (orphans), and dependency CVEs against a committed snapshot, flagging only *new* regressions; exit 1 on drift for cron/CI/`/schedule`. (Design-vs-code drift remains blocked on G4.)
@@ -108,7 +108,8 @@ When you add a guide or sensor, register it here so it joins the loop instead of
 1. **Build the control** — a hook check, a script, a skill, or a reviewer agent.
 2. **Wire it to a cadence** — session (a `verify-on-save`/`pre-write-gate` check), commit (`git-hooks/pre-commit` or `/gate`), integration (the evaluator), or drift (a scheduled job).
 3. **Register it** — add an entry to `harness-manifest.json` (`guides[]` or `sensors[]`) with a real `wired_at` path, its `axis`, `cadence`, `type`, and `status`. If it closes a gap, set the `gap_ref`.
-4. **Make the signal LLM-legible** — emit a message that tells the agent how to self-correct, not just that it failed (the highest-leverage sensor technique; see G5).
-5. **Update the matrix above** so the human view stays in sync with the manifest.
+4. **Declare the blocking level** — classify the sensor as `hard-block`, `self-correct`, `review-focus`, or `advisory` using [`docs/sensor-arbitration.md`](docs/sensor-arbitration.md). If it can be waived, state the evidence required in `specs/reviews/sensor-waivers.json` (schema: `.claude/templates/sensor-waivers.schema.json`) and the expiry rule.
+5. **Make the signal LLM-legible** — emit a message that tells the agent how to self-correct, not just that it failed (the highest-leverage sensor technique; see G5).
+6. **Update the matrix above** so the human view stays in sync with the manifest.
 
 > Keep `harness-manifest.json` honest: every `active`/`partial` entry must point at a file that exists. A drift between this registry and reality is itself a harness failure.

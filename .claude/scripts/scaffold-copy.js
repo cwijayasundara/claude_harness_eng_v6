@@ -43,12 +43,15 @@ const CORE_SCRIPTS = [
   'budget-state.js',
   'build-chain-state.js',
   'build-chain.js',
+  'canvas-sync-check.js',
   'build-lane.js',
   'ci-ingest.js',
   'constraints-extract.js',
   'coverage-diff.js',
   'cr-index.js',
+  'deep-mutation.js',
   'flag-scan.js',
+  'flake-history.js',
   'model-tier.js',
   'mutation-smoke.js',
   'perf-baseline.js',
@@ -62,6 +65,7 @@ const CORE_SCRIPTS = [
   'telemetry-pipeline-gauges.js',
   'telemetry-skill-helpers.js',
   'trace-check.js',
+  'validate-sensor-waivers.js',
   'validate-contract.js',
 ];
 const BROWNFIELD_SCRIPTS = [

@@ -56,6 +56,16 @@ Not sure? Describe the request plainly. The harness should classify the lane bef
 
 ## Command Cards
 
+The public surface is intentionally small:
+
+```
+New product          → /build
+Existing product     → /feature "<request>"
+Verify/review        → /gate
+```
+
+The other commands below are still available, but the harness should usually route to them for you.
+
 | Command | Use when | What happens |
 |---|---|---|
 | `/scaffold` | New target repo setup | Installs the lean core harness, settings, hooks, state seeds, manifest, and project guide |
@@ -127,6 +137,7 @@ Rule: native commands own atomic actions; the harness owns orchestration, ratche
 | Telemetry dashboards | `/scaffold --telemetry` | [docs/telemetry.md](docs/telemetry.md) |
 | Framework skill packs | Select during scaffold, then install manually | [docs/extras.md](docs/extras.md) |
 | Tracker orchestration | Configure Linear/Jira/Azure DevOps | [docs/extras.md](docs/extras.md) |
+| Drift cadence workflow | Copy `.claude/templates/github-workflows/harness-drift.yml` to `.github/workflows/` | Runs drift, harness coverage, flakes, fixtures, contract drift, and optional SLO checks |
 | Unattended backlog-to-merge | Run `symphony_clone/` separately | `symphony_clone/README.md` |
 | Artifact-only docs/mockups/research | Use `harness-lite` | `harness-lite/README.md` |
 
@@ -150,6 +161,7 @@ E2E logs land in `test/e2e/results/logs/`; summary JSON lands at `test/e2e/resul
 | PRD format | [docs/prd-format.md](docs/prd-format.md) |
 | Model/cost posture | [docs/model-allocation.md](docs/model-allocation.md) |
 | Behavior preservation | [docs/behavior-preservation.md](docs/behavior-preservation.md) |
+| Sensor arbitration | [docs/sensor-arbitration.md](docs/sensor-arbitration.md) |
 | Native command boundaries | [docs/native-command-integration.md](docs/native-command-integration.md) |
 | Prompt standards | [docs/prompting-standards.md](docs/prompting-standards.md) |
 | Harness architecture | [design.md](design.md) |

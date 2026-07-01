@@ -151,6 +151,44 @@ Confirm: "Here is the UI context I have captured: [summary]. Is this complete?"
 
 ---
 
+### Step 2.8 — Write the BRD Analysis Pack
+
+Before synthesizing the BRD prose, write `specs/brd/brd-analysis.json`. This is the SPDD-inspired analysis layer that turns the PRD/interview into a design contract instead of a thin summary. It must be grounded in the FRD/PRD, the clarification log, and existing-code scan.
+
+The JSON must include:
+
+```json
+{
+  "domain_concepts": [
+    { "name": "Subscription Plan", "status": "existing|new", "evidence": "FRD-1 or specs/brownfield/code-graph.json node", "notes": "business meaning and nearby terms" }
+  ],
+  "ambiguity_table": [
+    { "id": "AMB-1", "question": "What remains ambiguous?", "default_assumption": "Chosen assumption", "risk_if_wrong": "Concrete consequence", "resolution": "clarified|assumed|deferred", "trace": ["FRD-1", "C1"] }
+  ],
+  "edge_case_table": [
+    { "id": "EDGE-1", "scenario": "Boundary/failure case", "expected_behaviour": "Observable result", "trace": ["FRD-1"] }
+  ],
+  "decision_log": [
+    { "id": "DEC-1", "decision": "Chosen direction", "alternatives_rejected": ["Alternative A"], "rationale": "Trade-off that decided it", "trace": ["C2"] }
+  ],
+  "ac_coverage_matrix": [
+    { "requirement_id": "FRD-1", "acceptance_criteria": ["AC-1"], "covered": true, "gap": "" }
+  ],
+  "risk_gap_table": [
+    { "id": "RISK-1", "risk": "What could derail this", "mitigation": "Harness or design response", "owner": "human|agent|deferred", "trace": ["FRD-2"] }
+  ]
+}
+```
+
+Rules:
+- **Domain Concepts** marks each important business object as `existing` or `new`. In brownfield mode, `existing` entries cite a code-graph node or file path; in greenfield, they cite FRD/PRD sections.
+- **Ambiguity Table** captures load-bearing uncertainties that were clarified, assumed, or deferred. A deferred ambiguity must appear in the BRD Open Questions.
+- **Edge-Case Table** names failures, limits, empty states, concurrency/race cases, and security/privacy exceptions that the BRD must preserve downstream.
+- **AC Coverage Matrix** proves every extracted FRD/PRD requirement has at least one observable acceptance criterion before the grounding gate runs.
+- **Risk & Gap Table** records risks and missing inputs without turning them into hidden implementation scope.
+
+If this pack exposes a dropped requirement, unresolved high-risk ambiguity, or uncovered acceptance criterion, fix the interview/clarification log before proceeding. Do not paper over it in the BRD.
+
 ### Step 3 — Synthesize into BRD
 
 After all five dimensions are confirmed, produce a structured BRD with these sections:
@@ -168,7 +206,8 @@ After all five dimensions are confirmed, produce a structured BRD with these sec
 11. Edge Cases & Constraints
 12. UI Context
 13. Open Questions
-14. Forbidden Actions — an explicit list of things the implementation must **not** do, derived from the Out-of-Scope items (Dimension 2) and any source "non-goals". This becomes the deny-list the downstream gate (and any autonomous merge) enforces; phrase each as a checkable prohibition (e.g. "must not call external payment APIs", "must not store raw passwords").
+14. BRD Analysis Summary — summarize the Domain Concepts, Ambiguity Table, Edge-Case Table, AC Coverage Matrix, and Risk & Gap Table from `brd-analysis.json`; keep the full detail in JSON.
+15. Forbidden Actions — an explicit list of things the implementation must **not** do, derived from the Out-of-Scope items (Dimension 2) and any source "non-goals". This becomes the deny-list the downstream gate (and any autonomous merge) enforces; phrase each as a checkable prohibition (e.g. "must not call external payment APIs", "must not store raw passwords").
 
 ### Step 4 — Write to `specs/brd/`
 
@@ -245,6 +284,7 @@ Display the BRD and ask: "Does this BRD accurately capture the requirements? App
 | `specs/brd/source-frd.md` | (FRD mode) immutable copy of the provided FRD — the grounding baseline |
 | `specs/brd/frd-requirements.json` | (FRD mode) extracted `FRD-n` requirements the BRD is checked against |
 | `specs/brd/clarification-log.json` | Confirmed interrogation answers (`C-n`) — the only sanctioned net-new content |
+| `specs/brd/brd-analysis.json` | SPDD-grade analysis pack: Domain Concepts, Ambiguity Table, Edge-Case Table, decision log, AC Coverage Matrix, and Risk & Gap Table |
 | `specs/reviews/brd-grounding.json` | (FRD mode) deterministic grounding verdict (`pass`, `net_new[]`, `dropped[]`) |
 
 ---

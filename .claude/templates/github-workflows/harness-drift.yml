@@ -1,0 +1,43 @@
+name: Harness Drift
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Architecture, dead-code, dependency, and design drift
+        run: npm run drift
+
+      - name: Harness sensor coverage
+        run: npm run harness-coverage
+
+      - name: Flake detection
+        run: npm run flakes
+
+      - name: Flake history
+        if: always()
+        run: npm run flake-history
+
+      - name: Approved fixtures
+        run: npm run approved-fixtures
+
+      - name: API contract drift
+        run: npm run contract-drift
+
+      - name: Runtime SLO probe
+        if: vars.HARNESS_SLO_URL != ''
+        env:
+          HARNESS_SLO_URL: ${{ vars.HARNESS_SLO_URL }}
+        run: npm run slo -- --url "$HARNESS_SLO_URL"

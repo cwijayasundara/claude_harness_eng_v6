@@ -74,6 +74,8 @@ Document this assessment before writing any code.
 
 Read `specs/design/` for relevant architecture decisions and `.claude/skills/code-gen/references/architecture.md` for layering rules. Confirm the planned implementation stays within the correct layer (new type → `types/`, new query → `repository/`, …). Do not shortcut layers.
 
+If `specs/design/reasons-canvas.md` exists, treat it as the living design contract. Behaviour changes that create, move, or materially alter governed source files must update the Canvas first: `Requirements`/`Operations` for intent and implementation steps, `Safeguards` for risks, and `Governs` for changed paths. After code changes, run `npm run canvas-sync`; a mismatch is a **self-correct** finding in `/change` until the Canvas and diff agree.
+
 ### Step S4 — Write the Failing Test(s) First
 
 For each acceptance criterion, **write or update the test before the implementation, and observe it fail (red)**:

@@ -32,6 +32,14 @@ This is the second gate in the SDLC pipeline. The planner agent reads an approve
 
 Read the file at the path provided as the argument. Confirm the document exists and is an approved BRD. If the file is missing, halt and ask the human to run `/brd` first.
 
+If `specs/brd/brd-analysis.json` exists, read it before decomposing stories. It is the BRD analysis pack produced by `/brd`, and it carries the ambiguity, edge-case, acceptance-coverage, and risk signals that should shape story boundaries.
+
+Use the analysis pack this way:
+- Use `ambiguity_table` to avoid converting unresolved ambiguity into implementation scope. A high-risk deferred ambiguity should become `needs_breakdown` or an explicit Open Question, not a guessed story.
+- Use `edge_case_table` to create acceptance criteria for failure, empty, limit, concurrency, and security/privacy paths.
+- Use `ac_coverage_matrix` to preserve every source requirement's observable acceptance criterion.
+- Use `risk_gap_table` to tag stories that need human review, explicit non-goals, or later release deferral.
+
 ### Step 1.5 — Clarify Story Readiness Gaps
 
 Invoke `.claude/skills/clarify/SKILL.md` only if the BRD or existing stories contain uncertainty that affects story readiness, dependencies, acceptance criteria, layer assignment, or whether a story must be split.

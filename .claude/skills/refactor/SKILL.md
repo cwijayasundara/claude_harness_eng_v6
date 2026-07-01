@@ -65,6 +65,8 @@ If `specs/brownfield/` exists, read `architecture-map.md`, `test-map.md`, `risk-
 
 **Migration preflight — REQUIRED SUB-SKILL: `checking-migration-safety`** if the refactor touches ORM models or schema files (e.g. renaming a model field). A behavior-preserving refactor that requires a schema migration is two deployables, not one commit.
 
+**Canvas sync preflight:** if `specs/design/reasons-canvas.md` exists and the refactor moves, renames, splits, deletes, or creates governed source files, update the Canvas `Operations` and `Governs` sections before the refactor is considered complete. After the file movement/change, run `npm run canvas-sync`; a mismatch is a **hard-block** because a refactor must not leave the living design pointing at stale paths.
+
 For each file in the target path:
 
 - **Architecture compliance:** does the file import from a layer above it? (see layering rules in `code-gen/references/architecture.md`)

@@ -22,6 +22,7 @@
 // CLI:
 //   node scaffold-apply.js --profile <profile.json> \
 //     [--plugin-source <harness .claude dir>] [--target <project dir>]
+//     [--drift-workflow]
 //
 // --plugin-source defaults to env CLAUDE_PLUGIN_ROOT, else it is an error.
 // --target defaults to process.cwd().
@@ -72,6 +73,7 @@ function parseArgs(argv) {
     else if (key === '--scaffold-profile') opts.scaffoldProfile = argv[++i];
     else if (key === '--telemetry') opts.telemetry = true;
     else if (key === '--no-telemetry') opts.telemetry = false;
+    else if (key === '--drift-workflow') opts.driftWorkflow = true;
     else fail(`unknown argument: ${key}`);
   }
   return opts;
@@ -157,7 +159,10 @@ function writeInitSh(target, src, profile) {
 }
 
 // Copy the four starter files from templates/ (Steps 3 + 8). No telemetry,
-// tracker, or framework-pack files — those stay with the interactive command.
+// tracker, framework-pack, or optional GitHub workflow activation files — those
+// stay with the interactive command. The optional drift cadence workflow ships
+// as `.claude/templates/github-workflows/harness-drift.yml` so teams can opt in
+// by copying it to `.github/workflows/`.
 function copyStarterFiles(target, src) {
   const map = [
     ['templates/mcp-config.template.json', '.mcp.json'],
@@ -170,6 +175,18 @@ function copyStarterFiles(target, src) {
     fs.mkdirSync(path.dirname(toPath), { recursive: true });
     fs.copyFileSync(requireTemplate(src, from), toPath);
   }
+}
+
+function driftWorkflowEnabled(profile, opts = {}) {
+  return opts.driftWorkflow === true || profile?.quality?.drift?.workflow === true;
+}
+
+function copyDriftWorkflow(target, src) {
+  const from = requireTemplate(src, 'templates/github-workflows/harness-drift.yml');
+  const to = path.join(target, '.github', 'workflows', 'harness-drift.yml');
+  fs.mkdirSync(path.dirname(to), { recursive: true });
+  fs.copyFileSync(from, to);
+  return to;
 }
 
 function makeDirs(target) {
@@ -226,6 +243,7 @@ function applyScaffold(rawOpts) {
     writeDesignMd(target, pluginSource), writeInitSh(target, pluginSource, profile),
   ];
   copyStarterFiles(target, pluginSource);
+  if (driftWorkflowEnabled(profile, rawOpts)) written.push(copyDriftWorkflow(target, pluginSource));
   makeDirs(target);
   writeStateFiles(target, profile);
   const cal = writeCalibration(target, profile);

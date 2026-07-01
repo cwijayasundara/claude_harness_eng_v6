@@ -10,6 +10,16 @@ This project was scaffolded with **Claude Harness Engine v5**.
 
 ## Pick The Work Route
 
+Primary routes:
+
+```
+New product       -> /build
+Existing product  -> /feature "<request>"
+Verify/review     -> /gate
+```
+
+Advanced routes are still available when the harness chooses them:
+
 ```
 Are you building something NEW?
 ├── Yes → small scope (CLI, library, ≤5 stories)?  → /build --lite
@@ -78,6 +88,7 @@ Use `/brownfield` directly only when you want discovery without implementation. 
 | Power-up | How |
 |---|---|
 | Telemetry dashboards | Scaffold with `--telemetry`, then see `docs/telemetry.md` |
+| Drift cadence workflow | Scaffold with `--drift-workflow`, or copy `.claude/templates/github-workflows/harness-drift.yml` to `.github/workflows/` |
 | Framework skill packs | Select during scaffold, then install manually; see `docs/extras.md` |
 | Tracker orchestration | Configure Linear/Jira/Azure DevOps; see `docs/extras.md` |
 | Cost/model posture | Edit `project-manifest.json`, then run `node .claude/scripts/model-tier.js <tier> --apply .claude/agents` |

@@ -68,3 +68,13 @@ Exit `0` = pass, `1` = score below threshold, `2` = usage error.
 - A near-zero score with many survivors usually means the test command isn't actually exercising the file (wrong path, tests skipped) — verify the suite runs green unmutated first.
 - Don't point `--test-cmd` at a flaky suite: nondeterministic failures inflate kills. Stabilize flakes before trusting the score.
 - The operator set is intentionally small. A surviving bug outside these operators (a wrong constant, a missing call) won't be caught — mutation-smoke raises confidence, it does not certify correctness.
+
+## Optional deep mutation tier
+
+`mutation-smoke` is the default inner-loop gate. For critical modules or release checks, run the optional deeper wrapper:
+
+```bash
+npm run deep-mutation -- --critical-only
+```
+
+It detects Stryker for JS/TS projects and mutmut for Python projects when those tools are already configured. If neither tool is provisioned it writes an `unprovisioned` verdict and exits 0. Do not replace the fast diff-scoped smoke gate with full mutation testing; use the deep tier only where the extra runtime is justified.

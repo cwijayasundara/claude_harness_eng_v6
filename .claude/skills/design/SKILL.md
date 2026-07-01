@@ -71,6 +71,16 @@ Use the clarification budget:
 - Prefer existing code, `CONTEXT.md`, ADRs, stories, and manifest data over asking.
 - Record assumptions in `architecture.md` or `api-contracts.md` when risk is low.
 
+## Step 0.7 — Pre-Code Modularity Assessment
+
+Before spawning the planner, perform a lightweight greenfield modularity assessment so the design does not bake in avoidable coupling:
+
+- Classify each domain area as **core/supporting/generic** and record expected **volatility** (high/medium/low).
+- Identify module boundaries and the **integration contracts** between them before naming files.
+- Apply the Balanced Coupling lens: stronger integration is acceptable only when distance is low or volatility is low; high-volatility areas need explicit public contracts and lower knowledge leakage.
+- Name likely **coupling risks**: shared mutable models, cross-context imports, duplicated business rules, argument clumps, and pass-through modules.
+- Feed the result into the planner prompt and require the REASONS Canvas `Structure` and `Safeguards` sections to carry the relevant boundaries and coupling risks.
+
 ## Step 1 — Spawn Two Agents Concurrently
 
 In a single message, invoke both agents using the Agent tool. Do not wait for the planner to finish before starting the generator.
@@ -81,7 +91,9 @@ In a single message, invoke both agents using the Agent tool. Do not wait for th
 
 **Prompt:**
 
-> Read all ready story files in specs/stories/ plus specs/stories/epics.md and specs/stories/dependency-graph.md. Ignore any story listed in specs/stories/backlog-needs-breakdown.md. Design the full system architecture for this project.
+> Read all ready story files in specs/stories/ plus specs/stories/epics.md and specs/stories/dependency-graph.md. If present, also read `specs/brd/brd-analysis.json` and use its `domain_concepts`, `ambiguity_table`, `edge_case_table`, `ac_coverage_matrix`, and `risk_gap_table` as design inputs. Ignore any story listed in specs/stories/backlog-needs-breakdown.md. Design the full system architecture for this project.
+>
+> When `specs/brd/brd-analysis.json` exists: carry unresolved `ambiguity_table` entries into architecture assumptions or open questions, map `edge_case_table` entries to API/UI/error-state design, use `risk_gap_table` to drive Safeguards, and ensure `domain_concepts` align with Entities in the REASONS Canvas.
 >
 > Write the following files to specs/design/:
 >
@@ -103,6 +115,8 @@ In a single message, invoke both agents using the Agent tool. Do not wait for th
 > 8. **deployment.md** — Deployment architecture: environments (dev/staging/prod), CI/CD pipeline steps, infrastructure-as-code approach, secrets management strategy, rollback procedure.
 >
 > 9. **reasons-canvas.md** — The SPDD **REASONS Canvas**: the design's single narrative spine, consolidating the above into eight sections — **R**equirements, **E**ntities, **A**pproach, **S**tructure, **O**perations, **N**orms, **S**afeguards, and **Governs**. Follow `.claude/skills/design/references/reasons-canvas-template.md` exactly. The `Entities` section marks each entity **existing** (citing a `specs/brownfield/code-graph.json` node) or **new** when that graph is present, so the design extends real code. The `Governs` section is a machine-read bullet list of every source path this design creates or modifies (derive it from `component-map.md`) — the drift monitor uses it to detect Canvas↔code drift, so it must be accurate.
+>
+> Include the Step 0.7 modularity assessment in `architecture.md` and the Canvas: domain classification (`core/supporting/generic`), volatility, module boundaries, integration contracts, Balanced Coupling trade-offs, and coupling risks that the implementation must guard against.
 
 ---
 
