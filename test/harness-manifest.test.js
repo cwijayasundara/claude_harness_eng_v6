@@ -58,6 +58,21 @@ test('HARNESS.md exists and references the manifest', () => {
   assert.ok(md.includes('harness-manifest.json'), 'HARNESS.md must reference the manifest');
 });
 
+test('verification-matrix-gate sensor is active and wired', () => {
+  const sensor = manifest.sensors.find((s) => s.id === 'verification-matrix-gate');
+  assert.ok(sensor, 'expected verification-matrix-gate sensor');
+  assert.strictEqual(sensor.axis, 'traceability');
+  assert.strictEqual(sensor.type, 'computational');
+  assert.strictEqual(sensor.cadence, 'integration');
+  assert.strictEqual(sensor.status, 'active');
+  assert.strictEqual(sensor.scope, 'artifacts');
+  assert.strictEqual(sensor.wired_at, '.claude/scripts/verification-matrix-gate.js');
+  assert.ok(
+    fs.existsSync(path.join(REPO_ROOT, sensor.wired_at)),
+    'verification-matrix-gate wired_at file must exist'
+  );
+});
+
 test('every active or partial sensor declares a valid scope (G11)', () => {
   const SCOPES = new Set(['universal', 'test-covered', 'layer-roots', 'contexts', 'runtime', 'dependencies', 'artifacts', 'repo']);
   const offenders = manifest.sensors
