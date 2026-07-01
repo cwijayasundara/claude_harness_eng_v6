@@ -50,6 +50,8 @@ Read `sprint-contracts/{group}.json`. The contract contains:
 - `architecture_checks.files_must_exist`: list of file paths that must be present on disk.
 - `features`: list of feature IDs this group satisfies.
 
+Every runtime check should include `matrix_ids` from `specs/test_artefacts/verification-matrix.json`. Missing required matrix coverage is a hard verification failure.
+
 ### Step 3 — Load Project Manifest
 
 Read `project-manifest.json`. Extract:
@@ -98,7 +100,7 @@ For each entry in `api_checks`:
    ```
    A schema validation error is a FAIL for this check.
 
-Record each check as PASS or FAIL with the actual vs. expected values.
+Record each check as PASS or FAIL with the actual vs. expected values and the `matrix_ids` executed.
 
 ### Debugging API Failures
 
@@ -145,6 +147,8 @@ Interpret `PERF_STATUS`:
 - **1 (REGRESSION)** → performance **FAIL**. Record `failure_layer: "performance"` with the endpoint and the `p95 before -> after (+N%)` line from the tool's stdout. This flips the overall verdict to FAIL.
 - **2 (no baseline / just captured)** → **WARN** only. Note "performance baseline established — ratchet active next evaluation." Do not fail.
 - **0 (OK)** → pass. Still emit a WARN for any read endpoint whose measured p95 exceeds its resolved budget (slow, but not a regression).
+
+Record each performance entry with the `matrix_ids` for the endpoint(s) measured when the contract maps them to matrix rows.
 
 After a **PASS** verdict for the whole group, refresh the baseline so the ratchet tracks the accepted state:
 ```bash
@@ -196,7 +200,7 @@ For each entry in `playwright_checks`:
 
 4. Use `expect().toBeVisible()` for visibility assertions. Never use `waitForTimeout()` — if an element is not immediately visible, the check fails.
 
-5. Record each check as PASS or FAIL with a description of what was asserted and what was found.
+5. Record each check as PASS or FAIL with a description of what was asserted, what was found, and the `matrix_ids` executed.
 
 ### Accessibility (axe-core) — when the contract has `accessibility_checks`
 
@@ -205,7 +209,7 @@ Semantic selectors prove an element is *reachable*; they do not prove the page i
 1. `browser_navigate` to the page.
 2. Inject and run axe with `browser_evaluate` — load axe-core (e.g. from the `axe-core` package or CDN) and `return await axe.run()`.
 3. Collect `violations`; group them by `impact` (`minor` / `moderate` / `serious` / `critical`).
-4. **Verdict:** any violation whose `impact` is in `block_impacts` (default `["serious", "critical"]`) is a failure. In **Full** mode this FAILs the evaluation (`failure_layer: "accessibility"`); in **Lean** mode record it as a WARN. Always list the rule id, impact, and the offending selector(s) in the report.
+4. **Verdict:** any violation whose `impact` is in `block_impacts` (default `["serious", "critical"]`) is a failure. In **Full** mode this FAILs the evaluation (`failure_layer: "accessibility"`); in **Lean** mode record it as a WARN. Always list the rule id, impact, offending selector(s), and `matrix_ids` in the report.
 
 A missing axe run when `accessibility_checks.required` is true is a FAIL, not a pass — mirror the security-gate rule (a missing scan is never a pass).
 
@@ -247,6 +251,8 @@ The validator is not security-complete without this layer. Run it in Full and Le
 4. The security gate **FAILs** if any finding's `severity` is in the blocking set (equivalently, `security-verdict.json#pass === false`). Medium/low findings are WARN/INFO — record them, do not fail on them.
 5. If `security-verdict.json` is missing, treat that as a FAIL with `failure_layer: "security"` and reason `"security-reviewer did not produce a verdict"` — a missing scan is not a pass.
 
+Record security report entries with the `matrix_ids` for the checks, stories, or endpoints whose boundary was reviewed.
+
 This layer does not require Docker. It is independent of the app being reachable.
 
 ---
@@ -277,13 +283,13 @@ VERDICT: PASS | FAIL
 
 ## API Checks
 
-- [PASS] POST /users → 201 ✓
-- [FAIL] GET /users/1 → expected 200, got 404
-- [PASS] DELETE /users/1 → 204 ✓
+- [PASS] POST /users → 201 ✓ (`matrix_ids`: [`VM-001`])
+- [FAIL] GET /users/1 → expected 200, got 404 (`matrix_ids`: [`VM-002`])
+- [PASS] DELETE /users/1 → 204 ✓ (`matrix_ids`: [`VM-003`])
 
 ## Playwright Checks
 
-- [PASS] Upload page renders ✓
+- [PASS] Upload page renders ✓ (`matrix_ids`: [`VM-004`])
 - [FAIL] Submit button not clickable
 - [PASS] Success message visible after form submit ✓
 
@@ -299,14 +305,14 @@ VERDICT: PASS | FAIL
 
 ## Security Gate
 
-- [FAIL] VULN-001 (high): SQL injection in src/api/users.ts:47
+- [FAIL] VULN-001 (high): SQL injection in src/api/users.ts:47 (`matrix_ids`: [`VM-002`])
 - block: 1, warn: 2, info: 0 → gate FAIL
 
 ## Performance
 
-- [PASS] GET /items p95 41ms -> 44ms (+7%) — within ratchet
-- [FAIL] GET /items/1 p95 38ms -> 210ms (+452%) — regression
-- [WARN] POST /items 910ms > 800ms write budget (single-shot, not ratcheted)
+- [PASS] GET /items p95 41ms -> 44ms (+7%) — within ratchet (`matrix_ids`: [`VM-010`])
+- [FAIL] GET /items/1 p95 38ms -> 210ms (+452%) — regression (`matrix_ids`: [`VM-011`])
+- [WARN] POST /items 910ms > 800ms write budget (single-shot, not ratcheted) (`matrix_ids`: [`VM-012`])
 - [WARN] No baseline existed — established; ratchet active next evaluation
 
 ## Features Updated
@@ -316,7 +322,7 @@ VERDICT: PASS | FAIL
 - F003: PASS
 ```
 
-The overall VERDICT is PASS only if every check across all layers passes, the security gate passes (`security-verdict.json#pass === true`), **and** the performance ratchet reports no read-endpoint regression. A single FAIL in any layer — an open BLOCK (critical/high) security finding, or a p95 latency regression beyond threshold — produces a FAIL verdict. Performance WARNs (over budget, or first-build baseline established) do not affect the verdict.
+The overall VERDICT is PASS only if every check across all layers passes, the security gate passes (`security-verdict.json#pass === true`), the performance ratchet reports no read-endpoint regression, **and** required matrix coverage is present. A single FAIL in any layer — an open BLOCK (critical/high) security finding, a p95 latency regression beyond threshold, or missing required matrix coverage — produces a FAIL verdict. Performance WARNs (over budget, or first-build baseline established) do not affect the verdict.
 
 ---
 

@@ -46,6 +46,7 @@ Log every teammate spawn to `.claude/state/iteration-log.md` as evidence the tea
 - API contracts from `specs/design/api-contracts.schema.json`
 - Data models from `specs/design/data-models.schema.json`
 - Architecture from `specs/design/architecture.md`
+- Verification matrix from `specs/test_artefacts/verification-matrix.json`
 - Brownfield maps from `specs/brownfield/` when present
 - Learned rules from `.claude/state/learned-rules.md` (read before each group)
 - Code generation principles from `.claude/skills/code-gen/SKILL.md`
@@ -144,6 +145,7 @@ Max 5 concurrent teammates per phase. If a phase has >5 stories, batch in groups
 - Monitor for file ownership violations — reject and reassign if found
 - **Every teammate MUST follow TDD:** write failing test → implement → verify pass → commit
 - Teammates may NOT write implementation code before writing the corresponding test
+- Tests added by teammates MUST update `specs/test_artefacts/unit-traces.json` or `specs/test_artefacts/integration-traces.json` with the executed `matrix_id` from `specs/test_artefacts/verification-matrix.json`
 - Target: 100% meaningful coverage. Floor: 80% (ratchet gate blocks below this)
 
 ### Step 5: Run Tests

@@ -172,3 +172,28 @@ test('rubric now has a test phase, and design/test phases hard-gate on grounding
   assert.match(rubric.phases.test.hard_gate, /test-grounding\.json/);
   assert.match(rubric.phases.design.hard_gate, /design-grounding\.json/);
 });
+
+test('verification matrix gate is wired through test, auto, generator, evaluator, and evaluate prompts', () => {
+  const files = {
+    testSkill: fsw.readFileSync(pathw.join(ROOTW, '.claude', 'skills', 'test', 'SKILL.md'), 'utf8'),
+    autoSkill: fsw.readFileSync(pathw.join(ROOTW, '.claude', 'skills', 'auto', 'SKILL.md'), 'utf8'),
+    generator: fsw.readFileSync(pathw.join(ROOTW, '.claude', 'agents', 'generator.md'), 'utf8'),
+    evaluator: fsw.readFileSync(pathw.join(ROOTW, '.claude', 'agents', 'evaluator.md'), 'utf8'),
+    evaluateSkill: fsw.readFileSync(pathw.join(ROOTW, '.claude', 'skills', 'evaluate', 'SKILL.md'), 'utf8'),
+  };
+
+  assert.match(files.testSkill, /verification-matrix\.json/);
+  assert.match(files.testSkill, /verification-matrix-gate\.js --phase plan/);
+  assert.match(files.testSkill, /unit-traces\.json/);
+  assert.match(files.testSkill, /e2e-traces\.json/);
+
+  assert.match(files.autoSkill, /verification-matrix\.json/);
+  assert.match(files.autoSkill, /verification-matrix-gate\.js --phase contract/);
+  assert.match(files.autoSkill, /verification-matrix-gate\.js --phase implementation/);
+  assert.match(files.autoSkill, /verification-matrix-gate\.js --phase executed/);
+
+  assert.match(files.generator, /unit-traces\.json/);
+  assert.match(files.generator, /matrix_id/);
+  assert.match(files.evaluator, /matrix_ids/);
+  assert.match(files.evaluateSkill, /matrix_ids/);
+});

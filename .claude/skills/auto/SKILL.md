@@ -114,7 +114,7 @@ Sprint contracts define the verifiable done-criteria for a group. Two-step propo
 
 Spawn generator as a subagent with this prompt:
 
-> Read stories [list IDs for this group], `specs/design/api-contracts.md`, `specs/design/component-map.md`. Propose a sprint contract for group {ID}. Include: api_checks, playwright_checks, design_checks, architecture_checks, features list. Populate `architecture_checks.files_must_exist` with the file paths listed for this group's stories in `specs/design/component-map.md`. Write the contract to `sprint-contracts/{group}.json`.
+> Read stories [list IDs for this group], `specs/design/api-contracts.md`, `specs/design/component-map.md`, and `specs/test_artefacts/verification-matrix.json`. Propose a sprint contract for group {ID}. Include: api_checks, playwright_checks, design_checks, architecture_checks, features list. Every runtime check must carry the `matrix_ids` it verifies. Populate `architecture_checks.files_must_exist` with the file paths listed for this group's stories in `specs/design/component-map.md`. Write the contract to `sprint-contracts/{group}.json`.
 
 The generator produces a draft contract based on the story acceptance criteria and the architecture design.
 
@@ -122,13 +122,13 @@ The generator produces a draft contract based on the story acceptance criteria a
 
 Spawn evaluator as a subagent with this prompt:
 
-> Read the proposed sprint contract at `sprint-contracts/{group}.json`. Review each check against the story acceptance criteria and API contracts. Add any missing checks. Remove any checks that do not trace to an acceptance criterion. Write the final contract to the same path. Also write an audit of your edits to `specs/reviews/contract-audit-{group}.json`: `{"group": "...", "added": [{"check": ..., "reason": ...}], "removed": [{"check": ..., "reason": ...}]}` — an empty `added`/`removed` means the proposal was accepted as-is.
+> Read the proposed sprint contract at `sprint-contracts/{group}.json` and `specs/test_artefacts/verification-matrix.json`. Review each check against the story acceptance criteria, API contracts, and matrix obligations. Add any missing checks. Remove any checks that do not trace to an acceptance criterion. Ensure every runtime check carries the `matrix_ids` it verifies. Write the final contract to the same path. Also write an audit of your edits to `specs/reviews/contract-audit-{group}.json`: `{"group": "...", "added": [{"check": ..., "reason": ...}], "removed": [{"check": ..., "reason": ...}]}` — an empty `added`/`removed` means the proposal was accepted as-is.
 
 Rules:
 - **No back-and-forth.** The evaluator has final say. The generator does not get to dispute.
 - **The edit is not silent.** The orchestrator reads `contract-audit-{group}.json` after negotiation and surfaces it in the progress log (and to the user at the next escalation point). A removal whose `reason` contradicts a story acceptance criterion is grounds to re-run negotiation once with the audit attached — this is the only permitted second cycle.
 - **Contract is immutable after negotiation.** Once the evaluator writes the final version, no one edits it — the single permitted exception is the deterministic, additive-only accessibility normalizer (Step 3.5), which may inject a default `accessibility_checks` block for UI stories; it never edits or removes other checks.
-- **Validate before it freezes.** After the evaluator writes the final contract, run `node .claude/scripts/validate-contract.js sprint-contracts/{group}.json`. A non-zero exit means the contract is structurally malformed — re-run Step 3 once with the validator output attached. Do not proceed to execution with an invalid contract: the pre-commit hook repeats this check deterministically and will block every commit until it is fixed.
+- **Validate before it freezes.** After the evaluator writes the final contract, run `node .claude/scripts/validate-contract.js sprint-contracts/{group}.json`, then `node .claude/scripts/verification-matrix-gate.js --phase contract --group "$GROUP_ID"`. A non-zero exit means the contract is structurally malformed or missing required matrix coverage — re-run Step 3 once with the validator output attached. Do not proceed to execution with an invalid contract: the pre-commit hook repeats this check deterministically and will block every commit until it is fixed.
 
 ### Step 3.5 — Default-on accessibility (G12)
 
@@ -505,6 +505,14 @@ node .claude/scripts/mutation-gate.js --staged   # or pass explicit changed file
 
 It applies one high-signal operator mutation at a time (`>`↔`>=`, `==`↔`!=`, `&&`↔`||`, boolean literals) to the changed code and re-runs the project test command; a **survivor** is a mutation no test killed — behavior the suite does not verify. Below the threshold (default 0.8 of mutants killed) the gate **BLOCKS**, naming each survivor's file:line and the exact flip so the generator adds the missing boundary/false-branch assertion. The gate is enforced deterministically by the pre-commit hook during `/auto` builds (scoped to an active sprint group; bounded by `--max-mutants`), and is disabled with `HARNESS_MUTATION_GATE=off`. A language whose test command can't be discovered is skipped loudly, never silently passed.
 
+After coverage and mutation gates pass, run:
+
+```bash
+node .claude/scripts/verification-matrix-gate.js --phase implementation --group "$GROUP_ID"
+```
+
+This blocks if required unit, integration, or E2E trace sidecars are missing for the group's matrix obligations.
+
 ### Gate 4 — Architecture Checks
 
 Spawn evaluator to verify `architecture_checks` from the sprint contract:
@@ -542,6 +550,16 @@ If no trigger fires, do not spawn `security-reviewer`; record `security_review: 
 ### Gate 8 — Fresh-Context Diff Review (Full + Lean)
 
 Spawn the `diff-reviewer` agent on the group's diff (give it the commit range or branch, acceptance criteria, and `specs/reviews/review-context-pack.md` — nothing else from this session). It reads the diff cold, hunts correctness defects (logic errors, missing edge cases, contract breaks against existing callers), and writes `specs/reviews/diff-review-verdict.json`. The gate **FAILs** on any BLOCK finding or a missing verdict file. Route BLOCK findings to the generator like any other gate failure (max 3 fix cycles). Runs concurrently with Gates 5 and any selected Gate 7 security review — it needs only the repo, not the running app. The reviewer's value comes from its empty context: do not paste progress logs or builder reasoning into its spawn prompt.
+
+### Phase 9.5 — Pre-PR Executed Matrix Gate
+
+Before a Phase 9.5 pre-PR proof, draft PR, or final completion claim, run:
+
+```bash
+node .claude/scripts/verification-matrix-gate.js --phase executed
+```
+
+This blocks if evaluator execution failed to cover required matrix rows.
 
 ---
 
@@ -596,6 +614,7 @@ Do not immediately revert. Attempt targeted self-healing first.
 | Docker fail | Container exit code / won't start | Read `docker compose logs`, fix config or deps |
 | Architecture drift | Schema mismatch / missing file | Read the schema, fix the response or create the file |
 | Security (BLOCK) | `security-verdict.json#pass === false` (critical/high finding) | Apply the finding's `fix`; parameterize queries, add authz/validation, remove hardcoded secrets. Re-run the security-reviewer to confirm the verdict clears |
+| Verification matrix | `verification-matrix-verdict.json#pass === false` or missing `matrix_ids` / trace sidecar coverage | Add or execute the missing traced verification, preserving the matrix requirement. Never weaken or remove matrix rows to make the gate pass |
 
 3. **Spawn generator** to apply the targeted fix. The generator prompt must include:
    - The structured failure JSON from `specs/reviews/eval-failures-NNN.json` (see evaluator agent for schema).

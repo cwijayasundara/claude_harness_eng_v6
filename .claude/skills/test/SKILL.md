@@ -20,7 +20,7 @@ agent: generator
 
 - `/test` — generate all test artefacts: plan, cases, fixtures, and E2E tests.
 - `/test --plan-only` — generate test plan, test cases, and test data fixtures (everything in `specs/test_artefacts/`). Stop before writing Playwright files. Does NOT require source code — only needs stories from `/spec`.
-- `/test --e2e-only` — skip plan/cases, go straight to Playwright E2E generation. Use when plan already exists and source code has been built.
+- `/test --e2e-only` — skip plan/cases, go straight to Playwright E2E generation from `specs/test_artefacts/verification-matrix.json`; record `specs/test_artefacts/e2e-traces.json`. Use when plan already exists and source code has been built.
 - `/test --from-cr <file.md>` / `--from-cr --issue N` — **brownfield CR lane.** Turn a change request (a markdown file, or a GitHub issue) against existing code into a **regression-pin set** (behavior that must stay identical) plus a **delta test plan** (new behavior the CR introduces), grounded against the CR. See "Brownfield CR Lane" below. Run this *before* `/change` when a CR document exists.
 
 ---
@@ -101,6 +101,15 @@ Every test case must trace to at least one `{story}-AC{n}` id from `specs/storie
 { "id": "TC-3", "text": "username under 3 chars rejected with 422", "traces": ["E1-S1-AC2", "OBL-User.username-minLength"] }
 ```
 
+**`specs/test_artefacts/verification-matrix.json`** — one requirement row per AC, with stable matrix ids, story/AC references, required layers (`unit`, `api`, `e2e`), group, and planned checks. This is the shared oracle for `/auto`, generator teammates, and evaluator runtime checks.
+
+**Trace sidecars** — as implementation and E2E tests are authored, record the executed matrix coverage in:
+- `specs/test_artefacts/unit-traces.json`
+- `specs/test_artefacts/integration-traces.json`
+- `specs/test_artefacts/e2e-traces.json`
+
+Each sidecar entry must name the test artifact and its `matrix_id`.
+
 ### Step 4.4 — Constraint Obligation Extraction [when design schemas exist]
 
 The design schemas encode validation rules (`required`, `minLength`, `pattern`, `enum`, `minimum`, …) the test author may forget. Mine them into machine-checkable obligations — one negative-test obligation per constraint:
@@ -132,9 +141,13 @@ node .claude/scripts/trace-check.js \
   --downstream specs/test_artefacts/test-traces.json \
   --layer test \
   --out specs/reviews/test-grounding.json
+
+node .claude/scripts/verification-matrix-gate.js --phase plan
 ```
 
 `specs/reviews/test-grounding.json` is a **hard gate**: any `net_new` (test case tracing to no AC or obligation) or `dropped` (an AC or constraint obligation with no test case) blocks. Resolve before reporting the plan. (Skip when `story-traces.json` does not exist; omit the obligation index when Step 4.4 did not run.)
+
+`specs/reviews/verification-matrix-verdict.json` is also a **hard gate**: every implementation-ready AC must have a matrix obligation before the plan can be reported.
 
 **If `--plan-only`: STOP HERE.** Steps 4–4.5 (plan + cases + fixtures + trace spine + grounding gate) are the complete deliverable for the planning phase. Do not proceed to Playwright generation — source code does not exist yet. Report the generated artifacts and exit.
 
@@ -143,6 +156,8 @@ node .claude/scripts/trace-check.js \
 Create `e2e/` at the project root if it does not exist.
 
 For each story, generate a Playwright test file named `{story-id}.spec.ts`.
+
+In `--e2e-only` mode, generate Playwright specs from `specs/test_artefacts/verification-matrix.json`, not ad hoc story prose. Each E2E test must record its executed row in `specs/test_artefacts/e2e-traces.json` with the corresponding `matrix_id`.
 
 Selector and assertion rules are single-sourced in `.claude/skills/evaluate/references/playwright-patterns.md` (the canonical Playwright reference, shared with `/evaluate`). The rules below summarize it — defer to that file if they differ.
 
@@ -232,9 +247,14 @@ Any `net_new` (a delta test tracing to no CR line — scope creep) or `dropped` 
 | `specs/test_artefacts/test-cases.md` | Full test case inventory mapped to ACs |
 | `specs/test_artefacts/test-data/` | JSON fixture files per domain entity |
 | `specs/test_artefacts/test-traces.json` | Trace spine: each test case → AC id(s) and/or `OBL-` id(s) |
+| `specs/test_artefacts/verification-matrix.json` | AC → required verification layers and planned checks |
+| `specs/test_artefacts/unit-traces.json` | Unit test artifacts mapped to `matrix_id` |
+| `specs/test_artefacts/integration-traces.json` | Integration/API test artifacts mapped to `matrix_id` |
+| `specs/test_artefacts/e2e-traces.json` | Playwright artifacts mapped to `matrix_id` |
 | `specs/test_artefacts/constraint-obligations.json` | (when design schemas exist) one negative-test obligation per schema constraint |
 | `specs/test_artefacts/obligation-index.json` | (when design schemas exist) obligation upstream index for the grounding gate |
 | `specs/reviews/test-grounding.json` | (when story-traces exists) deterministic AC + obligation coverage verdict |
+| `specs/reviews/verification-matrix-verdict.json` | Deterministic matrix gate verdict |
 | `e2e/{story-id}.spec.ts` | Playwright tests per story |
 | `playwright.config.ts` | Playwright configuration |
 
