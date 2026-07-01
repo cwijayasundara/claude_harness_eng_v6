@@ -35,6 +35,10 @@
             "required": ["id", "method", "path", "expected_status"],
             "properties": {
               "id": { "type": "string" },
+              "matrix_ids": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
               "method": { "type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"] },
               "path": { "type": "string" },
               "headers": { "type": "object", "additionalProperties": { "type": "string" } },
@@ -53,6 +57,10 @@
             "required": ["id", "description", "steps"],
             "properties": {
               "id": { "type": "string" },
+              "matrix_ids": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
               "description": { "type": "string" },
               "url": { "type": "string" },
               "steps": {
@@ -78,6 +86,10 @@
             "design_quality": {
               "type": "object",
               "properties": {
+                "matrix_ids": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
                 "required": { "type": "boolean" },
                 "min_score": { "type": "integer", "minimum": 1, "maximum": 10 }
               }
@@ -85,6 +97,10 @@
             "originality": {
               "type": "object",
               "properties": {
+                "matrix_ids": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
                 "required": { "type": "boolean" },
                 "min_score": { "type": "integer", "minimum": 1, "maximum": 10 }
               }
@@ -92,6 +108,10 @@
             "craft": {
               "type": "object",
               "properties": {
+                "matrix_ids": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
                 "required": { "type": "boolean" },
                 "min_score": { "type": "integer", "minimum": 1, "maximum": 10 }
               }
@@ -99,6 +119,10 @@
             "functionality": {
               "type": "object",
               "properties": {
+                "matrix_ids": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
                 "required": { "type": "boolean" },
                 "min_score": { "type": "integer", "minimum": 1, "maximum": 10 }
               }
@@ -109,6 +133,10 @@
           "type": "object",
           "description": "Accessibility (axe-core) gate for Playwright-rendered pages. In Full mode any violation at or above a blocking impact FAILs the evaluation; in Lean mode violations are WARN. Omitted urls default to evaluation.ui_base_url.",
           "properties": {
+            "matrix_ids": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
             "required": { "type": "boolean", "default": false },
             "block_impacts": {
               "type": "array",
@@ -129,6 +157,10 @@
           "items": {
             "type": "object",
             "properties": {
+              "matrix_ids": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
               "endpoint": { "type": "string" },
               "max_response_time_ms": { "type": "number", "description": "Absolute budget (advisory WARN) for this endpoint, overriding the manifest default." },
               "method": { "type": "string", "default": "GET" },
@@ -195,6 +227,10 @@
           "type": "object",
           "description": "Security gate. The validator FAILs if the security-reviewer reports any finding at or above a blocking severity. Enforced by /evaluate and the /auto loop via specs/reviews/security-verdict.json.",
           "properties": {
+            "matrix_ids": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
             "required": {
               "type": "boolean",
               "default": true,

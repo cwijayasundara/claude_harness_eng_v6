@@ -88,6 +88,81 @@ test('nested required fields inside check items are enforced', () => {
   assert.ok(errors.some((e) => e.includes('expected_status')), errors.join('\n'));
 });
 
+test('contract schema accepts optional matrix_ids on verification checks', () => {
+  const c = validContract();
+  c.contract.api_checks = [
+    {
+      id: 'api-create',
+      matrix_ids: ['VM-001'],
+      method: 'POST',
+      path: '/todos',
+      expected_status: 201,
+    },
+  ];
+  c.contract.playwright_checks = [
+    {
+      id: 'e2e-create',
+      matrix_ids: ['VM-001'],
+      description: 'create todo',
+      steps: [],
+    },
+  ];
+  c.contract.design_checks = {
+    design_quality: {
+      matrix_ids: ['VM-001'],
+      required: true,
+      min_score: 7,
+    },
+  };
+  c.contract.accessibility_checks = {
+    matrix_ids: ['VM-001'],
+    required: true,
+    urls: ['/'],
+    block_impacts: ['serious', 'critical'],
+  };
+  c.contract.security_checks = {
+    matrix_ids: ['VM-001'],
+    required: true,
+    block_severities: ['critical', 'high'],
+  };
+  c.contract.performance_checks = [
+    {
+      matrix_ids: ['VM-001'],
+      endpoint: '/todos',
+      method: 'GET',
+      max_response_time_ms: 300,
+    },
+  ];
+
+  assert.deepStrictEqual(validate(SCHEMA, c), []);
+
+  const contractProps = SCHEMA.properties.contract.properties;
+  assert.deepStrictEqual(contractProps.api_checks.items.properties.matrix_ids, {
+    type: 'array',
+    items: { type: 'string' },
+  });
+  assert.deepStrictEqual(contractProps.playwright_checks.items.properties.matrix_ids, {
+    type: 'array',
+    items: { type: 'string' },
+  });
+  assert.deepStrictEqual(contractProps.design_checks.properties.design_quality.properties.matrix_ids, {
+    type: 'array',
+    items: { type: 'string' },
+  });
+  assert.deepStrictEqual(contractProps.accessibility_checks.properties.matrix_ids, {
+    type: 'array',
+    items: { type: 'string' },
+  });
+  assert.deepStrictEqual(contractProps.security_checks.properties.matrix_ids, {
+    type: 'array',
+    items: { type: 'string' },
+  });
+  assert.deepStrictEqual(contractProps.performance_checks.items.properties.matrix_ids, {
+    type: 'array',
+    items: { type: 'string' },
+  });
+});
+
 test('the shipped sprint-contract template validates against the shipped schema (drift guard)', () => {
   const template = JSON.parse(fs.readFileSync(
     path.join(__dirname, '..', '.claude', 'templates', 'sprint-contract.json'), 'utf8'
