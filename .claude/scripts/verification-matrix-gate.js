@@ -43,13 +43,18 @@ function matrixIdSet(rows) {
   return new Set(rows.map((row) => row.id).filter(Boolean));
 }
 
-function storyAcIds(root) {
+function storyAcIds(root, rows, group) {
   const traces = readJson(path.join(root, 'specs', 'stories', 'story-traces.json'), []);
-  return new Set(asArray(traces).flatMap((story) => asArray(story.acs)));
+  const storyIds = group ? new Set(rows.map((row) => row.story_id).filter(Boolean)) : null;
+  return new Set(
+    asArray(traces)
+      .filter((story) => !storyIds || storyIds.has(story.id))
+      .flatMap((story) => asArray(story.acs))
+  );
 }
 
-function validatePlan(root, rows, failures) {
-  const acIds = storyAcIds(root);
+function validatePlan(root, rows, failures, group) {
+  const acIds = storyAcIds(root, rows, group);
   const coveredAcs = new Set();
 
   for (const row of rows) {
@@ -101,7 +106,7 @@ function collectContractChecks(contract) {
   return checks;
 }
 
-function validateContract(root, rows, group, failures) {
+function validateContract(root, rows, group, failures, allRows) {
   if (!group) {
     add(failures, 'missing_group', {});
     return;
@@ -113,7 +118,8 @@ function validateContract(root, rows, group, failures) {
     return;
   }
 
-  const knownIds = matrixIdSet(rows);
+  const scopedIds = matrixIdSet(rows);
+  const allIds = matrixIdSet(allRows || rows);
   const covered = new Map();
 
   for (const { layer, check } of collectContractChecks(contract)) {
@@ -124,7 +130,11 @@ function validateContract(root, rows, group, failures) {
     }
 
     for (const matrix_id of matrixIds) {
-      if (!knownIds.has(matrix_id)) add(failures, 'unknown_matrix_id', { layer, matrix_id });
+      if (!allIds.has(matrix_id)) {
+        add(failures, 'unknown_matrix_id', { layer, matrix_id });
+        continue;
+      }
+      if (!scopedIds.has(matrix_id)) continue;
       if (!covered.has(matrix_id)) covered.set(matrix_id, new Set());
       covered.get(matrix_id).add(layer);
     }
@@ -144,16 +154,18 @@ function traceRows(root, rel) {
   return asArray(readJson(path.join(root, rel), []));
 }
 
-function validateTraceLayer(root, rows, layer, traceRel, failures) {
-  const knownIds = matrixIdSet(rows);
+function validateTraceLayer(root, rows, layer, traceRel, failures, allRows) {
+  const scopedIds = matrixIdSet(rows);
+  const allIds = matrixIdSet(allRows || rows);
   const covered = new Set();
 
   for (const trace of traceRows(root, traceRel)) {
     const matrix_id = trace.matrix_id || null;
-    if (!knownIds.has(matrix_id)) {
+    if (!allIds.has(matrix_id)) {
       add(failures, 'unknown_matrix_id', { layer, matrix_id });
       continue;
     }
+    if (!scopedIds.has(matrix_id)) continue;
     covered.add(matrix_id);
     if (!relExists(root, trace.path)) {
       add(failures, 'missing_artifact', { layer, matrix_id, path: trace.path || null });
@@ -167,14 +179,14 @@ function validateTraceLayer(root, rows, layer, traceRel, failures) {
   }
 }
 
-function validateImplementation(root, rows, failures) {
-  validateTraceLayer(root, rows, 'unit', path.join('specs', 'test_artefacts', 'unit-traces.json'), failures);
-  validateTraceLayer(root, rows, 'integration', path.join('specs', 'test_artefacts', 'integration-traces.json'), failures);
+function validateImplementation(root, rows, failures, allRows) {
+  validateTraceLayer(root, rows, 'unit', path.join('specs', 'test_artefacts', 'unit-traces.json'), failures, allRows);
+  validateTraceLayer(root, rows, 'integration', path.join('specs', 'test_artefacts', 'integration-traces.json'), failures, allRows);
 }
 
-function validateExecuted(root, rows, failures) {
-  validateImplementation(root, rows, failures);
-  validateTraceLayer(root, rows, 'e2e', path.join('specs', 'test_artefacts', 'e2e-traces.json'), failures);
+function validateExecuted(root, rows, failures, allRows) {
+  validateImplementation(root, rows, failures, allRows);
+  validateTraceLayer(root, rows, 'e2e', path.join('specs', 'test_artefacts', 'e2e-traces.json'), failures, allRows);
 
   const needsRuntime = rows.some((row) => asArray(row.required_layers).some((layer) => CONTRACT_LAYERS.has(layer)));
   if (!needsRuntime) return;
@@ -196,13 +208,14 @@ function runGate(options) {
   const root = path.resolve(opts.root || process.cwd());
   const phase = opts.phase || 'plan';
   if (!VALID_PHASES.has(phase)) throw new Error(`invalid phase: ${phase}`);
-  const rows = scopedRows(loadMatrix(root, opts.matrix || DEFAULT_MATRIX), opts.group);
+  const allRows = loadMatrix(root, opts.matrix || DEFAULT_MATRIX);
+  const rows = scopedRows(allRows, opts.group);
   const failures = [];
 
-  validatePlan(root, rows, failures);
-  if (phase === 'contract') validateContract(root, rows, opts.group, failures);
-  else if (phase === 'implementation') validateImplementation(root, rows, failures);
-  else if (phase === 'executed') validateExecuted(root, rows, failures);
+  validatePlan(root, rows, failures, opts.group);
+  if (phase === 'contract') validateContract(root, rows, opts.group, failures, allRows);
+  else if (phase === 'implementation') validateImplementation(root, rows, failures, allRows);
+  else if (phase === 'executed') validateExecuted(root, rows, failures, allRows);
 
   return {
     phase,

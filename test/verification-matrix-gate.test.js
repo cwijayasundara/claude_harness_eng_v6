@@ -89,6 +89,66 @@ function baseProject() {
   return root;
 }
 
+function groupedProject() {
+  const root = tmpProject();
+  writeJson(root, 'specs/stories/story-traces.json', [
+    { id: 'E1-S1', traces: ['BR-1'], acs: ['E1-S1-AC1'] },
+    { id: 'E1-S2', traces: ['BR-2'], acs: ['E1-S2-AC1'] },
+  ]);
+  writeJson(root, 'specs/test_artefacts/verification-matrix.json', {
+    version: 1,
+    requirements: [
+      {
+        id: 'VM-A',
+        brd_id: 'BR-1',
+        story_id: 'E1-S1',
+        ac_id: 'E1-S1-AC1',
+        text: 'Group A work',
+        group: 'A',
+        required_layers: ['unit', 'api'],
+        checks: [
+          { id: 'UT-A', layer: 'unit', kind: 'test', path: 'tests/unit/a.test.js', status: 'implemented' },
+          { id: 'API-A', layer: 'api', kind: 'sprint-contract-check', path: 'sprint-contracts/A.json', status: 'implemented' },
+        ],
+      },
+      {
+        id: 'VM-B',
+        brd_id: 'BR-2',
+        story_id: 'E1-S2',
+        ac_id: 'E1-S2-AC1',
+        text: 'Group B work',
+        group: 'B',
+        required_layers: ['unit', 'api'],
+        checks: [
+          { id: 'UT-B', layer: 'unit', kind: 'test', path: 'tests/unit/b.test.js', status: 'implemented' },
+          { id: 'API-B', layer: 'api', kind: 'sprint-contract-check', path: 'sprint-contracts/B.json', status: 'implemented' },
+        ],
+      },
+    ],
+  });
+  writeJson(root, 'sprint-contracts/A.json', {
+    api_checks: [{ id: 'api-a', matrix_ids: ['VM-A'], method: 'GET', path: '/a', expect: { status: 200 } }],
+    playwright_checks: [],
+    design_checks: [],
+    architecture_checks: { files_must_exist: [] },
+    features: ['F-A'],
+  });
+  writeJson(root, 'sprint-contracts/B.json', {
+    api_checks: [{ id: 'api-b', matrix_ids: ['VM-B'], method: 'GET', path: '/b', expect: { status: 200 } }],
+    playwright_checks: [],
+    design_checks: [],
+    architecture_checks: { files_must_exist: [] },
+    features: ['F-B'],
+  });
+  writeJson(root, 'specs/test_artefacts/unit-traces.json', [
+    { id: 'UT-A', matrix_id: 'VM-A', test_name: 'group a unit', path: 'tests/unit/a.test.js' },
+    { id: 'UT-B', matrix_id: 'VM-B', test_name: 'group b unit', path: 'tests/unit/b.test.js' },
+  ]);
+  writeText(root, 'tests/unit/a.test.js', 'test("group a", () => {});\n');
+  writeText(root, 'tests/unit/b.test.js', 'test("group b", () => {});\n');
+  return root;
+}
+
 test('plan phase passes a matrix covering every implementation-ready AC', () => {
   const root = baseProject();
   const verdict = gate.runGate({ root, phase: 'plan' });
@@ -134,6 +194,13 @@ test('contract phase fails when a contract check references an unknown matrix id
   assert.ok(verdict.failures.some((f) => f.code === 'unknown_matrix_id' && f.matrix_id === 'VM-999'));
 });
 
+test('contract phase scopes plan AC coverage to the requested group', () => {
+  const root = groupedProject();
+  const verdict = gate.runGate({ root, phase: 'contract', group: 'A' });
+  assert.strictEqual(verdict.pass, true);
+  assert.deepStrictEqual(verdict.failures, []);
+});
+
 test('implementation phase fails when a required unit trace is missing', () => {
   const root = baseProject();
   writeJson(root, 'specs/test_artefacts/unit-traces.json', [
@@ -150,6 +217,25 @@ test('implementation phase fails when a trace points to a missing test file', ()
   const verdict = gate.runGate({ root, phase: 'implementation', group: 'A' });
   assert.strictEqual(verdict.pass, false);
   assert.ok(verdict.failures.some((f) => f.code === 'missing_artifact' && f.path === 'tests/unit/todo.test.js'));
+});
+
+test('implementation phase ignores out-of-scope group traces', () => {
+  const root = groupedProject();
+  const verdict = gate.runGate({ root, phase: 'implementation', group: 'A' });
+  assert.strictEqual(verdict.pass, true);
+  assert.deepStrictEqual(verdict.failures, []);
+});
+
+test('implementation phase still fails truly unknown matrix ids in grouped runs', () => {
+  const root = groupedProject();
+  writeJson(root, 'specs/test_artefacts/unit-traces.json', [
+    { id: 'UT-A', matrix_id: 'VM-A', test_name: 'group a unit', path: 'tests/unit/a.test.js' },
+    { id: 'UT-B', matrix_id: 'VM-B', test_name: 'group b unit', path: 'tests/unit/b.test.js' },
+    { id: 'UT-X', matrix_id: 'VM-999', test_name: 'unknown unit', path: 'tests/unit/a.test.js' },
+  ]);
+  const verdict = gate.runGate({ root, phase: 'implementation', group: 'A' });
+  assert.strictEqual(verdict.pass, false);
+  assert.ok(verdict.failures.some((f) => f.code === 'unknown_matrix_id' && f.matrix_id === 'VM-999'));
 });
 
 test('executed phase fails when evaluator report is not PASS for API/E2E rows', () => {
