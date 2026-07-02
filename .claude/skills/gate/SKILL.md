@@ -51,6 +51,8 @@ Use the Agent tool to spawn the selected agents **in a single call**:
 
 - **Canvas sync:** when changed source files exist and `specs/design/reasons-canvas.md` exists, run `npm run canvas-sync`. A non-zero result means changed files are missing from the REASONS Canvas `Governs` or `Operations` sections; that is a **BLOCK** unless a valid `specs/reviews/sensor-waivers.json` explicitly covers the mismatch. Fix by updating the Canvas first, then rerun.
 
+- **Ownership:** when changed source files exist and `specs/design/component-map.md` exists, run `node .claude/scripts/ownership-check.js --files <changed files>` (or `--staged` pre-commit-side). It writes `specs/reviews/ownership-check.json`; a non-zero exit means changed source files are owned by no story in the component map (or the map parsed to zero entries — `empty_map`); that is a **BLOCK** unless a valid `specs/reviews/sensor-waivers.json` entry (`sensor_id: "ownership-check"`) explicitly covers the file. Fix by assigning the file to its owning story in component-map.md first, then rerun.
+
 - **Deep mutation (optional):** for release gates or critical modules configured in `project-manifest.json#quality.mutation.critical_globs`, run `npm run deep-mutation -- --critical-only`. This invokes Stryker or mutmut only when already provisioned; `unprovisioned` is a non-blocking note, while an explicitly requested failing deep mutation run is a **BLOCK**.
 
 If any finding is being suppressed or threshold-bumped via `specs/reviews/sensor-waivers.json`, first run `npm run sensor-waivers`. It validates required waiver fields and expiry rules against `.claude/templates/sensor-waivers.schema.json`; an `invalid` verdict is a **BLOCK** until the waiver is fixed or removed. Missing waiver file is `no-waivers` and passes.
@@ -70,6 +72,7 @@ Severity levels (BLOCK/WARN/INFO), the BLOCK self-healing loop (generator fix �
 - `specs/reviews/security-review.md` and `specs/reviews/security-verdict.json` — only when a security trigger fired
 - `specs/reviews/security-scan.json` — computational security scan (secrets/SAST/deps) result; only when a security trigger fired
 - `specs/reviews/canvas-sync-check.md` — living-design sync result when a REASONS Canvas exists
+- `specs/reviews/ownership-check.json` — file-ownership sensor result when a component-map.md exists
 - `specs/reviews/sensor-waivers-verdict.json` — waiver validation result when waivers are present or checked
 - `specs/reviews/review-context-pack.md` — compact shared review input
 

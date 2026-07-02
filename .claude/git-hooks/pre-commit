@@ -7,8 +7,9 @@
 // sprint-contract-gate): a real git hook blocks the commit BEFORE it exists,
 // fires exactly once per commit however it was invoked, and cannot be fooled
 // by `--amend` or unrelated commands containing "git commit".
-// Gates, cheapest first: staged-file layer check → sprint contract →
-// project-wide tsc (TS) → pytest coverage ratchet (Python).
+// Gates, cheapest first: staged-file layer check → bounded-context check →
+// ownership (component-map.md) → sprint contract → project-wide tsc (TS) →
+// pytest coverage ratchet (Python).
 // All toolchain gates fail open when unprovisioned. HARNESS_COVERAGE_GATE=off
 // skips coverage. Runs from the repo root (git guarantees cwd).
 
@@ -114,6 +115,37 @@ function checkContexts(projectDir, stagedSource) {
     `BLOCKED: Bounded-context violations — fix before committing:\n${lines.join('\n')}\n` +
     'Fix: import the other context only through its public surface (root/index), or add the edge to architecture.contexts.allow in project-manifest.json.\n'
   );
+}
+
+// Ownership gate (2026-07-02 audit fix #4): every staged source file must be
+// owned in specs/design/component-map.md. File-scope, like checkLayers. Lazy
+// require: the sensor ships in .claude/scripts; absence degrades to a loud skip.
+function checkOwnership(projectDir, stagedSource) {
+  if (process.env.HARNESS_OWNERSHIP_GATE === 'off') {
+    noteSkip('ownership', 'HARNESS_OWNERSHIP_GATE=off');
+    return;
+  }
+  const mapPath = path.join(projectDir, 'specs', 'design', 'component-map.md');
+  if (!fs.existsSync(mapPath)) return; // pre-map project or lane: nothing to check
+  let checkFn;
+  try {
+    ({ checkOwnership: checkFn } = require(path.join(__dirname, '..', 'scripts', 'ownership-check')));
+  } catch (_) {
+    noteSkip('ownership', 'sensor script missing or unloadable from .claude/scripts');
+    return;
+  }
+  const verdict = checkFn(stagedSource, fs.readFileSync(mapPath, 'utf8'));
+  if (!verdict.pass) {
+    const lines = verdict.unowned.map((f) => `  UNOWNED  ${f}`);
+    const reason = verdict.reason === 'empty_map'
+      ? 'component-map.md parsed to zero owned paths — the map is stale or malformed.\n'
+      : '';
+    fail(
+      `BLOCKED: staged source files are not owned by any story in specs/design/component-map.md:\n` +
+      lines.join('\n') + (lines.length ? '\n' : '') + reason +
+      `Fix: add the file(s) to the owning story's row in component-map.md (or set HARNESS_OWNERSHIP_GATE=off to acknowledge the skip).\n`
+    );
+  }
 }
 
 // keeping-refactors-pure: a refactor commit changes no behavior, so it may not
@@ -365,6 +397,7 @@ try {
   checkRefactorPurity(staged);
   checkLayers(projectDir, stagedSource);
   checkContexts(projectDir, stagedSource);
+  checkOwnership(projectDir, stagedSource);
   checkSprintContract(projectDir);
   checkTypescript(projectDir, stagedTs);
   checkCoverage(projectDir, stagedPy);

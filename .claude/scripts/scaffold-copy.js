@@ -44,6 +44,7 @@ const CORE_SCRIPTS = [
   'build-chain-state.js',
   'build-chain.js',
   'canvas-sync-check.js',
+  'ownership-check.js',
   'build-lane.js',
   'ci-ingest.js',
   'constraints-extract.js',

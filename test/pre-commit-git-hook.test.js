@@ -1,19 +1,11 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
 const { test } = require('node:test');
 const { makeGitProject, runGitHook } = require('./helpers/hook-fixture');
+const { stage } = require('./helpers/pre-commit-fixtures');
 
 const HOOK = 'pre-commit';
-
-function stage(projectDir, rel, content) {
-  const p = path.join(projectDir, rel);
-  fs.mkdirSync(path.dirname(p), { recursive: true });
-  fs.writeFileSync(p, content);
-  execFileSync('git', ['add', rel], { cwd: projectDir });
-  return p;
-}
 
 test('exits 0 when nothing source-like is staged', async () => {
   const projectDir = makeGitProject();
