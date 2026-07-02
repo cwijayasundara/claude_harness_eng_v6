@@ -7,8 +7,8 @@
 // sprint-contract-gate): a real git hook blocks the commit BEFORE it exists,
 // fires exactly once per commit however it was invoked, and cannot be fooled
 // by `--amend` or unrelated commands containing "git commit".
-// Gates, cheapest first: staged-file layer check → sprint contract →
-// project-wide tsc (TS) → pytest coverage ratchet (Python).
+// Gates, cheapest first: staged-file layer check → sprint contract
+// (+ verification matrix) → project-wide tsc (TS) → pytest coverage ratchet (Python).
 // All toolchain gates fail open when unprovisioned. HARNESS_COVERAGE_GATE=off
 // skips coverage. Runs from the repo root (git guarantees cwd).
 
@@ -171,6 +171,40 @@ function checkSecurityVerdict(projectDir, group) {
   }
 }
 
+// The verification-matrix gate's in-session invocation points are prompt
+// discipline; this backstop re-runs the executed phase at commit time so a
+// session that skipped Gate 9 cannot commit stale or missing runtime evidence.
+// Lazy require: the script ships in .claude/scripts (not hooks/lib), and its
+// absence must degrade to an announced skip, not crash every other gate.
+function checkVerificationMatrix(projectDir, group) {
+  if (!fs.existsSync(path.join(projectDir, 'specs', 'test_artefacts', 'verification-matrix.json'))) return;
+  let runGate;
+  try {
+    ({ runGate } = require(path.join(__dirname, '..', 'scripts', 'verification-matrix-gate')));
+  } catch (_) {
+    noteSkip('verification-matrix', 'gate script missing from .claude/scripts');
+    return;
+  }
+  let verdict;
+  try {
+    verdict = runGate({ root: projectDir, phase: 'executed', group });
+  } catch (err) {
+    fail(`BLOCKED: verification-matrix gate could not run: ${err.message}\nFix: repair specs/test_artefacts/verification-matrix.json, then retry the commit.\n`);
+  }
+  if (!verdict.pass) {
+    const lines = verdict.failures
+      .slice(0, 10)
+      .map((f) => `  - ${f.code}${f.matrix_id ? ` (${f.matrix_id})` : ''}${f.layer ? ` [${f.layer}]` : ''}`);
+    const more = verdict.failures.length > 10 ? `  … ${verdict.failures.length - 10} more\n` : '';
+    fail(
+      `BLOCKED: verification matrix (executed phase) not satisfied for group ${group} — ${verdict.failures.length} failure(s):\n` +
+      lines.join('\n') + '\n' + more +
+      `Fix: run /evaluate to (re)generate runtime evidence and update the matrix, then retry the commit.\n` +
+      `Check: node .claude/scripts/verification-matrix-gate.js --phase executed --group "${group}"\n`
+    );
+  }
+}
+
 function checkSprintContract(projectDir) {
   let progress;
   try {
@@ -195,6 +229,7 @@ function checkSprintContract(projectDir) {
     fail(`BLOCKED: Sprint contract for group ${group} not satisfied. Run /evaluate first.\nFix: Run /evaluate to verify the sprint contract, then retry the commit.\n`);
   }
   checkSecurityVerdict(projectDir, group);
+  checkVerificationMatrix(projectDir, group);
 }
 
 function checkTypescript(projectDir, stagedTs) {
