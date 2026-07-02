@@ -58,6 +58,18 @@ test('applyScaffold produces a real scaffold from a Minimal Node profile', () =>
     assert.strictEqual(manifest.execution.model_tier, 'balanced');
     assert.strictEqual(manifest.verification.mode, 'stub');
     assert.deepStrictEqual(manifest.architecture, { enabled: false });
+    assert.deepStrictEqual(manifest.token_governor, {
+      enabled: true,
+      mode: 'advisory',
+      living_navigation: true,
+      context_search_required: true,
+      max_source_read_lines: 300,
+      tool_output_token_estimates: true,
+      compress_tool_output: true,
+      ccr_enabled: true,
+      preserve_full_outputs: true,
+      budget_warn_pct: 80,
+    });
 
     const claudeMd = fs.readFileSync(path.join(target, 'CLAUDE.md'), 'utf8');
     assert.ok(claudeMd.length > 0, 'CLAUDE.md should be non-empty');
@@ -109,6 +121,19 @@ test('applyScaffold produces a real scaffold from a Minimal Node profile', () =>
       assert.ok(fs.statSync(path.join(target, d)).isDirectory(), `${d} should exist`);
     }
 
+    const navStatus = JSON.parse(fs.readFileSync(path.join(target, '.claude', 'state', 'navigation-status.json'), 'utf8'));
+    assert.strictEqual(navStatus.status, 'placeholder');
+    assert.strictEqual(navStatus.graph, 'placeholder');
+    assert.strictEqual(navStatus.wiki, 'placeholder');
+    assert.strictEqual(navStatus.source_files, 0);
+    const graph = JSON.parse(fs.readFileSync(path.join(target, 'specs', 'brownfield', 'code-graph.json'), 'utf8'));
+    assert.deepStrictEqual(graph.nodes, []);
+    assert.deepStrictEqual(graph.edges, []);
+    assert.strictEqual(graph.meta.status, 'empty');
+    assert.strictEqual(graph.meta.reason, 'no source files');
+    const wiki = fs.readFileSync(path.join(target, 'specs', 'brownfield', 'wiki', 'WIKI.md'), 'utf8');
+    assert.match(wiki, /No source code has been created yet/);
+
     assert.ok(fs.existsSync(path.join(target, '.mcp.json')));
     assert.ok(fs.existsSync(path.join(target, '.gitignore')));
     assert.ok(fs.existsSync(path.join(target, 'features.json')));
@@ -117,6 +142,34 @@ test('applyScaffold produces a real scaffold from a Minimal Node profile', () =>
     // Minimal (type D) skips calibration-profile.json.
     assert.ok(!fs.existsSync(path.join(target, 'calibration-profile.json')),
       'type D must not write calibration-profile.json');
+  } finally {
+    fs.rmSync(workDir, { recursive: true, force: true });
+  }
+});
+
+test('applyScaffold bootstraps code-map and wiki immediately for source-bearing repos', () => {
+  const workDir = makeTempDir();
+  const target = path.join(workDir, 'project');
+  try {
+    fs.mkdirSync(path.join(target, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(target, 'package.json'), JSON.stringify({ scripts: { test: 'node --test' } }));
+    fs.writeFileSync(path.join(target, 'src', 'index.py'), 'def greet(name: str) -> str:\n    return f"hello {name}"\n');
+    const profilePath = writeProfile(workDir, MINIMAL_NODE_PROFILE);
+    const result = applyScaffold({ profile: profilePath, pluginSource: PLUGIN_SOURCE, target });
+
+    assert.strictEqual(result.navigation.status, 'fresh');
+    assert.strictEqual(result.navigation.mode, 'bootstrap');
+    const navStatus = JSON.parse(fs.readFileSync(path.join(target, '.claude', 'state', 'navigation-status.json'), 'utf8'));
+    assert.strictEqual(navStatus.status, 'fresh');
+    assert.ok(navStatus.source_files >= 1, JSON.stringify(navStatus));
+    assert.ok(navStatus.indexed_files >= 1, JSON.stringify(navStatus));
+    const graph = JSON.parse(fs.readFileSync(path.join(target, 'specs', 'brownfield', 'code-graph.json'), 'utf8'));
+    assert.notStrictEqual(graph.meta.status, 'empty');
+    assert.ok(graph.files.some((file) => file.path === 'src/index.py'), 'source file should be indexed');
+    const map = fs.readFileSync(path.join(target, 'specs', 'brownfield', 'symbol-map.md'), 'utf8');
+    assert.match(map, /greet/);
+    const wiki = fs.readFileSync(path.join(target, 'specs', 'brownfield', 'wiki', 'WIKI.md'), 'utf8');
+    assert.match(wiki, /Codebase Wiki/);
   } finally {
     fs.rmSync(workDir, { recursive: true, force: true });
   }
@@ -160,6 +213,8 @@ test('core scaffold profile ships the lean product-development spine by default'
     assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'vibe', 'SKILL.md')));
     assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'tracker-publish', 'SKILL.md')));
     assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'build-chain.js')));
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'navigation-refresh.js')),
+      'core must copy living navigation refresh because graph-refresh depends on it');
     assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'ci-ingest.js')));
     assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'flag-scan.js')));
     assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'telemetry-memory.js')),

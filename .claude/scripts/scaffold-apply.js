@@ -51,6 +51,7 @@ const fs = require('fs');
 const path = require('path');
 const render = require('./scaffold-render');
 const { copyScaffoldTree, pruneSettings, resolveScaffoldProfile } = require('./scaffold-copy');
+const { refreshNavigation } = require('./navigation-refresh');
 
 const OUTPUT_DIRS = [
   'specs/brd', 'specs/stories', 'specs/design/mockups', 'specs/design/amendments',
@@ -246,9 +247,10 @@ function applyScaffold(rawOpts) {
   if (driftWorkflowEnabled(profile, rawOpts)) written.push(copyDriftWorkflow(target, pluginSource));
   makeDirs(target);
   writeStateFiles(target, profile);
+  const navigation = refreshNavigation({ projectDir: target, mode: 'scaffold' });
   const cal = writeCalibration(target, profile);
   if (cal) written.push(cal);
-  return { target, written, profileName: profile.name || 'untitled-project', scaffoldProfile };
+  return { target, written, profileName: profile.name || 'untitled-project', scaffoldProfile, navigation };
 }
 
 function run() {
@@ -263,6 +265,7 @@ function report(result) {
   process.stdout.write(`  created output dirs: ${OUTPUT_DIRS.join(', ')}\n`);
   process.stdout.write('  wrote .mcp.json, .gitignore, .claude/claude-security-guidance.md, .claude/security-patterns.yaml\n');
   process.stdout.write('  wrote features.json, claude-progress.txt\n');
+  process.stdout.write(`  navigation: ${result.navigation.status} (${result.navigation.graph}/${result.navigation.wiki})\n`);
 }
 
 module.exports = { applyScaffold, parseArgs };

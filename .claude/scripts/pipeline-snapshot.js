@@ -16,6 +16,9 @@ const {
   readPendingReviews,
   readPlanConfidence,
   readBudget,
+  readNavigation,
+  readContextCache,
+  readTokenAdvisor,
   parseIterationLog,
 } = require('./pipeline-state-readers');
 
@@ -115,6 +118,9 @@ function buildSnapshot(projectDir, { now, nowMs } = {}) {
     run: buildRun(stateDir, progress, last),
     confidence: readPlanConfidence(projectDir),
     budget: readBudget(projectDir, atMs),
+    navigation: readNavigation(projectDir),
+    context_cache: readContextCache(projectDir),
+    token_advisor: readTokenAdvisor(projectDir),
     phase: derivePhase(readMarker(stateDir, 'current-lane') || (last && last.lane), progress),
     wave: buildWave(groups, countGroupsFromGraph(projectDir)),
     groups,

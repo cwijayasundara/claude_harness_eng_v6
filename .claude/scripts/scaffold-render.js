@@ -80,6 +80,21 @@ function observabilityBlock(enabled) {
   };
 }
 
+function tokenGovernorBlock() {
+  return {
+    enabled: true,
+    mode: 'advisory',
+    living_navigation: true,
+    context_search_required: true,
+    max_source_read_lines: 300,
+    tool_output_token_estimates: true,
+    compress_tool_output: true,
+    ccr_enabled: true,
+    preserve_full_outputs: true,
+    budget_warn_pct: 80,
+  };
+}
+
 function buildManifest(profile) {
   const stack = profile.stack || {};
   const lite = isLiteShaped(profile);
@@ -99,6 +114,7 @@ function buildManifest(profile) {
     },
     verification: verificationBlock(profile.verificationMode || preset.verification_mode),
     topology,
+    token_governor: tokenGovernorBlock(),
   };
   manifest.observability = observabilityBlock(preset.observability_enabled && !!stack.backend);
   if (Array.isArray(profile.frameworkPacks) && profile.frameworkPacks.length) {

@@ -83,6 +83,17 @@ function producerIsAst(projectDir) {
   }
 }
 
+function producerIsPlaceholder(projectDir) {
+  try {
+    const meta = JSON.parse(fs.readFileSync(
+      path.join(projectDir, 'specs', 'brownfield', 'code-graph.meta.json'), 'utf8'
+    ));
+    return meta.producer === 'none' && meta.status === 'empty';
+  } catch (_) {
+    return false;
+  }
+}
+
 function main() {
   readHookInput();
   const projectDir = resolveProjectDir(path.dirname(path.resolve(__filename)));
@@ -90,6 +101,12 @@ function main() {
   const dirtyFile = path.join(stateDir, 'graph-dirty.jsonl');
   const rels = readDirty(dirtyFile, projectDir);
   if (rels.length === 0) return;
+  if (producerIsPlaceholder(projectDir)) {
+    const { refreshNavigation } = require('../scripts/navigation-refresh');
+    const status = refreshNavigation({ projectDir, mode: 'first-source' });
+    if (status.status === 'fresh') fs.writeFileSync(dirtyFile, '');
+    return;
+  }
   if (!producerIsAst(projectDir)) {
     fs.writeFileSync(dirtyFile, '');
     return;

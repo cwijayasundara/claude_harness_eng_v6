@@ -203,6 +203,12 @@ Based on their answers, write `project-manifest.json` to the project root. Fill 
 
 `accessibility` (G12): default-on axe/WCAG gate for UI stories (contracts with `playwright_checks`). Set `enabled:false` to opt out.
 
+- token_governor: default-on advisory living navigation and compact-output
+  guidance. The renderer writes
+  `{"enabled":true,"mode":"advisory","living_navigation":true,"context_search_required":true,"max_source_read_lines":300,"tool_output_token_estimates":true,"compress_tool_output":true,"ccr_enabled":true,"preserve_full_outputs":true,"budget_warn_pct":80}`.
+  Empty greenfield repos get placeholder code-map/wiki artifacts; source-bearing
+  repos get an immediate lean DeepWiki/code-map bootstrap.
+
 - **Topology:** the manifest records a detected `topology` (`web-app` / `api-service` / `cli-or-library`) and applies its preset bundle of harness knobs (architecture, observability, verification mode, ceremony, model tier). Print the detected topology and its `summary` (from `.claude/scripts/topologies.js`) in the scaffold report, e.g. "Detected topology: web-app → layered architecture · observability · docker verify · full ceremony · balanced model tier." Every field stays overridable in `project-manifest.json`.
 
 ### LSP Config (auto-detected from stack)
@@ -343,9 +349,18 @@ Before copying, validate the source:
 ```bash
 test -f "$PLUGIN_SOURCE/.claude-plugin/plugin.json"
 test -d "$PLUGIN_SOURCE/skills/brownfield"
+test -d "$PLUGIN_SOURCE/skills/context"
 test -d "$PLUGIN_SOURCE/skills/code-map"
 test -f "$PLUGIN_SOURCE/skills/code-map/scripts/import_understand_graph.js"
+test -f "$PLUGIN_SOURCE/scripts/context-pack.js"
+test -f "$PLUGIN_SOURCE/scripts/context-retrieve.js"
+test -f "$PLUGIN_SOURCE/scripts/context-store.js"
 test -f "$PLUGIN_SOURCE/scripts/telemetry-memory.js"
+test -f "$PLUGIN_SOURCE/scripts/navigation-refresh.js"
+test -f "$PLUGIN_SOURCE/scripts/run-compact.js"
+test -f "$PLUGIN_SOURCE/scripts/search-compact.js"
+test -f "$PLUGIN_SOURCE/scripts/tool-output-pack.js"
+test -f "$PLUGIN_SOURCE/hooks/token-advisor.js"
 test -d "$PLUGIN_SOURCE/skills/seam-finder"
 test -d "$PLUGIN_SOURCE/skills/vibe"
 test -f "$PLUGIN_SOURCE/templates/context.template.md"
@@ -354,7 +369,7 @@ test -f "$PLUGIN_SOURCE/templates/security-patterns.template.yaml"
 test -f "$PLUGIN_SOURCE/templates/story.template.md"
 # Assert load-bearing skills exist rather than a brittle exact count (the count
 # changes whenever a skill is merged/split — existence checks don't).
-for s in build auto feature brownfield code-map change vibe refactor tracker-publish code-gen evaluate gate status; do
+for s in build auto feature brownfield context code-map change vibe refactor tracker-publish code-gen evaluate gate status; do
   test -f "$PLUGIN_SOURCE/skills/$s/SKILL.md"
 done
 SKILL_COUNT=$(find "$PLUGIN_SOURCE/skills" -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')
@@ -391,6 +406,12 @@ node "$PLUGIN_SOURCE/scripts/scaffold-apply.js" \
   --scaffold-profile "$SCAFFOLD_PROFILE" \
   ${TELEMETRY_REQUESTED:+--telemetry}
 ```
+
+The generator also initializes living navigation. In an empty greenfield repo it
+writes placeholder `specs/brownfield/code-graph.json`, `symbol-map.md`, and
+`wiki/WIKI.md` so later hooks have stable paths. In a source-bearing repo it runs
+the lean initial code-map/wiki render immediately. The `graph-refresh` hook keeps
+the graph, symbol map, and deterministic DeepWiki current after edits.
 
 `settings.auto.json` is the **unattended full-auto profile** — a no-prompt permission set (`Bash(*)`, `Write(*)`, …) plus `CLAUDE_AUTO_CONTINUE=1`. Claude Code does **not** auto-load it; a headless `--auto` run passes it explicitly with `--settings .claude/settings.auto.json`. It merges over the curated `settings.json`, so the deterministic gate hooks and ratchet still enforce safety — interactive sessions keep `settings.json`'s curated allowlist untouched. Do not enable broad permissions in `settings.json` itself.
 
@@ -740,6 +761,7 @@ Installed:
   templates     → .claude/templates/ (+ state-seeds/)
   workflows/    → .claude/workflows/  (full profile only)
   state seeds   → .claude/state/ (from templates/state-seeds/)
+  navigation    → living DeepWiki/code-map initialized ({placeholder|fresh})
   1 manifest    → .claude/.claude-plugin/plugin.json
 
 Telemetry (OFF by default — opt-in):

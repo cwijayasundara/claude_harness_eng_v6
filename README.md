@@ -142,13 +142,51 @@ Rule: native commands own atomic actions; the harness owns orchestration, ratche
 - Security review before PR when the diff touches security/data/API boundaries
 - Fresh-context diff review
 - Brownfield discipline: architecture claims cite `code-graph.json`
+- Token waste discipline: living DeepWiki/code-map navigation, compact command/search output, and advisory warnings for broad reads or noisy raw commands
 - Human review before merge
+
+## Token Usage Optimizer
+
+The lean scaffold now ships a scaffold-native token-saving layer, enabled by
+default in `project-manifest.json#token_governor`:
+
+- Living navigation from `/scaffold`: placeholder or fresh `code-graph.json`,
+  `symbol-map.md`, and deterministic DeepWiki, kept current as code changes.
+- `/context "<question>"`: returns bounded file/line citations before broad
+  source reads.
+- Compress-Cache-Retrieve (CCR): raw command/search output is stored locally by
+  hash under `.claude/state/context-cache/`, while the agent receives compact
+  failure/search evidence first.
+- `run-compact.js`: runs noisy commands and preserves raw output plus compact
+  failure evidence.
+- `search-compact.js`: returns grouped search hits while preserving the full raw
+  search output.
+- `token-advisor.js`: non-blocking `Read|Bash` hook that warns on avoidable
+  broad source reads and likely verbose commands.
+- `/status`: reports navigation freshness, context-cache savings, and token
+  advisor warning counts.
+
+Useful commands:
+
+```bash
+node .claude/scripts/context-pack.js "where is session validation handled?"
+node .claude/scripts/run-compact.js --kind test -- npm test
+node .claude/scripts/search-compact.js --pattern "validateSession" --glob "src/*.ts"
+node .claude/scripts/context-retrieve.js <hash> --query "auth token"
+node .claude/scripts/pipeline-status.js status
+```
+
+The optimizer is advisory by default. It suggests cheaper paths and records
+warnings, but it does not block work unless a future project explicitly enables
+enforced mode. See [docs/token-governor.md](docs/token-governor.md) and
+[docs/token-usage-optimizer-design.md](docs/token-usage-optimizer-design.md).
 
 ## Optional Power-Ups
 
 | Power-up | How to enable | Details |
 |---|---|---|
 | Telemetry dashboards | `/scaffold --telemetry` | [docs/telemetry.md](docs/telemetry.md) |
+| Token Usage Optimizer / living DeepWiki / CCR | On by default | [docs/token-governor.md](docs/token-governor.md) |
 | Framework skill packs | Select during scaffold, then install manually | [docs/extras.md](docs/extras.md) |
 | Tracker orchestration | Configure Linear/Jira/Azure DevOps | [docs/extras.md](docs/extras.md) |
 | Drift cadence workflow | Copy `.claude/templates/github-workflows/harness-drift.yml` to `.github/workflows/` | Runs drift, harness coverage, flakes, fixtures, contract drift, and optional SLO checks |
@@ -160,6 +198,7 @@ Rule: native commands own atomic actions; the harness owns orchestration, ratche
 
 ```bash
 npm test                 # fast unit/contract suite, no live Claude
+node --test test/token-compression-e2e.test.js  # local token optimizer e2e, no live Claude
 npm run test:e2e:fast    # e2e contracts + safe helper tests
 npm run test:routes      # scaffold + lite-auto + full-auto + gated + feature routes (live Claude)
 npm run test:e2e:live    # all live route/smoke checks (live Claude, costs tokens)

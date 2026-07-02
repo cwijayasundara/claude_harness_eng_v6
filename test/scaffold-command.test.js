@@ -19,7 +19,16 @@ const installFrameworkPacks = fs.readFileSync(
 
 test('/scaffold validates telemetry assets only for the opt-in telemetry profile', () => {
   const requiredChecks = [
+    'test -d "$PLUGIN_SOURCE/skills/context"',
     'test -f "$PLUGIN_SOURCE/skills/code-map/scripts/import_understand_graph.js"',
+    'test -f "$PLUGIN_SOURCE/scripts/context-pack.js"',
+    'test -f "$PLUGIN_SOURCE/scripts/context-retrieve.js"',
+    'test -f "$PLUGIN_SOURCE/scripts/context-store.js"',
+    'test -f "$PLUGIN_SOURCE/scripts/navigation-refresh.js"',
+    'test -f "$PLUGIN_SOURCE/scripts/run-compact.js"',
+    'test -f "$PLUGIN_SOURCE/scripts/search-compact.js"',
+    'test -f "$PLUGIN_SOURCE/scripts/tool-output-pack.js"',
+    'test -f "$PLUGIN_SOURCE/hooks/token-advisor.js"',
     'test -f "$PLUGIN_SOURCE/scripts/telemetry-memory.js"',
     'test -f "$HARNESS_ROOT/telemetry_docker_compose.yml"',
     'test -f "$HARNESS_ROOT/telemetry/otel-collector-config.yml"',
@@ -33,6 +42,14 @@ test('/scaffold validates telemetry assets only for the opt-in telemetry profile
     assert.match(scaffold, new RegExp(check.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
   assert.match(scaffold, /only if telemetry was requested/i);
+});
+
+test('/scaffold documents living navigation bootstrap and token governor defaults', () => {
+  assert.match(scaffold, /token_governor/);
+  assert.match(scaffold, /living_navigation/);
+  assert.match(scaffold, /placeholder code-map\/wiki artifacts/);
+  assert.match(scaffold, /source-bearing repo it runs\s+the lean initial code-map\/wiki render immediately/);
+  assert.match(scaffold, /graph-refresh.*keeps\s+the graph, symbol map, and deterministic DeepWiki current/s);
 });
 
 test('/scaffold keeps telemetry stack copying opt-in while still copying git hook assets', () => {

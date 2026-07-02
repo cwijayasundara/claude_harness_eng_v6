@@ -159,6 +159,81 @@ function readBudget(projectDir, nowMs) {
   return computeBudget(spent, config);
 }
 
+function readNavigation(projectDir) {
+  let obj;
+  try {
+    obj = JSON.parse(readText(path.join(projectDir, '.claude', 'state', 'navigation-status.json')));
+  } catch (_) {
+    return null;
+  }
+  if (!obj || typeof obj.status !== 'string') return null;
+  return {
+    status: obj.status,
+    graph: obj.graph || 'unknown',
+    wiki: obj.wiki || 'unknown',
+    source_files: Number.isFinite(obj.source_files) ? obj.source_files : 0,
+    indexed_files: Number.isFinite(obj.indexed_files) ? obj.indexed_files : 0,
+    dirty_files: Number.isFinite(obj.dirty_files) ? obj.dirty_files : 0,
+    estimated_context_query_tokens: Number.isFinite(obj.estimated_context_query_tokens)
+      ? obj.estimated_context_query_tokens : null,
+    estimated_tokens_saved_per_orientation: Number.isFinite(obj.estimated_tokens_saved_per_orientation)
+      ? obj.estimated_tokens_saved_per_orientation : null,
+    last_refresh: obj.last_refresh || null,
+  };
+}
+
+function readContextCache(projectDir) {
+  const dir = path.join(projectDir, '.claude', 'state', 'context-cache');
+  let files;
+  try {
+    files = fs.readdirSync(dir).filter((name) => name.endsWith('.json')).sort();
+  } catch (_) {
+    return null;
+  }
+  let entries = 0;
+  let estimatedRaw = 0;
+  let estimatedPack = 0;
+  let estimatedSaved = 0;
+  const byKind = {};
+  for (const file of files) {
+    let obj;
+    try {
+      obj = JSON.parse(readText(path.join(dir, file)));
+    } catch (_) {
+      continue;
+    }
+    entries += 1;
+    const kind = obj.kind || 'unknown';
+    byKind[kind] = (byKind[kind] || 0) + 1;
+    if (Number.isFinite(obj.estimated_raw_tokens)) estimatedRaw += obj.estimated_raw_tokens;
+    if (Number.isFinite(obj.estimated_pack_tokens)) estimatedPack += obj.estimated_pack_tokens;
+    if (Number.isFinite(obj.estimated_saved_tokens)) estimatedSaved += obj.estimated_saved_tokens;
+  }
+  if (!entries) return null;
+  return {
+    entries,
+    by_kind: byKind,
+    estimated_raw_tokens: estimatedRaw,
+    estimated_pack_tokens: estimatedPack,
+    estimated_saved_tokens: estimatedSaved,
+  };
+}
+
+function readTokenAdvisor(projectDir) {
+  const records = readJsonl(path.join(projectDir, '.claude', 'state', 'token-advisor.jsonl'));
+  if (!records.length) return null;
+  const byKind = {};
+  for (const r of records) {
+    const kind = r.kind || 'unknown';
+    byKind[kind] = (byKind[kind] || 0) + 1;
+  }
+  return {
+    warnings: records.length,
+    by_kind: byKind,
+    latest: records[records.length - 1],
+  };
+}
+
 function readPendingReviews(stateDir) {
   return readText(path.join(stateDir, 'pending-reviews.jsonl'))
     .split('\n')
@@ -202,5 +277,8 @@ module.exports = {
   readPendingReviews,
   readPlanConfidence,
   readBudget,
+  readNavigation,
+  readContextCache,
+  readTokenAdvisor,
   parseIterationLog,
 };

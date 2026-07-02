@@ -40,7 +40,8 @@ node .claude/scripts/pipeline-status.js status --json
 
 `status` prints: phase · health (`on_track` / `blocked` / `failing`) · group
 progress (`done / current / remaining`) · features passing X/Y · coverage vs
-baseline · current iteration · pending reviews · next action · blocked stories.
+baseline · current iteration · pending reviews · navigation freshness/token
+savings · context-cache entries/token savings · next action · blocked stories.
 
 `--json` emits the full snapshot object (`schema_version: 1`). Treat that object —
 not the text rendering — as the stable interface; the text layout may change.

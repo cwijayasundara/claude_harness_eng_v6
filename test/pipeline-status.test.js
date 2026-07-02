@@ -16,6 +16,7 @@ const {
   readRunReceipts,
   findProjectDir,
 } = require(script);
+const { storeContext } = require('../.claude/scripts/context-store');
 
 const NOW = '2026-06-21T12:00:00.000Z';
 
@@ -206,6 +207,70 @@ test('renderStatus surfaces the headline fields in plain text', () => {
   assert.match(out, /Run evaluator against group B/, 'next action shown');
   assert.match(out, /on_track|failing|blocked/, 'health shown');
   assert.match(out, /group B/i, 'current group shown');
+});
+
+test('buildSnapshot and renderStatus surface living navigation freshness and token savings', () => {
+  const dir = midBuildProject();
+  fs.writeFileSync(path.join(dir, '.claude', 'state', 'navigation-status.json'), JSON.stringify({
+    status: 'fresh',
+    graph: 'fresh',
+    wiki: 'fresh',
+    source_files: 42,
+    indexed_files: 42,
+    dirty_files: 0,
+    estimated_context_query_tokens: 800,
+    estimated_tokens_saved_per_orientation: 4200,
+    last_refresh: NOW,
+  }));
+
+  const snap = buildSnapshot(dir, { now: NOW });
+  assert.strictEqual(snap.navigation.status, 'fresh');
+  assert.strictEqual(snap.navigation.estimated_tokens_saved_per_orientation, 4200);
+  const out = renderStatus(snap);
+  assert.match(out, /Navigation:\s+fresh/);
+  assert.match(out, /graph=fresh/);
+  assert.match(out, /~4200 tokens saved/);
+});
+
+test('buildSnapshot and renderStatus surface CCR context-cache savings', () => {
+  const dir = midBuildProject();
+  const first = storeContext({ projectDir: dir, kind: 'test-log', raw: Array.from({ length: 40 }, () => 'PASS repeated output').join('\n'), label: 'npm test' });
+  const second = storeContext({ projectDir: dir, kind: 'search-results', raw: 'src/auth.js:1:function validateSession() {}\n', label: 'validateSession' });
+  fs.writeFileSync(path.join(dir, '.claude', 'state', 'context-cache', `${first.hash}.json`), JSON.stringify({
+    ...first,
+    estimated_pack_tokens: 12,
+    estimated_saved_tokens: 180,
+  }));
+  fs.writeFileSync(path.join(dir, '.claude', 'state', 'context-cache', `${second.hash}.json`), JSON.stringify({
+    ...second,
+    estimated_pack_tokens: 8,
+    estimated_saved_tokens: 3,
+  }));
+
+  const snap = buildSnapshot(dir, { now: NOW });
+  assert.strictEqual(snap.context_cache.entries, 2);
+  assert.strictEqual(snap.context_cache.estimated_pack_tokens, 20);
+  assert.strictEqual(snap.context_cache.estimated_saved_tokens, 183);
+
+  const out = renderStatus(snap);
+  assert.match(out, /Context Cache:\s+entries=2/);
+  assert.match(out, /~183 tokens saved/);
+});
+
+test('buildSnapshot and renderStatus surface token advisor warning counts', () => {
+  const dir = midBuildProject();
+  fs.appendFileSync(path.join(dir, '.claude', 'state', 'token-advisor.jsonl'), `${JSON.stringify({ kind: 'broad_source_read', path: 'src/auth.js' })}\n`);
+  fs.appendFileSync(path.join(dir, '.claude', 'state', 'token-advisor.jsonl'), `${JSON.stringify({ kind: 'verbose_command', command: 'npm test' })}\n`);
+
+  const snap = buildSnapshot(dir, { now: NOW });
+  assert.strictEqual(snap.token_advisor.warnings, 2);
+  assert.strictEqual(snap.token_advisor.by_kind.broad_source_read, 1);
+  assert.strictEqual(snap.token_advisor.by_kind.verbose_command, 1);
+
+  const out = renderStatus(snap);
+  assert.match(out, /Token Advisor:\s+warnings=2/);
+  assert.match(out, /broad_source_read:1/);
+  assert.match(out, /verbose_command:1/);
 });
 
 test('confidence is null and the Plan line is omitted when no artifact exists', () => {

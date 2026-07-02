@@ -25,6 +25,30 @@ function fmtConfidence(c) {
   return `Plan:      confidence=${c.band} (${drivers})${thr}`;
 }
 
+function fmtNavigation(n) {
+  const saved = n.estimated_tokens_saved_per_orientation != null
+    ? ` · ~${n.estimated_tokens_saved_per_orientation} tokens saved/orientation`
+    : '';
+  return `Navigation: ${n.status} · graph=${n.graph} · wiki=${n.wiki} · indexed=${n.indexed_files}/${n.source_files} · dirty=${n.dirty_files}${saved}`;
+}
+
+function fmtContextCache(c) {
+  const saved = c.estimated_saved_tokens != null
+    ? ` · ~${c.estimated_saved_tokens} tokens saved`
+    : '';
+  const kinds = Object.entries(c.by_kind || {})
+    .map(([k, v]) => `${k}:${v}`)
+    .join(', ');
+  return `Context Cache: entries=${c.entries} · raw=${c.estimated_raw_tokens} · pack=${c.estimated_pack_tokens}${saved}${kinds ? ` · ${kinds}` : ''}`;
+}
+
+function fmtTokenAdvisor(a) {
+  const kinds = Object.entries(a.by_kind || {})
+    .map(([k, v]) => `${k}:${v}`)
+    .join(', ');
+  return `Token Advisor: warnings=${a.warnings}${kinds ? ` · ${kinds}` : ''}`;
+}
+
 function renderStatus(s) {
   const lines = [
     `Pipeline status — ${s.phase}  [${s.health}]`,
@@ -32,6 +56,9 @@ function renderStatus(s) {
   ];
   if (s.confidence) lines.push(fmtConfidence(s.confidence));
   if (s.budget) lines.push(fmtBudget(s.budget));
+  if (s.navigation) lines.push(fmtNavigation(s.navigation));
+  if (s.context_cache) lines.push(fmtContextCache(s.context_cache));
+  if (s.token_advisor) lines.push(fmtTokenAdvisor(s.token_advisor));
   lines.push(
     `Groups:    ${s.wave.current}/${s.wave.total}  done=[${s.groups.completed.join(', ')}]  current=${s.groups.current || 'none'}  remaining=[${s.groups.remaining.join(', ')}]`,
     `Features:  ${s.features.passing} / ${s.features.total} passing`,
