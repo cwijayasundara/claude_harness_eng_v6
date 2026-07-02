@@ -110,7 +110,7 @@ In a single message, invoke both agents using the Agent tool. Do not wait for th
 >
 > 6. **folder-structure.md** — Full proposed directory tree for the implementation, with a one-line annotation for each directory explaining its purpose.
 >
-> 7. **component-map.md** — A table mapping every ready story ID (from specs/stories/) to the specific files that will be created or modified to implement it. Include `Produces:` and `Consumes:` notes for cross-story interfaces, and identify the owning story for every shared file.
+> 7. **component-map.md** — A table mapping every ready story ID (from specs/stories/) to the specific files that will be created or modified to implement it. Include `Produces:` and `Consumes:` notes for cross-story interfaces, and identify the owning story for every shared file. Wrap every file/directory path in backticks — the ownership sensor (`ownership-check.js`) parses only backticked tokens, and a map it cannot parse blocks commits loudly (`empty_map`).
 >
 > 8. **deployment.md** — Deployment architecture: environments (dev/staging/prod), CI/CD pipeline steps, infrastructure-as-code approach, secrets management strategy, rollback procedure.
 >
