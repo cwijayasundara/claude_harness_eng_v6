@@ -82,6 +82,14 @@ This prevents proposing solutions that conflict with what is already built.
 
 Work through each dimension in order. Do not skip dimensions. Ask only the highest-value questions within the clarification budget, then summarize what you heard and ask the human to confirm before proceeding. If a dimension is already answered by local context, document the assumption and move on.
 
+**As each dimension is confirmed, append the confirmed requirement statements to `specs/brd/interview-requirements.json`** — one entry per discrete requirement the human signed off:
+
+```json
+[{ "id": "INT-1", "text": "Admins invite users by email", "section": "users-and-permissions" }]
+```
+
+Write entries **at confirmation time, not after synthesis** — this file is the grounding baseline the BRD is mechanically checked against (Step 4.4), so it must capture what the human confirmed before BRD prose can drift. Q&A detail that is context rather than a requirement stays in `clarification-log.json` (`C-n`); a statement the human confirmed as something the system must do is an `INT-n`.
+
 ---
 
 #### Dimension 1 — Why (Problem & Goals)
@@ -223,13 +231,13 @@ Also write the **machine-readable requirement spine** to `specs/brd/brd-requirem
 ```
 
 Each BR entry carries an `acceptance` postcondition — an observable end-state the evaluator can verify, not a restatement of the requirement. This gives downstream gates (and any autonomous merge) a concrete pass/fail oracle instead of a self-judged "looks done".
-**Every BR entry must carry at least one valid trace.** If you cannot trace a requirement to an FRD section or a clarification, it is invented — either remove it, or (if the human genuinely wants it) capture the human's confirmation as a new `C-n` entry in `clarification-log.json` first, then trace to it. In interview-from-scratch mode (no FRD), trace BR entries to `C-n` clarifications only.
+**Every BR entry must carry at least one valid trace.** If you cannot trace a requirement to an FRD section or a clarification, it is invented — either remove it, or (if the human genuinely wants it) capture the human's confirmation as a new `C-n` entry in `clarification-log.json` first, then trace to it. In interview-from-scratch mode (no FRD), trace BR entries to `INT-n` interview requirements and/or `C-n` clarifications; every `INT-n` must be covered by at least one BR entry.
 
 Create the `specs/brd/` directory if it does not exist.
 
-### Step 4.4 — Grounding Gate [HARD BLOCK — FRD mode]
+### Step 4.4 — Grounding Gate [HARD BLOCK — all modes]
 
-When an FRD was provided, run the deterministic grounding check before the rubric evaluation. This proves mechanically — not by judgement — that the BRD invented and dropped nothing relative to the FRD + clarifications:
+Run the deterministic grounding check before the rubric evaluation — in FRD mode against the FRD spine, in interview mode against the confirmed interview spine. This proves mechanically — not by judgement — that the BRD invented and dropped nothing relative to the FRD + clarifications:
 
 ```bash
 node .claude/skills/brd/scripts/grounding-check.js \
@@ -239,11 +247,21 @@ node .claude/skills/brd/scripts/grounding-check.js \
   --out specs/reviews/brd-grounding.json
 ```
 
+In interview-from-scratch mode, run the same gate with the interview spine as the required set (the verdict keeps the generic `frd_total`/`frd_covered` field names):
+
+```bash
+node .claude/skills/brd/scripts/grounding-check.js \
+  --frd specs/brd/interview-requirements.json \
+  --clarifications specs/brd/clarification-log.json \
+  --brd specs/brd/brd-requirements.json \
+  --out specs/reviews/brd-grounding.json
+```
+
 The script writes `specs/reviews/brd-grounding.json` (`{ pass, frd_total, frd_covered, net_new[], dropped[] }`) and exits non-zero on any violation. **This is a hard gate, independent of the rubric score:**
 - **`net_new` non-empty** → the BRD invented a requirement not in the FRD or any clarification. For each, either delete it or get explicit human sign-off and record it as a `C-n` clarification (then re-trace and re-run). Do **not** proceed with an unresolved net-new requirement.
 - **`dropped` non-empty** → the BRD silently lost an FRD requirement. Add a BR entry covering it (or, if the human confirms it is intentionally out of scope, record that decision as a `C-n` clarification noting the deferral) and re-run.
 
-Only when `brd-grounding.json#pass === true` may you proceed to Step 4.5. (Skip this step entirely in interview-from-scratch mode — there is no FRD to ground against.)
+Only when `brd-grounding.json#pass === true` may you proceed to Step 4.5. (Skip only when neither `frd-requirements.json` nor `interview-requirements.json` exists — a pre-spine legacy project — and note the skipped gate in the BRD summary.)
 
 ### Step 4.5 — Phase Evaluation Gate
 
@@ -254,8 +272,8 @@ Spawn the `evaluator` agent (artifact mode) to validate the BRD before human rev
 Spawn Agent with subagent_type="evaluator" and prompt:
 - Phase: brd
 - Artifact: the BRD file path (specs/brd/brd.md or specs/brd/feature-{name}.md)
-- Upstream: in FRD mode, `specs/brd/source-frd.md` + `specs/brd/frd-requirements.json` + `specs/brd/clarification-log.json`; otherwise none
-- Grounding verdict: in FRD mode, `specs/reviews/brd-grounding.json` (already PASS from Step 4.4 — the evaluator confirms the rubric's traceability criterion against it)
+- Upstream: in FRD mode, `specs/brd/source-frd.md` + `specs/brd/frd-requirements.json` + `specs/brd/clarification-log.json`; in interview mode, `specs/brd/interview-requirements.json` + `specs/brd/clarification-log.json`
+- Grounding verdict: `specs/reviews/brd-grounding.json` in both modes (already PASS from Step 4.4 — the evaluator confirms the rubric's traceability criterion against it)
 - Rubric: Read .claude/templates/phase-eval-rubrics.json, key "brd"
 - Iteration: 1 (increment on retry)
 - Previous score: null (or previous iteration's weighted_average)
@@ -283,15 +301,16 @@ Display the BRD and ask: "Does this BRD accurately capture the requirements? App
 | `specs/brd/brd-requirements.json` | Machine-readable requirement spine; each BR carries `traces` to FRD/clarification ids |
 | `specs/brd/source-frd.md` | (FRD mode) immutable copy of the provided FRD — the grounding baseline |
 | `specs/brd/frd-requirements.json` | (FRD mode) extracted `FRD-n` requirements the BRD is checked against |
+| `specs/brd/interview-requirements.json` | (interview mode) confirmed `INT-n` requirement spine — the grounding baseline |
 | `specs/brd/clarification-log.json` | Confirmed interrogation answers (`C-n`) — the only sanctioned net-new content |
 | `specs/brd/brd-analysis.json` | SPDD-grade analysis pack: Domain Concepts, Ambiguity Table, Edge-Case Table, decision log, AC Coverage Matrix, and Risk & Gap Table |
-| `specs/reviews/brd-grounding.json` | (FRD mode) deterministic grounding verdict (`pass`, `net_new[]`, `dropped[]`) |
+| `specs/reviews/brd-grounding.json` | deterministic grounding verdict (`pass`, `net_new[]`, `dropped[]`) |
 
 ---
 
 ## Gate
 
-**Grounding gate (FRD mode) — hard block.** `grounding-check.js` proves mechanically that the BRD invented nothing (`net_new`) and dropped nothing (`dropped`) relative to the FRD + clarifications. Any violation blocks before the rubric even runs, regardless of quality score — see Step 4.4.
+**Grounding gate — hard block (both modes).** `grounding-check.js` proves mechanically that the BRD invented nothing (`net_new`) and dropped nothing (`dropped`) relative to the FRD spine (FRD mode) or the confirmed interview spine (interview mode), plus clarifications. Any violation blocks before the rubric even runs, regardless of quality score — see Step 4.4.
 
 **Phase evaluation gate runs before human approval.** The evaluator agent (artifact mode) scores the BRD against 5 criteria (completeness, traceability, specificity, consistency, actionability). Threshold: average >= 7.0, all criteria >= 5. In FRD mode the traceability criterion is anchored to the grounding verdict, not free judgement.
 

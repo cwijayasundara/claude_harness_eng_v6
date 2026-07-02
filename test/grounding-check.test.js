@@ -154,6 +154,55 @@ test('CLI works without a clarification log (FRD-only grounding)', () => {
   assert.strictEqual(JSON.parse(fs.readFileSync(out, 'utf8')).pass, true);
 });
 
+// --- interview-mode grounding (2026-07-02 audit fix #3) -----------------------
+// The engine is source-agnostic: the confirmed interview spine (INT-n) rides in
+// as the required set exactly like an FRD. Round-trips the REAL script.
+
+const interview = [
+  { id: 'INT-1', text: 'Admins invite users by email', section: 'users-and-permissions' },
+  { id: 'INT-2', text: 'Weekly usage digest email', section: 'reporting' },
+];
+
+test('interview mode: CLI passes when every BR traces to INT-n/C-n and every INT-n is covered', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'grounding-'));
+  writeJson(dir, 'specs/brd/interview-requirements.json', interview);
+  writeJson(dir, 'specs/brd/clarification-log.json', [{ id: 'C1', question: 'digest day?', answer: 'Monday' }]);
+  writeJson(dir, 'specs/brd/brd-requirements.json', [
+    { id: 'BR-1', text: 'Email invitations', traces: ['INT-1'] },
+    { id: 'BR-2', text: 'Monday usage digest', traces: ['INT-2', 'C1'] },
+  ]);
+  const out = path.join(dir, 'specs/reviews/brd-grounding.json');
+  execFileSync(process.execPath, [SCRIPT,
+    '--frd', path.join(dir, 'specs/brd/interview-requirements.json'),
+    '--clarifications', path.join(dir, 'specs/brd/clarification-log.json'),
+    '--brd', path.join(dir, 'specs/brd/brd-requirements.json'),
+    '--out', out]);
+  assert.strictEqual(JSON.parse(fs.readFileSync(out, 'utf8')).pass, true);
+});
+
+test('interview mode: CLI blocks an invented BR and a dropped INT-n together', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'grounding-'));
+  writeJson(dir, 'int.json', interview);
+  writeJson(dir, 'brd.json', [
+    { id: 'BR-1', text: 'Email invitations', traces: ['INT-1'] },
+    { id: 'BR-2', text: 'Invented SSO federation', traces: [] },
+  ]);
+  const out = path.join(dir, 'out.json');
+  let exitCode = 0;
+  try {
+    execFileSync(process.execPath, [SCRIPT,
+      '--frd', path.join(dir, 'int.json'),
+      '--brd', path.join(dir, 'brd.json'),
+      '--out', out], { stdio: 'pipe' });
+  } catch (e) {
+    exitCode = e.status;
+  }
+  assert.strictEqual(exitCode, 1);
+  const verdict = JSON.parse(fs.readFileSync(out, 'utf8'));
+  assert.deepStrictEqual(verdict.net_new.map((r) => r.id), ['BR-2']);
+  assert.deepStrictEqual(verdict.dropped.map((r) => r.id), ['INT-2']);
+});
+
 // --- wiring consistency: the gate is referenced across skill + rubric + evaluator ---
 
 const fsw = require('fs');
@@ -170,6 +219,9 @@ test('/brd skill documents the --frd flow and runs the grounding gate', () => {
   assert.match(brd, /HARD BLOCK/);
   assert.match(brd, /net_new/);
   assert.match(brd, /dropped/);
+  assert.match(brd, /interview-requirements\.json/);
+  assert.match(brd, /INT-\d|INT-<n>|INT-n/);
+  assert.match(brd, /HARD BLOCK — all modes|HARD BLOCK — FRD & interview/);
 });
 
 test('rubric brd phase has the FRD hard-gate and grounded traceability criterion', () => {
