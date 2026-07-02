@@ -1,19 +1,11 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
 const { test } = require('node:test');
 const { makeGitProject, runGitHook } = require('./helpers/hook-fixture');
+const { stage, VALID_CONTRACT, installContractSchema, armContractGate } = require('./helpers/pre-commit-fixtures');
 
 const HOOK = 'pre-commit';
-
-function stage(projectDir, rel, content) {
-  const p = path.join(projectDir, rel);
-  fs.mkdirSync(path.dirname(p), { recursive: true });
-  fs.writeFileSync(p, content);
-  execFileSync('git', ['add', rel], { cwd: projectDir });
-  return p;
-}
 
 test('exits 0 when nothing source-like is staged', async () => {
   const projectDir = makeGitProject();
@@ -43,30 +35,6 @@ test('blocks when a sprint contract exists without a PASS verdict', async () => 
   assert.notStrictEqual(result.status, 0);
   assert.ok((result.stdout + result.stderr).includes('Sprint contract'), result.stdout + result.stderr);
 });
-
-const VALID_CONTRACT = JSON.stringify({
-  group: 'group-01',
-  stories: ['S1'],
-  features: ['F1'],
-  contract: { api_checks: [{ id: 'a1', method: 'GET', path: '/health', expected_status: 200 }] },
-});
-
-function installContractSchema(projectDir) {
-  const dir = path.join(projectDir, '.claude', 'skills', 'evaluate', 'references');
-  fs.mkdirSync(dir, { recursive: true });
-  fs.copyFileSync(
-    path.join(__dirname, '..', '.claude', 'skills', 'evaluate', 'references', 'contract-schema.json'),
-    path.join(dir, 'contract-schema.json')
-  );
-}
-
-function armContractGate(projectDir, contractJson) {
-  fs.writeFileSync(path.join(projectDir, 'claude-progress.txt'), 'current_group: group-01\n');
-  fs.mkdirSync(path.join(projectDir, 'sprint-contracts'), { recursive: true });
-  fs.writeFileSync(path.join(projectDir, 'sprint-contracts', 'group-01.json'), contractJson);
-  fs.mkdirSync(path.join(projectDir, 'specs', 'reviews'), { recursive: true });
-  fs.writeFileSync(path.join(projectDir, 'specs', 'reviews', 'evaluator-report.md'), 'VERDICT: PASS\n');
-}
 
 test('passes when the contract is valid, evaluator PASSed, and the security verdict PASSed', async () => {
   const projectDir = makeGitProject();
@@ -201,3 +169,6 @@ test('advisory (non-blocking) when the layer gate matches no staged source', asy
   assert.strictEqual(result.status, 0, result.stdout + result.stderr);
   assert.ok(result.stdout.includes('layer gate matched no staged file'), result.stdout);
 });
+
+// verification-matrix backstop tests live in ./pre-commit-git-hook-matrix.test.js
+// (split out to stay under the 300-line SRP file-size gate).
