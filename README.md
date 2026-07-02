@@ -100,6 +100,25 @@ node .claude/scripts/build-chain.js docs/prd.md
 
 It starts a fresh `claude -p` process per build wave and survives single-session wall-clock limits.
 
+## If Your Run Dies (and What It Costs First)
+
+`/auto` runs are resumable by design — a killed session, closed laptop, or budget stop loses nothing that was committed:
+
+- **Just re-invoke `/auto`.** It resumes from `claude-progress.txt` (the append-only progress log every iteration writes), re-reads `features.json` and git state, and runs a startup smoke check before building on prior work. Nothing needs exporting from the dead session.
+- **See where it stopped** with `/status` (or `node .claude/scripts/pipeline-status.js status`), which reads the same state files.
+- **Budget stops are clean stops.** Every run is metered (wall-clock, agent spawns, estimated cost via `node .claude/scripts/budget-state.js`) and stops at an iteration boundary when a cap is hit, setting `next_action: "BUDGET — …"` in `claude-progress.txt`. Raise the cap (`--budget …`) or pass `--budget off`, then re-invoke `/auto` to resume.
+- **For long unattended PRD-to-PR runs**, prefer `node .claude/scripts/build-chain.js docs/prd.md` — it drives fresh `claude -p` processes wave by wave through the same progress file, so a killed process resumes at the next wave.
+
+Default budget caps by model tier (`.claude/scripts/budget-state.js`):
+
+| Tier | Wall-clock | Agent spawns | Est. cost |
+|------|-----------|--------------|-----------|
+| `cost` | 30 min | 80 | ~$8 |
+| `balanced` (default) | 90 min | 200 | ~$25 |
+| `max-quality` | 180 min | 400 | ~$60 |
+
+Cost figures are surfaced estimates (Σ per-spawn receipts × tier rate), not billing data. A first `--auto` run on `balanced` that stops after ~90 minutes with `BUDGET` in `next_action` is behaving as designed — resume it or merge what's done.
+
 ## Existing-Code Flow
 
 For sprint-by-sprint product work on an existing repo, start with `/feature "<request>"`.
