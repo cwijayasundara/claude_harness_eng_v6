@@ -125,6 +125,73 @@ test('non-numeric comment ids are rejected loudly, never written to state', () =
   assert.deepStrictEqual(loadState(file).replied_comments, []);
 });
 
+test('readComments surfaces in_reply_to_id from the API payload', () => {
+  const WITH_REPLY = ['pulls/42/comments', [
+    { id: 9001, path: 'src/a.py', line: 12, body: 'x', user: { login: 'r1' }, in_reply_to_id: 9001 },
+  ]];
+  const out = poll(42, { handled_checks: [], replied_comments: [] }, ghStub([VIEW, CHECKS, WITH_REPLY]));
+  assert.strictEqual(out.comments[0].in_reply_to_id, 9001);
+});
+
+test('in_reply_to_id is null when absent from the API payload', () => {
+  const out = poll(42, { handled_checks: [], replied_comments: [] }, ghStub([VIEW, CHECKS, COMMENTS]));
+  assert.strictEqual(out.comments[0].in_reply_to_id, null);
+});
+
+test('a throwing checks sub-call degrades to checksKnown:false with checks_error; comments still surface', () => {
+  const gh = (args) => {
+    const key = args.join(' ');
+    if (key.includes('pr view')) return JSON.stringify(VIEW[1]);
+    if (key.includes('pr checks')) throw new Error("gh: pr checks failed (exit 1)\nfull stderr detail here");
+    if (key.includes('pulls/42/comments')) return JSON.stringify(COMMENTS[1]);
+    throw new Error(`unexpected gh call: ${key}`);
+  };
+  const out = poll(42, { handled_checks: [], replied_comments: [] }, gh);
+  assert.strictEqual(out.clean, false);
+  assert.strictEqual(out.checks_error, 'gh: pr checks failed (exit 1)');
+  assert.deepStrictEqual(out.comments.map((c) => c.id), [9001]);
+});
+
+test('checks_error is null when the checks call succeeds', () => {
+  const out = poll(42, { handled_checks: [], replied_comments: [] }, ghStub([VIEW, CHECKS, COMMENTS]));
+  assert.strictEqual(out.checks_error, null);
+});
+
+test('poll() propagates errors from pr view (fail-loud) — only the checks sub-call degrades gracefully', () => {
+  const gh = (args) => {
+    const key = args.join(' ');
+    if (key.includes('pr view')) throw new Error('gh: not found');
+    throw new Error(`unexpected gh call: ${key}`);
+  };
+  assert.throws(() => poll(42, { handled_checks: [], replied_comments: [] }, gh), /not found/);
+});
+
+test('cancelled_count counts cancel-bucket checks; cancel still counts as pending for clean', () => {
+  const CANCELLED = ['pr checks', [{ name: 'e2e', workflow: 'E2E', bucket: 'cancel', link: 'x' }]];
+  const NONE = ['pulls/42/comments', []];
+  const out = poll(42, { handled_checks: [], replied_comments: [] }, ghStub([VIEW, CANCELLED, NONE]));
+  assert.strictEqual(out.cancelled_count, 1);
+  assert.strictEqual(out.clean, false);
+});
+
+test('cancelled_count is 0 when there are no cancelled checks', () => {
+  const out = poll(42, { handled_checks: [], replied_comments: [] }, ghStub([VIEW, CHECKS, COMMENTS]));
+  assert.strictEqual(out.cancelled_count, 0);
+});
+
+test('comment bodies are truncated at 4000 chars with a trailing marker', () => {
+  const bigBody = 'x'.repeat(5000);
+  const BIG = ['pulls/42/comments', [{ id: 1, path: 'a.py', line: 1, body: bigBody, user: { login: 'r1' } }]];
+  const out = poll(42, { handled_checks: [], replied_comments: [] }, ghStub([VIEW, CHECKS, BIG]));
+  assert.ok(out.comments[0].body.length <= 4100, `body length ${out.comments[0].body.length} should be <= 4100`);
+  assert.ok(out.comments[0].body.endsWith('\n[truncated by pr-poll]'));
+});
+
+test('short comment bodies are not truncated', () => {
+  const out = poll(42, { handled_checks: [], replied_comments: [] }, ghStub([VIEW, CHECKS, COMMENTS]));
+  assert.strictEqual(out.comments[0].body, 'This swallows the error');
+});
+
 test('run() rejects a non-numeric --record-comment with usage and exit code 2, writes nothing', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pr-poll-'));
   const file = path.join(dir, 's.json');

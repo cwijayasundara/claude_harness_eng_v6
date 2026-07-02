@@ -57,9 +57,30 @@ function readView(pr, gh) {
   ) || {};
 }
 
+function firstLine(message) {
+  return String(message || '').split('\n')[0];
+}
+
+// The checks sub-call degrades independently: a no-checks repo or the
+// post-push empty-rollup window throws from `gh pr checks`, but that must
+// not abort the whole poll (comments still need to surface). `pr view`
+// deliberately stays fail-loud — see runPoll.
 function readChecks(pr, gh) {
-  const checksRaw = parseJson(gh(['pr', 'checks', String(pr), '--json', 'name,workflow,bucket,link']), 'checks');
+  let checksRaw;
+  try {
+    checksRaw = parseJson(gh(['pr', 'checks', String(pr), '--json', 'name,workflow,bucket,link']), 'checks');
+  } catch (err) {
+    return { checks: [], checksKnown: false, checks_error: firstLine(err.message) };
+  }
   return { checks: Array.isArray(checksRaw) ? checksRaw : [], checksKnown: checksRaw !== null };
+}
+
+const COMMENT_BODY_LIMIT = 4000;
+const TRUNCATE_MARKER = '\n[truncated by pr-poll]';
+
+function truncateBody(body) {
+  if (body.length <= COMMENT_BODY_LIMIT) return body;
+  return body.slice(0, COMMENT_BODY_LIMIT) + TRUNCATE_MARKER;
 }
 
 function readComments(pr, gh, state) {
@@ -73,8 +94,9 @@ function readComments(pr, gh, state) {
       id: c.id,
       path: c.path || '',
       line: c.line != null ? c.line : null,
-      body: String(c.body || ''),
+      body: truncateBody(String(c.body || '')),
       author: (c.user && c.user.login) || '',
+      in_reply_to_id: c.in_reply_to_id != null ? c.in_reply_to_id : null,
     }));
 }
 
@@ -92,12 +114,13 @@ function poll(pr, state, gh) {
   const view = readView(pr, gh);
   const head_sha = view.headRefOid || '';
 
-  const { checks, checksKnown } = readChecks(pr, gh);
+  const { checks, checksKnown, checks_error } = readChecks(pr, gh);
   const failures = checks
     .filter((c) => c && c.bucket === 'fail')
     .filter((c) => !state.handled_checks.includes(`${head_sha}:${c.name}`))
     .map((c) => ({ name: c.name, workflow: c.workflow || '', link: c.link || '' }));
   const raw_failure_count = checks.filter((c) => c && c.bucket === 'fail').length;
+  const cancelled_count = checks.filter((c) => c && c.bucket === 'cancel').length;
 
   const comments = readComments(pr, gh, state);
   const clean = computeClean({ checks, checksKnown, failures, comments });
@@ -111,6 +134,8 @@ function poll(pr, state, gh) {
     review_decision: view.reviewDecision || '',
     failures,
     raw_failure_count,
+    cancelled_count,
+    checks_error: checks_error || null,
     comments,
     clean,
   };
@@ -144,7 +169,8 @@ function runPoll(pr, stateFile) {
   try {
     result = poll(pr, loadState(stateFile), defaultGh);
   } catch (err) {
-    process.stderr.write(`pr-poll: gh unavailable or PR not found: ${err.message}\n`);
+    const hint = "gh missing/too old (needs >= 2.37 for 'pr checks --json'), unauthenticated, or PR not found";
+    process.stderr.write(`pr-poll: poll failed (${hint}): ${firstLine(err.message)}\n`);
     return 2;
   }
   process.stdout.write(JSON.stringify(result, null, 2) + '\n');
