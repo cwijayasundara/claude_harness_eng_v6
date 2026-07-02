@@ -74,6 +74,10 @@ for (const profile of ['core', 'brownfield', 'full']) {
         fs.existsSync(path.join(target, '.claude', 'scripts', 'verification-matrix-gate.js')),
         'verification-matrix-gate.js must be copied because /test and /auto call it',
       );
+      assert.ok(
+        fs.existsSync(path.join(target, '.claude', 'scripts', 'ownership-check.js')),
+        'ownership-check.js must be copied because the pre-commit hook and /gate call it',
+      );
     } finally {
       fs.rmSync(workDir, { recursive: true, force: true });
     }

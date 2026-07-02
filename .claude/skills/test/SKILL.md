@@ -178,6 +178,10 @@ cp .claude/templates/playwright.config.template.ts playwright.config.ts
 
 Fill in the `baseURL` values from `project-manifest.json`. Configure `webServer` entries for each service that needs to be running during tests.
 
+### Step 6.5 — Ship the CI workflow
+
+Copy `.claude/templates/github-workflows/e2e.yml` to `.github/workflows/e2e.yml` (skip if the target file already exists — never overwrite a team's edited workflow). This makes every future PR re-run the generated suite in CI instead of only inside harness sessions; the config's `webServer` block self-starts the compose stack on the runner. Requires Docker on the runner (true for `ubuntu-latest`). After copying, adapt the dependency-install step to the project's package layout: the template assumes a root `package.json` and skips `npm install` when none exists — a Python-backend monorepo may need its frontend workspace path installed instead.
+
 ### Step 7 — Install Playwright
 
 ```

@@ -72,7 +72,7 @@ Status: ✅ active · 🟡 partial (limited/opt-in/report-only) · ⛔ planned (
 
 | | Guides | Sensors |
 |---|---|---|
-| | FRD/PRD as immutable baseline · ✅ **sensor arbitration policy** (blocking levels + waivers) | ✅ `grounding-check` (BRD vs FRD or confirmed interview spine, hard block) · ✅ `trace-check` (spec vs BRD; test vs AC+obligation) · ✅ `verification-matrix-gate` (BRD/story AC -> unit/API/E2E evidence matrix, hard-blocking before PR; commit-time backstop via pre-commit hook, executed phase) · ✅ `constraints-extract` · ✅ `plan-confidence` · ✅ `seam-confidence` · ✅ `canvas-sync-check` (changed files vs REASONS Canvas) |
+| | FRD/PRD as immutable baseline · ✅ **sensor arbitration policy** (blocking levels + waivers) | ✅ `grounding-check` (BRD vs FRD or confirmed interview spine, hard block) · ✅ `trace-check` (spec vs BRD; test vs AC+obligation) · ✅ `verification-matrix-gate` (BRD/story AC -> unit/API/E2E evidence matrix, hard-blocking before PR; commit-time backstop via pre-commit hook, executed phase) · ✅ `constraints-extract` · ✅ `plan-confidence` · ✅ `seam-confidence` · ✅ `canvas-sync-check` (changed files vs REASONS Canvas) · ✅ `ownership-check` (changed files vs component-map story ownership) |
 
 > This row is **ahead of the source material**: the deterministic FRD→BRD→spec→test grounding chain has no equivalent in the SPDD example, which leans on human review. Keep it; the SPDD idea to *add* is the living, code-synced design artifact (G4), not its traceability.
 

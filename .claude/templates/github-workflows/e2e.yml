@@ -1,0 +1,28 @@
+# Copied into target projects by /test (Step 6.5) once e2e/ and
+# playwright.config.ts exist. The generated playwright.config.ts webServer
+# block starts the docker compose stack itself; CI=true (always set on
+# Actions) forces a fresh build instead of reusing a running server.
+# Adapt the dependency-install step to your package layout: it assumes a
+# root package.json and is skipped when none exists (e.g. Python-backend
+# monorepos may need their frontend workspace path instead).
+name: E2E
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: if [ -f package.json ]; then npm install; fi
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Run E2E suite
+        run: npx playwright test
