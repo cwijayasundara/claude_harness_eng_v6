@@ -34,9 +34,16 @@ function parseComponentMap(text) {
   const re = /`([^`\n]+)`/g;
   let m;
   while ((m = re.exec(String(text))) !== null) {
-    const token = m[1].trim().replace(/^\.\//, '').replace(/\/+$/, '');
+    const token = m[1].trim().replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/+$/, '');
     if (!token || /\s/.test(token)) continue;
     if (token.includes('/') && token.startsWith('/')) continue; // URL-ish/route tokens like /users
+    if (token.includes('*')) {
+      // A glob owns its static prefix subtree (tolerant by design: this is an
+      // ownership sensor, not a security boundary — src/**/*.ts owns src/).
+      const prefix = token.slice(0, token.indexOf('*')).replace(/\/+$/, '');
+      if (prefix) owned.add(prefix);
+      continue;
+    }
     if (token.includes('/') || isSource(token)) owned.add(token);
   }
   return owned;
@@ -56,7 +63,7 @@ function checkOwnership(files, mapText) {
   let checked = 0;
   const unowned = [];
   for (const raw of files) {
-    const file = String(raw).replace(/\\/g, '/');
+    const file = String(raw).replace(/\\/g, '/').replace(/^(\.\/)+/, '');
     if (!isSource(file) || isAllowed(file)) continue;
     checked += 1;
     if (!isOwned(file, owned)) unowned.push(file);

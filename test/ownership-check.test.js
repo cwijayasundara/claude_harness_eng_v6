@@ -97,3 +97,24 @@ test('run --staged uses the injected exec to list staged files', () => {
   const code = run(['--staged'], dir, { exec: fakeExec });
   assert.strictEqual(code, 1);
 });
+
+// --- normalization hardening (task-review findings) ---------------------------
+
+test('a glob map entry owns its static-prefix subtree', () => {
+  const v = checkOwnership(['src/deep/nested/file.ts'], '| S1 | `src/**/*.ts` |');
+  assert.strictEqual(v.pass, true);
+});
+
+test('a backslash-style map token matches the POSIX-normalized file', () => {
+  const v = checkOwnership(['src/ui/App.tsx'], '| S1 | `src\\ui\\App.tsx` |');
+  assert.strictEqual(v.pass, true);
+});
+
+test('a ./-prefixed checked file still hits the allowlist and the owned map', () => {
+  const v = checkOwnership(
+    ['./.claude/scripts/y.js', './src/api/users.py'],
+    '| S1 | `src/api/users.py` |'
+  );
+  assert.strictEqual(v.pass, true);
+  assert.strictEqual(v.checked, 1); // only the src file is checked; .claude is allowlisted
+});
