@@ -230,6 +230,9 @@ test('rubric brd phase has the FRD hard-gate and grounded traceability criterion
   assert.match(brd.hard_gate, /brd-grounding\.json/);
   assert.match(brd.hard_gate, /net_new/);
   assert.match(brd.criteria.traceability, /brd-grounding\.json/);
+  assert.match(brd.hard_gate, /interview-requirements\.json/);
+  assert.match(brd.criteria.traceability, /INT-n|interview-requirements/);
+  assert.ok(!/score as 10/.test(brd.criteria.traceability), 'interview mode must no longer auto-score 10');
 });
 
 test('evaluator artifact mode hard-gates the BRD on the grounding verdict in FRD mode', () => {
@@ -237,4 +240,5 @@ test('evaluator artifact mode hard-gates the BRD on the grounding verdict in FRD
   assert.match(ev, /brd-grounding\.json/);
   assert.match(ev, /FRD mode/);
   assert.match(ev, /interview-from-scratch/i);
+  assert.match(ev, /interview-requirements\.json/);
 });
