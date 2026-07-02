@@ -74,6 +74,10 @@ for (const profile of ['core', 'brownfield', 'full']) {
         fs.existsSync(path.join(target, '.claude', 'scripts', 'verification-matrix-gate.js')),
         'verification-matrix-gate.js must be copied because /test and /auto call it',
       );
+      assert.ok(
+        fs.existsSync(path.join(target, '.claude', 'scripts', 'pr-poll.js')),
+        'pr-poll.js must be copied because /pr-respond calls it',
+      );
     } finally {
       fs.rmSync(workDir, { recursive: true, force: true });
     }

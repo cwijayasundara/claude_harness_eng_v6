@@ -29,12 +29,19 @@ already do; the conductor itself stays in the main session.
 /feature "split billing into usage-based and seat-based plans"           # 3 gates (likely an epic)
 /feature "add a /health endpoint" --autonomous                           # 1 gate (seam-cited plan)
 /feature "add a /health endpoint" --auto                                 # 0 gates: request -> PR(s)
+/feature "add a /health endpoint" --auto --respond                       # + bounded post-PR response pass
 ```
 
 Lane resolution is deterministic — `node .claude/scripts/feature-lane.js "<args>"`
 returns `{ valid, lane, humanGates, request, auto, autonomous }` (`gated`=3,
 `autonomous`=1, `auto`=0; `--auto` implies the autonomous tail). All lanes stop
 at the open PR; merge stays human.
+
+**`--respond[=minutes]`.** Opt-in (default **off**): after the PR(s) open, invoke
+`/pr-respond <pr#> --watch` on each one so red CI or early review comments get
+one bounded, budget-metered response pass before handoff (`=minutes` sets the
+watch window, default 30). Merge remains human-owned regardless — `/pr-respond`
+never merges or enables auto-merge.
 
 ## The spine
 
@@ -48,7 +55,9 @@ The same backbone runs at every scale; only the engine in steps 5–8 differs.
 5. **Implement** test-first, in place.
 6–7. **Unit + integration tests**, full suite green.
 8. **Verify** against acceptance criteria + adaptive review.
-9. **Open PR(s)** linked to the Linear issue(s). → **GATE 3**.
+9. **Open PR(s)** linked to the Linear issue(s). If `--respond` was passed
+   (default off), invoke `/pr-respond <pr#> --watch` on each PR just opened —
+   one bounded response pass; merge remains human-owned. → **GATE 3**.
 
 ## Lanes (autonomous surface)
 

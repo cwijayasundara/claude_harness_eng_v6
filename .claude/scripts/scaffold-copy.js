@@ -59,6 +59,7 @@ const CORE_SCRIPTS = [
   'pipeline-state-readers.js',
   'pipeline-status.js',
   'plan-confidence.js',
+  'pr-poll.js',
   'telemetry-ledger-rotate.js',
   'telemetry-memory.js',
   'telemetry-phase-eval.js',
