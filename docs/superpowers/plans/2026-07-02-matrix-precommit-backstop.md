@@ -256,8 +256,9 @@ Do not proceed to execution with an invalid contract: the pre-commit hook repeat
 
 New:
 ```
-Do not proceed to execution with an invalid contract: the pre-commit hook deterministically re-validates the contract's schema shape and re-runs the verification-matrix `executed` phase on every commit, so a malformed contract or missing/stale runtime evidence blocks the commit regardless of whether this step was run.
+Do not proceed to execution with an invalid contract: the pre-commit hook deterministically re-validates the contract's schema shape and re-runs the verification-matrix `executed` phase on every commit, so, whenever `specs/test_artefacts/verification-matrix.json` exists, a malformed contract or missing/stale runtime evidence blocks the commit regardless of whether this step was run.
 ```
+(Reviewer-amended wording: the original sentence over-claimed — the hook is a silent no-op when the matrix file is absent.)
 
 - [ ] **Step 2: Update the manifest sensor entry**
 
