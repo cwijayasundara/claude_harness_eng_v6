@@ -43,7 +43,7 @@ If an FRD path was provided:
    ```
    Be exhaustive and faithful — every "the system must / shall / should" statement, every user-facing behavior, every business rule becomes one `FRD-n`. Do not paraphrase away constraints. This list is what the BRD will be checked against, so a requirement you fail to extract here is a requirement that can be silently dropped.
 
-If no `--frd` was given, skip this step; the BRD's grounding baseline is the confirmed interview answers (Step 0.5) alone.
+If no `--frd` was given, skip this step; the BRD's grounding baseline is then the confirmed `INT-n` interview requirements captured in Step 2 (`specs/brd/interview-requirements.json`), plus the Step 0.5 clarification log.
 
 ### Step 0 — Brainstorm with Superpowers
 
