@@ -64,7 +64,7 @@ Before asking interview questions, invoke `.claude/skills/clarify/SKILL.md`. Use
   { "id": "C2", "question": "Should order history paginate?", "answer": "Yes, 20 per page" }
 ]
 ```
-The clarification log is the **only** sanctioned channel for content not already in the FRD. A BRD requirement may legitimately introduce something new *only* if it traces to an FRD section or a `C-n` clarification here — so anything the human confirms that expands scope must be captured as a `C-n` entry, not absorbed silently into the BRD prose.
+The clarification log is the **only** sanctioned channel for content not already in the FRD. A BRD requirement may legitimately introduce something new *only* if it traces to an FRD section, an `INT-n` interview requirement, or a `C-n` clarification here — so anything the human confirms that expands scope must be captured as a `C-n` entry, not absorbed silently into the BRD prose.
 
 ### Step 1 — Analyze Existing Codebase (if any)
 
@@ -189,10 +189,10 @@ The JSON must include:
 ```
 
 Rules:
-- **Domain Concepts** marks each important business object as `existing` or `new`. In brownfield mode, `existing` entries cite a code-graph node or file path; in greenfield, they cite FRD/PRD sections.
+- **Domain Concepts** marks each important business object as `existing` or `new`. In brownfield mode, `existing` entries cite a code-graph node or file path; in greenfield, they cite FRD/PRD sections or `INT-n` interview requirements.
 - **Ambiguity Table** captures load-bearing uncertainties that were clarified, assumed, or deferred. A deferred ambiguity must appear in the BRD Open Questions.
 - **Edge-Case Table** names failures, limits, empty states, concurrency/race cases, and security/privacy exceptions that the BRD must preserve downstream.
-- **AC Coverage Matrix** proves every extracted FRD/PRD requirement has at least one observable acceptance criterion before the grounding gate runs.
+- **AC Coverage Matrix** proves every extracted FRD/PRD/`INT-n` requirement has at least one observable acceptance criterion before the grounding gate runs.
 - **Risk & Gap Table** records risks and missing inputs without turning them into hidden implementation scope.
 
 If this pack exposes a dropped requirement, unresolved high-risk ambiguity, or uncovered acceptance criterion, fix the interview/clarification log before proceeding. Do not paper over it in the BRD.
@@ -237,7 +237,7 @@ Create the `specs/brd/` directory if it does not exist.
 
 ### Step 4.4 — Grounding Gate [HARD BLOCK — all modes]
 
-Run the deterministic grounding check before the rubric evaluation — in FRD mode against the FRD spine, in interview mode against the confirmed interview spine. This proves mechanically — not by judgement — that the BRD invented and dropped nothing relative to the FRD + clarifications:
+Run the deterministic grounding check before the rubric evaluation — in FRD mode against the FRD spine, in interview mode against the confirmed interview spine. This proves mechanically — not by judgement — that the BRD invented and dropped nothing relative to the required spine (FRD or interview) + clarifications:
 
 ```bash
 node .claude/skills/brd/scripts/grounding-check.js \
@@ -261,7 +261,7 @@ node .claude/skills/brd/scripts/grounding-check.js \
 
 The script writes `specs/reviews/brd-grounding.json` (`{ pass, frd_total, frd_covered, net_new[], dropped[] }`) and exits non-zero on any violation. **This is a hard gate, independent of the rubric score:**
 - **`net_new` non-empty** → the BRD invented a requirement not in the FRD or any clarification. For each, either delete it or get explicit human sign-off and record it as a `C-n` clarification (then re-trace and re-run). Do **not** proceed with an unresolved net-new requirement.
-- **`dropped` non-empty** → the BRD silently lost an FRD requirement. Add a BR entry covering it (or, if the human confirms it is intentionally out of scope, record that decision as a `C-n` clarification noting the deferral) and re-run.
+- **`dropped` non-empty** → the BRD silently lost a required-spine requirement. Add a BR entry covering it (or, if the human confirms it is intentionally out of scope, record that decision as a `C-n` clarification noting the deferral) and re-run.
 
 Only when `brd-grounding.json#pass === true` may you proceed to Step 4.5. (Skip only when neither `frd-requirements.json` nor `interview-requirements.json` exists — a pre-spine legacy project — and note the skipped gate in the BRD summary. **If you conducted the Step 2 interview in this session, the spine MUST exist** — a missing spine is a Step 2 execution bug, not a legacy project: reconstruct `interview-requirements.json` from the confirmed dimension summaries and re-run the gate. The skip applies only to a pre-existing BRD you did not author in this session.)
 
@@ -275,7 +275,7 @@ Spawn Agent with subagent_type="evaluator" and prompt:
 - Phase: brd
 - Artifact: the BRD file path (specs/brd/brd.md or specs/brd/feature-{name}.md)
 - Upstream: in FRD mode, `specs/brd/source-frd.md` + `specs/brd/frd-requirements.json` + `specs/brd/clarification-log.json`; in interview mode, `specs/brd/interview-requirements.json` + `specs/brd/clarification-log.json`
-- Grounding verdict: `specs/reviews/brd-grounding.json` in both modes (already PASS from Step 4.4 — the evaluator confirms the rubric's traceability criterion against it)
+- Grounding verdict: `specs/reviews/brd-grounding.json` in both modes (already PASS from Step 4.4 — the evaluator confirms the rubric's traceability criterion against it) (absent only for pre-spine legacy projects, where the gate was skipped and noted)
 - Rubric: Read .claude/templates/phase-eval-rubrics.json, key "brd"
 - Iteration: 1 (increment on retry)
 - Previous score: null (or previous iteration's weighted_average)
@@ -314,7 +314,7 @@ Display the BRD and ask: "Does this BRD accurately capture the requirements? App
 
 **Grounding gate — hard block (both modes).** `grounding-check.js` proves mechanically that the BRD invented nothing (`net_new`) and dropped nothing (`dropped`) relative to the FRD spine (FRD mode) or the confirmed interview spine (interview mode), plus clarifications. Any violation blocks before the rubric even runs, regardless of quality score — see Step 4.4.
 
-**Phase evaluation gate runs before human approval.** The evaluator agent (artifact mode) scores the BRD against 5 criteria (completeness, traceability, specificity, consistency, actionability). Threshold: average >= 7.0, all criteria >= 5. In FRD mode the traceability criterion is anchored to the grounding verdict, not free judgement.
+**Phase evaluation gate runs before human approval.** The evaluator agent (artifact mode) scores the BRD against 5 criteria (completeness, traceability, specificity, consistency, actionability). Threshold: average >= 7.0, all criteria >= 5. In both modes the traceability criterion is anchored to the grounding verdict, not free judgement.
 
 **Human approval is still required before proceeding to `/spec`.** The gates validate quality + grounding; the human validates intent.
 
