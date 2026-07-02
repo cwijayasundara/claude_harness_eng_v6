@@ -1,6 +1,6 @@
 ---
 name: pinning-down-behavior
-description: Use when checking-coverage-before-change reports an UNCOVERED symbol you must edit — writes characterization (pin-down) tests at the nearest observable seam and verifies they bite before any production edit.
+description: Use when checking-coverage-before-change reports an UNCOVERED symbol you must edit — writes characterization (pin-down) tests at the nearest observable seam and verifies they bite before any production edit. [Internal discipline — applied automatically by pipeline agents mid-task; direct use is a power-user path.]
 ---
 
 # Pinning Down Behavior

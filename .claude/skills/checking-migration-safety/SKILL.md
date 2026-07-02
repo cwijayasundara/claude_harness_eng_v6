@@ -1,6 +1,6 @@
 ---
 name: checking-migration-safety
-description: Use when a planned change touches persisted data shape — ORM models, migration files, schema definitions, serialized formats, or message contracts — in /change, /refactor, or /implement on an existing codebase. Routes schema changes through expand-contract and proves reversibility before any deploy.
+description: Use when a planned change touches persisted data shape — ORM models, migration files, schema definitions, serialized formats, or message contracts — in /change, /refactor, or /implement on an existing codebase. Routes schema changes through expand-contract and proves reversibility before any deploy. [Internal discipline — applied automatically by pipeline agents mid-task; direct use is a power-user path.]
 ---
 
 # Checking Migration Safety

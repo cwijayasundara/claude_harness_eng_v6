@@ -1,6 +1,6 @@
 ---
 name: checking-coverage-before-change
-description: Use when about to edit any existing (non-greenfield) symbol — before the first Edit/Write to production code in /refactor, /change, or /vibe — to learn which tests cover it and route uncovered code to pinning or sprouting.
+description: Use when about to edit any existing (non-greenfield) symbol — before the first Edit/Write to production code in /refactor, /change, or /vibe — to learn which tests cover it and route uncovered code to pinning or sprouting. [Internal discipline — applied automatically by pipeline agents mid-task; direct use is a power-user path.]
 ---
 
 # Checking Coverage Before Change
