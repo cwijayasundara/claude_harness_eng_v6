@@ -69,6 +69,8 @@ This is the in-session human trigger. The tracker-driven equivalent (Jira/Linear
 
 **`--budget <spec>`.** Cap the compute the autonomous loop may spend before halting at a clean checkpoint: `--budget 2h` (wall-clock), `--budget 150agents` (agent spawns), `--budget '$20'` (estimated cost), or `--budget off`. Without the flag, a per-tier default applies (cost ≈ 30 min, balanced ≈ 90 min, max-quality ≈ 180 min; see `.claude/scripts/budget-state.js`). A `project-manifest.json#execution.budget` object overrides the default; `--budget` overrides both. The halt is enforced by `/auto` and `build-chain.js` at iteration/link boundaries — committed work is always preserved, and raising the cap resumes the run. **Wall-clock and agent-count are exact; estimated cost is a surfaced estimate** (the harness makes no direct API calls, so it cannot meter tokens exactly in-loop). Budget caps compute, never the verification gates.
 
+**`--respond[=minutes]`.** Opt-in (default **off**) post-PR response pass: after Phase 11 opens the PR(s), invoke `/pr-respond <pr#> --watch` on each one so red CI or early review comments get one bounded, budget-metered response cycle before handoff (`=minutes` sets the watch window, default 30). Merge remains human-owned regardless — `/pr-respond` never merges or enables auto-merge.
+
 ### `--lite` — compressed greenfield lane
 
 For a **small** new project (single language/runtime, one module, no DB/auth, ≤ ~5 stories — e.g. a CLI tool, single-script utility, or small library), pass `--lite` with a one-line description. Instead of the full phases below, follow the compressed lane in **`.claude/skills/build/references/lite-lane.md`**: a 5-question interview → one-page BRD-lite → ≤5 stories in a single group → minimal design artifacts → one approval gate → hand off to `/auto --group A`. It enforces the same ratchet/gates; it only compresses the planning ceremony. If the project exceeds the lite scope caps (a database, a second service, auth, >5 stories), the lane escalates you to the full pipeline. Everything from Phase 0 below is the full (non-lite) path.
@@ -330,6 +332,8 @@ The pipeline's terminal step. **Only reachable when Phase 9.5 passed** (applicab
    on a repo with no required status checks, `gh pr merge --auto` merges
    immediately, so AUTO_MERGE there merges right after the harness gates — assume
    "Allow auto-merge" + branch protection with required checks.
+
+4. **Respond pass (opt-in).** If `--respond` was passed (default off), invoke `/pr-respond <pr#> --watch` on each PR just opened, so red CI or early review comments get one bounded response pass before handoff. Merge remains human-owned regardless.
 
 In the **gated** model, offer to raise the PR rather than doing it unprompted. In **`--autonomous`** mode, raise it automatically once green — that is the point of the run. **In `--pod` mode this phase is superseded:** the per-cluster PRs were already raised by the engineer-orchestrators inside `/auto` (Section 4B → Pod mode), so there is no single integrated PR to open here — instead, confirm every cluster's PR is open and green and report the set. Detail: `.claude/skills/build/references/autonomous-lane.md`.
 

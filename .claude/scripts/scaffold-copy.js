@@ -30,7 +30,7 @@ const CORE_SKILLS = [
   'evaluate', 'gate', 'implement', 'spec', 'status', 'test',
   'feature', 'brownfield', 'change', 'checking-coverage-before-change',
   'checking-migration-safety', 'code-map', 'keeping-refactors-pure',
-  'pinning-down-behavior', 'refactor', 'seam-finder',
+  'pinning-down-behavior', 'pr-respond', 'refactor', 'seam-finder',
   'sprouting-instead-of-editing', 'tracker-publish',
   'upgrading-dependencies', 'vibe',
 ];
@@ -60,6 +60,7 @@ const CORE_SCRIPTS = [
   'pipeline-state-readers.js',
   'pipeline-status.js',
   'plan-confidence.js',
+  'pr-poll.js',
   'telemetry-ledger-rotate.js',
   'telemetry-memory.js',
   'telemetry-phase-eval.js',
