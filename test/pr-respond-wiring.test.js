@@ -20,6 +20,9 @@ test('/pr-respond skill exists with the poller, bounds, and safety rails wired',
   assert.match(skill, /[Nn]ever force-push/);
   assert.match(skill, /untrusted/);
   assert.match(skill, /Self-Healing|self-healing/);
+  assert.match(skill, /record.*reply|reply.*id/i);
+  assert.match(skill, /log output|--log-failed/);
+  assert.match(skill, /2\.37/);
 });
 
 test('/build and /feature expose the opt-in --respond flag', () => {

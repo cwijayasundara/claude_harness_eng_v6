@@ -78,6 +78,10 @@ for (const profile of ['core', 'brownfield', 'full']) {
         fs.existsSync(path.join(target, '.claude', 'scripts', 'pr-poll.js')),
         'pr-poll.js must be copied because /pr-respond calls it',
       );
+      assert.ok(
+        fs.existsSync(path.join(target, '.claude', 'skills', 'pr-respond', 'SKILL.md')),
+        'pr-respond/SKILL.md must be copied — the scaffold ships the skill that invokes pr-poll.js',
+      );
     } finally {
       fs.rmSync(workDir, { recursive: true, force: true });
     }
