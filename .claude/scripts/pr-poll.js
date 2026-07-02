@@ -38,34 +38,36 @@ function loadState(file) {
 function recordHandled(file, item) {
   const state = loadState(file);
   if (item.check && !state.handled_checks.includes(item.check)) state.handled_checks.push(item.check);
-  if (item.comment != null && !state.replied_comments.includes(item.comment)) state.replied_comments.push(item.comment);
+  if (item.comment != null) {
+    if (Number.isFinite(item.comment)) {
+      if (!state.replied_comments.includes(item.comment)) state.replied_comments.push(item.comment);
+    } else {
+      process.stderr.write('pr-poll: ignoring non-numeric comment id\n');
+    }
+  }
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, JSON.stringify(state, null, 2) + '\n');
   return state;
 }
 
-// Pure core. gh(args) -> stdout string. Never throws on malformed payloads.
-function poll(pr, state, gh) {
-  const view = parseJson(
+function readView(pr, gh) {
+  return parseJson(
     gh(['pr', 'view', String(pr), '--json', 'headRefName,headRefOid,state,mergeable,reviewDecision']),
     'pr view'
   ) || {};
-  const head_sha = view.headRefOid || '';
+}
 
+function readChecks(pr, gh) {
   const checksRaw = parseJson(gh(['pr', 'checks', String(pr), '--json', 'name,workflow,bucket,link']), 'checks');
-  const checks = Array.isArray(checksRaw) ? checksRaw : [];
-  const failures = checks
-    .filter((c) => c && c.bucket === 'fail')
-    .filter((c) => !state.handled_checks.includes(`${head_sha}:${c.name}`))
-    .map((c) => ({ name: c.name, workflow: c.workflow || '', link: c.link || '' }));
-  const pending = checks.some((c) => c && (c.bucket === 'pending' || c.bucket === 'cancel'));
-  const checksKnown = checksRaw !== null;
+  return { checks: Array.isArray(checksRaw) ? checksRaw : [], checksKnown: checksRaw !== null };
+}
 
+function readComments(pr, gh, state) {
   const commentsRaw = parseJson(
     gh(['api', `repos/{owner}/{repo}/pulls/${pr}/comments`, '--paginate']),
     'comments'
   );
-  const comments = (Array.isArray(commentsRaw) ? commentsRaw : [])
+  return (Array.isArray(commentsRaw) ? commentsRaw : [])
     .filter((c) => c && !state.replied_comments.includes(c.id))
     .map((c) => ({
       id: c.id,
@@ -74,9 +76,31 @@ function poll(pr, state, gh) {
       body: String(c.body || ''),
       author: (c.user && c.user.login) || '',
     }));
+}
 
-  const allChecksPass = checksKnown && checks.length > 0 && checks.every((c) => c && c.bucket === 'pass');
-  const clean = allChecksPass && !pending && failures.length === 0 && comments.length === 0;
+// 'skipping' (path-filtered CI jobs) is neutral: it can neither pass nor
+// block clean. All-skipped stays NOT clean — nothing was actually validated.
+function computeClean({ checks, checksKnown, failures, comments }) {
+  const relevant = checks.filter((c) => c && c.bucket !== 'skipping');
+  const pending = relevant.some((c) => c && (c.bucket === 'pending' || c.bucket === 'cancel'));
+  const allPass = checksKnown && relevant.length > 0 && relevant.every((c) => c && c.bucket === 'pass');
+  return allPass && !pending && failures.length === 0 && comments.length === 0;
+}
+
+// Pure core. gh(args) -> stdout string. Never throws on malformed payloads.
+function poll(pr, state, gh) {
+  const view = readView(pr, gh);
+  const head_sha = view.headRefOid || '';
+
+  const { checks, checksKnown } = readChecks(pr, gh);
+  const failures = checks
+    .filter((c) => c && c.bucket === 'fail')
+    .filter((c) => !state.handled_checks.includes(`${head_sha}:${c.name}`))
+    .map((c) => ({ name: c.name, workflow: c.workflow || '', link: c.link || '' }));
+  const raw_failure_count = checks.filter((c) => c && c.bucket === 'fail').length;
+
+  const comments = readComments(pr, gh, state);
+  const clean = computeClean({ checks, checksKnown, failures, comments });
 
   return {
     pr,
@@ -86,31 +110,36 @@ function poll(pr, state, gh) {
     mergeable: view.mergeable || '',
     review_decision: view.reviewDecision || '',
     failures,
+    raw_failure_count,
     comments,
     clean,
   };
 }
 
-function run(argv, root) {
-  const pr = parseInt(argv[0], 10);
-  if (!Number.isFinite(pr)) {
-    process.stderr.write('usage: pr-poll.js <pr-number> [--state-file <path>] [--record-check <sha:name>] [--record-comment <id>]\n');
+// Returns the updated state, or null if recordCommentRaw was given but isn't
+// a finite number (caller turns that into a usage error + exit 2).
+function handleRecordFlags(stateFile, recordCheck, recordCommentRaw) {
+  let recordComment;
+  if (recordCommentRaw !== undefined) {
+    recordComment = Number(recordCommentRaw);
+    if (!Number.isFinite(recordComment)) return null;
+  }
+  return recordHandled(stateFile, { check: recordCheck, comment: recordComment });
+}
+
+const USAGE = 'usage: pr-poll.js <pr-number> [--state-file <path>] [--record-check <sha:name>] [--record-comment <id>]\n';
+
+function runRecord(stateFile, recordCheck, recordCommentRaw) {
+  const state = handleRecordFlags(stateFile, recordCheck, recordCommentRaw);
+  if (state === null) {
+    process.stderr.write(USAGE);
     return 2;
   }
-  const flag = (name) => {
-    const i = argv.indexOf(name);
-    return i >= 0 ? argv[i + 1] : undefined;
-  };
-  const stateFile = flag('--state-file') || path.join(root, '.claude', 'state', `pr-respond-${pr}.json`);
+  process.stdout.write(JSON.stringify(state, null, 2) + '\n');
+  return 0;
+}
 
-  const recordCheck = flag('--record-check');
-  const recordComment = flag('--record-comment');
-  if (recordCheck || recordComment) {
-    const state = recordHandled(stateFile, { check: recordCheck, comment: recordComment ? Number(recordComment) : undefined });
-    process.stdout.write(JSON.stringify(state) + '\n');
-    return 0;
-  }
-
+function runPoll(pr, stateFile) {
   let result;
   try {
     result = poll(pr, loadState(stateFile), defaultGh);
@@ -120,6 +149,26 @@ function run(argv, root) {
   }
   process.stdout.write(JSON.stringify(result, null, 2) + '\n');
   return 0;
+}
+
+function run(argv, root) {
+  const pr = parseInt(argv[0], 10);
+  if (!Number.isFinite(pr)) {
+    process.stderr.write(USAGE);
+    return 2;
+  }
+  const flag = (name) => {
+    const i = argv.indexOf(name);
+    return i >= 0 ? argv[i + 1] : undefined;
+  };
+  const stateFile = flag('--state-file') || path.join(root, '.claude', 'state', `pr-respond-${pr}.json`);
+
+  const recordCheck = flag('--record-check');
+  const recordCommentRaw = flag('--record-comment');
+  if (recordCheck || recordCommentRaw !== undefined) {
+    return runRecord(stateFile, recordCheck, recordCommentRaw);
+  }
+  return runPoll(pr, stateFile);
 }
 
 module.exports = { poll, loadState, recordHandled, run };
