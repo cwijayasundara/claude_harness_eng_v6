@@ -1,6 +1,6 @@
 ---
 name: sprouting-instead-of-editing
-description: Use when a symbol that must change is UNCOVERED and unpinnable (seam score < 0.5, or a skeletons/-flagged god file with no clean boundary) — adds behavior in a new fully-tested unit instead of editing legacy code in place.
+description: Use when a symbol that must change is UNCOVERED and unpinnable (seam score < 0.5, or a skeletons/-flagged god file with no clean boundary) — adds behavior in a new fully-tested unit instead of editing legacy code in place. [Internal discipline — applied automatically by pipeline agents mid-task; direct use is a power-user path.]
 ---
 
 # Sprouting Instead of Editing

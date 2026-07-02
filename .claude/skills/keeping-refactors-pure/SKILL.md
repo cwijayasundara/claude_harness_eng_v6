@@ -1,6 +1,6 @@
 ---
 name: keeping-refactors-pure
-description: Use when committing any change that includes structural work (rename, move, extract, reorder) in an existing codebase — keeps refactor commits behavior-free and behavior commits refactor-free so regressions stay attributable.
+description: Use when committing any change that includes structural work (rename, move, extract, reorder) in an existing codebase — keeps refactor commits behavior-free and behavior commits refactor-free so regressions stay attributable. [Internal discipline — applied automatically by pipeline agents mid-task; direct use is a power-user path.]
 ---
 
 # Keeping Refactors Pure

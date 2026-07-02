@@ -80,6 +80,10 @@ Status: ✅ active · 🟡 partial (limited/opt-in/report-only) · ⛔ planned (
 
 The harness improves itself between runs: `.claude/program.md` (the steering input that biases `/auto`), `.claude/state/learned-rules.md` (failure-derived rules, injected into future prompts, never deleted), and `review-on-stop.js` (surfaces session learnings as suggested `CLAUDE.md` edits — applied *between* sessions, never mid-run, to preserve the prompt cache).
 
+## Skill-description conventions
+
+Skill-description markers: pipeline *stage* skills carry a leading `[Internal pipeline stage — …]` prefix; discipline micro-skills carry a trailing `[Internal discipline — …]` suffix instead, because their leading "Use when…" phrase is the auto-invocation trigger and must stay first (pinned by `test/skills-consistency.test.js`).
+
 ## The current holes (so they're not invisible)
 
 The point of a registry is that gaps are explicit. As of 2026-06 **every gap below (G1–G14) is closed** — the section is kept as the shipped-control record, not a backlog. The post-gap hardening items now active are: SPDD-grade BRD analysis, sensor arbitration + waiver schema, optional drift workflow template, Canvas sync check, cross-run flake-history trend, and pre-code greenfield modularity assessment.

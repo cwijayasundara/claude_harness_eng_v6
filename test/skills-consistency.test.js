@@ -124,3 +124,28 @@ test('no doc references a removed agent', () => {
   }
   assert.deepStrictEqual(offenders, [], offenders.join('\n'));
 });
+
+// The five discipline micro-skills are auto-invoked by agents mid-pipeline,
+// not typed by humans; without a marker they read as user commands when a
+// team browses .claude/skills/ (2026-07-02 audit fix #5). The marker is a
+// SUFFIX: the leading "Use when…" trigger phrase drives auto-invocation and
+// must stay first (unlike seam-finder-style stage skills, which prefix).
+const INTERNAL_DISCIPLINE_SKILLS = [
+  'checking-coverage-before-change',
+  'checking-migration-safety',
+  'keeping-refactors-pure',
+  'pinning-down-behavior',
+  'sprouting-instead-of-editing',
+];
+
+test('internal discipline skills carry the marker after their trigger phrase', () => {
+  const offenders = [];
+  for (const skill of INTERNAL_DISCIPLINE_SKILLS) {
+    const text = fs.readFileSync(path.join(SKILLS_DIR, skill, 'SKILL.md'), 'utf8');
+    const match = text.match(/^description:\s*(.+)$/m);
+    const desc = match ? match[1] : '';
+    const ok = /^Use when/.test(desc) && /\[Internal discipline — .+power-user path\.\]$/.test(desc);
+    if (!ok) offenders.push(skill);
+  }
+  assert.deepStrictEqual(offenders, [], `missing/misplaced internal marker: ${offenders.join(', ')}`);
+});
