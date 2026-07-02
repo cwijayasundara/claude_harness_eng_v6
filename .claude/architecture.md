@@ -41,7 +41,7 @@ Violations:
 - A `Config` importing from `Repository` — FORBIDDEN
 - A `Types` importing from any other layer — FORBIDDEN
 
-The `verify-on-save` hook enforces this rule on every file save; the git `pre-commit` gate re-checks staged files.
+The `verify-on-save` hook enforces this rule on every file save; the git `pre-commit` gate re-checks staged files. If the layer gate matches no staged source file (the project doesn't follow a `<root>/<layer>/` layout), `pre-commit` warns loudly instead of silently passing — configure or disable the check via `project-manifest.json` (see Customization).
 
 ## Verification Commands
 
@@ -92,20 +92,32 @@ The following concerns span all layers and are handled via shared utilities, not
 | **Telemetry** | Instrumentation via a shared `src/lib/telemetry` module with span/trace helpers |
 | **Error Handling** | Typed error classes in `Types`; caught and mapped at `API` boundary; never swallowed silently |
 
+## Bounded Contexts (Vertical Boundaries)
+
+The layer check is horizontal; bounded contexts are its vertical complement. Two contexts (e.g., `src/billing`, `src/user`) may not reach into each other's internals — a cross-context import is allowed only via the target's public surface (its root, `index`, `public`, or `__init__`) or an explicit allow-edge.
+
+This check is **opt-in**: it runs only when `project-manifest.json` declares `architecture.contexts` (see Customization). Both `verify-on-save` and the git `pre-commit` gate enforce it, after the layer check.
+
 ## Customization
 
-Layer names, paths, and verification commands can be overridden for non-standard stacks (e.g., monorepos, microservices, full-stack frameworks) via `project-manifest.json` in the project root.
+Layer names, source roots, and bounded contexts are configured via the `architecture` block of `project-manifest.json` in the project root. Without a manifest (or without an `architecture` block), the defaults above apply: layers `types → config → repository → service → api → ui` under `src/`.
 
-Example override:
 ```json
 {
-  "layers": [
-    { "name": "domain", "path": "src/domain", "rank": 1 },
-    { "name": "application", "path": "src/application", "rank": 2 },
-    { "name": "infrastructure", "path": "src/infrastructure", "rank": 3 },
-    { "name": "presentation", "path": "src/presentation", "rank": 4 }
-  ]
+  "architecture": {
+    "layers": ["domain", "application", "infrastructure", "presentation"],
+    "layer_roots": ["src", "backend/src"],
+    "contexts": {
+      "roots": ["src/billing", "src/user"],
+      "allow": [["billing", "user"]],
+      "public": ["index", "public", "__init__"]
+    }
+  }
 }
 ```
 
-When `project-manifest.json` is present, the layer check reads layer definitions from it instead of using the defaults above.
+- `layers` — layer names in order, **lowest to highest**; a layer may import only from layers earlier in the list.
+- `layer_roots` — directories scanned for `<root>/<layer>/` paths (default `["src"]`).
+- `contexts` — optional bounded-context rules: `roots` name the context directories, `allow` lists permitted cross-context edges (`["billing", "user"]` = billing may import user's internals), `public` overrides the default public-surface names.
+
+To **disable** the layer check entirely — the right default for libraries, CLIs, data pipelines, and ML projects that don't follow a layered hierarchy — set `"architecture": { "enabled": false }` (or `"layers": []`). `/scaffold` sets this automatically for those project shapes.
