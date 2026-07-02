@@ -257,11 +257,13 @@ node .claude/skills/brd/scripts/grounding-check.js \
   --out specs/reviews/brd-grounding.json
 ```
 
+**Empty-spine guard (interview mode):** a verdict with `frd_total: 0` means `interview-requirements.json` is empty — the gate checked nothing. A completed five-dimension interview yields at least one `INT-n`; treat `frd_total: 0` as FAIL and return to Step 2 to capture the confirmed requirements before re-running.
+
 The script writes `specs/reviews/brd-grounding.json` (`{ pass, frd_total, frd_covered, net_new[], dropped[] }`) and exits non-zero on any violation. **This is a hard gate, independent of the rubric score:**
 - **`net_new` non-empty** → the BRD invented a requirement not in the FRD or any clarification. For each, either delete it or get explicit human sign-off and record it as a `C-n` clarification (then re-trace and re-run). Do **not** proceed with an unresolved net-new requirement.
 - **`dropped` non-empty** → the BRD silently lost an FRD requirement. Add a BR entry covering it (or, if the human confirms it is intentionally out of scope, record that decision as a `C-n` clarification noting the deferral) and re-run.
 
-Only when `brd-grounding.json#pass === true` may you proceed to Step 4.5. (Skip only when neither `frd-requirements.json` nor `interview-requirements.json` exists — a pre-spine legacy project — and note the skipped gate in the BRD summary.)
+Only when `brd-grounding.json#pass === true` may you proceed to Step 4.5. (Skip only when neither `frd-requirements.json` nor `interview-requirements.json` exists — a pre-spine legacy project — and note the skipped gate in the BRD summary. **If you conducted the Step 2 interview in this session, the spine MUST exist** — a missing spine is a Step 2 execution bug, not a legacy project: reconstruct `interview-requirements.json` from the confirmed dimension summaries and re-run the gate. The skip applies only to a pre-existing BRD you did not author in this session.)
 
 ### Step 4.5 — Phase Evaluation Gate
 

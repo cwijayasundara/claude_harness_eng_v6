@@ -222,6 +222,8 @@ test('/brd skill documents the --frd flow and runs the grounding gate', () => {
   assert.match(brd, /interview-requirements\.json/);
   assert.match(brd, /INT-\d|INT-<n>|INT-n/);
   assert.match(brd, /HARD BLOCK — all modes|HARD BLOCK — FRD & interview/);
+  assert.match(brd, /frd_total/);
+  assert.match(brd, /MUST exist/);
 });
 
 test('rubric brd phase has the FRD hard-gate and grounded traceability criterion', () => {
@@ -241,4 +243,21 @@ test('evaluator artifact mode hard-gates the BRD on the grounding verdict in FRD
   assert.match(ev, /FRD mode/);
   assert.match(ev, /interview-from-scratch/i);
   assert.match(ev, /interview-requirements\.json/);
+  assert.match(ev, /frd_total/);
+});
+
+test('interview mode: empty spine yields a vacuous pass with frd_total 0 (guarded in prompts, not the engine)', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'grounding-'));
+  writeJson(dir, 'int.json', []);
+  writeJson(dir, 'clar.json', [{ id: 'C1', question: 'q', answer: 'a' }]);
+  writeJson(dir, 'brd.json', [{ id: 'BR-1', text: 'x', traces: ['C1'] }]);
+  const out = path.join(dir, 'out.json');
+  execFileSync(process.execPath, [SCRIPT,
+    '--frd', path.join(dir, 'int.json'),
+    '--clarifications', path.join(dir, 'clar.json'),
+    '--brd', path.join(dir, 'brd.json'),
+    '--out', out]);
+  const verdict = JSON.parse(fs.readFileSync(out, 'utf8'));
+  assert.strictEqual(verdict.pass, true);
+  assert.strictEqual(verdict.frd_total, 0);
 });
