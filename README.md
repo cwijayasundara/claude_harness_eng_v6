@@ -138,6 +138,7 @@ Rule: native commands own atomic actions; the harness owns orchestration, ratche
 | Framework skill packs | Select during scaffold, then install manually | [docs/extras.md](docs/extras.md) |
 | Tracker orchestration | Configure Linear/Jira/Azure DevOps | [docs/extras.md](docs/extras.md) |
 | Drift cadence workflow | Copy `.claude/templates/github-workflows/harness-drift.yml` to `.github/workflows/` | Runs drift, harness coverage, flakes, fixtures, contract drift, and optional SLO checks |
+| PR-time E2E re-runs | Copied automatically by /test as .github/workflows/e2e.yml | Re-runs the generated Playwright suite on every PR |
 | Unattended backlog-to-merge | Run `symphony_clone/` separately | `symphony_clone/README.md` |
 | Artifact-only docs/mockups/research | Use `harness-lite` | `harness-lite/README.md` |
 
