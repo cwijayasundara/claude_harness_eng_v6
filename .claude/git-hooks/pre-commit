@@ -182,7 +182,7 @@ function checkVerificationMatrix(projectDir, group) {
   try {
     ({ runGate } = require(path.join(__dirname, '..', 'scripts', 'verification-matrix-gate')));
   } catch (_) {
-    noteSkip('verification-matrix', 'gate script missing from .claude/scripts');
+    noteSkip('verification-matrix', 'gate script missing or unloadable from .claude/scripts');
     return;
   }
   let verdict;
@@ -190,6 +190,12 @@ function checkVerificationMatrix(projectDir, group) {
     verdict = runGate({ root: projectDir, phase: 'executed', group });
   } catch (err) {
     fail(`BLOCKED: verification-matrix gate could not run: ${err.message}\nFix: repair specs/test_artefacts/verification-matrix.json, then retry the commit.\n`);
+  }
+  // Zero rows in scope is a vacuous pass — e.g. the group advanced but the
+  // matrix was never extended. Announce it: silent-skip must never read as verified.
+  if (verdict.rows_checked === 0) {
+    noteSkip('verification-matrix', `no matrix rows in scope for group ${group}`);
+    return;
   }
   if (!verdict.pass) {
     const lines = verdict.failures
