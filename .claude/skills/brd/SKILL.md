@@ -51,6 +51,11 @@ Run the FRD-grounded flow (Steps 0.0, 0, 0.5, 1, 2, 2.8, 3, 4) exactly as
 written above, with one change: every output path becomes
 `specs/brd/sprint-N/` (e.g. `specs/brd/sprint-N/brd.md`,
 `specs/brd/sprint-N/brd-requirements.json`, `specs/brd/sprint-N/clarification-log.json`).
+When writing `brd-requirements.json`, any requirement that carries forward a
+prior-sprint requirement unchanged (or with only minor edits) must include
+that prior sprint's BR id in its `traces` array alongside this sprint's own
+FRD/clarification traces — this is what lets Step Δ2's classification tell
+"carried forward" apart from "silently dropped."
 
 ### Step Δ2 — Requirements-delta classification [HARD BLOCK]
 
