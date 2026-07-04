@@ -84,6 +84,12 @@ function buildLastStep(last) {
   };
 }
 
+function buildSprint(stateDir) {
+  const num = readMarker(stateDir, 'current-sprint');
+  if (!num) return null;
+  return { number: parseInt(num, 10), phase: readMarker(stateDir, 'sprint-phase') || 'unknown' };
+}
+
 function derivePhase(lane, progress) {
   if (/^DONE\b/i.test(progress.next_action || '')) return 'done';
   const done = parseList(progress.groups_completed).length > 0;
@@ -102,18 +108,8 @@ function deriveHealth(coverage, groups, stories, iter) {
   return 'on_track';
 }
 
-function buildSnapshot(projectDir, { now, nowMs } = {}) {
-  const stateDir = path.join(projectDir, '.claude', 'state');
-  const atMs = nowMs || (now ? Date.parse(now) : undefined);
-  const progress = readProgress(projectDir);
-  const records = readRunReceipts(projectDir);
-  const last = records.length ? records[records.length - 1] : null;
-  const iter = parseIterationLog(stateDir);
-  const groups = buildGroups(progress, iter);
-  const stories = buildStories(progress, readMarker(stateDir, 'current-story'));
-  const coverage = buildCoverage(progress, iter, stateDir);
+function composeValues(stateDir, projectDir, progress, records, last, iter, groups, stories, coverage, now, atMs) {
   return {
-    schema_version: 1,
     generated_at: now || new Date().toISOString(),
     run: buildRun(stateDir, progress, last),
     confidence: readPlanConfidence(projectDir),
@@ -130,9 +126,24 @@ function buildSnapshot(projectDir, { now, nowMs } = {}) {
     coverage,
     pending_reviews: readPendingReviews(stateDir),
     last_step: buildLastStep(last),
+    sprint: buildSprint(stateDir),
     next_action: progress.next_action || null,
     health: deriveHealth(coverage, groups, stories, iter),
   };
+}
+
+function buildSnapshot(projectDir, { now, nowMs } = {}) {
+  const stateDir = path.join(projectDir, '.claude', 'state');
+  const atMs = nowMs || (now ? Date.parse(now) : undefined);
+  const progress = readProgress(projectDir);
+  const records = readRunReceipts(projectDir);
+  const last = records.length ? records[records.length - 1] : null;
+  const iter = parseIterationLog(stateDir);
+  const groups = buildGroups(progress, iter);
+  const stories = buildStories(progress, readMarker(stateDir, 'current-story'));
+  const coverage = buildCoverage(progress, iter, stateDir);
+  const vals = composeValues(stateDir, projectDir, progress, records, last, iter, groups, stories, coverage, now, atMs);
+  return { schema_version: 1, ...vals };
 }
 
 module.exports = { buildSnapshot };

@@ -54,6 +54,7 @@ function renderStatus(s) {
     `Pipeline status — ${s.phase}  [${s.health}]`,
     `Run:       lane=${s.run.lane || '-'}  mode=${s.run.mode || '-'}  session=${s.run.session_id || '-'}`,
   ];
+  if (s.sprint) lines.push(`Sprint:    ${s.sprint.number} (${s.sprint.phase})`);
   if (s.confidence) lines.push(fmtConfidence(s.confidence));
   if (s.budget) lines.push(fmtBudget(s.budget));
   if (s.navigation) lines.push(fmtNavigation(s.navigation));
