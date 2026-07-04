@@ -14,6 +14,7 @@ agent: planner
 
 ```
 /spec specs/brd/brd.md
+/spec specs/brd/sprint-N/brd.md --sprint N   # sprint N: write to specs/stories/sprint-N/ instead of the flat path
 ```
 
 Pass the path to the approved BRD as the argument. Produces epics, stories, a dependency graph, and a `features.json` for session chaining.
@@ -39,6 +40,16 @@ Use the analysis pack this way:
 - Use `edge_case_table` to create acceptance criteria for failure, empty, limit, concurrency, and security/privacy paths.
 - Use `ac_coverage_matrix` to preserve every source requirement's observable acceptance criterion.
 - Use `risk_gap_table` to tag stories that need human review, explicit non-goals, or later release deferral.
+
+**Sprint addendum.** When the BRD path is under `specs/brd/sprint-N/` (or
+`--sprint N` is passed explicitly), write every output of this skill to
+`specs/stories/sprint-N/` instead of the flat `specs/stories/` path, and
+suffix every `--out` argument in the grounding-gate commands below with
+`-sprint-N` (e.g. `specs/reviews/spec-grounding-sprint-N.json`). For every
+story whose scope overlaps existing code, require a citation to the specific
+DeepWiki page/symbol or code-graph node it extends (the same design-adherence
+discipline `/feature` already applies) — do not decompose a story that
+silently re-implements existing functionality.
 
 ### Step 1.5 — Clarify Story Readiness Gaps
 
@@ -281,6 +292,11 @@ node .claude/scripts/trace-check.js \
   --out specs/reviews/spec-grounding.json
 ```
 
+**Sprint addendum.** In sprint mode, point `--required` at
+`specs/brd/sprint-N/brd-requirements.json`, `--downstream` at
+`specs/stories/sprint-N/story-traces.json`, and `--out` at
+`specs/reviews/spec-grounding-sprint-N.json`.
+
 The verdict (`specs/reviews/spec-grounding.json` — `{ pass, required_covered, net_new[], dropped[] }`) is a **hard gate, independent of the rubric score**:
 - **`net_new` non-empty** → a story introduces scope tracing to no BRD requirement. Remove it, or get the requirement into the BRD first.
 - **`dropped` non-empty** → a BRD requirement that no story realizes. Add a story covering it (or, if intentionally deferred, record the deferral and re-run `/brd` so the BRD reflects it).
@@ -338,6 +354,7 @@ Display:
 | `features.json` | Machine-readable feature list for evaluator |
 | `specs/stories/story-traces.json` | Trace spine: each story's `BR-n` traces + stable AC ids (grounds spec to BRD, seeds `/test`) |
 | `specs/reviews/spec-grounding.json` | (FRD-grounded BRD) deterministic spec-vs-BRD verdict (`pass`, `net_new[]`, `dropped[]`) |
+| `specs/stories/sprint-N/*` | (sprint mode) same artifact set as the flat layout, scoped to sprint N |
 
 ---
 
