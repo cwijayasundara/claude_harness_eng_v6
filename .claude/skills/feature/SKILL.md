@@ -102,7 +102,7 @@ Two layers, run in the `--autonomous` and `--auto` lanes:
 
 Classify scope automatically (reuse the single-vs-epic size thresholds + the
 `specs/brownfield/risk-map.md`): single bounded story → `/change`; epic/cluster →
-`/spec` → `/design` → `/auto`. When the size is ambiguous, take the larger
+`/spec` → `/design --delta` → `/auto`. When the size is ambiguous, take the larger
 (`/auto`) lane — it carries more verification. The human no longer confirms this
 classification in autonomous lanes.
 
