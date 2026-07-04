@@ -51,6 +51,18 @@
         "actionability": "Folder structure is viable and buildable; shared files are annotated with owning component and consumers"
       }
     },
+    "design-delta": {
+      "max_iterations": 3,
+      "upstream": "specs/design/ (the living baseline prior to this amendment) + specs/design/constitution.md + specs/brownfield/wiki/ (committed DeepWiki) + specs/brownfield/code-graph.json",
+      "hard_gate": "specs/reviews/design-grounding.json (trace-check.js over this sprint's design-traces.json vs its story-traces.json) must have pass=true — any net_new or dropped component is an automatic FAIL. specs/reviews/contract-drift-verdict.json (contract-drift-gate.js over api-contracts.schema.json) must not be verdict=breaking unless the amendment's Breaking Changes section names and justifies every broken endpoint. Any invariant in specs/design/constitution.md under '## Invariants' that this amendment violates is an automatic FAIL regardless of the weighted average — quote the violated invariant verbatim in the finding.",
+      "criteria": {
+        "completeness": "The amendment narrative (specs/design/amendments/<amendment-id>.md) covers every story in this sprint/change: what it changes in the existing architecture, options considered, the recommendation, and per-component impact. Every changed specs/design/ file has a corresponding narrative section.",
+        "traceability": "Every design change traces to a story/BR-n (anchored to specs/reviews/design-grounding.json when present). Every edit cites a specific committed DeepWiki page/symbol or code-graph node for the code it touches — an edit with no such citation is an orphan change.",
+        "specificity": "Each edit names the existing module/seam/layer it extends, consistent with specs/brownfield/code-graph.json. Breaking changes are enumerated with the exact endpoint/field and a concrete justification, not a general note.",
+        "consistency": "No edit introduces a new parallel structure where an existing seam already fits (reject and name the seam it should have extended instead). The amendment does not contradict any specs/design/constitution.md invariant.",
+        "actionability": "The living specs/design/ artifacts (architecture.md, schemas, component-map.md) are updated non-destructively and are immediately buildable by /auto — no dangling references to the pre-amendment shape remain."
+      }
+    },
     "brownfield": {
       "max_iterations": 2,
       "upstream": null,

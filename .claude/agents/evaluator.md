@@ -173,7 +173,7 @@ When the orchestrator gives you a `phase` and `artifact_paths`, you are scoring 
 
 | Input | Description |
 |---|---|
-| `phase` | Name of the phase being evaluated: `brd`, `spec`, `design`, `brownfield`, `seam-finder`, `deploy` |
+| `phase` | Name of the phase being evaluated: `brd`, `spec`, `design`, `design-delta`, `brownfield`, `seam-finder`, `deploy` |
 | `artifact_paths` | Array of file paths to the artifacts produced by this phase |
 | `upstream_paths` | Array of file paths to upstream artifacts this phase should trace to (empty for BRD) |
 | `rubric_ref` | Optional path to a phase-specific rubric override |
@@ -270,6 +270,8 @@ All fields are required. `failing_criteria` is an empty array when verdict is PA
 **Spec** — Check for: epics, stories with acceptance criteria, dependency graph, `features.json`, story files, and `specs/stories/story-traces.json`. Every epic needs at least one story; every story needs acceptance criteria. Traceability: every story traces to a BRD requirement and vice versa — **hard-gated on `specs/reviews/spec-grounding.json` when it exists** (net-new story / dropped BRD requirement = FAIL; see the Cross-Phase Traceability Check). Actionability: are acceptance criteria testable, and does each have a stable `{story}-AC{n}` id in story-traces.json?
 
 **Design** — Check for: system architecture, API contracts (`api-contracts.schema.json`), data models, component hierarchy, technology choices with rationale. Every API endpoint must trace to a story; every tech choice to a constraint. Consistency: do contracts match data models? Do component names agree across diagrams and schemas?
+
+**Design-Delta** — Check for: an amendment narrative under `specs/design/amendments/` plus a non-destructively updated living `specs/design/` set. Every edit must cite a committed DeepWiki page/symbol or code-graph node and name the existing seam it extends — reject any edit that introduces a parallel structure. Treat `specs/design/constitution.md`'s `## Invariants` as hard constraints: quote the violated line verbatim in any finding. Cross-reference `specs/reviews/contract-drift-verdict.json` against the amendment's Breaking Changes section — every reported breaking change needs a matching justification.
 
 **Brownfield** — Check for: architecture map, dependency inventory, test coverage report, risk map, change strategy. Are all entry points documented? Are risks rated with likelihood and impact? Does the change strategy identify specific seams?
 
