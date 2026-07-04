@@ -42,7 +42,6 @@ test('pre-commit hook wires the amendment-provenance gate before the source-only
   // It must run before the source-only early exit (design docs are markdown/json, not SOURCE_EXTS).
   // Search from checkSecrets (which is the call site context) to avoid matching the function definition.
   const checkSecretsCall = src.indexOf('checkSecrets(projectDir, staged)');
-  const checkSecretsEnd = src.indexOf('\n', checkSecretsCall);
   const mainTryStart = src.indexOf('const staged = stagedFiles();');
   const callSiteStart = Math.max(mainTryStart, checkSecretsCall);
   const checkAmendmentInCallSite = src.indexOf('checkAmendmentProvenance(projectDir, staged)', callSiteStart);
