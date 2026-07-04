@@ -21,7 +21,7 @@
   "properties": {
     "phase": {
       "type": "string",
-      "enum": ["brd", "spec", "design", "brownfield", "seam", "deploy", "test"],
+      "enum": ["brd", "spec", "design", "design-delta", "brownfield", "seam", "deploy", "test"],
       "description": "The planning phase that was evaluated"
     },
     "iteration": {

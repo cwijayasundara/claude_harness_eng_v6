@@ -16,9 +16,9 @@ test('phase-eval-rubrics.json is valid JSON', () => {
   assert.strictEqual(typeof rubrics, 'object');
 });
 
-test('rubrics contains the 7 planning phases (incl. the test phase)', () => {
+test('rubrics contains the 8 planning phases (incl. the test phase)', () => {
   const phases = Object.keys(rubrics.phases);
-  assert.deepStrictEqual(phases.sort(), ['brd', 'brownfield', 'deploy', 'design', 'seam', 'spec', 'test']);
+  assert.deepStrictEqual(phases.sort(), ['brd', 'brownfield', 'deploy', 'design', 'design-delta', 'seam', 'spec', 'test']);
 });
 
 test('each phase has exactly 5 criteria', () => {
