@@ -35,3 +35,20 @@ test('security-scan CLI and lib are present and required correctly', () => {
   const cli = read('.claude/scripts/security-scan.js');
   assert.match(cli, /require\('\.\.\/hooks\/lib\/security-scan'\)/, 'CLI must reuse the tested lib');
 });
+
+test('pre-commit hook wires the amendment-provenance gate before the source-only early exit', () => {
+  const src = read('.claude/git-hooks/pre-commit');
+  assert.match(src, /checkAmendmentProvenance\(projectDir, staged\)/, 'must call checkAmendmentProvenance on all staged files');
+  // It must run before the source-only early exit (design docs are markdown/json, not SOURCE_EXTS).
+  // Search from checkSecrets (which is the call site context) to avoid matching the function definition.
+  const checkSecretsCall = src.indexOf('checkSecrets(projectDir, staged)');
+  const checkSecretsEnd = src.indexOf('\n', checkSecretsCall);
+  const mainTryStart = src.indexOf('const staged = stagedFiles();');
+  const callSiteStart = Math.max(mainTryStart, checkSecretsCall);
+  const checkAmendmentInCallSite = src.indexOf('checkAmendmentProvenance(projectDir, staged)', callSiteStart);
+  const stagedSourceCheck = src.indexOf('stagedSource.length === 0', callSiteStart);
+  assert.ok(
+    checkAmendmentInCallSite > callSiteStart && checkAmendmentInCallSite < stagedSourceCheck,
+    'checkAmendmentProvenance must run before the source-only early exit (before stagedSource.length === 0)'
+  );
+});
