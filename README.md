@@ -61,6 +61,7 @@ The public surface is intentionally small:
 ```
 New product          → /build
 Existing product     → /feature "<request>"
+Sprint N of an existing product → /sprint <prd-file>
 Verify/review        → /gate
 ```
 
@@ -73,6 +74,7 @@ The other commands below are still available, but the harness should usually rou
 | `/build <prd> --lite --auto` | Small PRD, hands-off | Headless lite: compressed plan (≤5 stories, one group, no interview/gate) -> PR; auto-escalates to the full `--auto` pipeline if the PRD exceeds lite scope |
 | `/build <prd>` | Normal greenfield build | BRD -> stories -> design/test plan -> `/auto`, with human gates |
 | `/build <prd> --auto` | PRD is ready and you want hands-off | PRD -> PR with no human approval gates; machine gates still block red builds |
+| `/sprint <prd-file>` | Next PRD for an existing (harness-built or brownfield) product | Grounds the PRD against the prior sprint's requirements, amends the living design with a human-reviewed diff (never regenerates it), then `/auto` |
 | `/feature` | Normal existing-code feature/change. Run as `/feature "<request>"` | Refreshes committed DeepWiki/code-map, creates or publishes story, routes to the right lane, gates, opens PR |
 | `/brownfield` | Discovery-only map of an existing repo | Delegates graph/wiki generation to `/code-map`, writes short architecture/test/risk/change strategy, stops before code |
 | `/code-map` | Agent needs deterministic repo map only | Produces `code-graph.json`, `symbol-map.md`, and `wiki/WIKI.md` |
@@ -90,6 +92,8 @@ The other commands below are still available, but the harness should usually rou
 | Gated | `/build <prd>` | Approve BRD, stories, design/test plan |
 | Semi-auto | `/build <prd> --autonomous` | One plan approval gate |
 | Full-auto | `/build <prd> --auto` | Zero human gates |
+| Sprint (gated) | `/sprint <prd-file>` | Approve requirement delta + decomposition, approve design amendment |
+| Sprint (semi-auto) | `/sprint <prd-file> --autonomous` | One consolidated gate before the design amendment; the amendment approval itself is never skipped |
 
 Machine gates always stay on: tests, lint/types, coverage, architecture, evaluator, design critic when enabled, adaptive review, and diff review. The generator does not grade itself, and the harness does not merge for you.
 
@@ -119,6 +123,8 @@ Cost figures are surfaced estimates (Σ per-spawn receipts × tier rate), not bi
 For sprint-by-sprint product work on an existing repo, start with `/feature "<request>"`.
 
 `/feature` keeps the committed DeepWiki fresh, creates or publishes the story when a tracker is configured, checks the existing design before planning changes, delegates to `/vibe`, `/change`, `/refactor`, or `/build` by scope, runs tests and gates, and leaves the issue in Human Review with the PR linked.
+
+When the next unit of work is a full PRD rather than a single request, use `/sprint <prd-file>` instead — it grounds the PRD against the prior sprint's requirements and produces a human-reviewed design amendment before any code generation, so the system evolves sprint by sprint instead of being regenerated each time.
 
 Use `/brownfield` directly only when you want discovery without implementation. Use `/brownfield --seams "<goal>"` when you need safe cut-points before a risky change. Use `/brownfield --full` only for heavier CI/flag/perf inventory and evaluator scoring.
 
