@@ -518,6 +518,19 @@ cp $PLUGIN_SOURCE/templates/security-patterns.template.yaml .claude/security-pat
 
 `claude-security-guidance.md` holds the project threat model; its `MUST`/`NEVER` rules are advisory in the plugin but become **blocking** findings in the `security-reviewer` gate. `security-patterns.yaml` adds deterministic per-edit warning patterns (plugin-only, advisory). Commit both. Tell the user to fill in the project-specific rules and note that `security-patterns.yaml` requires PyYAML in the plugin's Python — otherwise rename it to `security-patterns.json` (same schema).
 
+### Generate the Architecture Constitution
+
+Copy the constitution starter file — the cross-sprint invariants `/sprint`'s
+design-delta gate checks every amendment against:
+
+```bash
+cp $PLUGIN_SOURCE/templates/constitution-template.md specs/design/constitution.md
+```
+
+Tell the user this file starts empty (example invariants only) and should be
+filled in once the sprint-1 design is approved — it is reviewed like code at
+every sprint boundary.
+
 ## Step 4: Create Output Directories
 
 ```bash

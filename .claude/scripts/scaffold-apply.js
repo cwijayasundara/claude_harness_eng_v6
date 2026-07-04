@@ -170,6 +170,7 @@ function copyStarterFiles(target, src) {
     ['templates/claude-security-guidance.template.md', '.claude/claude-security-guidance.md'],
     ['templates/security-patterns.template.yaml', '.claude/security-patterns.yaml'],
     ['templates/gitignore.template', '.gitignore'],
+    ['templates/constitution-template.md', 'specs/design/constitution.md'],
   ];
   for (const [from, to] of map) {
     const toPath = path.join(target, to);
@@ -263,7 +264,7 @@ function report(result) {
   process.stdout.write(`  .claude/ tree copied (${result.scaffoldProfile} profile)\n`);
   for (const f of result.written) process.stdout.write(`  wrote ${path.relative(result.target, f)}\n`);
   process.stdout.write(`  created output dirs: ${OUTPUT_DIRS.join(', ')}\n`);
-  process.stdout.write('  wrote .mcp.json, .gitignore, .claude/claude-security-guidance.md, .claude/security-patterns.yaml\n');
+  process.stdout.write('  wrote .mcp.json, .gitignore, .claude/claude-security-guidance.md, .claude/security-patterns.yaml, specs/design/constitution.md\n');
   process.stdout.write('  wrote features.json, claude-progress.txt\n');
   process.stdout.write(`  navigation: ${result.navigation.status} (${result.navigation.graph}/${result.navigation.wiki})\n`);
 }

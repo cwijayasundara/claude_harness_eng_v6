@@ -91,3 +91,17 @@ for (const profile of ['core', 'brownfield', 'full']) {
     }
   });
 }
+
+for (const profile of ['core', 'brownfield', 'full']) {
+  test(`scaffold (${profile}) copies the architecture constitution template`, () => {
+    const { workDir, target } = scaffoldInto(profile);
+    try {
+      const constPath = path.join(target, 'specs', 'design', 'constitution.md');
+      assert.ok(fs.existsSync(constPath), 'specs/design/constitution.md must be copied by scaffold-apply');
+      const body = fs.readFileSync(constPath, 'utf8');
+      assert.ok(body.includes('## Invariants'), 'constitution.md must carry the Invariants section');
+    } finally {
+      fs.rmSync(workDir, { recursive: true, force: true });
+    }
+  });
+}
