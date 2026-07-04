@@ -13,6 +13,7 @@ agent: planner
 /brd                              # interview-from-scratch
 /brd --frd path/to/frd.md         # ground the BRD in a Functional Requirements Document
 /brd --prd path/to/prd.md         # alias for --frd: a PRD is the grounding baseline
+/brd --delta path/to/prd-sprintN.md    # ground sprint N's PRD against the prior sprint's requirement spine
 ```
 
 Two modes:
@@ -24,6 +25,66 @@ Two modes:
 ## Overview
 
 This is the first gate in the SDLC pipeline, and the origin of the whole grounding chain (`BRD → /spec → /design → /test → /auto`). Mistakes here cascade through every downstream phase, so the BRD must invent nothing the business did not state. With `--frd`, the FRD plus the human's confirmed interrogation answers are the **only** sanctioned sources of content; with no FRD, the confirmed interview answers are. Either way the planner interviews the human across five dimensions to surface the full problem space — Socratic: ask clarifying questions, probe assumptions, reflect answers back for confirmation before moving on.
+
+---
+
+## Delta Mode (`--delta`)
+
+> Invoked by `/sprint` for sprint N (N >= 2). Grounds a new PRD against the
+> **prior sprint's approved requirement spine**, not against nothing — this is
+> what proves the new PRD's requirements are new/changed/carried, and flags
+> anything it silently drops. See
+> `docs/superpowers/specs/2026-07-04-sprint-delta-lane-design.md`.
+
+### Step Δ0 — Locate the prior spine and resolve N
+
+List `specs/brd/sprint-*/` directories; let `prev` be the highest number found.
+If none exist, the prior spine is the flat legacy `specs/brd/brd-requirements.json`
+(sprint 1 predates sprint-numbered directories) and `N = 2`. If sprint
+directories exist, `N = prev + 1`. If neither the flat file nor any sprint
+directory exists, halt — `--delta` requires a prior sprint; use `--frd`/`--prd`
+for the very first sprint.
+
+### Step Δ1 — Run Steps 0.0 through 4 unchanged, writing to `specs/brd/sprint-N/`
+
+Run the FRD-grounded flow (Steps 0.0, 0, 0.5, 1, 2, 2.8, 3, 4) exactly as
+written above, with one change: every output path becomes
+`specs/brd/sprint-N/` (e.g. `specs/brd/sprint-N/brd.md`,
+`specs/brd/sprint-N/brd-requirements.json`, `specs/brd/sprint-N/clarification-log.json`).
+
+### Step Δ2 — Requirements-delta classification [HARD BLOCK]
+
+Step 4.4's grounding gate still runs unchanged (this sprint's BRD vs this
+sprint's own FRD/PRD spine). In addition, classify this sprint's spine against
+the **prior sprint's** spine — the same `trace-check.js` engine, reused with
+the prior spine as `required`, this sprint's spine also as a valid trace
+target (`optional`), and this sprint's spine as `downstream`:
+
+```bash
+node .claude/scripts/trace-check.js \
+  --required specs/brd/sprint-{prev}/brd-requirements.json \
+  --optional specs/brd/sprint-N/brd-requirements.json \
+  --downstream specs/brd/sprint-N/brd-requirements.json \
+  --layer requirements-delta \
+  --out specs/brd/sprint-N/requirements-delta.json
+```
+
+(When `prev` refers to the flat legacy layout, use `--required specs/brd/brd-requirements.json`.)
+
+Read the resulting `requirements-delta.json`:
+- `net_new` entries are genuinely new requirements this sprint introduces — expected, not a failure.
+- `dropped` entries are prior-sprint requirements this sprint's spine does not cover — **each one needs an explicit human decision**: still active (add a BR entry carrying it forward) or intentionally retired (record why in this sprint's BRD Open Questions). A `dropped` entry with no such resolution is a silent regression — halt and ask before proceeding to Step 4.5.
+
+**Empty-spine guard:** a `required_total: 0` here means the prior sprint's
+spine is empty — a pre-spine legacy project. Skip this step in that case and
+note it in the BRD summary (Step 4.4's own grounding gate still runs
+normally against this sprint's spine).
+
+### Step Δ3 — Present for Human Approval (delta mode)
+
+Same as Step 5, plus display the requirements-delta classification (new /
+changed / carried / dropped, with the human's resolution for each dropped
+item) before asking for approval.
 
 ---
 
@@ -307,6 +368,8 @@ Display the BRD and ask: "Does this BRD accurately capture the requirements? App
 | `specs/brd/clarification-log.json` | Confirmed interrogation answers (`C-n`) — the only sanctioned net-new content |
 | `specs/brd/brd-analysis.json` | SPDD-grade analysis pack: Domain Concepts, Ambiguity Table, Edge-Case Table, decision log, AC Coverage Matrix, and Risk & Gap Table |
 | `specs/reviews/brd-grounding.json` | deterministic grounding verdict (`pass`, `net_new[]`, `dropped[]`) |
+| `specs/brd/sprint-N/*` | (delta mode) sprint-N's BRD artifact set, same shape as the flat sprint-1 layout |
+| `specs/brd/sprint-N/requirements-delta.json` | (delta mode) new/changed/carried/dropped classification vs the prior sprint's spine |
 
 ---
 
