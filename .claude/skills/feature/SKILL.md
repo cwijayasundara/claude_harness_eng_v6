@@ -92,6 +92,11 @@ Two layers, run in the `--autonomous` and `--auto` lanes:
    machine GATE 2; the **diff-reviewer**'s design-adherence lens checks the *diff*
    actually extended it before the PR. A FAIL self-heals up to the loop's attempt
    cap, else STOP & surface.
+3. **Design-delta rubric.** When the lane runs `/design --delta` (either
+   routing above), its own Delta Mode Step D6 (the `design-delta` evaluator
+   rubric) is the machine check for that amendment — in `--autonomous` and
+   `--auto`, this still runs and still blocks; only the human stop at Step D7
+   is skipped or folded, matching this skill's existing gate-collapse model.
 
 ### Autonomous scope routing
 
@@ -124,18 +129,47 @@ design-adherence lens, `/auto`'s ratchet, and `/gate` all run regardless of
 lane — only the human approval prompts inside delegated sub-skills are
 suppressed.
 
-## Scope classification (the one routing decision)
+## Scope classification (two routing decisions)
 
-After GATE 1 you hold the decomposition. Classify it, reusing `/change`
-Step 0's thresholds and `specs/brownfield/risk-map.md`:
+After GATE 1 you hold the decomposition. First classify size, reusing
+`/change` Step 0's thresholds and `specs/brownfield/risk-map.md`:
 
 - **Single-story lane** — 1 bounded story, ≤ 3 files, no auth/authz/payments/
   persistence/public-API-contract change → delegate to **`/change`**.
 - **Epic / cluster lane** — multiple stories, an epic, or any dependency graph →
-  run **`/spec` → `/design` → `tracker-publish --granularity group` → `/auto`**
-  for parallel agent-team execution.
+  run **`/spec` → `/design --delta`** (not full `/design` — see below) →
+  **`tracker-publish --granularity group`** → **`/auto`** for parallel
+  agent-team execution.
 
 State the chosen lane in one line before proceeding.
+
+### Impact classification (single-story lane only)
+
+A bounded single story can still be architecturally invisible or
+design-touching. Run:
+
+```bash
+node .claude/scripts/impact-classifier.js --story <story-file> --graph specs/brownfield/code-graph.json
+```
+
+- **`invisible`** — delegate to `/change` exactly as today. No design
+  amendment, no GATE 2.
+- **`design-touching`** — before `/change` implements it, run
+  `/design --delta --story <story-file> --amendment-id story-<id>` (see
+  `design/SKILL.md`'s Delta Mode) to produce
+  `specs/design/amendments/story-<id>.md` and amend the living design. GATE 2
+  (Delta Mode's Step D7) runs here — approve the amendment before `/change`
+  implements the story.
+
+### Epic / cluster lane uses `/design --delta`, not full `/design`
+
+When this project already has an approved `specs/design/` baseline (the
+normal case for `/feature`, since it targets existing code), the epic/cluster
+lane's `/design` call **must** be `/design --delta --stories
+specs/stories/<epic-dir>/ --amendment-id <epic-id>` — never the full
+regenerate-from-scratch mode. This closes the gap where the epic lane
+previously regenerated `specs/design/` from the epic's stories alone,
+discarding everything the rest of the system's design already established.
 
 ## DeepWiki lifecycle — build once, maintain incrementally
 
@@ -185,8 +219,11 @@ wiki; the post-change re-render is part of the implementation output.
 
 - **GATE 1 — approve decomposition.** Present the story (or epics + stories +
   dependency-graph) with acceptance criteria before publishing to Linear.
-- **GATE 2 — approve plan/design.** Present the DeepWiki-cited plan (single lane)
-  or `/design` output (cluster lane). Enforce design-adherence here.
+- **GATE 2 — approve plan/design.** Single-story design-touching lane: the
+  `/design --delta` amendment (Delta Mode Step D7). Cluster lane: the same
+  `/design --delta` amendment, scoped to the epic's stories. Enforce
+  design-adherence here — both share the design-delta rubric and grounding
+  gate.
 - **GATE 3 — review PR(s).** Stop at the opened PR(s); the human reviews and merges.
 
 ## Token discipline
