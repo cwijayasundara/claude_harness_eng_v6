@@ -108,7 +108,7 @@ function deriveHealth(coverage, groups, stories, iter) {
   return 'on_track';
 }
 
-function composeValues(stateDir, projectDir, progress, records, last, iter, groups, stories, coverage, now, atMs) {
+function composeValues(stateDir, projectDir, progress, last, iter, groups, stories, coverage, now, atMs) {
   return {
     generated_at: now || new Date().toISOString(),
     run: buildRun(stateDir, progress, last),
@@ -142,7 +142,7 @@ function buildSnapshot(projectDir, { now, nowMs } = {}) {
   const groups = buildGroups(progress, iter);
   const stories = buildStories(progress, readMarker(stateDir, 'current-story'));
   const coverage = buildCoverage(progress, iter, stateDir);
-  const vals = composeValues(stateDir, projectDir, progress, records, last, iter, groups, stories, coverage, now, atMs);
+  const vals = composeValues(stateDir, projectDir, progress, last, iter, groups, stories, coverage, now, atMs);
   return { schema_version: 1, ...vals };
 }
 
