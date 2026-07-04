@@ -92,6 +92,26 @@ for (const profile of ['core', 'brownfield', 'full']) {
   });
 }
 
+test('scaffold (core) copies the sprint skill and its supporting scripts', () => {
+  const { workDir, target } = scaffoldInto('core');
+  try {
+    assert.ok(
+      fs.existsSync(path.join(target, '.claude', 'skills', 'sprint', 'SKILL.md')),
+      'skills/sprint/SKILL.md must be copied so /sprint is available in a default-scaffolded project',
+    );
+    assert.ok(
+      fs.existsSync(path.join(target, '.claude', 'scripts', 'impact-classifier.js')),
+      'impact-classifier.js must be copied because /feature\'s single-story lane calls it unconditionally',
+    );
+    assert.ok(
+      fs.existsSync(path.join(target, '.claude', 'scripts', 'amendment-provenance-check.js')),
+      'amendment-provenance-check.js must be copied because the pre-commit hook\'s amendment-provenance gate requires it',
+    );
+  } finally {
+    fs.rmSync(workDir, { recursive: true, force: true });
+  }
+});
+
 for (const profile of ['core', 'brownfield', 'full']) {
   test(`scaffold (${profile}) copies the architecture constitution template`, () => {
     const { workDir, target } = scaffoldInto(profile);

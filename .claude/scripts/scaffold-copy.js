@@ -31,7 +31,7 @@ const CORE_SKILLS = [
   'feature', 'brownfield', 'change', 'checking-coverage-before-change',
   'checking-migration-safety', 'code-map', 'keeping-refactors-pure',
   'pinning-down-behavior', 'pr-respond', 'refactor', 'seam-finder',
-  'sprouting-instead-of-editing', 'tracker-publish',
+  'sprint', 'sprouting-instead-of-editing', 'tracker-publish',
   'upgrading-dependencies', 'vibe',
 ];
 const BROWNFIELD_SKILLS = [
@@ -39,6 +39,7 @@ const BROWNFIELD_SKILLS = [
 ];
 
 const CORE_SCRIPTS = [
+  'amendment-provenance-check.js',
   'archive-state.js',
   'budget-state.js',
   'build-chain-state.js',
@@ -56,6 +57,7 @@ const CORE_SCRIPTS = [
   'deep-mutation.js',
   'flag-scan.js',
   'flake-history.js',
+  'impact-classifier.js',
   'model-tier.js',
   'mutation-smoke.js',
   'navigation-refresh.js',
