@@ -148,6 +148,40 @@ function checkOwnership(projectDir, stagedSource) {
   }
 }
 
+// Amendment-provenance gate (sprint-delta lane, design spec 2026-07-04): once a
+// design baseline exists, any commit touching specs/design/ must carry a
+// matching record under specs/design/amendments/. Runs on ALL staged files
+// (not just source) because design docs are markdown/json, not source
+// extensions — same reasoning as checkSecrets. Lazy require, like checkOwnership.
+function checkAmendmentProvenance(projectDir, staged) {
+  if (process.env.HARNESS_AMENDMENT_GATE === 'off') {
+    noteSkip('amendment-provenance', 'HARNESS_AMENDMENT_GATE=off');
+    return;
+  }
+  let checkFn;
+  try {
+    ({ checkProvenance: checkFn } = require(path.join(__dirname, '..', 'scripts', 'amendment-provenance-check')));
+  } catch (_) {
+    noteSkip('amendment-provenance', 'sensor script missing or unloadable from .claude/scripts');
+    return;
+  }
+  let baselineExists = false;
+  try {
+    execFileSync('git', ['show', 'HEAD:specs/design/architecture.md'], { cwd: projectDir, encoding: 'utf8' });
+    baselineExists = true;
+  } catch (_) {
+    baselineExists = false;
+  }
+  const verdict = checkFn(staged, baselineExists);
+  if (!verdict.pass) {
+    fail(
+      `BLOCKED: ${verdict.reason}\n` +
+      `Fix: write a design amendment under specs/design/amendments/ (see docs/superpowers/specs/2026-07-04-sprint-delta-lane-design.md) ` +
+      `in the same commit as the specs/design/ change, or set HARNESS_AMENDMENT_GATE=off to acknowledge the skip.\n`
+    );
+  }
+}
+
 // keeping-refactors-pure: a refactor commit changes no behavior, so it may not
 // touch tests or snapshots. The skill sets HARNESS_COMMIT_KIND=refactor on the
 // commit command; without it this gate is inert. The commit-msg hook covers the
@@ -425,6 +459,7 @@ try {
   const projectDir = process.cwd();
   const staged = stagedFiles();
   checkSecrets(projectDir, staged); // before the source-only exit: secrets hide in config/yaml too
+  checkAmendmentProvenance(projectDir, staged); // same reason: design docs are markdown/json, not SOURCE_EXTS
   const stagedSource = staged.filter((f) => SOURCE_EXTS.has(path.extname(f).toLowerCase()));
   if (stagedSource.length === 0) process.exit(0); // docs-only commit: nothing else to gate
 
