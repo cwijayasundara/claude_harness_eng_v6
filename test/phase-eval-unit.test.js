@@ -82,8 +82,8 @@ test('evaluator.md documents the artifact mode', () => {
   assert.match(agentContent, /# Artifact Mode/);
 });
 
-test('evaluator.md artifact mode contains all 6 phase-specific guidance sections', () => {
-  const phases = ['BRD', 'Spec', 'Design', 'Brownfield', 'Seam-Finder', 'Deploy'];
+test('evaluator.md artifact mode contains all 7 phase-specific guidance sections', () => {
+  const phases = ['BRD', 'Spec', 'Design', 'Design-Delta', 'Brownfield', 'Seam-Finder', 'Deploy'];
   for (const phase of phases) {
     assert.match(agentContent, new RegExp(`\\*\\*${phase}\\*\\*`), `missing guidance for ${phase}`);
   }
