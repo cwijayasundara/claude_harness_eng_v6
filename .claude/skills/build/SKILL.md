@@ -90,6 +90,14 @@ For a **small** new project (single language/runtime, one module, no DB/auth, �
 
 > **Resumability.** `/build` is re-entrant. Each planning phase (0–3) is **skip-if-its-artifacts-exist**: if `specs/brd/`, `specs/stories/`, or `specs/design/` are already populated from an interrupted run, do not regenerate them — confirm they are complete and move on (re-running a phase silently discards human-approved plan edits). Phase 4 state files follow the per-file reset-vs-preserve rule documented there. Only force a regenerate when the user explicitly asks to redo a phase.
 
+**Boundary with `/sprint`.** If `specs/design/architecture.md` already
+exists, this project has already been through sprint 1 (or a recovered
+baseline) — `/build` is not the right entry point for further work. Stop and
+tell the human to run `/sprint <prd-file>` instead, which grounds the new PRD
+against the prior sprint and amends the living design rather than
+regenerating it. Only continue past this check when `specs/design/` does not
+yet have an approved baseline.
+
 ### Phase 0 — Brownfield Discovery [EXISTING CODEBASES]
 
 **Boundary with `/feature`.** `/build` is the **greenfield** pipeline. For *changing existing-code behavior* — adding or altering a feature in a live codebase — use **`/feature`**, the brownfield change route (it owns the DeepWiki lifecycle, Linear tracking, and the single-story-vs-epic routing). Reach Phase 0 here only when you are running a **full greenfield-style build that happens to be layered onto an existing repo** (e.g. standing up a new service inside a monorepo) and you need the discovery maps as planning constraints. If the request is really an existing-code change, stop and route to `/feature`.
