@@ -41,6 +41,8 @@ Use the analysis pack this way:
 - Use `ac_coverage_matrix` to preserve every source requirement's observable acceptance criterion.
 - Use `risk_gap_table` to tag stories that need human review, explicit non-goals, or later release deferral.
 
+**Read the domain glossary.** If `CONTEXT.md` exists, read it before writing story titles, descriptions, or acceptance criteria. Reuse its terms verbatim — do not introduce a new name for a concept `CONTEXT.md` already defines. If a story needs a domain concept not yet in `CONTEXT.md`, add a `### <term>` entry there before finalizing the story.
+
 **Sprint addendum.** When the BRD path is under `specs/brd/sprint-N/` (or
 `--sprint N` is passed explicitly), write every output of this skill to
 `specs/stories/sprint-N/` instead of the flat `specs/stories/` path, and

@@ -12,7 +12,7 @@ Emit all eight sections. The `Governs` list is **required and machine-read** by 
 Problem statement, definition of done, and the acceptance criteria this design realizes (cite story IDs / AC IDs from `specs/stories/`).
 
 ## Entities
-The domain entities, their relationships, and business rules — a Mermaid `classDiagram` plus prose. **In brownfield** (when `specs/brownfield/code-graph.json` exists), mark each entity **existing** (cite the code-graph node) or **new**, so the design extends real code instead of re-inventing it.
+The domain entities, their relationships, and business rules — a Mermaid `classDiagram` plus prose. Entity names must match `CONTEXT.md` terms exactly; a new domain concept is added to `CONTEXT.md` first, then reflected here and in the schemas — never invented in the Canvas or schema alone. **In brownfield** (when `specs/brownfield/code-graph.json` exists), mark each entity **existing** (cite the code-graph node) or **new**, so the design extends real code instead of re-inventing it.
 
 ## Approach
 The strategy chosen to meet the requirements, and the alternatives rejected (with the trade-off that decided each). This is where the thinking lives.

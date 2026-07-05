@@ -298,6 +298,8 @@ Use the clarification budget:
 - Prefer existing code, `CONTEXT.md`, ADRs, stories, and manifest data over asking.
 - Record assumptions in `architecture.md` or `api-contracts.md` when risk is low.
 
+**Required glossary read.** Before the planner names any entity, read `CONTEXT.md` if present. Every entity in `data-models.schema.json`, `api-contracts.schema.json`, and the REASONS Canvas `Entities` section must use `CONTEXT.md`'s term for that concept. A new domain concept goes into `CONTEXT.md` first (add a `### <term>` entry), then into the schema — never invent a name in the schema alone.
+
 ## Step 0.7 — Pre-Code Modularity Assessment
 
 Before spawning the planner, perform a lightweight greenfield modularity assessment so the design does not bake in avoidable coupling:
@@ -398,6 +400,19 @@ node .claude/scripts/validate-canvas.js specs/design/reasons-canvas.md
 
 A non-zero exit (a missing REASONS section, or a `Governs` list with no source paths) **BLOCKS** — fix the Canvas before Step 2. The `Governs` list must be non-empty so the drift monitor can detect Canvas↔code drift later.
 
+Also run the **vocabulary-consistency gate** (deterministic; skip only when `CONTEXT.md` does not exist yet):
+
+```bash
+node .claude/scripts/vocabulary-check.js \
+  --glossary CONTEXT.md \
+  --domain-concepts specs/brd/brd-analysis.json \
+  --data-models specs/design/data-models.schema.json \
+  --api-contracts specs/design/api-contracts.schema.json \
+  --out specs/reviews/vocabulary-check.json
+```
+
+A non-zero exit means an entity or field name in `domain_concepts`, `data-models.schema.json`, or `api-contracts.schema.json` has no matching term in `CONTEXT.md` — add the missing term to `CONTEXT.md` (or fix the name to match an existing one) before Step 2. This is the deterministic backstop for the API-shape-divergence gotcha below.
+
 > **Living artifact — fix the prompt first (gap G4).** The Canvas is not write-once. When a later `/change` or `/refactor` alters behavior or moves code, update `reasons-canvas.md` *with the same change* — change the design, then the code — and keep its `Governs` list accurate. The G2 drift monitor (`drift-report.js`) flags governed paths that vanished as **design-vs-code drift**, so a Canvas left to rot will surface in the next drift run rather than silently misleading the next reader.
 
 ### Step 2 — Phase Evaluation Gate
@@ -484,7 +499,7 @@ autonomous scope-routing gates elsewhere in the harness.
 
 ## Gotchas
 
-- **API shape divergence.** The planner and generator run concurrently and may independently invent field names. The evaluator (artifact mode) gate exists specifically to catch this. Never skip it.
+- **API shape divergence.** The planner and generator run concurrently and may independently invent field names. Both must read `CONTEXT.md` before naming entities — that is the primary defense. `vocabulary-check.js` (Step 1.9) and the evaluator (artifact mode) gate are the deterministic and inferential backstops that catch what slips through — never skip either.
 - **Missing deployment.md.** Builder agents need to know the target environment. This file is required, not optional.
 - **Mock data must match API contracts.** If a mockup shows a `user_name` field but the API contract defines `username`, the downstream evaluator will flag a mismatch.
 - **No folder structure means builder agents guess.** The `folder-structure.md` and `component-map.md` are the routing instructions for the build phase. Missing or vague entries cause agents to create files in wrong locations.
