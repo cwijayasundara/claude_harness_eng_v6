@@ -75,6 +75,7 @@ def _add_content_slide(prs, section):
 
 def build_deck(memo, out_path):
     prs = Presentation()
+    # Intentional 16:9 override; stock placeholders are positioned for 4:3 — acceptable until a real firm template replaces this generic layout.
     prs.slide_width = Inches(13.333)
     prs.slide_height = Inches(7.5)
 
