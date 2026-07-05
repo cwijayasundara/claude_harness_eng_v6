@@ -25,6 +25,7 @@ function main() {
     process.exit(2);
   }
   const clusters = clusterNamingEvidence(graph);
+  fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, renderCandidates(clusters) + '\n');
   process.stdout.write(`naming-clusters OK: ${clusters.length} candidate term(s) → specs/brownfield/naming-clusters.md\n`);
   process.exit(0);

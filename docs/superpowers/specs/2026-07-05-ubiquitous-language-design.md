@@ -91,6 +91,7 @@ Add `.claude/scripts/vocabulary-check.js`, modeled on the pure-core-plus-CLI sha
 - `--candidates <file...>` — one or more JSON sources to extract candidate names from:
   - `brd-analysis.json#domain_concepts[].name`
   - `data-models.schema.json` entity/property titles (`$defs.*.title`, top-level schema keys)
+    (Implementation note: the shipped extractor reads `$defs`/`definitions` object keys only — entity/model definition names, not per-field `.title` values or nested property names. This was a deliberate scope narrowing made during implementation, not a bug.)
   - `api-contracts.schema.json` `components.schemas` keys
 
 **Algorithm (pure function, exported for `node:test`):**

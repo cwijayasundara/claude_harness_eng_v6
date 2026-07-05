@@ -411,7 +411,7 @@ node .claude/scripts/vocabulary-check.js \
   --out specs/reviews/vocabulary-check.json
 ```
 
-A non-zero exit means an entity or field name in `domain_concepts`, `data-models.schema.json`, or `api-contracts.schema.json` has no matching term in `CONTEXT.md` — add the missing term to `CONTEXT.md` (or fix the name to match an existing one) before Step 2. This is the deterministic backstop for the API-shape-divergence gotcha below.
+Exit code 1 means a real vocabulary mismatch: an entity/model name in `domain_concepts`, `data-models.schema.json`, or `api-contracts.schema.json` has no matching term in `CONTEXT.md` — add the missing term to `CONTEXT.md` (or fix the name to match an existing one) before Step 2. Exit code 2 means an infrastructure/usage problem, not a vocabulary mismatch — most commonly `CONTEXT.md` does not exist yet (run `/brd` first) or a candidate JSON file is malformed; resolve the underlying problem rather than adding a glossary term. This is the deterministic backstop for the API-shape-divergence gotcha below.
 
 > **Living artifact — fix the prompt first (gap G4).** The Canvas is not write-once. When a later `/change` or `/refactor` alters behavior or moves code, update `reasons-canvas.md` *with the same change* — change the design, then the code — and keep its `Governs` list accurate. The G2 drift monitor (`drift-report.js`) flags governed paths that vanished as **design-vs-code drift**, so a Canvas left to rot will surface in the next drift run rather than silently misleading the next reader.
 
