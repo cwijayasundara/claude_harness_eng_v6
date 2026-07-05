@@ -73,6 +73,21 @@ test('verification-matrix-gate sensor is active and wired', () => {
   );
 });
 
+test('vocabulary-check sensor is active and wired', () => {
+  const sensor = manifest.sensors.find((s) => s.id === 'vocabulary-check');
+  assert.ok(sensor, 'expected vocabulary-check sensor');
+  assert.strictEqual(sensor.axis, 'traceability');
+  assert.strictEqual(sensor.type, 'computational');
+  assert.strictEqual(sensor.cadence, 'planning');
+  assert.strictEqual(sensor.status, 'active');
+  assert.strictEqual(sensor.scope, 'artifacts');
+  assert.strictEqual(sensor.wired_at, '.claude/scripts/vocabulary-check.js');
+  assert.ok(
+    fs.existsSync(path.join(REPO_ROOT, sensor.wired_at)),
+    'vocabulary-check wired_at file must exist'
+  );
+});
+
 test('every active or partial sensor declares a valid scope (G11)', () => {
   const SCOPES = new Set(['universal', 'test-covered', 'layer-roots', 'contexts', 'runtime', 'dependencies', 'artifacts', 'repo']);
   const offenders = manifest.sensors
