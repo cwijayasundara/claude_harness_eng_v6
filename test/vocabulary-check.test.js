@@ -128,3 +128,19 @@ test('CLI: combines domain-concepts, data-models, and api-contracts candidates',
   assert.strictEqual(v.pass, true);
   assert.strictEqual(v.candidate_total, 2);
 });
+
+test('CLI: exits 2 with clean error message when candidate JSON is malformed', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vocab-'));
+  const glossary = writeFile(dir, 'CONTEXT.md', '# Context\n\n## Terms\n\n### Account\nDef.\n');
+  const malformedJson = writeFile(dir, 'data-models.schema.json', 'not valid json{');
+  let code = 0;
+  let stderr = '';
+  try {
+    execFileSync(process.execPath, [SCRIPT, '--glossary', glossary, '--data-models', malformedJson], { stdio: 'pipe' });
+  } catch (e) {
+    code = e.status;
+    stderr = e.stderr.toString();
+  }
+  assert.strictEqual(code, 2);
+  assert.match(stderr, /vocabulary-check: cannot read/);
+});

@@ -106,7 +106,11 @@ function loadCandidates(candidateFiles) {
   let all = [];
   for (const { file, kind } of candidateFiles) {
     if (!file || !fs.existsSync(file)) continue;
-    all = all.concat(extractors[kind](readJson(file), file));
+    try {
+      all = all.concat(extractors[kind](readJson(file), file));
+    } catch (err) {
+      throw new Error(`cannot read ${file}: ${err.message}`);
+    }
   }
   return all;
 }
@@ -132,7 +136,13 @@ function main() {
     process.exit(2);
   }
   const glossaryTerms = parseGlossaryTerms(fs.readFileSync(args.glossary, 'utf8'));
-  const candidates = loadCandidates(args.candidateFiles);
+  let candidates;
+  try {
+    candidates = loadCandidates(args.candidateFiles);
+  } catch (err) {
+    process.stderr.write(`vocabulary-check: ${err.message}\n`);
+    process.exit(2);
+  }
   const verdict = checkVocabulary({ glossaryTerms, candidates });
   if (args.out) {
     fs.mkdirSync(path.dirname(args.out), { recursive: true });
