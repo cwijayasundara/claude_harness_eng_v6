@@ -4,7 +4,7 @@
 
 // Deterministic vocabulary-consistency sensor (traceability axis): extends
 // trace-check.js's ID-linkage discipline to term-linkage. Checks that every
-// entity/field name surfaced in domain_concepts, data-models.schema.json, and
+// entity/model name surfaced in domain_concepts, data-models.schema.json, and
 // api-contracts.schema.json resolves to a term already defined in CONTEXT.md,
 // so "Account" in the BRD and "User" in the API contract can no longer trace
 // cleanly just because their IDs line up.
