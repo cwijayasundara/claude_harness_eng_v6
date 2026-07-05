@@ -88,6 +88,21 @@ test('vocabulary-check sensor is active and wired', () => {
   );
 });
 
+test('naming-clusters sensor is active and wired', () => {
+  const sensor = manifest.sensors.find((s) => s.id === 'naming-clusters');
+  assert.ok(sensor, 'expected naming-clusters sensor');
+  assert.strictEqual(sensor.axis, 'traceability');
+  assert.strictEqual(sensor.type, 'computational');
+  assert.strictEqual(sensor.cadence, 'planning');
+  assert.strictEqual(sensor.status, 'active');
+  assert.strictEqual(sensor.scope, 'repo');
+  assert.strictEqual(sensor.wired_at, '.claude/scripts/naming-clusters.js');
+  assert.ok(
+    fs.existsSync(path.join(REPO_ROOT, sensor.wired_at)),
+    'naming-clusters wired_at file must exist'
+  );
+});
+
 test('every active or partial sensor declares a valid scope (G11)', () => {
   const SCOPES = new Set(['universal', 'test-covered', 'layer-roots', 'contexts', 'runtime', 'dependencies', 'artifacts', 'repo']);
   const offenders = manifest.sensors
