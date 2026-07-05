@@ -46,3 +46,10 @@ test('generator.md lists CONTEXT.md as an input, reads it in Step 1, and passes 
   const contextMentions = generator.match(/CONTEXT\.md/g) || [];
   assert.ok(contextMentions.length >= 3, `expected >=3 CONTEXT.md mentions (Inputs, Step 1, teammate prompt), got ${contextMentions.length}`);
 });
+
+test('/brownfield Step 6 runs naming-clusters.js before writing CONTEXT.md', () => {
+  const brownfield = read('.claude/skills/brownfield/SKILL.md');
+  assert.match(brownfield, /naming-clusters\.js/);
+  assert.match(brownfield, /naming-clusters\.md/);
+  assert.doesNotMatch(brownfield, /Optional domain glossary, created only when meaningful domain terms are discovered/);
+});

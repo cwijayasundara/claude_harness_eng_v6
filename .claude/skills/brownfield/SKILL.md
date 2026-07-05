@@ -51,7 +51,8 @@ Write these files:
 | `specs/brownfield/change-strategy.md` | Recommended lane for future work: `/vibe`, `/change`, `/refactor`, `/spec`, `/auto` |
 | `specs/brownfield/ci-map.md`, `flag-inventory.md`, `perf-baseline.json` | `--full` only: CI alignment, feature flags, and latency baseline |
 | `specs/brownfield/seams-<goal>.md` | Optional ranked seam candidates produced by `/seam-finder "<goal>"` |
-| `CONTEXT.md` | Optional domain glossary, created only when meaningful domain terms are discovered |
+| `specs/brownfield/naming-clusters.md` | Deterministic root-noun clusters from `code-graph.json` symbols — candidate domain terms for Step 6 |
+| `CONTEXT.md` | Domain glossary, seeded from naming-cluster evidence and confirmed against source — no longer purely optional; see Step 6 |
 
 ---
 
@@ -200,9 +201,15 @@ If the requested work has a concrete goal, run seam analysis via `/brownfield --
 
 ## Step 6 — Domain Glossary
 
-If recurring domain terms are discovered, create or update `CONTEXT.md`.
+Run the deterministic naming-cluster extraction before writing anything:
 
-Keep it domain-level:
+```bash
+node .claude/scripts/naming-clusters.js
+```
+
+This writes `specs/brownfield/naming-clusters.md` — root nouns that recur across 2+ symbols in `code-graph.json` (e.g. `Account` appearing in `AccountController`, `AccountRepository`, `AccountService`), each with file evidence. Treat this as candidate terms to confirm, not a final glossary — judge each against the source before writing a definition. It only catches suffix-stripped symbol names, not terms embedded purely in prose or comments, so also add any other recurring domain terms you find in the source.
+
+Create or update `CONTEXT.md` from the confirmed candidates:
 
 ```markdown
 # Context
@@ -216,7 +223,7 @@ Definition meaningful to users/domain experts.
 Definition and how it differs from Account.
 ```
 
-Do not fill `CONTEXT.md` with implementation details.
+Do not fill `CONTEXT.md` with implementation details. Every codebase produces at least the naming-clusters evidence file, so create `CONTEXT.md` even if only 1-2 terms are confirmed — it is no longer purely optional.
 
 ---
 
