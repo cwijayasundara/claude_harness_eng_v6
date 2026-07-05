@@ -45,6 +45,7 @@ Log every teammate spawn to `.claude/state/iteration-log.md` as evidence the tea
 - Component map from `specs/design/component-map.md`
 - API contracts from `specs/design/api-contracts.schema.json`
 - Data models from `specs/design/data-models.schema.json`
+- Domain glossary from `CONTEXT.md` when present — authoritative for naming domain concepts (services, aggregates, business rules) not yet represented as a schema field
 - Architecture from `specs/design/architecture.md`
 - Verification matrix from `specs/test_artefacts/verification-matrix.json`
 - Brownfield maps from `specs/brownfield/` when present
@@ -76,8 +77,11 @@ For each sprint group:
 ### Step 1: Read Learned Rules
 - Read `.claude/state/learned-rules.md`
 - Read `.claude/skills/code-gen/SKILL.md`
+- Read `CONTEXT.md` when present. Schema field names (`data-models.schema.json`, `api-contracts.schema.json`) are already authoritative for API/data fields; `CONTEXT.md` is authoritative for everything else — services, aggregates, business rules. Name new classes/variables/services after its terms, not a freely invented synonym.
 - Invoke `superpowers:test-driven-development` — follow the red-green-refactor cycle for every function
 - Note any rules relevant to the current sprint group
+
+If a story requires a domain concept not yet in `CONTEXT.md`, add a `### <term>` entry there (with a one-line definition) before marking the story's teammate work complete.
 
 If `specs/brownfield/` exists, also read `architecture-map.md`, `test-map.md`, `risk-map.md`, and `change-strategy.md`. Preserve existing public interfaces and framework patterns unless the story/design explicitly authorizes a change. Navigate with `symbol-map.md` (fan-in-ranked signatures with `Lstart-Lend` anchors) instead of grepping blind; for any file flagged in `skeletons/`, read its `.skel.md` to pick the right symbol, then read only that slice with `Read(offset=START, limit=END-START+1)` — never whole-file-read a skeleton-flagged file. Check downstream impact of a symbol via its edges in `code-graph.json` before changing it.
 
@@ -132,6 +136,7 @@ Execute teammates in phases from the micro-DAG:
 - Story acceptance criteria
 - File ownership (which files this teammate may edit)
 - Learned rules (from `.claude/state/learned-rules.md`)
+- Domain glossary (`CONTEXT.md`) when present — teammates must name new domain concepts after its terms, not invent synonyms
 - Quality principles (from `.claude/skills/code-gen/SKILL.md`), **including the "Performance & Latency" section** — the evaluator runs a runtime latency ratchet on read endpoints, so a teammate that ships an N+1 query or an unbounded scan will fail the group, not just the review. Tell the teammate the project's latency budget from `project-manifest.json` → `execution.latency_budget_ms` (read/write) so it codes against the target it will be measured against.
 - The stack reference for the story's files per the Stack Expertise table (e.g. `code-gen/references/stack-python-fastapi.md` for backend Python, `stack-react-typescript.md` for React/TS frontend)
 - Brownfield constraints from `specs/brownfield/` when present

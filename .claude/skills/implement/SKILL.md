@@ -100,6 +100,8 @@ This ownership map is the single source of truth for file assignments during par
 
 Read `.claude/state/learned-rules.md`. Inject ALL rules verbatim into every teammate spawn prompt. Learned rules include anti-pattern code examples and better approach code — teammates must study these before writing code, not just read the rule text. Rules represent project-specific decisions made during previous sprints (naming conventions, library choices, API patterns). Skipping this step causes regressions.
 
+Also read `CONTEXT.md` when present and inject it into every teammate spawn prompt alongside learned rules. Schema field names are already authoritative for API/data fields; `CONTEXT.md` is authoritative for naming everything else — services, aggregates, business rules. If a teammate's story requires a domain concept not yet in `CONTEXT.md`, add a `### <term>` entry there before Step 6's validation gate.
+
 ### Step 5 — Execute the Group via the /auto Team Protocol
 
 The agent-team execution protocol is defined **once**, in `/auto` SECTION 4 (Agent Team Execution) — `.claude/skills/auto/SKILL.md`. Follow it verbatim in **standalone mode** (skip SECTION 3's sprint-contract negotiation): the mandatory team spawn for 2+ story groups (1 teammate per story, max 5 concurrent, batch the remainder), the orchestrator and teammate spawn prompt templates, model tiering, the shared-type dependency handshake, and the spawn-evidence logging to `.claude/state/iteration-log.md`. Do not restate or improvise that protocol here — if this skill and SECTION 4 ever disagree, SECTION 4 wins.

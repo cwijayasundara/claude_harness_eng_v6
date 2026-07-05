@@ -35,3 +35,14 @@ test('REASONS Canvas Entities section requires CONTEXT.md term reuse', () => {
   const canvas = read('.claude/skills/design/references/reasons-canvas-template.md');
   assert.match(canvas, /CONTEXT\.md/);
 });
+
+test('/implement requires reading CONTEXT.md alongside learned rules', () => {
+  const implement = read('.claude/skills/implement/SKILL.md');
+  assert.match(implement, /CONTEXT\.md/);
+});
+
+test('generator.md lists CONTEXT.md as an input, reads it in Step 1, and passes it to teammates', () => {
+  const generator = read('.claude/agents/generator.md');
+  const contextMentions = generator.match(/CONTEXT\.md/g) || [];
+  assert.ok(contextMentions.length >= 3, `expected >=3 CONTEXT.md mentions (Inputs, Step 1, teammate prompt), got ${contextMentions.length}`);
+});
