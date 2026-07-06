@@ -1,0 +1,26 @@
+{
+  "packs": [
+    {
+      "plugin": "private-equity",
+      "enabled_plugin_prefix": "private-equity@",
+      "marketplace": "claude-for-financial-services",
+      "install_id": "private-equity@claude-for-financial-services",
+      "marketplace_skills_subpath": ".claude/plugins/marketplaces/claude-for-financial-services/plugins/vertical-plugins/private-equity/skills",
+      "cache_skills_subpath": ".claude/plugins/cache/claude-for-financial-services/private-equity/skills",
+      "bounded_contexts": [
+        {
+          "name": "Deal Lifecycle (Sourcing, Screening & Diligence)",
+          "skills": ["deal-sourcing", "deal-screening", "dd-checklist", "dd-meeting-prep"]
+        },
+        {
+          "name": "Investment Decision & Returns",
+          "skills": ["ic-memo", "returns-analysis"]
+        },
+        {
+          "name": "Portfolio Operations & Value Creation",
+          "skills": ["portfolio-monitoring", "value-creation-plan", "unit-economics", "ai-readiness"]
+        }
+      ]
+    }
+  ]
+}
