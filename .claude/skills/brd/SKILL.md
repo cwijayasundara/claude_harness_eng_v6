@@ -227,13 +227,13 @@ Confirm: "Here is the UI context I have captured: [summary]. Is this complete?"
 
 ### Step 2.7 — Seed PE Domain Vocabulary (private-equity projects only)
 
-Run `node .claude/scripts/pe-glossary-pack.js`. This is a no-op (nothing written, nothing to do here) unless the `private-equity` vertical plugin is enabled in `.claude/settings.json#enabledPlugins`.
+**Run the PE glossary pack script.** Run `node .claude/scripts/pe-glossary-pack.js`. This is a no-op (nothing written, nothing to do here) unless the `private-equity` vertical plugin is enabled in `.claude/settings.json#enabledPlugins`.
 
-- If `specs/brd/pe-glossary-pack.json` now exists, read it. For each context entry, distill the real domain nouns implied by each skill's description (e.g. `deal-screening` → CIM, teaser, IOI; `returns-analysis` → IRR, MOIC; `value-creation-plan` → EBITDA bridge, 100-day plan) into `CONTEXT.md`'s `## Terms` section (create `CONTEXT.md` from `.claude/templates/context.template.md` first if it does not exist yet). Use the context's `name` as a `### <Bounded Context Name>` grouping heading, with individual `### <Term>` entries and a one-line definition beneath each.
-- If the script exited 2 (plugin enabled but no skills directory found), note the broken plugin install in the progress log and continue — do not block the BRD on it.
-- If `specs/brd/pe-glossary-pack.json` does not exist and the script did not report an error, the plugin simply isn't enabled for this project — do nothing further.
+- **Pack written.** If `specs/brd/pe-glossary-pack.json` now exists, read it. For each context entry, distill the real domain nouns implied by each skill's description (e.g. `deal-screening` → CIM, teaser, IOI; `returns-analysis` → IRR, MOIC; `value-creation-plan` → EBITDA bridge, 100-day plan) into `CONTEXT.md`'s `## Terms` section (create `CONTEXT.md` from `.claude/templates/context.template.md` first if it does not exist yet). Use the context's `name` as a `### <Bounded Context Name>` grouping heading, with individual `### <Term>` entries and a one-line definition beneath each.
+- **Broken plugin install.** If the script exited 2 (plugin enabled but no skills directory found), note the broken plugin install in the progress log and continue — do not block the BRD on it.
+- **Plugin not enabled.** If `specs/brd/pe-glossary-pack.json` does not exist and the script did not report an error, the plugin simply isn't enabled for this project — do nothing further.
 
-Step 2.8 below still runs afterward for every project and merges `domain_concepts`-derived terms into the same `CONTEXT.md`, layering project-specific concepts on top of this PE baseline rather than overwriting it.
+**Layering with Step 2.8.** Step 2.8 below still runs afterward for every project and merges `domain_concepts`-derived terms into the same `CONTEXT.md`, layering project-specific concepts on top of this PE baseline rather than overwriting it.
 
 ---
 

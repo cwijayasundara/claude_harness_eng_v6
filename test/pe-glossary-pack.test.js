@@ -154,8 +154,8 @@ test('brd/SKILL.md documents Step 2.7 seeding CONTEXT.md from pe-glossary-pack.j
   const brdSkill = fs.readFileSync(
     path.join(__dirname, '..', '.claude', 'skills', 'brd', 'SKILL.md'), 'utf8'
   );
-  const step27Index = brdSkill.indexOf('Step 2.7');
-  const step28Index = brdSkill.indexOf('Step 2.8');
+  const step27Index = brdSkill.indexOf('### Step 2.7');
+  const step28Index = brdSkill.indexOf('### Step 2.8');
   assert.ok(step27Index > -1, 'expected Step 2.7 in brd/SKILL.md');
   assert.ok(step28Index > -1, 'expected Step 2.8 in brd/SKILL.md');
   assert.ok(step27Index < step28Index, 'Step 2.7 must precede Step 2.8');
