@@ -225,15 +225,15 @@ Confirm: "Here is the UI context I have captured: [summary]. Is this complete?"
 
 ---
 
-### Step 2.7 — Seed PE Domain Vocabulary (private-equity projects only)
+### Step 2.7 — Seed Domain Vocabulary from Enabled Vertical Plugins
 
-**Run the PE glossary pack script.** Run `node .claude/scripts/pe-glossary-pack.js`. This is a no-op (nothing written, nothing to do here) unless the `private-equity` vertical plugin is enabled in `.claude/settings.json#enabledPlugins`.
+**Run the vertical glossary pack script.** Run `node .claude/scripts/vertical-glossary-pack.js`. This is a no-op (nothing written, nothing to do here) unless `.claude/config/vertical-glossary-packs.json` has at least one entry whose `enabled_plugin_prefix` matches a truthy key in `.claude/settings.json#enabledPlugins`.
 
-- **Pack written.** If `specs/brd/pe-glossary-pack.json` now exists, read it. For each context entry, distill the real domain nouns implied by each skill's description (e.g. `deal-screening` → CIM, teaser, IOI; `returns-analysis` → IRR, MOIC; `value-creation-plan` → EBITDA bridge, 100-day plan) into `CONTEXT.md`'s `## Terms` section (create `CONTEXT.md` from `.claude/templates/context.template.md` first if it does not exist yet). Use the context's `name` as a **`<Bounded Context Name>`** bold grouping line (not a `###` heading — `vocabulary-check.js` parses every `###` under `## Terms` as a glossary term, so only actual terms may use that heading level), with individual `### <Term>` entries and a one-line definition beneath each.
-- **Broken plugin install.** If the script exited 2 (plugin enabled but no skills directory found), note the broken plugin install in the progress log and continue — do not block the BRD on it.
-- **Plugin not enabled.** If `specs/brd/pe-glossary-pack.json` does not exist and the script did not report an error, the plugin simply isn't enabled for this project — do nothing further.
+- **Pack(s) written.** For each `specs/brd/<plugin>-glossary-pack.json` the script wrote, read it. For each context entry, distill the real domain nouns implied by each skill's description into `CONTEXT.md`'s `## Terms` section (create `CONTEXT.md` from `.claude/templates/context.template.md` first if it does not exist yet). Use the context's `name` as a **`<Bounded Context Name>`** bold grouping line (not a `###` heading — `vocabulary-check.js` parses every `###` under `## Terms` as a glossary term, so only actual terms may use that heading level), with individual `### <Term>` entries and a one-line definition beneath each.
+- **Broken plugin install.** If the script exited 2, at least one enabled vertical's skills directory was missing or empty. Note the broken plugin install(s) in the progress log and continue — packs from any OTHER, successfully-resolved vertical were still written and should still be distilled per the bullet above. Do not block the BRD on a broken install.
+- **No verticals enabled.** If the script reported nothing enabled and wrote no pack files, no registered vertical plugin is active for this project — do nothing further.
 
-**Layering with Step 2.8.** Step 2.8 below still runs afterward for every project and merges `domain_concepts`-derived terms into the same `CONTEXT.md`, layering project-specific concepts on top of this PE baseline rather than overwriting it.
+**Layering with Step 2.8.** Step 2.8 below still runs afterward for every project and merges `domain_concepts`-derived terms into the same `CONTEXT.md`, layering project-specific concepts on top of any vertical baseline(s) rather than overwriting them.
 
 ---
 

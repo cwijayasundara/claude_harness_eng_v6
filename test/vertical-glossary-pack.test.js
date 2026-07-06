@@ -228,3 +228,17 @@ test('CLI: writes private-equity-glossary-pack.json (not pe-glossary-pack.json) 
   assert.strictEqual(fs.existsSync(path.join(repo, 'specs', 'brd', 'private-equity-glossary-pack.json')), true);
   assert.strictEqual(fs.existsSync(path.join(repo, 'specs', 'brd', 'pe-glossary-pack.json')), false);
 });
+
+test('brd/SKILL.md Step 2.7 is generalized to any registered vertical, not private-equity-only', () => {
+  const brdSkill = fs.readFileSync(
+    path.join(__dirname, '..', '.claude', 'skills', 'brd', 'SKILL.md'), 'utf8'
+  );
+  const step27Index = brdSkill.indexOf('### Step 2.7');
+  const step28Index = brdSkill.indexOf('### Step 2.8');
+  assert.ok(step27Index > -1, 'expected Step 2.7 in brd/SKILL.md');
+  assert.ok(step28Index > -1, 'expected Step 2.8 in brd/SKILL.md');
+  assert.ok(step27Index < step28Index, 'Step 2.7 must precede Step 2.8');
+  assert.match(brdSkill, /vertical-glossary-pack\.js/);
+  assert.match(brdSkill, /vertical-glossary-packs\.json/);
+  assert.doesNotMatch(brdSkill, /private-equity projects only/);
+});
