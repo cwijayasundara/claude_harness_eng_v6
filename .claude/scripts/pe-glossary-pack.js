@@ -121,8 +121,15 @@ function main() {
   checkPrivateEquityEnabled(settings);
   const skillsDir = ensureSkillsDir();
   const pack = buildPack(readSkillDescriptions(skillsDir));
-  const outPath = writePack(pack, repoRoot);
   const skillCount = pack.contexts.reduce((n, c) => n + c.skills.length, 0);
+  if (skillCount === 0) {
+    process.stderr.write(
+      'pe-glossary-pack: private-equity plugin is enabled and a skills directory exists, ' +
+      'but no skill descriptions were found — check the plugin install.\n'
+    );
+    process.exit(2);
+  }
+  const outPath = writePack(pack, repoRoot);
   process.stdout.write(
     `pe-glossary-pack OK: ${pack.contexts.length} context(s), ${skillCount} skill(s) -> ${outPath}\n`
   );

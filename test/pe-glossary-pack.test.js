@@ -136,6 +136,17 @@ test('CLI: exits 2 when private-equity is enabled but no skills directory is fou
   );
 });
 
+test('CLI: exits 2 when private-equity is enabled and skills directory exists but is empty', () => {
+  const repo = mkTmpRepo();
+  const home = mkTmpDir();
+  writeSettings(repo, { 'private-equity@claude-for-financial-services': true });
+  fs.mkdirSync(path.join(home, MARKETPLACE_SKILLS_SUBPATH), { recursive: true });
+  assert.throws(
+    () => runScript(repo, home),
+    (err) => err.status === 2 && /no skill descriptions were found/.test(err.stderr.toString())
+  );
+});
+
 test('CLI: writes pe-glossary-pack.json when private-equity is enabled and skills exist', () => {
   const repo = mkTmpRepo();
   const home = mkTmpDir();
