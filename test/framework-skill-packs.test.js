@@ -37,3 +37,51 @@ test('install-framework-packs/SKILL.md references the registry file instead of a
   );
   assert.match(skill, /framework-skill-packs\.json/);
 });
+
+const os = require('os');
+const { copyFrameworkPackSkills } = require(
+  path.join(__dirname, '..', '.claude', 'scripts', 'scaffold-copy.js')
+);
+
+function mkHarnessFixture() {
+  const src = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-src-'));
+  fs.mkdirSync(path.join(src, '.claude', 'config'), { recursive: true });
+  fs.writeFileSync(
+    path.join(src, '.claude', 'config', 'framework-skill-packs.json'),
+    JSON.stringify({
+      packs: [
+        { key: 'python-ai-agents', source: 'local', skills: ['langgraph-code', 'langchain-code'] },
+        { key: 'langchain', source: 'github', repo: 'cwijayasundara/agent_cli_langchain', prefix: 'langchain-agents-', expected_skills: 9 },
+      ],
+    }, null, 2)
+  );
+  for (const skillName of ['langgraph-code', 'langchain-code']) {
+    const dir = path.join(src, '.claude', 'skills', skillName);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'SKILL.md'), `---\nname: ${skillName}\ndescription: test\n---\n`);
+  }
+  return src;
+}
+
+test('copyFrameworkPackSkills copies a local pack\'s skill directories when selected', () => {
+  const src = mkHarnessFixture();
+  const target = fs.mkdtempSync(path.join(os.tmpdir(), 'target-'));
+  copyFrameworkPackSkills(src, target, ['python-ai-agents']);
+  assert.strictEqual(fs.existsSync(path.join(target, '.claude', 'skills', 'langgraph-code', 'SKILL.md')), true);
+  assert.strictEqual(fs.existsSync(path.join(target, '.claude', 'skills', 'langchain-code', 'SKILL.md')), true);
+});
+
+test('copyFrameworkPackSkills does nothing for a github-source pack (external, manual install)', () => {
+  const src = mkHarnessFixture();
+  const target = fs.mkdtempSync(path.join(os.tmpdir(), 'target-'));
+  copyFrameworkPackSkills(src, target, ['langchain']);
+  assert.strictEqual(fs.existsSync(path.join(target, '.claude', 'skills', 'langgraph-code')), false);
+});
+
+test('copyFrameworkPackSkills does nothing when frameworkSkillPacks is empty or undefined', () => {
+  const src = mkHarnessFixture();
+  const target = fs.mkdtempSync(path.join(os.tmpdir(), 'target-'));
+  copyFrameworkPackSkills(src, target, []);
+  copyFrameworkPackSkills(src, target, undefined);
+  assert.strictEqual(fs.existsSync(path.join(target, '.claude', 'skills')), false);
+});

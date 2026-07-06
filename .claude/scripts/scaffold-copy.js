@@ -163,4 +163,20 @@ function copyScaffoldTree(src, target, profileName) {
   copyDirContents(path.join(src, 'templates', 'state-seeds'), path.join(dotClaude, 'state'));
 }
 
-module.exports = { copyScaffoldTree, pruneSettings, resolveScaffoldProfile };
+// Copy a locally-bundled framework-skill-pack's skills into <target>/.claude/skills,
+// per project-manifest.json#framework_skill_packs (Expert-Generalist scaffold
+// composition, docs/superpowers/specs/2026-07-06-expert-generalist-scaffold-composition-design.md).
+// "source":"github" packs (langchain, google-adk) are untouched here — those stay
+// manual-install-only via install-framework-packs, as today.
+function copyFrameworkPackSkills(pluginSource, target, frameworkSkillPacks) {
+  const registryPath = path.join(pluginSource, '.claude', 'config', 'framework-skill-packs.json');
+  if (!fs.existsSync(registryPath) || !Array.isArray(frameworkSkillPacks) || frameworkSkillPacks.length === 0) return;
+  const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+  for (const key of frameworkSkillPacks) {
+    const entry = registry.packs.find((p) => p.key === key);
+    if (!entry || entry.source !== 'local') continue;
+    copyNamedFiles(path.join(pluginSource, '.claude', 'skills'), path.join(target, '.claude', 'skills'), entry.skills);
+  }
+}
+
+module.exports = { copyScaffoldTree, pruneSettings, resolveScaffoldProfile, copyFrameworkPackSkills };

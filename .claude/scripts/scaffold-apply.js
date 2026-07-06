@@ -50,7 +50,7 @@
 const fs = require('fs');
 const path = require('path');
 const render = require('./scaffold-render');
-const { copyScaffoldTree, pruneSettings, resolveScaffoldProfile } = require('./scaffold-copy');
+const { copyScaffoldTree, pruneSettings, resolveScaffoldProfile, copyFrameworkPackSkills } = require('./scaffold-copy');
 const { refreshNavigation } = require('./navigation-refresh');
 
 const OUTPUT_DIRS = [
@@ -237,6 +237,7 @@ function applyScaffold(rawOpts) {
   const scaffoldProfile = resolveScaffoldProfile(profile, rawOpts);
   fs.mkdirSync(target, { recursive: true });
   copyScaffoldTree(pluginSource, target, scaffoldProfile);
+  copyFrameworkPackSkills(pluginSource, target, profile.frameworkPacks);
   pruneSettings(target, scaffoldProfile);
   if (telemetryEnabled(profile, rawOpts)) enableTelemetry(target);
   const written = [
