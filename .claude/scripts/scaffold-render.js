@@ -95,6 +95,15 @@ function tokenGovernorBlock() {
   };
 }
 
+function attachPacksToManifest(manifest, profile) {
+  if (Array.isArray(profile.frameworkPacks) && profile.frameworkPacks.length) {
+    manifest.framework_skill_packs = profile.frameworkPacks;
+  }
+  if (Array.isArray(profile.domainVerticalPacks) && profile.domainVerticalPacks.length) {
+    manifest.domain_vertical_packs = profile.domainVerticalPacks;
+  }
+}
+
 function buildManifest(profile) {
   const stack = profile.stack || {};
   const lite = isLiteShaped(profile);
@@ -117,9 +126,7 @@ function buildManifest(profile) {
     token_governor: tokenGovernorBlock(),
   };
   manifest.observability = observabilityBlock(preset.observability_enabled && !!stack.backend);
-  if (Array.isArray(profile.frameworkPacks) && profile.frameworkPacks.length) {
-    manifest.framework_skill_packs = profile.frameworkPacks;
-  }
+  attachPacksToManifest(manifest, profile);
   if (preset.architecture) {
     manifest.architecture = preset.architecture;
   }
