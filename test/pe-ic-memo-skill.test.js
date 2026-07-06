@@ -35,3 +35,9 @@ test('pe-ic-memo is NOT registered in scaffold-copy.js CORE_SKILLS or BROWNFIELD
   assert.ok(brownfieldMatch, 'could not find BROWNFIELD_SKILLS array in scaffold-copy.js');
   assert.doesNotMatch(brownfieldMatch[1], /pe-ic-memo/);
 });
+
+test('pe-ic-memo SKILL.md reads CONTEXT.md and reuses its terms verbatim', () => {
+  const skill = read('.claude/skills/pe-ic-memo/SKILL.md');
+  assert.match(skill, /Read `CONTEXT\.md`/);
+  assert.match(skill, /verbatim/);
+});

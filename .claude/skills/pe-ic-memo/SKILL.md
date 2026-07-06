@@ -21,6 +21,7 @@ Collect from the user (or from prior analysis in the session):
 - Due diligence findings (commercial, financial, legal, operational)
 - Value creation plan / 100-day plan
 - Returns analysis (base, upside, downside)
+- Read `CONTEXT.md` if present. Use its terms verbatim in section headings and bullets below — do not introduce a new name for a concept `CONTEXT.md` already defines.
 
 ### Step 2: Structure the Memo
 
