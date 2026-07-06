@@ -111,3 +111,28 @@ test('langchain-code skill exists with correct frontmatter and reference files',
   const models = fs.readFileSync(path.join(skillDir, 'references', 'models.md'), 'utf8');
   assert.match(models, /docs\.langchain\.com\/oss\/python\/langchain\/models/);
 });
+
+test('deepagents-code skill exists with correct frontmatter and reference file', () => {
+  const skillDir = path.join(__dirname, '..', '.claude', 'skills', 'deepagents-code');
+  const skill = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8');
+  assert.match(skill, /^---\nname: deepagents-code\n/);
+  assert.match(skill, /create_deep_agent/);
+  assert.strictEqual(fs.existsSync(path.join(skillDir, 'references', 'architecture-and-api.md')), true);
+  const arch = fs.readFileSync(path.join(skillDir, 'references', 'architecture-and-api.md'), 'utf8');
+  assert.match(arch, /docs\.langchain\.com\/oss\/python\/deepagents\/overview/);
+  assert.match(arch, /HarnessProfile/);
+});
+
+test('python-ai-agents pack registers exactly the three skills this plan built', () => {
+  const registry = JSON.parse(fs.readFileSync(
+    path.join(__dirname, '..', '.claude', 'config', 'framework-skill-packs.json'), 'utf8'
+  ));
+  const local = registry.packs.find((p) => p.key === 'python-ai-agents');
+  for (const skillName of local.skills) {
+    assert.strictEqual(
+      fs.existsSync(path.join(__dirname, '..', '.claude', 'skills', skillName, 'SKILL.md')),
+      true,
+      `expected .claude/skills/${skillName}/SKILL.md to exist`
+    );
+  }
+});
