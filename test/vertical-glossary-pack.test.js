@@ -118,3 +118,113 @@ test('buildPack groups skill descriptions under the entry bounded contexts, in o
   assert.strictEqual(pack.contexts[1].name, 'Context B');
   assert.deepStrictEqual(pack.contexts[1].skills, [{ skill: 'skill-2', description: 'Second.' }]);
 });
+
+const { execFileSync } = require('child_process');
+
+function mkTmpRepo() {
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'vertical-glossary-repo-'));
+}
+
+function writeSettings(repoDir, enabledPlugins) {
+  fs.mkdirSync(path.join(repoDir, '.claude'), { recursive: true });
+  fs.writeFileSync(
+    path.join(repoDir, '.claude', 'settings.json'),
+    JSON.stringify({ enabledPlugins }, null, 2)
+  );
+}
+
+function writeRepoRegistry(repoDir, packs) {
+  fs.mkdirSync(path.join(repoDir, '.claude', 'config'), { recursive: true });
+  fs.writeFileSync(
+    path.join(repoDir, '.claude', 'config', 'vertical-glossary-packs.json'),
+    JSON.stringify({ packs }, null, 2)
+  );
+}
+
+function runScript(repoDir, homeDir) {
+  return execFileSync(process.execPath, [SCRIPT], {
+    cwd: repoDir,
+    env: { ...process.env, HOME: homeDir },
+    encoding: 'utf8',
+  });
+}
+
+function testEntry(name) {
+  return {
+    plugin: name,
+    enabled_plugin_prefix: `${name}@`,
+    marketplace: 'test-marketplace',
+    install_id: `${name}@test-marketplace`,
+    marketplace_skills_subpath: path.join('.claude', 'plugins', 'marketplaces', 'test-marketplace', 'plugins', name, 'skills'),
+    cache_skills_subpath: path.join('.claude', 'plugins', 'cache', 'test-marketplace', name, 'skills'),
+    bounded_contexts: [{ name: 'Everything', skills: ['a-skill'] }],
+  };
+}
+
+test('CLI: no-ops with no output files when no registry entry is enabled', () => {
+  const repo = mkTmpRepo();
+  const home = mkTmpDir();
+  writeSettings(repo, { 'wealth-management@claude-for-financial-services': true });
+  writeRepoRegistry(repo, [testEntry('vertical-a')]);
+  const stdout = runScript(repo, home);
+  assert.match(stdout, /no vertical glossary packs enabled/);
+  assert.strictEqual(fs.existsSync(path.join(repo, 'specs', 'brd', 'vertical-a-glossary-pack.json')), false);
+});
+
+test('CLI: exits 2 when an enabled entry has no skills directory', () => {
+  const repo = mkTmpRepo();
+  const home = mkTmpDir();
+  writeSettings(repo, { 'vertical-a@test-marketplace': true });
+  writeRepoRegistry(repo, [testEntry('vertical-a')]);
+  assert.throws(
+    () => runScript(repo, home),
+    (err) => err.status === 2
+  );
+});
+
+test('CLI: exits 2 when an enabled entry has an empty skills directory', () => {
+  const repo = mkTmpRepo();
+  const home = mkTmpDir();
+  const entry = testEntry('vertical-a');
+  writeSettings(repo, { 'vertical-a@test-marketplace': true });
+  writeRepoRegistry(repo, [entry]);
+  fs.mkdirSync(path.join(home, entry.marketplace_skills_subpath), { recursive: true });
+  assert.throws(
+    () => runScript(repo, home),
+    (err) => err.status === 2 && /no skill descriptions were found/.test(err.stderr.toString())
+  );
+});
+
+test('CLI: writes a pack per enabled entry and still writes the healthy one when another entry is broken', () => {
+  const repo = mkTmpRepo();
+  const home = mkTmpDir();
+  const healthy = testEntry('vertical-a');
+  const broken = testEntry('vertical-b');
+  writeSettings(repo, { 'vertical-a@test-marketplace': true, 'vertical-b@test-marketplace': true });
+  writeRepoRegistry(repo, [healthy, broken]);
+  const skillsDir = path.join(home, healthy.marketplace_skills_subpath);
+  writeSkill(skillsDir, 'a-skill', 'a-skill', 'Does a thing.');
+  // broken entry's skills dir intentionally left absent
+  assert.throws(
+    () => runScript(repo, home),
+    (err) => err.status === 2
+  );
+  const healthyOut = path.join(repo, 'specs', 'brd', 'vertical-a-glossary-pack.json');
+  assert.strictEqual(fs.existsSync(healthyOut), true, 'the healthy entry must still write its pack');
+  const pack = JSON.parse(fs.readFileSync(healthyOut, 'utf8'));
+  assert.strictEqual(pack.contexts[0].skills[0].skill, 'a-skill');
+});
+
+test('CLI: writes private-equity-glossary-pack.json (not pe-glossary-pack.json) for the private-equity entry', () => {
+  const repo = mkTmpRepo();
+  const home = mkTmpDir();
+  const entry = testEntry('private-equity');
+  entry.enabled_plugin_prefix = 'private-equity@';
+  writeSettings(repo, { 'private-equity@test-marketplace': true });
+  writeRepoRegistry(repo, [entry]);
+  const skillsDir = path.join(home, entry.marketplace_skills_subpath);
+  writeSkill(skillsDir, 'a-skill', 'a-skill', 'Does a thing.');
+  runScript(repo, home);
+  assert.strictEqual(fs.existsSync(path.join(repo, 'specs', 'brd', 'private-equity-glossary-pack.json')), true);
+  assert.strictEqual(fs.existsSync(path.join(repo, 'specs', 'brd', 'pe-glossary-pack.json')), false);
+});
