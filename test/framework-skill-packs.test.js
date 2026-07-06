@@ -85,3 +85,16 @@ test('copyFrameworkPackSkills does nothing when frameworkSkillPacks is empty or 
   copyFrameworkPackSkills(src, target, undefined);
   assert.strictEqual(fs.existsSync(path.join(target, '.claude', 'skills')), false);
 });
+
+test('langgraph-code skill exists with correct frontmatter and reference files', () => {
+  const skillDir = path.join(__dirname, '..', '.claude', 'skills', 'langgraph-code');
+  const skill = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8');
+  assert.match(skill, /^---\nname: langgraph-code\n/);
+  assert.match(skill, /LangGraph/);
+  assert.strictEqual(fs.existsSync(path.join(skillDir, 'references', 'graph-api.md')), true);
+  assert.strictEqual(fs.existsSync(path.join(skillDir, 'references', 'persistence-and-checkpointing.md')), true);
+  const graphApi = fs.readFileSync(path.join(skillDir, 'references', 'graph-api.md'), 'utf8');
+  assert.match(graphApi, /docs\.langchain\.com\/oss\/python\/langgraph\/graph-api/);
+  const persistence = fs.readFileSync(path.join(skillDir, 'references', 'persistence-and-checkpointing.md'), 'utf8');
+  assert.match(persistence, /docs\.langchain\.com\/oss\/python\/langgraph\/persistence/);
+});
