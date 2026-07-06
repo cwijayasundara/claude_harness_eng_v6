@@ -98,3 +98,16 @@ test('langgraph-code skill exists with correct frontmatter and reference files',
   const persistence = fs.readFileSync(path.join(skillDir, 'references', 'persistence-and-checkpointing.md'), 'utf8');
   assert.match(persistence, /docs\.langchain\.com\/oss\/python\/langgraph\/persistence/);
 });
+
+test('langchain-code skill exists with correct frontmatter and reference files', () => {
+  const skillDir = path.join(__dirname, '..', '.claude', 'skills', 'langchain-code');
+  const skill = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8');
+  assert.match(skill, /^---\nname: langchain-code\n/);
+  assert.match(skill, /create_agent/);
+  assert.strictEqual(fs.existsSync(path.join(skillDir, 'references', 'agents.md')), true);
+  assert.strictEqual(fs.existsSync(path.join(skillDir, 'references', 'models.md')), true);
+  const agents = fs.readFileSync(path.join(skillDir, 'references', 'agents.md'), 'utf8');
+  assert.match(agents, /docs\.langchain\.com\/oss\/python\/langchain\/agents/);
+  const models = fs.readFileSync(path.join(skillDir, 'references', 'models.md'), 'utf8');
+  assert.match(models, /docs\.langchain\.com\/oss\/python\/langchain\/models/);
+});
