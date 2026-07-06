@@ -87,3 +87,17 @@ test('CLI: prints INSTALLED for an enabled vertical and a manual-install block f
   assert.match(stdout, /claude plugin marketplace add claude-for-financial-services/);
   assert.match(stdout, /claude plugin install wealth-management@claude-for-financial-services/);
 });
+
+test('scaffold.md documents the combined tech-stack + domain-vertical question and both report families', () => {
+  const scaffoldMd = fs.readFileSync(
+    path.join(__dirname, '..', '.claude', 'commands', 'scaffold.md'), 'utf8'
+  );
+  assert.match(scaffoldMd, /domainVerticalPacks/);
+  assert.match(scaffoldMd, /vertical-glossary-packs\.json/);
+  assert.match(scaffoldMd, /scaffold-vertical-status\.js/);
+  assert.match(scaffoldMd, /claude plugin marketplace add/);
+  assert.match(scaffoldMd, /claude plugin install/);
+  // The existing framework-pack flow must still be present, unchanged in spirit:
+  assert.match(scaffoldMd, /npx --yes skills add cwijayasundara\/agent_cli_langchain/);
+  assert.match(scaffoldMd, /framework_skill_packs/);
+});

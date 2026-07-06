@@ -558,35 +558,35 @@ If the user named a specific provider in Q1 ("Linear", "Jira"), also overwrite `
 
 Do not write tracker API keys into `.claude/tracker-config.json`. Use environment variables such as `LINEAR_API_KEY`, `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, and `GITHUB_TOKEN`. Surface the remaining prerequisites in the Step 10 report (see "Tracker Setup Addendum" below).
 
-### Optional Agent-Framework Skill Packs
+### Optional Agent-Framework Skill Packs & Domain Vertical Plugins
 
-If the user selected one or more skill packs (LangChain or Google ADK) at the confirmation card or wizard, record the selection in `project-manifest.json` and print the manual install commands in the Step 10 report.
+If the user selected one or more tech-stack skill packs (LangChain/LangGraph/DeepAgents, or Google ADK) and/or one or more domain vertical plugins (e.g. private equity) at the confirmation card or wizard, record both selections in `project-manifest.json` and print the manual install commands in the Step 10 report. These are two independent choices asked together in one step — a user may pick a tech-stack pack, a domain vertical, both, or neither.
 
-Do not run `npx skills add` from `/scaffold`. Claude Code auto-mode commonly blocks external `npx` installs even when command permissions are allowlisted, so attempting it during scaffold creates a noisy denial and a misleading partial-success report. The reliable path is:
+#### Tech-Stack Packs
 
-1. Scaffold writes the harness files and records selected packs.
-2. The user runs the listed `npx --yes skills add ...` command in a normal terminal.
-3. The user returns to Claude Code and runs `/install-framework-packs --list` to verify.
+**A) Local — Python AI Agents (LangGraph, LangChain, DeepAgents) — bundled, no install needed**
 
-**Important:** The manual commands must be run inside the target project directory. Do NOT use `-g`/`--global` — the user has explicitly chosen to scope framework skills per-project so the harness scaffold remains generic.
+This pack (`python-ai-agents`) is authored and bundled directly in this harness. If selected, its three skills (`langgraph-code`, `langchain-code`, `deepagents-code`) are copied automatically by `scaffold-apply.js`'s `copyFrameworkPackSkills` when the scaffold is applied — no manual step, no entry in the Step 10 manual-install block.
 
-**CLI syntax (critical):** the **package source goes FIRST** as a positional argument. Putting flags before the package will fail with `ERROR  Missing required argument: source`. Use `-y` only AFTER the package source.
+**B) External — LangChain / LangGraph / DeepAgents (community pack) — 9 skills**
 
-**A) LangChain / LangGraph / DeepAgents — 9 skills**
+Do not run `npx skills add` from `/scaffold`. Claude Code auto-mode commonly blocks external `npx` installs even when command permissions are allowlisted, so attempting it during scaffold creates a noisy denial and a misleading partial-success report. The reliable path is: (1) scaffold writes the harness files and records selected packs; (2) the user runs the listed `npx --yes skills add ...` command in a normal terminal; (3) the user returns to Claude Code and runs `/install-framework-packs --list` to verify.
+
+**Important:** manual commands must be run inside the target project directory. Do NOT use `-g`/`--global`. **CLI syntax:** the package source goes FIRST as a positional argument — flags before it fail with `ERROR Missing required argument: source`.
 
 ```bash
 npx --yes skills add cwijayasundara/agent_cli_langchain -a claude-code -s '*' -y
 ```
 
-Expected: 9 skills under `.claude/skills/langchain-agents-*` (scaffold, workflow, langchain-code, langgraph-code, deepagents-code, middleware, langsmith-evals, deploy, observability). Source: <https://github.com/cwijayasundara/agent_cli_langchain>. Two skills (`deepagents-code`, `deploy`) carry a "Med Risk" Snyk flag — surface this in the install report and recommend the user review those SKILL.md files before letting them drive code generation.
+Expected: 9 skills under `.claude/skills/langchain-agents-*`. Source: <https://github.com/cwijayasundara/agent_cli_langchain>. Two skills (`deepagents-code`, `deploy`) carry a "Med Risk" Snyk flag — surface this in the install report. Note this is a separate, external, unaudited alternative to option A above — prefer A unless the user specifically wants the community pack.
 
-**B) Google ADK — 7 skills**
+**C) Google ADK — 7 skills**
 
 ```bash
 npx --yes skills add google/agents-cli -a claude-code -s '*' -y
 ```
 
-Expected: 7 skills under `.claude/skills/google-agents-cli-*` (scaffold, workflow, adk-code, eval, deploy, observability, publish).
+Expected: 7 skills under `.claude/skills/google-agents-cli-*`.
 
 Verify manual installs with:
 
@@ -594,32 +594,49 @@ Verify manual installs with:
 ls .claude/skills/ | grep -E '^(langchain-agents|google-agents-cli)-' | wc -l
 ```
 
-#### Manual install block
+#### Domain Vertical Plugins
 
-If one or more framework packs were selected, print this block verbatim and ADD it to the Step 10 report under a "Manual follow-ups" heading:
+Read `.claude/config/vertical-glossary-packs.json` for the list of known verticals to offer (currently: `private-equity`). A selected vertical is a Claude Code marketplace plugin, installed via `claude plugin install` — a different command family from the tech-stack packs above, kept separate in the report below on purpose.
+
+Once selected, the vertical's `enabled_plugin_prefix` becoming truthy in `.claude/settings.json#enabledPlugins` (via the manual install below) is what makes `/brd` Step 2.7 (`vertical-glossary-pack.js`) start seeding `CONTEXT.md` from that vertical's skill vocabulary automatically — no further scaffold-side action needed once installed.
+
+#### Combined Manual-Install Report (Step 10)
+
+If one or more external tech-stack packs or domain verticals were selected, run `node .claude/scripts/scaffold-vertical-status.js` for the vertical half of the report, and print this combined block verbatim, adding it to the Step 10 report under a "Manual follow-ups" heading:
 
 ```text
-[!] Framework skill pack(s) require a manual terminal install.
-    Claude Code auto-mode blocks external npx installs during /scaffold.
+[!] Some selections require a manual terminal install.
+    Claude Code auto-mode blocks these installs during /scaffold.
 
+  Tech-stack packs (npx):
   cd <project-root>
-  npx --yes skills add cwijayasundara/agent_cli_langchain -a claude-code -s '*' -y   # if LangChain
-  npx --yes skills add google/agents-cli -a claude-code -s '*' -y                     # if Google ADK
+  npx --yes skills add cwijayasundara/agent_cli_langchain -a claude-code -s '*' -y   # if external LangChain pack selected
+  npx --yes skills add google/agents-cli -a claude-code -s '*' -y                     # if Google ADK selected
 
-After running, verify (the packs land in .claude/skills/ alongside the harness skills):
+  Domain vertical plugins (claude plugin):
+  <output of `node .claude/scripts/scaffold-vertical-status.js`, verbatim, for each selected vertical not yet installed — e.g.:
+    private-equity: PENDING MANUAL INSTALL
+      claude plugin marketplace add claude-for-financial-services
+      claude plugin install private-equity@claude-for-financial-services>
+
+After running, verify:
   ls .claude/skills/ | grep -E '^(langchain-agents|google-agents-cli)-'
   /install-framework-packs --list
+  node .claude/scripts/scaffold-vertical-status.js
 ```
 
-#### Record selected packs in project-manifest.json
+The local `python-ai-agents` pack, if selected, needs no line in this block — it's already been copied.
 
-Record the user's *choice* under a top-level `framework_skill_packs` array in `project-manifest.json`. This lets future `/scaffold enhance` operations and the Step 10 report see the intent regardless of install status:
+#### Record selections in project-manifest.json
+
+Internally, the selected verticals flow through `profile.domainVerticalPacks` (alongside the existing `profile.frameworkPacks`) before `scaffold-render.js`'s `buildManifest` writes them out below:
 
 ```json
-"framework_skill_packs": ["langchain", "google-adk"]
+"framework_skill_packs": ["python-ai-agents", "langchain", "google-adk"],
+"domain_vertical_packs": ["private-equity"]
 ```
 
-Omit the field if the user picked None.
+Omit either field if the user picked None for that question.
 
 ## Step 5: Generate CLAUDE.md
 
