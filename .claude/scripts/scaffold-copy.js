@@ -146,7 +146,7 @@ function copyScaffoldTree(src, target, profileName) {
   copyTree(path.join(src, '.claude-plugin'), path.join(dotClaude, '.claude-plugin'));
   const selected = selectedCopySet(profileName);
   if (!selected) {
-    for (const dir of ['agents', 'skills', 'hooks', 'scripts', 'templates', 'workflows', 'git-hooks']) {
+    for (const dir of ['agents', 'skills', 'hooks', 'scripts', 'templates', 'workflows', 'git-hooks', 'config']) {
       copyTree(path.join(src, dir), path.join(dotClaude, dir));
     }
   } else {

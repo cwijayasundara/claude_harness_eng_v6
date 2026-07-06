@@ -92,6 +92,18 @@ for (const profile of ['core', 'brownfield', 'full']) {
   });
 }
 
+test('scaffold (full) copies the .claude/config/ registry directory', () => {
+  const { workDir, target } = scaffoldInto('full');
+  try {
+    assert.ok(
+      fs.existsSync(path.join(target, '.claude', 'config', 'vertical-glossary-packs.json')),
+      'config/vertical-glossary-packs.json must be copied so vertical-glossary-pack.js finds its registry in a scaffolded project',
+    );
+  } finally {
+    fs.rmSync(workDir, { recursive: true, force: true });
+  }
+});
+
 test('scaffold (core) copies the sprint skill and its supporting scripts', () => {
   const { workDir, target } = scaffoldInto('core');
   try {
