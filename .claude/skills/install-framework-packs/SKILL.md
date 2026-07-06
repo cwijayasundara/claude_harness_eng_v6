@@ -15,12 +15,9 @@ This skill is the one-command path to verify those installs. It is idempotent an
 
 ## Pack registry
 
-| Manifest key | Repository | Prefix | Expected skills |
-|---|---|---|---:|
-| `langchain` | `cwijayasundara/agent_cli_langchain` | `langchain-agents-` | 9 |
-| `google-adk` | `google/agents-cli` | `google-agents-cli-` | 7 |
+Read `.claude/config/framework-skill-packs.json` for the current registry. Each `"source":"github"` entry has `repo`, `prefix`, and `expected_skills` — use these exactly as today's hardcoded table did. `"source":"local"` entries (e.g. `python-ai-agents`) are bundled directly in this harness and copied by `/scaffold` itself — they need no install-status check here and never appear in this skill's MISSING/PARTIAL/PENDING reporting.
 
-If `framework_skill_packs` contains a key not in this registry, report it as unknown and skip — do not invent install commands.
+If `framework_skill_packs` contains a key not present in the registry, report it as unknown and skip — do not invent install commands.
 
 ---
 

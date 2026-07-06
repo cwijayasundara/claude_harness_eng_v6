@@ -1,0 +1,23 @@
+{
+  "packs": [
+    {
+      "key": "python-ai-agents",
+      "source": "local",
+      "skills": ["langgraph-code", "langchain-code", "deepagents-code"]
+    },
+    {
+      "key": "langchain",
+      "source": "github",
+      "repo": "cwijayasundara/agent_cli_langchain",
+      "prefix": "langchain-agents-",
+      "expected_skills": 9
+    },
+    {
+      "key": "google-adk",
+      "source": "github",
+      "repo": "google/agents-cli",
+      "prefix": "google-agents-cli-",
+      "expected_skills": 7
+    }
+  ]
+}
