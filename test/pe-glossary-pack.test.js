@@ -5,6 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { test } = require('node:test');
+const { execFileSync } = require('child_process');
 
 const SCRIPT = path.join(__dirname, '..', '.claude', 'scripts', 'pe-glossary-pack.js');
 const {
@@ -92,4 +93,59 @@ test('buildPack groups skill descriptions under their bounded context in BOUNDED
   assert.strictEqual(pack.contexts[1].name, 'Investment Decision & Returns');
   assert.deepStrictEqual(pack.contexts[1].skills, [{ skill: 'returns-analysis', description: 'IRR/MOIC sensitivity tables.' }]);
   assert.deepStrictEqual(pack.contexts[2].skills, []);
+});
+
+// --- CLI Integration Tests ---------------------------------------------------------
+
+function mkTmpRepo() {
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'pe-glossary-repo-'));
+}
+
+function writeSettings(repoDir, enabledPlugins) {
+  fs.mkdirSync(path.join(repoDir, '.claude'), { recursive: true });
+  fs.writeFileSync(
+    path.join(repoDir, '.claude', 'settings.json'),
+    JSON.stringify({ enabledPlugins }, null, 2)
+  );
+}
+
+function runScript(repoDir, homeDir) {
+  return execFileSync(process.execPath, [SCRIPT], {
+    cwd: repoDir,
+    env: { ...process.env, HOME: homeDir },
+    encoding: 'utf8',
+  });
+}
+
+test('CLI: no-ops with no output file when private-equity is not enabled', () => {
+  const repo = mkTmpRepo();
+  const home = mkTmpDir();
+  writeSettings(repo, { 'wealth-management@claude-for-financial-services': true });
+  const stdout = runScript(repo, home);
+  assert.match(stdout, /not enabled/);
+  assert.strictEqual(fs.existsSync(path.join(repo, 'specs', 'brd', 'pe-glossary-pack.json')), false);
+});
+
+test('CLI: exits 2 when private-equity is enabled but no skills directory is found', () => {
+  const repo = mkTmpRepo();
+  const home = mkTmpDir();
+  writeSettings(repo, { 'private-equity@claude-for-financial-services': true });
+  assert.throws(
+    () => runScript(repo, home),
+    (err) => err.status === 2
+  );
+});
+
+test('CLI: writes pe-glossary-pack.json when private-equity is enabled and skills exist', () => {
+  const repo = mkTmpRepo();
+  const home = mkTmpDir();
+  writeSettings(repo, { 'private-equity@claude-for-financial-services': true });
+  const skillsDir = path.join(home, MARKETPLACE_SKILLS_SUBPATH);
+  writeSkill(skillsDir, 'ic-memo', 'ic-memo', 'Draft an IC memo.');
+  const stdout = runScript(repo, home);
+  assert.match(stdout, /OK/);
+  const outPath = path.join(repo, 'specs', 'brd', 'pe-glossary-pack.json');
+  assert.strictEqual(fs.existsSync(outPath), true);
+  const pack = JSON.parse(fs.readFileSync(outPath, 'utf8'));
+  assert.strictEqual(pack.contexts[1].skills[0].skill, 'ic-memo');
 });

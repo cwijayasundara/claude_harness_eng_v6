@@ -77,7 +77,61 @@ function buildPack(skillDescriptions) {
   };
 }
 
+// --- CLI ----------------------------------------------------------------------
+
+function loadSettings(repoRoot) {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(repoRoot, '.claude', 'settings.json'), 'utf8'));
+  } catch (err) {
+    process.stdout.write('pe-glossary-pack: no .claude/settings.json found — nothing to do.\n');
+    process.exit(0);
+  }
+}
+
+function checkPrivateEquityEnabled(settings) {
+  if (!isPrivateEquityEnabled(settings.enabledPlugins)) {
+    process.stdout.write('pe-glossary-pack: private-equity plugin not enabled — nothing to do.\n');
+    process.exit(0);
+  }
+}
+
+function ensureSkillsDir() {
+  const skillsDir = findSkillsDir(os.homedir());
+  if (!skillsDir) {
+    process.stderr.write(
+      'pe-glossary-pack: private-equity plugin is enabled but no skills directory was found ' +
+      `under ${os.homedir()}/.claude/plugins — check the plugin install.\n`
+    );
+    process.exit(2);
+  }
+  return skillsDir;
+}
+
+function writePack(pack, repoRoot) {
+  const outDir = path.join(repoRoot, 'specs', 'brd');
+  fs.mkdirSync(outDir, { recursive: true });
+  const outPath = path.join(outDir, 'pe-glossary-pack.json');
+  fs.writeFileSync(outPath, JSON.stringify(pack, null, 2) + '\n');
+  return outPath;
+}
+
+function main() {
+  const repoRoot = process.cwd();
+  const settings = loadSettings(repoRoot);
+  checkPrivateEquityEnabled(settings);
+  const skillsDir = ensureSkillsDir();
+  const pack = buildPack(readSkillDescriptions(skillsDir));
+  const outPath = writePack(pack, repoRoot);
+  const skillCount = pack.contexts.reduce((n, c) => n + c.skills.length, 0);
+  process.stdout.write(
+    `pe-glossary-pack OK: ${pack.contexts.length} context(s), ${skillCount} skill(s) -> ${outPath}\n`
+  );
+  process.exit(0);
+}
+
 module.exports = {
   isPrivateEquityEnabled, findSkillsDir, readSkillDescriptions, buildPack,
   BOUNDED_CONTEXTS, MARKETPLACE_SKILLS_SUBPATH, CACHE_SKILLS_SUBPATH,
 };
+
+if (require.main === module) main();
