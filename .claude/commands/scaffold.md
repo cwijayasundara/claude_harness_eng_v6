@@ -75,11 +75,15 @@ Apply these rules. Be explicit and conservative — when the description is ambi
 - Mentions "Linear" → C Publish + sync
 - Mentions "Jira" → B Publish-only (Jira sync isn't fully implemented yet)
 
-**Framework skill pack — keyword match in Q1:**
-- "LangChain" / "LangGraph" / "DeepAgents" / "LangSmith" → A LangChain pack
-- "ADK" / "Agent Development Kit" / "Gemini Enterprise" / "Vertex AI Agents" → B Google ADK
+**Tech-stack pack — keyword match in Q1:**
+- "LangChain" / "LangGraph" / "DeepAgents" / "LangSmith" / Python agent framework → A Python AI Agents (local bundled pack — prefer this over the external community pack unless the user names the external repo specifically)
+- "ADK" / "Agent Development Kit" / "Gemini Enterprise" / "Vertex AI Agents" → C Google ADK
 - Both sets of terms → both packs
-- Neither → C None
+- Neither → D None
+
+**Domain vertical — keyword match in Q1:**
+- "private equity" / "PE fund" / "deal sourcing" / "portfolio company" / GP/LP fund-management context → Private Equity
+- No match → None
 
 Graphify (the former Q6) is no longer asked here. It only matters for brownfield discovery — surface it inside `/brownfield`, not at scaffold time.
 
@@ -107,7 +111,8 @@ The `preview` for option A must be a markdown block in this exact shape (substit
   Telemetry       {off by default; on only with --telemetry}
   Plugins         Playwright + Superpowers in lean profiles; full optional set only in full
   Tracker         {A / B / C / D — display name}
-  Framework pack  {A / B / C — display name(s)}
+  Tech-stack pack {A / B / C / D — display name(s)}
+  Domain vertical {vertical display name, or "None"}
 
   (Graphify is no longer asked at scaffold time; surface it via /brownfield.)
 ```
@@ -164,10 +169,14 @@ If the user picks D, install the `core` scaffold by default, recommend `/build -
    - B) Publish generated story groups to Linear/Jira only
    - C) Publish + sync proof/status
    - D) Publish + external orchestrator dispatch
-7. "Configure agent-framework skill packs?" (multi-select; default: None) — opt-in packs recorded in `project-manifest.json`, then installed manually from a normal terminal because Claude Code auto-mode blocks external `npx skills add` installs.
-   - A) LangChain / LangGraph / DeepAgents — `cwijayasundara/agent_cli_langchain` (9 skills)
-   - B) Google ADK — `google/agents-cli` (7 skills)
-   - C) None
+7. "Configure agent-framework skill packs?" (multi-select; default: None) — opt-in packs recorded in `project-manifest.json`.
+   - A) Python AI Agents (LangGraph / LangChain / DeepAgents) — bundled directly in this harness, copied automatically, no manual install needed
+   - B) LangChain / LangGraph / DeepAgents (external community pack) — `cwijayasundara/agent_cli_langchain` (9 skills, installed manually from a normal terminal because Claude Code auto-mode blocks external `npx skills add` installs)
+   - C) Google ADK — `google/agents-cli` (7 skills, same manual-install caveat as B)
+   - D) None
+8. "Enable a domain-vertical plugin?" (single-select; default: None) — reads `.claude/config/vertical-glossary-packs.json` for the list of known verticals; recorded in `project-manifest.json`, installed manually via `claude plugin marketplace add`/`claude plugin install` because Claude Code auto-mode blocks these installs the same way it blocks `npx skills add`.
+   - A) Private Equity — `private-equity@claude-for-financial-services`
+   - B) None
 
 ## Step 2: Generate project-manifest.json
 
@@ -889,9 +898,22 @@ Also append a "Framework-specific entry points" hint to Next steps, since these 
 
 If the user picked None for framework packs, omit both additions.
 
+### Domain Vertical Plugin Addendum
+
+If the user selected a domain vertical, run `node .claude/scripts/scaffold-vertical-status.js` and append a section after the `Installed:` block (before `Next steps:`), listing each selected vertical with its install status, using that script's real output. Example:
+
+```
+Domain vertical plugins (.claude/settings.json#enabledPlugins):
+  + Private Equity — private-equity@claude-for-financial-services   [PENDING MANUAL INSTALL]
+```
+
+Use `INSTALLED` when `scaffold-vertical-status.js` reports the vertical as `INSTALLED`, `PENDING MANUAL INSTALL` otherwise.
+
+If the user picked None for the domain-vertical question, omit this section.
+
 ### Final banner — print LAST when any selected pack is pending
 
-If at least one selected framework pack is `PENDING MANUAL INSTALL`, the very last thing the scaffold prints (after the Files-written section, after Next steps, after everything) MUST be a prominent boxed banner. This banner is the user's primary signal that the scaffold is complete but the optional framework pack still needs a terminal install.
+If at least one selected framework pack OR domain vertical is `PENDING MANUAL INSTALL`, the very last thing the scaffold prints (after the Files-written section, after Next steps, after everything) MUST be a prominent boxed banner per pending item. This banner is the user's primary signal that the scaffold is complete but an optional pack or vertical still needs a terminal install.
 
 Print exactly this template for each pending pack (concatenate if there are multiple):
 
@@ -923,7 +945,33 @@ Banner rules:
 
 - The banner MUST be the absolute last text printed in the scaffold report. Do not append further "Files written" or "Configuration" blocks below it.
 - Use real Unicode box characters (`═`). Do not collapse to ASCII dashes.
-- One banner per pending pack. If two packs are pending, print two banners back-to-back.
-- If all selected packs are already installed, omit the banner entirely and end the report on Next steps.
+- One banner per pending item (pack or vertical). If several are pending, print banners back-to-back.
+- For a pending domain vertical, use this template instead of the framework-pack one above:
 
-If no framework packs were configured (the user picked None), neither this banner nor the addendum appears in the report.
+```
+═══════════════════════════════════════════════════════════════════════════════
+  [!] ACTION REQUIRED — Domain vertical pending manual install
+═══════════════════════════════════════════════════════════════════════════════
+
+  Vertical: <vertical-display-name> (<install_id>)
+  Cause: Claude Code auto-mode blocks external plugin installs during /scaffold.
+
+  Finish the install in 2 steps:
+
+  1) Open a normal terminal (NOT Claude Code) and run:
+
+       claude plugin marketplace add <marketplace>
+       claude plugin install <install_id>
+
+  2) Come back to Claude Code and run:
+
+       node .claude/scripts/scaffold-vertical-status.js
+
+     This verifies the install completed.
+
+═══════════════════════════════════════════════════════════════════════════════
+```
+
+- If all selected packs/verticals are already installed, omit the banner entirely and end the report on Next steps.
+
+If no framework packs and no domain vertical were configured (the user picked None for both), neither the addenda nor any banner appears in the report.

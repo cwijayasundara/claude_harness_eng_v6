@@ -101,3 +101,20 @@ test('scaffold.md documents the combined tech-stack + domain-vertical question a
   assert.match(scaffoldMd, /npx --yes skills add cwijayasundara\/agent_cli_langchain/);
   assert.match(scaffoldMd, /framework_skill_packs/);
 });
+
+test('scaffold.md wires the local tech pack and domain vertical into Step 1\'s question flow, not just the reference section', () => {
+  const scaffoldMd = fs.readFileSync(
+    path.join(__dirname, '..', '.claude', 'commands', 'scaffold.md'), 'utf8'
+  );
+  const referenceSectionIndex = scaffoldMd.indexOf('### Optional Agent-Framework Skill Packs & Domain Vertical Plugins');
+  assert.notStrictEqual(referenceSectionIndex, -1, 'reference section heading should exist');
+  const step1Section = scaffoldMd.slice(0, referenceSectionIndex);
+
+  assert.match(step1Section, /Enable a domain-vertical plugin\?/);
+  assert.match(step1Section, /Python AI Agents \(LangGraph \/ LangChain \/ DeepAgents\)/);
+
+  const scaffoldApplyJs = fs.readFileSync(
+    path.join(__dirname, '..', '.claude', 'scripts', 'scaffold-apply.js'), 'utf8'
+  );
+  assert.match(scaffoldApplyJs, /domainVerticalPacks/);
+});

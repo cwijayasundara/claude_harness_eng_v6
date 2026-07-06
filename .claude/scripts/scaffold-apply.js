@@ -43,7 +43,8 @@
 //     "scaffoldProfile":  "core"|"brownfield"|"full",
 //     "telemetry":        boolean,
 //     "tracker":          "A"|"B"|"C"|"D",   // recorded only; files out of scope
-//     "frameworkPacks":   string[],          // e.g. ["langchain","google-adk"]
+//     "frameworkPacks":   string[],          // e.g. ["python-ai-agents","langchain","google-adk"]
+//     "domainVerticalPacks": string[],       // e.g. ["private-equity"]
 //     "lsp":              [{ name, language }]  // OR auto-derived from stack
 //   }
 
