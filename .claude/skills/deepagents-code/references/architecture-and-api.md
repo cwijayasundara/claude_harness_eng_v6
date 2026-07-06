@@ -17,7 +17,8 @@ DeepAgents is built directly on LangChain's core building blocks and uses the La
 
 Ships built-in (cannot be fully removed, only individual tools hidden via `HarnessProfile.excluded_tools`):
 
-- Filesystem tools: `ls`, `read_file`, `write_file`, `edit_file`, `glob`, `grep`, `execute`.
+- Filesystem tools: `ls`, `read_file`, `write_file`, `edit_file`, `glob`, `grep`.
+- Code execution via sandboxes (a distinct, separately-backed capability — not part of the filesystem tool set above).
 - Subagent spawning via the `task` tool (on by default, "intentionally rejected" for removal per the framework's own design).
 - Context management: automatic summarization and offloading for long-running work.
 - Automatic prompt caching for Anthropic/Bedrock models — static prompt sections (system prompt, memory, skills) are cache-eligible by default, no configuration needed.
