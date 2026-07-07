@@ -222,7 +222,7 @@ Based on their answers, write `project-manifest.json` to the project root. Fill 
 
 ### Auto-attach stack-matched specialty packs
 
-After the interview, before assembling `frameworkPacks` for the profile: if `stack.backend.framework` is `"fastapi"`, include `"fastapi-code"` in `frameworkPacks`. If `stack.frontend.framework` is `"react"` (the Vite variant — Presets A and C; **not** `"nextjs"`, Preset B), include `"react-code"`. These are additive to any AI-agent packs the user explicitly selected in the tech-stack-pack question (Step 1.E Q7) — a project can end up with any combination of `python-ai-agents`, `fastapi-code`, `react-code`, `langchain`, `google-adk` in `frameworkPacks`. Neither of these two additions requires a new question or a new confirmation-card line — they follow silently from the stack the user already chose.
+`scaffold-apply.js` and `scaffold-render.js` both derive the effective `frameworkPacks` list via a shared `deriveFrameworkPacks(profile)` helper: whatever the user explicitly selected in the tech-stack-pack question (Step 1.E Q7), plus `fastapi-code` whenever `stack.backend.framework === "fastapi"`, plus `react-code` whenever `stack.frontend.framework === "react"` (the Vite variant — Presets A and C; **not** `"nextjs"`, Preset B). This is fully automatic in both interactive and non-interactive (`--yes`) modes — there is no separate question or confirmation-card line for it, and no manual step is required for either pack since both are locally bundled.
 
 ### LSP Config (auto-detected from stack)
 

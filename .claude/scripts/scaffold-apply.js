@@ -238,7 +238,7 @@ function applyScaffold(rawOpts) {
   const scaffoldProfile = resolveScaffoldProfile(profile, rawOpts);
   fs.mkdirSync(target, { recursive: true });
   copyScaffoldTree(pluginSource, target, scaffoldProfile);
-  copyFrameworkPackSkills(pluginSource, target, profile.frameworkPacks);
+  copyFrameworkPackSkills(pluginSource, target, render.deriveFrameworkPacks(profile));
   pruneSettings(target, scaffoldProfile);
   if (telemetryEnabled(profile, rawOpts)) enableTelemetry(target);
   const written = [

@@ -4,7 +4,9 @@ const assert = require('assert');
 const path = require('path');
 const { test } = require('node:test');
 
-const { buildManifest } = require(path.join(__dirname, '..', '.claude', 'scripts', 'scaffold-render.js'));
+const { buildManifest, deriveFrameworkPacks } = require(
+  path.join(__dirname, '..', '.claude', 'scripts', 'scaffold-render.js')
+);
 
 test('buildManifest includes domain_vertical_packs when profile.domainVerticalPacks is a non-empty array', () => {
   const manifest = buildManifest({ name: 'test-project', domainVerticalPacks: ['private-equity'] });
@@ -147,4 +149,76 @@ test('copyFrameworkPackSkills copies fastapi-code when selected via an auto-atta
   copyFrameworkPackSkills(src, target, ['fastapi-code', 'react-code']);
   assert.strictEqual(fs.existsSync(path.join(target, '.claude', 'skills', 'fastapi-code', 'SKILL.md')), true);
   assert.strictEqual(fs.existsSync(path.join(target, '.claude', 'skills', 'react-code', 'SKILL.md')), true);
+});
+
+test('deriveFrameworkPacks adds fastapi-code when stack.backend.framework is fastapi', () => {
+  const packs = deriveFrameworkPacks({ stack: { backend: { framework: 'fastapi' } } });
+  assert.deepStrictEqual(packs, ['fastapi-code']);
+});
+
+test('deriveFrameworkPacks adds react-code when stack.frontend.framework is react', () => {
+  const packs = deriveFrameworkPacks({ stack: { frontend: { framework: 'react' } } });
+  assert.deepStrictEqual(packs, ['react-code']);
+});
+
+test('deriveFrameworkPacks does NOT add react-code for nextjs', () => {
+  const packs = deriveFrameworkPacks({ stack: { frontend: { framework: 'nextjs' } } });
+  assert.deepStrictEqual(packs, []);
+});
+
+test('deriveFrameworkPacks combines an explicit pack with both auto-derived ones, deduped', () => {
+  const packs = deriveFrameworkPacks({
+    frameworkPacks: ['python-ai-agents'],
+    stack: { backend: { framework: 'fastapi' }, frontend: { framework: 'react' } },
+  });
+  assert.deepStrictEqual(packs.sort(), ['fastapi-code', 'python-ai-agents', 'react-code'].sort());
+});
+
+test('deriveFrameworkPacks returns explicit packs unchanged when stack is absent or non-matching', () => {
+  assert.deepStrictEqual(deriveFrameworkPacks({ frameworkPacks: ['google-adk'] }), ['google-adk']);
+  assert.deepStrictEqual(deriveFrameworkPacks({}), []);
+});
+
+test('buildManifest.framework_skill_packs reflects auto-derived packs even with an empty explicit frameworkPacks', () => {
+  const manifest = buildManifest({
+    name: 'auto-attach-test',
+    stack: { backend: { framework: 'fastapi' }, frontend: { framework: 'react' } },
+  });
+  assert.deepStrictEqual(manifest.framework_skill_packs.sort(), ['fastapi-code', 'react-code'].sort());
+});
+
+test('CLI: scaffold-apply.js copies fastapi-code and react-code for a matching stack with NO explicit frameworkPacks selection', () => {
+  const SCAFFOLD_APPLY = path.join(__dirname, '..', '.claude', 'scripts', 'scaffold-apply.js');
+  const PLUGIN_SOURCE = path.join(__dirname, '..', '.claude');
+  const workDir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'scaffold-apply-autopack-'));
+  const target = path.join(workDir, 'project');
+  try {
+    const profilePath = path.join(workDir, 'profile.json');
+    fs.writeFileSync(profilePath, JSON.stringify({
+      name: 'autopack-cli',
+      stack: {
+        backend: { language: 'python', framework: 'fastapi' },
+        frontend: { language: 'typescript', framework: 'react' },
+        database: null,
+      },
+      projectType: 'A',
+      verificationMode: 'C',
+      // frameworkPacks intentionally omitted — proves the auto-attach fires without an explicit selection.
+    }));
+    const { execFileSync } = require('child_process');
+    execFileSync(process.execPath, [
+      SCAFFOLD_APPLY,
+      '--profile', profilePath,
+      '--plugin-source', PLUGIN_SOURCE,
+      '--target', target,
+      '--scaffold-profile', 'core',
+    ], { encoding: 'utf8' });
+
+    assert.strictEqual(fs.existsSync(path.join(target, '.claude', 'skills', 'fastapi-code', 'SKILL.md')), true);
+    assert.strictEqual(fs.existsSync(path.join(target, '.claude', 'skills', 'react-code', 'SKILL.md')), true);
+    const manifest = JSON.parse(fs.readFileSync(path.join(target, 'project-manifest.json'), 'utf8'));
+    assert.deepStrictEqual(manifest.framework_skill_packs.sort(), ['fastapi-code', 'react-code'].sort());
+  } finally {
+    fs.rmSync(workDir, { recursive: true, force: true });
+  }
 });

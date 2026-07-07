@@ -95,9 +95,25 @@ function tokenGovernorBlock() {
   };
 }
 
+// Auto-attaches tech-stack specialty packs based on the chosen stack, additive
+// to whatever the user explicitly picked (docs/superpowers/specs/2026-07-07-
+// python-react-specialty-pack-design.md). Must be the single place this
+// derivation happens — both the manifest (below) and the actual skill copy
+// (scaffold-apply.js) call this same function, so what gets recorded and what
+// gets copied can never diverge.
+function deriveFrameworkPacks(profile) {
+  const explicit = Array.isArray(profile.frameworkPacks) ? profile.frameworkPacks : [];
+  const derived = new Set(explicit);
+  const stack = profile.stack || {};
+  if (stack.backend && stack.backend.framework === 'fastapi') derived.add('fastapi-code');
+  if (stack.frontend && stack.frontend.framework === 'react') derived.add('react-code');
+  return Array.from(derived);
+}
+
 function attachPacksToManifest(manifest, profile) {
-  if (Array.isArray(profile.frameworkPacks) && profile.frameworkPacks.length) {
-    manifest.framework_skill_packs = profile.frameworkPacks;
+  const frameworkPacks = deriveFrameworkPacks(profile);
+  if (frameworkPacks.length) {
+    manifest.framework_skill_packs = frameworkPacks;
   }
   if (Array.isArray(profile.domainVerticalPacks) && profile.domainVerticalPacks.length) {
     manifest.domain_vertical_packs = profile.domainVerticalPacks;
@@ -265,5 +281,5 @@ function calibrationProfile(projectType) {
 
 module.exports = {
   lspServers, buildManifest, renderClaudeMd, renderTemplate, initShValues, calibrationProfile,
-  renderProjectReadme,
+  renderProjectReadme, deriveFrameworkPacks,
 };
