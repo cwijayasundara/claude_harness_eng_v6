@@ -207,3 +207,18 @@ test('framework-skill-packs.json registers fastapi-code and react-code as local,
   const local = registry.packs.find((p) => p.key === 'python-ai-agents');
   assert.deepStrictEqual(local.skills.sort(), ['deepagents-code', 'langchain-code', 'langgraph-code'].sort());
 });
+
+test('fastapi-code skill exists with correct frontmatter and reference files', () => {
+  const skillDir = path.join(__dirname, '..', '.claude', 'skills', 'fastapi-code');
+  const skill = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8');
+  assert.match(skill, /^---\nname: fastapi-code\n/);
+  assert.match(skill, /Depends/);
+  assert.strictEqual(fs.existsSync(path.join(skillDir, 'references', 'dependency-injection-and-validation.md')), true);
+  assert.strictEqual(fs.existsSync(path.join(skillDir, 'references', 'async-and-testing.md')), true);
+  const di = fs.readFileSync(path.join(skillDir, 'references', 'dependency-injection-and-validation.md'), 'utf8');
+  assert.match(di, /fastapi\.tiangolo\.com\/tutorial\/dependencies/);
+  assert.match(di, /pydantic\.dev/);
+  const asyncTesting = fs.readFileSync(path.join(skillDir, 'references', 'async-and-testing.md'), 'utf8');
+  assert.match(asyncTesting, /fastapi\.tiangolo\.com\/async/);
+  assert.match(asyncTesting, /fastapi\.tiangolo\.com\/tutorial\/testing/);
+});
