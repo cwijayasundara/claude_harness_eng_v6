@@ -189,3 +189,21 @@ test('python-ai-agents pack registers exactly the three skills this plan built',
     );
   }
 });
+
+test('framework-skill-packs.json registers fastapi-code and react-code as local, single-skill packs', () => {
+  const registry = JSON.parse(fs.readFileSync(REGISTRY_PATH, 'utf8'));
+
+  const fastapi = registry.packs.find((p) => p.key === 'fastapi-code');
+  assert.ok(fastapi, 'expected a fastapi-code entry');
+  assert.strictEqual(fastapi.source, 'local');
+  assert.deepStrictEqual(fastapi.skills, ['fastapi-code']);
+
+  const react = registry.packs.find((p) => p.key === 'react-code');
+  assert.ok(react, 'expected a react-code entry');
+  assert.strictEqual(react.source, 'local');
+  assert.deepStrictEqual(react.skills, ['react-code']);
+
+  // Existing entries must survive untouched
+  const local = registry.packs.find((p) => p.key === 'python-ai-agents');
+  assert.deepStrictEqual(local.skills.sort(), ['deepagents-code', 'langchain-code', 'langgraph-code'].sort());
+});

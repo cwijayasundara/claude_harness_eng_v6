@@ -6,6 +6,16 @@
       "skills": ["langgraph-code", "langchain-code", "deepagents-code"]
     },
     {
+      "key": "fastapi-code",
+      "source": "local",
+      "skills": ["fastapi-code"]
+    },
+    {
+      "key": "react-code",
+      "source": "local",
+      "skills": ["react-code"]
+    },
+    {
       "key": "langchain",
       "source": "github",
       "repo": "cwijayasundara/agent_cli_langchain",
