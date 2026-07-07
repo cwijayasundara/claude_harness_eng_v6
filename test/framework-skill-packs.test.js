@@ -222,3 +222,30 @@ test('fastapi-code skill exists with correct frontmatter and reference files', (
   assert.match(asyncTesting, /fastapi\.tiangolo\.com\/async/);
   assert.match(asyncTesting, /fastapi\.tiangolo\.com\/tutorial\/testing/);
 });
+
+test('react-code skill exists with correct frontmatter and reference files', () => {
+  const skillDir = path.join(__dirname, '..', '.claude', 'skills', 'react-code');
+  const skill = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8');
+  assert.match(skill, /^---\nname: react-code\n/);
+  assert.match(skill, /useEffect/);
+  assert.strictEqual(fs.existsSync(path.join(skillDir, 'references', 'hooks-and-state.md')), true);
+  assert.strictEqual(fs.existsSync(path.join(skillDir, 'references', 'vite-and-testing.md')), true);
+  const hooks = fs.readFileSync(path.join(skillDir, 'references', 'hooks-and-state.md'), 'utf8');
+  assert.match(hooks, /react\.dev\/learn\/synchronizing-with-effects/);
+  const vite = fs.readFileSync(path.join(skillDir, 'references', 'vite-and-testing.md'), 'utf8');
+  assert.match(vite, /vite\.dev\/guide\/env-and-mode/);
+});
+
+test('python-ai-agents, fastapi-code, and react-code packs all register skills that exist on disk', () => {
+  const registry = JSON.parse(fs.readFileSync(REGISTRY_PATH, 'utf8'));
+  for (const key of ['python-ai-agents', 'fastapi-code', 'react-code']) {
+    const entry = registry.packs.find((p) => p.key === key);
+    for (const skillName of entry.skills) {
+      assert.strictEqual(
+        fs.existsSync(path.join(__dirname, '..', '.claude', 'skills', skillName, 'SKILL.md')),
+        true,
+        `expected .claude/skills/${skillName}/SKILL.md to exist`
+      );
+    }
+  }
+});
