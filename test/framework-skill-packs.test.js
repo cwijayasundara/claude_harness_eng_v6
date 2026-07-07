@@ -43,11 +43,15 @@ const { copyFrameworkPackSkills } = require(
   path.join(__dirname, '..', '.claude', 'scripts', 'scaffold-copy.js')
 );
 
+// The fixture is built at the pluginSource root itself (src/config/..., src/skills/...),
+// matching how scaffold-apply.js actually calls copyFrameworkPackSkills: pluginSource
+// is already the harness `.claude` root (verified via .claude-plugin/plugin.json
+// directly inside it), not a directory that itself contains a nested `.claude/`.
 function mkHarnessFixture() {
   const src = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-src-'));
-  fs.mkdirSync(path.join(src, '.claude', 'config'), { recursive: true });
+  fs.mkdirSync(path.join(src, 'config'), { recursive: true });
   fs.writeFileSync(
-    path.join(src, '.claude', 'config', 'framework-skill-packs.json'),
+    path.join(src, 'config', 'framework-skill-packs.json'),
     JSON.stringify({
       packs: [
         { key: 'python-ai-agents', source: 'local', skills: ['langgraph-code', 'langchain-code'] },
@@ -56,7 +60,7 @@ function mkHarnessFixture() {
     }, null, 2)
   );
   for (const skillName of ['langgraph-code', 'langchain-code']) {
-    const dir = path.join(src, '.claude', 'skills', skillName);
+    const dir = path.join(src, 'skills', skillName);
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, 'SKILL.md'), `---\nname: ${skillName}\ndescription: test\n---\n`);
   }
@@ -84,6 +88,55 @@ test('copyFrameworkPackSkills does nothing when frameworkSkillPacks is empty or 
   copyFrameworkPackSkills(src, target, []);
   copyFrameworkPackSkills(src, target, undefined);
   assert.strictEqual(fs.existsSync(path.join(target, '.claude', 'skills')), false);
+});
+
+// Regression test for the pluginSource double-nesting bug: copyFrameworkPackSkills
+// used to join('.claude', ...) onto a pluginSource that scaffold-apply.js's
+// resolveOpts already requires to BE the harness `.claude` root, producing a
+// nonexistent .claude/.claude/... path and silently no-op'ing for every real
+// core/brownfield-profile invocation. The unit tests above build their fixture
+// directly at the pluginSource root, so they can't catch that mismatch — only
+// running the real CLI against the real harness `.claude` tree with a
+// core-profile + selected pack can. This is the exact scenario that shipped broken.
+const { execFileSync } = require('child_process');
+
+test('CLI: scaffold-apply.js --scaffold-profile core with frameworkPacks copies the local pack into the target', () => {
+  const SCAFFOLD_APPLY = path.join(__dirname, '..', '.claude', 'scripts', 'scaffold-apply.js');
+  const PLUGIN_SOURCE = path.join(__dirname, '..', '.claude');
+  const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'scaffold-apply-fwpack-'));
+  const target = path.join(workDir, 'project');
+  try {
+    const profilePath = path.join(workDir, 'profile.json');
+    fs.writeFileSync(profilePath, JSON.stringify({
+      name: 'fwpack-cli',
+      stack: { backend: { language: 'typescript' }, frontend: null, database: null },
+      projectType: 'D',
+      verificationMode: 'C',
+      frameworkPacks: ['python-ai-agents'],
+    }));
+    execFileSync(process.execPath, [
+      SCAFFOLD_APPLY,
+      '--profile', profilePath,
+      '--plugin-source', PLUGIN_SOURCE,
+      '--target', target,
+      '--scaffold-profile', 'core',
+    ], { encoding: 'utf8' });
+
+    assert.strictEqual(
+      fs.existsSync(path.join(target, '.claude', 'skills', 'langgraph-code', 'SKILL.md')), true,
+      'core-profile scaffold-apply with frameworkPacks:["python-ai-agents"] must copy langgraph-code'
+    );
+    assert.strictEqual(
+      fs.existsSync(path.join(target, '.claude', 'skills', 'langchain-code', 'SKILL.md')), true,
+      'core-profile scaffold-apply with frameworkPacks:["python-ai-agents"] must copy langchain-code'
+    );
+    assert.strictEqual(
+      fs.existsSync(path.join(target, '.claude', 'skills', 'deepagents-code', 'SKILL.md')), true,
+      'core-profile scaffold-apply with frameworkPacks:["python-ai-agents"] must copy deepagents-code'
+    );
+  } finally {
+    fs.rmSync(workDir, { recursive: true, force: true });
+  }
 });
 
 test('langgraph-code skill exists with correct frontmatter and reference files', () => {
