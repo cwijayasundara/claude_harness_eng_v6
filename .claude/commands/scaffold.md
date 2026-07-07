@@ -76,7 +76,7 @@ Apply these rules. Be explicit and conservative — when the description is ambi
 - Mentions "Jira" → B Publish-only (Jira sync isn't fully implemented yet)
 
 **Tech-stack pack — keyword match in Q1:**
-- "LangChain" / "LangGraph" / "DeepAgents" / "LangSmith" / Python agent framework → A Python AI Agents (local bundled pack — prefer this over the external community pack unless the user names the external repo specifically)
+- "LangChain" / "LangGraph" / "DeepAgents" / "LangSmith" / Python agent framework → A Python AI Agents (local bundled pack — default when the user doesn't ask for the external community pack specifically; it needs no manual install step, see option B below for the tradeoffs of the alternative)
 - "ADK" / "Agent Development Kit" / "Gemini Enterprise" / "Vertex AI Agents" → C Google ADK
 - Both sets of terms → both packs
 - Neither → D None
@@ -587,7 +587,9 @@ Do not run `npx skills add` from `/scaffold`. Claude Code auto-mode commonly blo
 npx --yes skills add cwijayasundara/agent_cli_langchain -a claude-code -s '*' -y
 ```
 
-Expected: 9 skills under `.claude/skills/langchain-agents-*`. Source: <https://github.com/cwijayasundara/agent_cli_langchain>. Two skills (`deepagents-code`, `deploy`) carry a "Med Risk" Snyk flag — surface this in the install report. Note this is a separate, external, unaudited alternative to option A above — prefer A unless the user specifically wants the community pack.
+Expected: 9 skills under `.claude/skills/langchain-agents-*`. Source: <https://github.com/cwijayasundara/agent_cli_langchain>. Two skills (`deepagents-code`, `deploy`) carry a "Med Risk" Snyk flag from the `skills` CLI's install-time scan — surface this in the install report; the flag's cause hasn't been independently root-caused (likely a repo/dependency-level finding, not something found in the skill content itself — see below).
+
+Content review (2026-07-07): the actual `SKILL.md` bodies for `langgraph-code`, `langchain-code`, `deepagents-code`, `middleware`, and `deploy` were read directly from the repo and found to be current, specific, and production-oriented (version-pinned breaking-change notes, concrete gotchas, real decision tables) — not generic filler. This is not a formal security audit and does not resolve the Snyk flag above; it only speaks to content quality. Its design differs from option A: it's an "editorial" layer that defers API signatures/facts to a live `mcpdoc` MCP tool fetch rather than inlining reference docs, so it needs that MCP server configured for full value, and it additionally covers LCEL/RAG-chain patterns that option A's pack does not. Prefer A by default (no install step, no MCP dependency); pick B if the user wants that broader LCEL coverage or already has `mcpdoc` set up.
 
 **C) Google ADK — 7 skills**
 
