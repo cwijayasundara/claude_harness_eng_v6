@@ -118,3 +118,33 @@ test('scaffold.md wires the local tech pack and domain vertical into Step 1\'s q
   );
   assert.match(scaffoldApplyJs, /domainVerticalPacks/);
 });
+
+test('scaffold.md Step 2 auto-attaches fastapi-code and react-code based on the chosen stack', () => {
+  const scaffoldMd = fs.readFileSync(
+    path.join(__dirname, '..', '.claude', 'commands', 'scaffold.md'), 'utf8'
+  );
+  const step2Index = scaffoldMd.indexOf('## Step 2: Generate project-manifest.json');
+  const step3Index = scaffoldMd.indexOf('## Step 3');
+  assert.ok(step2Index > -1, 'expected Step 2 heading in scaffold.md');
+  assert.ok(step3Index > step2Index, 'expected Step 3 to follow Step 2');
+  const step2Section = scaffoldMd.slice(step2Index, step3Index);
+  assert.match(step2Section, /fastapi-code/);
+  assert.match(step2Section, /react-code/);
+  assert.match(step2Section, /stack\.backend\.framework/);
+  assert.match(step2Section, /stack\.frontend\.framework/);
+  assert.match(step2Section, /nextjs/);
+});
+
+test('copyFrameworkPackSkills copies fastapi-code when selected via an auto-attached frameworkPacks entry', () => {
+  const { copyFrameworkPackSkills } = require(
+    path.join(__dirname, '..', '.claude', 'scripts', 'scaffold-copy.js')
+  );
+  const src = path.join(__dirname, '..', '.claude');
+  const target = fs.mkdtempSync(path.join(require('os').tmpdir(), 'fastapi-attach-'));
+  // Simulates what Step 2's auto-attach rule produces for a FastAPI-backend profile:
+  // frameworkPacks includes "fastapi-code" even though the user never answered a
+  // separate framework-pack question about it.
+  copyFrameworkPackSkills(src, target, ['fastapi-code', 'react-code']);
+  assert.strictEqual(fs.existsSync(path.join(target, '.claude', 'skills', 'fastapi-code', 'SKILL.md')), true);
+  assert.strictEqual(fs.existsSync(path.join(target, '.claude', 'skills', 'react-code', 'SKILL.md')), true);
+});

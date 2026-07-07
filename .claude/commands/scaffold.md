@@ -220,6 +220,10 @@ Based on their answers, write `project-manifest.json` to the project root. Fill 
 
 - **Topology:** the manifest records a detected `topology` (`web-app` / `api-service` / `cli-or-library`) and applies its preset bundle of harness knobs (architecture, observability, verification mode, ceremony, model tier). Print the detected topology and its `summary` (from `.claude/scripts/topologies.js`) in the scaffold report, e.g. "Detected topology: web-app → layered architecture · observability · docker verify · full ceremony · balanced model tier." Every field stays overridable in `project-manifest.json`.
 
+### Auto-attach stack-matched specialty packs
+
+After the interview, before assembling `frameworkPacks` for the profile: if `stack.backend.framework` is `"fastapi"`, include `"fastapi-code"` in `frameworkPacks`. If `stack.frontend.framework` is `"react"` (the Vite variant — Presets A and C; **not** `"nextjs"`, Preset B), include `"react-code"`. These are additive to any AI-agent packs the user explicitly selected in the tech-stack-pack question (Step 1.E Q7) — a project can end up with any combination of `python-ai-agents`, `fastapi-code`, `react-code`, `langchain`, `google-adk` in `frameworkPacks`. Neither of these two additions requires a new question or a new confirmation-card line — they follow silently from the stack the user already chose.
+
 ### LSP Config (auto-detected from stack)
 
 Infer the recommended LSP servers from the stack chosen in Step 1. Write an `lsp` block into `project-manifest.json`:
