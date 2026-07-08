@@ -69,3 +69,16 @@ test('GATE 2 (Step D7) displays the duplication pre-check result', () => {
   const d7Section = deltaSection.slice(deltaSection.indexOf('Step D7'));
   assert.match(d7Section, /duplication pre-check/i, 'GATE 2 display list must include the duplication pre-check result');
 });
+
+test('manifest description mentions the design-delta invocation site', () => {
+  const m = JSON.parse(read('harness-manifest.json'));
+  const review = m.sensors.find((s) => s.id === 'modularity-review');
+  assert.match(review.description, /design --delta/, 'description must mention the new call site');
+  assert.strictEqual(review.status, 'active');
+  assert.strictEqual(review.type, 'inferential');
+});
+
+test('HARNESS.md G6 line mentions the design-delta invocation site', () => {
+  const doc = read('HARNESS.md');
+  assert.match(doc, /G6 \(P1\)[\s\S]*?design --delta/, 'G6 done-line must mention the new invocation site');
+});
