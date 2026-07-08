@@ -182,14 +182,7 @@ function readNavigation(projectDir) {
   };
 }
 
-function readContextCache(projectDir) {
-  const dir = path.join(projectDir, '.claude', 'state', 'context-cache');
-  let files;
-  try {
-    files = fs.readdirSync(dir).filter((name) => name.endsWith('.json')).sort();
-  } catch (_) {
-    return null;
-  }
+function tallyContextCacheEntries(dir, files) {
   let entries = 0;
   let estimatedRaw = 0;
   let estimatedPack = 0;
@@ -209,6 +202,18 @@ function readContextCache(projectDir) {
     if (Number.isFinite(obj.estimated_pack_tokens)) estimatedPack += obj.estimated_pack_tokens;
     if (Number.isFinite(obj.estimated_saved_tokens)) estimatedSaved += obj.estimated_saved_tokens;
   }
+  return { entries, byKind, estimatedRaw, estimatedPack, estimatedSaved };
+}
+
+function readContextCache(projectDir) {
+  const dir = path.join(projectDir, '.claude', 'state', 'context-cache');
+  let files;
+  try {
+    files = fs.readdirSync(dir).filter((name) => name.endsWith('.json')).sort();
+  } catch (_) {
+    return null;
+  }
+  const { entries, byKind, estimatedRaw, estimatedPack, estimatedSaved } = tallyContextCacheEntries(dir, files);
   if (!entries) return null;
   return {
     entries,
@@ -232,13 +237,6 @@ function readTokenAdvisor(projectDir) {
     by_kind: byKind,
     latest: records[records.length - 1],
   };
-}
-
-function readPendingReviews(stateDir) {
-  return readText(path.join(stateDir, 'pending-reviews.jsonl'))
-    .split('\n')
-    .filter((l) => l.trim())
-    .length;
 }
 
 // Latest iteration-log entry → coverage/baseline, blocked groups, attempt count,
@@ -274,7 +272,6 @@ module.exports = {
   readProgress,
   readFeatures,
   countGroupsFromGraph,
-  readPendingReviews,
   readPlanConfidence,
   readBudget,
   readNavigation,

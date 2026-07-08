@@ -11,7 +11,7 @@ const {
   loadRegistry, isPluginEnabled, findSkillsDir, readSkillDescriptions, buildPack,
 } = require(SCRIPT);
 
-const REGISTRY_PATH = path.join(__dirname, '..', '.claude', 'config', 'vertical-glossary-packs.json');
+const REGISTRY_PATH = path.join(__dirname, '..', '.claude', 'config', 'scaffold-packs.json');
 
 function mkTmpDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'vertical-glossary-'));
@@ -28,8 +28,8 @@ function writeSkill(skillsDir, dirName, frontmatterName, description) {
 
 test('loadRegistry reads the real committed registry and finds the private-equity entry', () => {
   const registry = loadRegistry(REGISTRY_PATH);
-  assert.ok(Array.isArray(registry.packs));
-  const pe = registry.packs.find((p) => p.plugin === 'private-equity');
+  assert.ok(Array.isArray(registry.verticalPacks));
+  const pe = registry.verticalPacks.find((p) => p.plugin === 'private-equity');
   assert.ok(pe, 'expected a private-equity entry in the registry');
   assert.strictEqual(pe.enabled_plugin_prefix, 'private-equity@');
   assert.strictEqual(pe.marketplace, 'claude-for-financial-services');
@@ -136,8 +136,8 @@ function writeSettings(repoDir, enabledPlugins) {
 function writeRepoRegistry(repoDir, packs) {
   fs.mkdirSync(path.join(repoDir, '.claude', 'config'), { recursive: true });
   fs.writeFileSync(
-    path.join(repoDir, '.claude', 'config', 'vertical-glossary-packs.json'),
-    JSON.stringify({ packs }, null, 2)
+    path.join(repoDir, '.claude', 'config', 'scaffold-packs.json'),
+    JSON.stringify({ verticalPacks: packs }, null, 2)
   );
 }
 
@@ -239,6 +239,6 @@ test('brd/SKILL.md Step 2.7 is generalized to any registered vertical, not priva
   assert.ok(step28Index > -1, 'expected Step 2.8 in brd/SKILL.md');
   assert.ok(step27Index < step28Index, 'Step 2.7 must precede Step 2.8');
   assert.match(brdSkill, /vertical-glossary-pack\.js/);
-  assert.match(brdSkill, /vertical-glossary-packs\.json/);
+  assert.match(brdSkill, /scaffold-packs\.json/);
   assert.doesNotMatch(brdSkill, /private-equity projects only/);
 });

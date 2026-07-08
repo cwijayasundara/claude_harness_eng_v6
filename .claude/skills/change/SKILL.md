@@ -102,7 +102,7 @@ If `specs/test_artefacts/` exists, update `test-cases.md` and `test-data/` to re
 
 Write or refresh `specs/reviews/review-context-pack.md` with the story, acceptance criteria, changed files, relevant DeepWiki/code-map links, and the exact test/lint/typecheck commands that passed.
 
-Spawn the `clean-code-reviewer` agent (harness-provided: `.claude/agents/clean-code-reviewer.md`; recognized by the `review-on-stop` Stop hook) on the full diff. **Spawn `security-reviewer` only if the diff touches authentication, authorization, secrets, user input handling, uploads/downloads, network fetch/redirect/proxy code, payments/billing, persistence/schema/migrations, API routes/controllers/middleware, or configured security patterns**. Run selected reviewers in parallel in a single message.
+Spawn the `code-reviewer` agent (harness-provided: `.claude/agents/code-reviewer.md`) on the full diff. **Spawn `security-reviewer` only if the diff touches authentication, authorization, secrets, user input handling, uploads/downloads, network fetch/redirect/proxy code, payments/billing, persistence/schema/migrations, API routes/controllers/middleware, or configured security patterns**. Run selected reviewers in parallel in a single message.
 
 Reviewers read only the context pack, final diff, test output, and directly touched files. Do not pass the whole implementation transcript or raw full-suite logs.
 
@@ -168,7 +168,7 @@ Run the project's lint and type checks (`npm run lint`, `mypy`, `tsc --noEmit`, 
 
 Write or refresh `specs/reviews/review-context-pack.md` with the issue, reproduction, root cause, changed files, test proof, and risk triggers.
 
-Spawn the `clean-code-reviewer` agent on the diff. **Spawn `security-reviewer` only if the fix touches authentication, authorization, secrets, user input handling, uploads/downloads, network fetch/redirect/proxy code, payments/billing, persistence/schema/migrations, API routes/controllers/middleware, or configured security patterns**. Run selected reviewers in parallel in a single message. Resolve BLOCK findings (max 3 cycles).
+Spawn the `code-reviewer` agent on the diff. **Spawn `security-reviewer` only if the fix touches authentication, authorization, secrets, user input handling, uploads/downloads, network fetch/redirect/proxy code, payments/billing, persistence/schema/migrations, API routes/controllers/middleware, or configured security patterns**. Run selected reviewers in parallel in a single message. Resolve BLOCK findings (max 3 cycles).
 
 ### Step I9 — Commit and Open a PR
 

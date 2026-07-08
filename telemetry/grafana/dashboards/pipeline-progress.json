@@ -59,25 +59,6 @@
       }
     },
     {
-      "title": "Pending reviews",
-      "targets": [
-        { "expr": "max(harness_pending_reviews)", "legendFormat": "pending" }
-      ],
-      "type": "stat",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "orange", "value": 1 }
-            ]
-          }
-        }
-      }
-    },
-    {
       "title": "Active stories",
       "targets": [
         { "expr": "count(harness_story_active == 1)", "legendFormat": "active" }

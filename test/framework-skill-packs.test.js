@@ -5,25 +5,25 @@ const fs = require('fs');
 const path = require('path');
 const { test } = require('node:test');
 
-const REGISTRY_PATH = path.join(__dirname, '..', '.claude', 'config', 'framework-skill-packs.json');
+const REGISTRY_PATH = path.join(__dirname, '..', '.claude', 'config', 'scaffold-packs.json');
 
-test('framework-skill-packs.json registers the local python-ai-agents pack and both existing external packs', () => {
+test('scaffold-packs.json registers the local python-ai-agents pack and both existing external packs', () => {
   const registry = JSON.parse(fs.readFileSync(REGISTRY_PATH, 'utf8'));
-  assert.ok(Array.isArray(registry.packs));
+  assert.ok(Array.isArray(registry.frameworkPacks));
 
-  const local = registry.packs.find((p) => p.key === 'python-ai-agents');
+  const local = registry.frameworkPacks.find((p) => p.key === 'python-ai-agents');
   assert.ok(local, 'expected a python-ai-agents entry');
   assert.strictEqual(local.source, 'local');
   assert.deepStrictEqual(local.skills.sort(), ['deepagents-code', 'langchain-code', 'langgraph-code'].sort());
 
-  const langchain = registry.packs.find((p) => p.key === 'langchain');
+  const langchain = registry.frameworkPacks.find((p) => p.key === 'langchain');
   assert.ok(langchain, 'expected the existing langchain entry to survive migration');
   assert.strictEqual(langchain.source, 'github');
   assert.strictEqual(langchain.repo, 'cwijayasundara/agent_cli_langchain');
   assert.strictEqual(langchain.prefix, 'langchain-agents-');
   assert.strictEqual(langchain.expected_skills, 9);
 
-  const googleAdk = registry.packs.find((p) => p.key === 'google-adk');
+  const googleAdk = registry.frameworkPacks.find((p) => p.key === 'google-adk');
   assert.ok(googleAdk, 'expected the existing google-adk entry to survive migration');
   assert.strictEqual(googleAdk.source, 'github');
   assert.strictEqual(googleAdk.repo, 'google/agents-cli');
@@ -35,7 +35,7 @@ test('install-framework-packs/SKILL.md references the registry file instead of a
   const skill = fs.readFileSync(
     path.join(__dirname, '..', '.claude', 'skills', 'install-framework-packs', 'SKILL.md'), 'utf8'
   );
-  assert.match(skill, /framework-skill-packs\.json/);
+  assert.match(skill, /scaffold-packs\.json/);
 });
 
 const os = require('os');
@@ -51,9 +51,9 @@ function mkHarnessFixture() {
   const src = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-src-'));
   fs.mkdirSync(path.join(src, 'config'), { recursive: true });
   fs.writeFileSync(
-    path.join(src, 'config', 'framework-skill-packs.json'),
+    path.join(src, 'config', 'scaffold-packs.json'),
     JSON.stringify({
-      packs: [
+      frameworkPacks: [
         { key: 'python-ai-agents', source: 'local', skills: ['langgraph-code', 'langchain-code'] },
         { key: 'langchain', source: 'github', repo: 'cwijayasundara/agent_cli_langchain', prefix: 'langchain-agents-', expected_skills: 9 },
       ],
@@ -178,9 +178,9 @@ test('deepagents-code skill exists with correct frontmatter and reference file',
 
 test('python-ai-agents pack registers exactly the three skills this plan built', () => {
   const registry = JSON.parse(fs.readFileSync(
-    path.join(__dirname, '..', '.claude', 'config', 'framework-skill-packs.json'), 'utf8'
+    path.join(__dirname, '..', '.claude', 'config', 'scaffold-packs.json'), 'utf8'
   ));
-  const local = registry.packs.find((p) => p.key === 'python-ai-agents');
+  const local = registry.frameworkPacks.find((p) => p.key === 'python-ai-agents');
   for (const skillName of local.skills) {
     assert.strictEqual(
       fs.existsSync(path.join(__dirname, '..', '.claude', 'skills', skillName, 'SKILL.md')),
@@ -190,21 +190,21 @@ test('python-ai-agents pack registers exactly the three skills this plan built',
   }
 });
 
-test('framework-skill-packs.json registers fastapi-code and react-code as local, single-skill packs', () => {
+test('scaffold-packs.json registers fastapi-code and react-code as local, single-skill packs', () => {
   const registry = JSON.parse(fs.readFileSync(REGISTRY_PATH, 'utf8'));
 
-  const fastapi = registry.packs.find((p) => p.key === 'fastapi-code');
+  const fastapi = registry.frameworkPacks.find((p) => p.key === 'fastapi-code');
   assert.ok(fastapi, 'expected a fastapi-code entry');
   assert.strictEqual(fastapi.source, 'local');
   assert.deepStrictEqual(fastapi.skills, ['fastapi-code']);
 
-  const react = registry.packs.find((p) => p.key === 'react-code');
+  const react = registry.frameworkPacks.find((p) => p.key === 'react-code');
   assert.ok(react, 'expected a react-code entry');
   assert.strictEqual(react.source, 'local');
   assert.deepStrictEqual(react.skills, ['react-code']);
 
   // Existing entries must survive untouched
-  const local = registry.packs.find((p) => p.key === 'python-ai-agents');
+  const local = registry.frameworkPacks.find((p) => p.key === 'python-ai-agents');
   assert.deepStrictEqual(local.skills.sort(), ['deepagents-code', 'langchain-code', 'langgraph-code'].sort());
 });
 
@@ -239,7 +239,7 @@ test('react-code skill exists with correct frontmatter and reference files', () 
 test('python-ai-agents, fastapi-code, and react-code packs all register skills that exist on disk', () => {
   const registry = JSON.parse(fs.readFileSync(REGISTRY_PATH, 'utf8'));
   for (const key of ['python-ai-agents', 'fastapi-code', 'react-code']) {
-    const entry = registry.packs.find((p) => p.key === key);
+    const entry = registry.frameworkPacks.find((p) => p.key === key);
     for (const skillName of entry.skills) {
       assert.strictEqual(
         fs.existsSync(path.join(__dirname, '..', '.claude', 'skills', skillName, 'SKILL.md')),

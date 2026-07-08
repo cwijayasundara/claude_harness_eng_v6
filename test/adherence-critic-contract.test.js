@@ -7,7 +7,7 @@ const { test } = require('node:test');
 
 const read = (rel) => fs.readFileSync(path.join(__dirname, '..', rel), 'utf8');
 const EVAL = read('.claude/agents/evaluator.md');
-const DIFF = read('.claude/agents/diff-reviewer.md');
+const CODE_REVIEWER = read('.claude/agents/code-reviewer.md');
 
 test('evaluator documents the brownfield-adherence rubric', () => {
   assert.match(EVAL, /brownfield-adherence/i);
@@ -16,8 +16,8 @@ test('evaluator documents the brownfield-adherence rubric', () => {
   assert.match(EVAL, /seam/i);
 });
 
-test('diff-reviewer documents the design-adherence lens', () => {
-  assert.match(DIFF, /adherence/i);
-  assert.match(DIFF, /seam/i);
-  assert.match(DIFF, /parallel structure/i);
+test('code-reviewer documents the design-adherence lens', () => {
+  assert.match(CODE_REVIEWER, /adherence/i);
+  assert.match(CODE_REVIEWER, /seam/i);
+  assert.match(CODE_REVIEWER, /parallel structure/i);
 });

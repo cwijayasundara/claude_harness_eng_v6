@@ -38,9 +38,9 @@ function printReport(statuses) {
 
 function main() {
   const repoRoot = process.cwd();
-  const registryPath = path.join(repoRoot, '.claude', 'config', 'vertical-glossary-packs.json');
+  const registryPath = path.join(repoRoot, '.claude', 'config', 'scaffold-packs.json');
   if (!fs.existsSync(registryPath)) {
-    process.stdout.write('scaffold-vertical-status: no vertical-glossary-packs.json registry found — nothing to report.\n');
+    process.stdout.write('scaffold-vertical-status: no scaffold-packs.json registry found — nothing to report.\n');
     process.exit(0);
   }
   let settings = { enabledPlugins: {} };
@@ -50,7 +50,7 @@ function main() {
     // no settings.json yet — every entry reports as not-installed, which is correct.
   }
   const registry = loadRegistry(registryPath);
-  printReport(checkVerticalStatus(settings.enabledPlugins, registry.packs));
+  printReport(checkVerticalStatus(settings.enabledPlugins, registry.verticalPacks || []));
   process.exit(0);
 }
 

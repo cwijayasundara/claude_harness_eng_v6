@@ -76,17 +76,6 @@ test('does not block a freshly scaffolded project (failing features but none pas
   assert.strictEqual(result.stdout, '');
 });
 
-test('defers to the review gate while a review cycle is open', async () => {
-  const projectDir = makeHookProject([HOOK]);
-  writeProgress(projectDir, { groups_remaining: '[A]', current_group: 'A', next_action: 'build' });
-  fs.writeFileSync(statePath(projectDir, 'review-block-count'), '1');
-  const result = await runHook(projectDir, HOOK, {}, ON);
-  assert.strictEqual(result.status, 0);
-  assert.strictEqual(result.stdout, '', `expected deferral, got: ${result.stdout}`);
-  // counter must not advance while deferring
-  assert.ok(!fs.existsSync(statePath(projectDir, 'auto-continue-count')));
-});
-
 test('resets the no-progress budget when a new feature passes', async () => {
   const projectDir = makeHookProject([HOOK]);
   writeProgress(projectDir, { groups_remaining: '[A]', current_group: 'A', next_action: 'build' });

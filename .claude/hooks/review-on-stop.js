@@ -2,132 +2,20 @@
 
 'use strict';
 
-// Stop hook — end-of-turn review gate + session-learnings advisories.
-// Blocks the stop while source files written this turn (queued by
-// verify-on-save.js) have not been seen by a reviewer agent. Review evidence
-// is a reviewer 'Task'/'Agent' tool_use in the transcript OR fresh verdict
-// artifacts under specs/reviews/. Blocking is bounded: after
-// MAX_CONSECUTIVE_BLOCKS the gate fails open loudly instead of looping.
-// When not blocking, emits maintenance advisories for oversized state files
-// and surfaces new hook-errors.log entries (gates that crashed fail open).
+// Stop hook — session-learnings + hook-error advisories.
+//
+// Previously also blocked the stop until source files written this turn had
+// been seen by a reviewer agent (a per-turn review-gate). That gate was
+// removed: all reviewer agents (code-reviewer, security-reviewer) now run
+// only at the pre-PR checkpoints they already had — end of /implement,
+// /change, /refactor, /auto's Section 5 ratchet gate, and /gate — never
+// mid-development on every turn. This hook is now purely advisory: it
+// surfaces stale session-learnings files and newly logged hook crashes
+// (gates that crashed fail open, which would otherwise be silent).
 
 const fs = require('fs');
 const path = require('path');
 const { resolveProjectDir, readHookInput, reportFailure } = require('./lib/common');
-const { renderContextPack, reviewPolicy } = require('./lib/review-policy');
-
-const REVIEWER_AGENTS = new Set([
-  'clean-code-reviewer',
-  'diff-reviewer',
-  'security-reviewer',
-  'pr-review-toolkit:code-reviewer',
-  'code-review:code-review',
-  'performance-optimizer',
-]);
-
-// The gate may block this many consecutive stops; after that it fails open
-// LOUDLY (stdout warning + hook-errors.log) instead of looping forever. A
-// silent one-shot clear would let a model bypass review by simply stopping
-// twice; a bounded budget keeps the escape hatch without the free pass.
-const MAX_CONSECUTIVE_BLOCKS = 3;
-
-function verdictTs(projectDir, verdictNames) {
-  let oldest = Infinity;
-  for (const name of verdictNames) {
-    const p = path.join(projectDir, 'specs', 'reviews', name);
-    let stat;
-    try {
-      stat = fs.statSync(p);
-      // mtime alone is forgeable with an empty touch; require an actual
-      // verdict payload before the file counts as review evidence.
-      const parsed = JSON.parse(fs.readFileSync(p, 'utf8'));
-      if (typeof parsed.verdict !== 'string') return 0;
-    } catch (_) {
-      return 0; // missing or unparseable verdict — that reviewer has not run
-    }
-    if (stat.mtimeMs < oldest) oldest = stat.mtimeMs;
-  }
-  return oldest === Infinity ? 0 : oldest;
-}
-
-function readBlockCount(stateDir) {
-  try {
-    const n = parseInt(fs.readFileSync(path.join(stateDir, 'review-block-count'), 'utf8'), 10);
-    return Number.isFinite(n) && n > 0 ? n : 0;
-  } catch (_) {
-    return 0;
-  }
-}
-
-function writeBlockCount(stateDir, n) {
-  try {
-    fs.writeFileSync(path.join(stateDir, 'review-block-count'), `${n}\n`);
-  } catch (_) {
-    /* best effort */
-  }
-}
-
-function readPending(stateFile) {
-  if (!fs.existsSync(stateFile)) return [];
-  const out = [];
-  for (const line of fs.readFileSync(stateFile, 'utf8').split('\n')) {
-    if (!line) continue;
-    try {
-      out.push(JSON.parse(line));
-    } catch (_) {
-      /* skip malformed */
-    }
-  }
-  return out;
-}
-
-function lastReviewerTs(transcriptPath) {
-  if (!transcriptPath || !fs.existsSync(transcriptPath)) return new Map();
-  const lastByAgent = new Map();
-  for (const line of fs.readFileSync(transcriptPath, 'utf8').split('\n')) {
-    if (!line) continue;
-    let msg;
-    try {
-      msg = JSON.parse(line);
-    } catch (_) {
-      continue;
-    }
-    const parts =
-      (msg.message && Array.isArray(msg.message.content) && msg.message.content) ||
-      (Array.isArray(msg.content) && msg.content) ||
-      [];
-    for (const part of parts) {
-      if (part && part.type === 'tool_use' && (part.name === 'Task' || part.name === 'Agent')) {
-        const sub = part.input && (part.input.subagent_type || part.input.subagent);
-        if (sub && REVIEWER_AGENTS.has(sub)) {
-          const tsRaw = msg.timestamp || (msg.message && msg.message.timestamp);
-          const ts = tsRaw ? Date.parse(tsRaw) : Date.now();
-          if (ts > (lastByAgent.get(sub) || 0)) lastByAgent.set(sub, ts);
-        }
-      }
-    }
-  }
-  return lastByAgent;
-}
-
-function requiredReviewTs(projectDir, transcriptPath, policy) {
-  const transcriptTs = lastReviewerTs(transcriptPath);
-  let oldest = Infinity;
-  for (const reviewer of policy.required) {
-    const byTranscript = transcriptTs.get(reviewer.agent) || 0;
-    const byVerdict = verdictTs(projectDir, [reviewer.verdict]);
-    const ts = Math.max(byTranscript, byVerdict);
-    if (!ts) return 0;
-    if (ts < oldest) oldest = ts;
-  }
-  return oldest === Infinity ? 0 : oldest;
-}
-
-function writeContextPack(projectDir, policy) {
-  const reviewsDir = path.join(projectDir, 'specs', 'reviews');
-  fs.mkdirSync(reviewsDir, { recursive: true });
-  fs.writeFileSync(path.join(reviewsDir, 'review-context-pack.md'), renderContextPack(policy));
-}
 
 function readOffset(offsetPath) {
   try {
@@ -199,57 +87,9 @@ function learningAdvisories(stateDir) {
 }
 
 try {
-  const input = readHookInput();
+  readHookInput();
   const projectDir = resolveProjectDir(path.dirname(path.resolve(__filename)));
   const stateDir = path.join(projectDir, '.claude', 'state');
-  const stateFile = path.join(stateDir, 'pending-reviews.jsonl');
-
-  const pending = readPending(stateFile);
-  if (pending.length === 0) {
-    writeBlockCount(stateDir, 0); // no open review cycle — drop any stale counter
-  } else {
-    const policy = reviewPolicy(pending);
-    writeContextPack(projectDir, policy);
-    // Review evidence: each required reviewer has either a matching agent spawn
-    // in the transcript or a fresh verdict artifact on disk (mtime after the
-    // pending writes). Security review is required only when the changed files
-    // cross a security/data/API boundary.
-    const reviewedTs = requiredReviewTs(projectDir, input.transcript_path, policy);
-    const unreviewed = pending.filter((p) => p.ts > reviewedTs);
-    if (unreviewed.length === 0) {
-      fs.writeFileSync(stateFile, '');
-      writeBlockCount(stateDir, 0);
-    } else {
-      const blocks = readBlockCount(stateDir);
-      const fileList = [...new Set(unreviewed.map((p) => p.file))].map((f) => `  - ${f}`).join('\n');
-      if (blocks >= MAX_CONSECUTIVE_BLOCKS) {
-        // Bounded escape hatch: never loop forever, but never fail open silently.
-        fs.writeFileSync(stateFile, '');
-        writeBlockCount(stateDir, 0);
-        reportFailure('review-on-stop', new Error(`reviewer gate failed open after ${blocks} consecutive blocks; unreviewed files:\n${fileList}`));
-        process.stdout.write(
-          `WARNING: reviewer gate failed open after ${blocks} consecutive blocks.\n` +
-          `These files were written WITHOUT required review:\n${fileList}\n` +
-          `Run the required reviewer agents before shipping this work.\n`
-        );
-      } else {
-        writeBlockCount(stateDir, blocks + 1);
-        const requiredList = policy.required.map((r, i) =>
-          `  ${i + 1}. Agent(subagent_type="${r.agent}", prompt="${r.prompt}")`
-        ).join('\n');
-        const reason =
-          `Production code was written this turn but not reviewed.\n` +
-          `Files awaiting review:\n${fileList}\n\n` +
-          `Review policy: ${policy.scope}; ${policy.reasons.join('; ')}.\n` +
-          `Context pack: specs/reviews/review-context-pack.md\n\n` +
-          `Before stopping, invoke the required reviewer agent${policy.required.length === 1 ? '' : 's'} in a single message${policy.required.length === 1 ? '' : ' (parallel)'}:\n` +
-          `${requiredList}\n` +
-          `The gate clears when the required reviewer agents have run or their verdicts land in specs/reviews/.\n`;
-        process.stdout.write(JSON.stringify({ decision: 'block', reason }));
-        process.exit(0);
-      }
-    }
-  }
 
   const advisories = learningAdvisories(stateDir);
   const errAdvisory = hookErrorAdvisory(stateDir);

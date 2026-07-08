@@ -96,7 +96,7 @@ describe('Harness E2E — Native command integration (/refactor→/simplify, /ga
     const prompt =
       `This project is a git repo with a passing test suite. Use the harness /refactor workflow on ${rel} ` +
       'to improve code quality. Follow the refactor skill exactly, INCLUDING Step 6 — the native ' +
-      '/simplify mechanical-cleanup pass — followed by the clean-code-reviewer. ' +
+      '/simplify mechanical-cleanup pass — followed by the code-reviewer. ' +
       'This is a behavior-preserving refactor: do NOT change observable behavior, and every existing ' +
       'test must still pass. Commit the result as a pure refactor (HARNESS_COMMIT_KIND=refactor).';
     const result = runClaude(prompt, { cwd: PROJECT_DIR, model: 'sonnet', budgetUsd: '2.00', timeoutMs: 290000 });

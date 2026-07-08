@@ -30,9 +30,9 @@ launch, simplify) rather than calling them. That is the duplication to address.
 
 | Native built-in | Harness equivalent | Verdict | Notes |
 |---|---|---|---|
-| `/code-review` | `diff-reviewer` (Gate 8) + `clean-code-reviewer` + `/review` | Heavy overlap | Native is single-shot/advisory; harness adds GAN separation + **blocking** `diff-review-verdict.json` + ratchet |
+| `/code-review` | `code-reviewer` (Gate 8) + `/review` | Heavy overlap | Native is single-shot/advisory; harness adds GAN separation + **blocking** `code-review-verdict.json` + ratchet |
 | `/security-review` | `security-reviewer` agent + `/review` | Heavy overlap | Harness adds blocking `security-verdict.json` |
-| `/simplify` | `clean-code-reviewer` + `code-simplifier` | Overlap | Native does mechanical cleanups + `--fix`; harness reviewer judges structure (SOLID) |
+| `/simplify` | `code-reviewer` + `code-simplifier` | Overlap | Native does mechanical cleanups + `--fix`; harness reviewer judges structure (SOLID) |
 | `/review` (PR) | `/review` (eval + security, local) | **Name collision** | Different scope, same name → user confusion |
 | `/verify` | `/evaluate` Layer 2 (Playwright) | Overlap | Both run the app and observe behavior |
 | `/run` | `/evaluate` app-launch logic | Overlap | Native launches/drives the app |
@@ -94,14 +94,14 @@ because upstream moves).
    lightweight human-driven *complement* to the rigorous `/evaluate`.
 4. **Done.** `/refactor` Step 6 now invokes native **`/simplify`** as its mechanical-cleanup engine,
    fenced by the behavior-preservation gates (green precondition, diff-scoped, re-verify, pure-refactor
-   commit). This is *additive* — `clean-code-reviewer` only reports; `/simplify` applies. The reviewer
+   commit). This is *additive* — `code-reviewer` only reports; `/simplify` applies. The reviewer
    (now Step 7) is reserved for structural / SOLID judgment native `/simplify` does not do. Not wired
    into `/change` or `/implement`, whose diffs are behavioral (new code) and where a mechanical pass is
    riskier and less cleanly scoped — revisit only if a concrete need appears.
 
 ### Phase 3 — Wrap, don't replace (keep the guarantees)
 5. `security-reviewer` runtime *calls* native **`/security-review`** as its scan engine, then applies
-   the GAN wrapper (blocking `security-verdict.json` + ratchet). Same for `diff-reviewer` ↔
+   the GAN wrapper (blocking `security-verdict.json` + ratchet). Same for `code-reviewer` ↔
    `/code-review`. The blocking-verdict + ratchet behavior stays bespoke; the scanning is delegated.
 
 ### Phase 4 — Fill gaps — **REVISED after investigation 2026-06-14**

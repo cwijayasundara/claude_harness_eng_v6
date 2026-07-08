@@ -431,9 +431,9 @@ After the agent team completes, run the ratchet gate. The ratchet is monotonic: 
 | 5. Evaluator (API + Playwright vs running Docker) | Yes | Yes |
 | 6. Design critic (vision scoring, GAN loop) | Yes | No |
 | 7. Adaptive security review (security-reviewer only on security/data/API boundary, block on critical/high) | Yes | Yes |
-| 8. Fresh-context diff review (diff-reviewer, block on correctness defects) | Yes | Yes |
+| 8. Fresh-context code review (code-reviewer, block on structure/correctness defects) | Yes | Yes |
 
-**Lean** differs from **Full** only at Gate 6: it does **not** run the design-critic vision loop at all. Every other gate — including the Gate 7 adaptive security policy, Gate 8 diff review, and the Gate 5 evaluator — runs in both modes. There is no mode that skips the evaluator, and there is no mode that can silently bypass a required security review; that is the whole point of the ratchet.
+**Lean** differs from **Full** only at Gate 6: it does **not** run the design-critic vision loop at all. Every other gate — including the Gate 7 adaptive security policy, Gate 8 code review, and the Gate 5 evaluator — runs in both modes. There is no mode that skips the evaluator, and there is no mode that can silently bypass a required security review; that is the whole point of the ratchet.
 
 ### Fast Lane (trivial commits)
 
@@ -547,9 +547,9 @@ If a trigger fires, spawn the `security-reviewer` agent against the group's chan
 
 If no trigger fires, do not spawn `security-reviewer`; record `security_review: skipped_no_boundary` in `review-context-pack.md`. This is an explicit policy decision, not a silent skip.
 
-### Gate 8 — Fresh-Context Diff Review (Full + Lean)
+### Gate 8 — Fresh-Context Code Review (Full + Lean)
 
-Spawn the `diff-reviewer` agent on the group's diff (give it the commit range or branch, acceptance criteria, and `specs/reviews/review-context-pack.md` — nothing else from this session). It reads the diff cold, hunts correctness defects (logic errors, missing edge cases, contract breaks against existing callers), and writes `specs/reviews/diff-review-verdict.json`. The gate **FAILs** on any BLOCK finding or a missing verdict file. Route BLOCK findings to the generator like any other gate failure (max 3 fix cycles). Runs concurrently with Gates 5 and any selected Gate 7 security review — it needs only the repo, not the running app. The reviewer's value comes from its empty context: do not paste progress logs or builder reasoning into its spawn prompt.
+Spawn the `code-reviewer` agent on the group's diff (give it the commit range or branch, acceptance criteria, and `specs/reviews/review-context-pack.md` — nothing else from this session). It reads the diff cold, hunting both structure violations (SOLID breaks, duplication, god functions) and correctness defects (logic errors, missing edge cases, contract breaks against existing callers), and writes `specs/reviews/code-review-verdict.json`. The gate **FAILs** on any BLOCK finding or a missing verdict file. Route BLOCK findings to the generator like any other gate failure (max 3 fix cycles). Runs concurrently with Gates 5 and any selected Gate 7 security review — it needs only the repo, not the running app. The reviewer's value comes from its empty context: do not paste progress logs or builder reasoning into its spawn prompt.
 
 ### Gate 9 — Executed Matrix Gate
 

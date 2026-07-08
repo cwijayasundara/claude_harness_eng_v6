@@ -13,8 +13,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { TRACKED_EXTS, resolveProjectDir, readHookInput, reportFailure } = require('./lib/common');
-const { isTestFile } = require('./lib/tdd');
+const { resolveProjectDir, readHookInput, reportFailure } = require('./lib/common');
 const { checkContentViolations, loadLayerConfig } = require('./lib/layers');
 const { checkContextContent, loadContextConfig } = require('./lib/contexts');
 const { run, output, shouldBlock, detectCwd } = require('./lib/toolchain');
@@ -37,18 +36,6 @@ function block(message) {
 
 function inSkippedDir(n) {
   return n.split('/').some((p) => QUEUE_SKIP_DIRS.has(p));
-}
-
-function queueForReview(projectDir, filePath, n, ext) {
-  if (!TRACKED_EXTS.has(ext)) return;
-  if (isTestFile(n)) return;
-  if (inSkippedDir(n)) return;
-  const stateDir = path.join(projectDir, '.claude', 'state');
-  fs.mkdirSync(stateDir, { recursive: true });
-  fs.appendFileSync(
-    path.join(stateDir, 'pending-reviews.jsonl'),
-    JSON.stringify({ file: filePath, ts: Date.now() }) + '\n'
-  );
 }
 
 function markGraphDirty(projectDir, filePath, n, ext) {
@@ -142,7 +129,6 @@ try {
   const n = filePath.replace(/\\/g, '/');
   const ext = path.extname(n).toLowerCase();
 
-  queueForReview(projectDir, filePath, n, ext);
   markGraphDirty(projectDir, filePath, n, ext);
   if (!inSkippedDir(n)) {
     checkLayers(projectDir, filePath, n, ext);

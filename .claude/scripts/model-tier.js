@@ -27,18 +27,18 @@ const SONNET5 = 'claude-sonnet-5';  // generation + read-only exploration
 const PRESETS = {
   cost: {
     planner: OPUS, generator: SONNET5, evaluator: OPUS,
-    'design-critic': OPUS, 'security-reviewer': OPUS, 'diff-reviewer': OPUS,
-    'clean-code-reviewer': OPUS, 'codebase-explorer': SONNET5,
+    'design-critic': OPUS, 'security-reviewer': OPUS, 'code-reviewer': OPUS,
+    'codebase-explorer': SONNET5,
   },
   balanced: {
     planner: OPUS, generator: SONNET5, evaluator: OPUS,
-    'design-critic': OPUS, 'security-reviewer': OPUS, 'diff-reviewer': OPUS,
-    'clean-code-reviewer': OPUS, 'codebase-explorer': SONNET5,
+    'design-critic': OPUS, 'security-reviewer': OPUS, 'code-reviewer': OPUS,
+    'codebase-explorer': SONNET5,
   },
   'max-quality': {
     planner: OPUS, generator: OPUS, evaluator: OPUS,
-    'design-critic': OPUS, 'security-reviewer': OPUS, 'diff-reviewer': OPUS,
-    'clean-code-reviewer': OPUS, 'codebase-explorer': SONNET5,
+    'design-critic': OPUS, 'security-reviewer': OPUS, 'code-reviewer': OPUS,
+    'codebase-explorer': SONNET5,
   },
 };
 

@@ -6,7 +6,7 @@
 // (docs/superpowers/specs/2026-07-05-ubiquitous-language-design.md), generalized
 // from the private-equity-only pe-glossary-pack.js (2026-07-06) into a
 // registry-driven engine: any vertical plugin registered in
-// .claude/config/vertical-glossary-packs.json is a config entry, not a new
+// .claude/config/scaffold-packs.json (verticalPacks) is a config entry, not a new
 // script. No NLP, no invented terms — just what each plugin already says
 // about itself in its skill descriptions, grouped under that entry's fixed
 // bounded-context table.
@@ -68,9 +68,9 @@ function loadSettings(repoRoot) {
 }
 
 function loadRepoRegistry(repoRoot) {
-  const registryPath = path.join(repoRoot, '.claude', 'config', 'vertical-glossary-packs.json');
+  const registryPath = path.join(repoRoot, '.claude', 'config', 'scaffold-packs.json');
   if (!fs.existsSync(registryPath)) return { packs: [] };
-  return loadRegistry(registryPath);
+  return { packs: loadRegistry(registryPath).verticalPacks || [] };
 }
 
 function processEntry(entry, repoRoot) {

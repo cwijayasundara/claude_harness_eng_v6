@@ -89,7 +89,7 @@ Two layers, run in the `--autonomous` and `--auto` lanes:
    - `band: high`: proceed, carrying `target_seam` into the plan.
 2. **Judged adherence critic.** The **evaluator**'s brownfield-adherence rubric
    (artifact mode) checks the *plan* cites the DeepWiki and extends the seam — the
-   machine GATE 2; the **diff-reviewer**'s design-adherence lens checks the *diff*
+   machine GATE 2; the **code-reviewer**'s design-adherence lens checks the *diff*
    actually extended it before the PR. A FAIL self-heals up to the loop's attempt
    cap, else STOP & surface.
 3. **Design-delta rubric.** When the lane runs `/design --delta` (either
@@ -124,7 +124,7 @@ This mirrors `/build`'s approval model (`humanGates: 0` ⇒ no sub-phase stops)
 sub-skill's own interactive prompt.
 
 **Machine gates are never collapsed.** The deterministic seam-confidence gate,
-the evaluator brownfield-adherence rubric (artifact mode), the diff-reviewer
+the evaluator brownfield-adherence rubric (artifact mode), the code-reviewer
 design-adherence lens, `/auto`'s ratchet, and `/gate` all run regardless of
 lane — only the human approval prompts inside delegated sub-skills are
 suppressed.

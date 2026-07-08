@@ -46,7 +46,7 @@ UI mockups, architecture / ARB (Architecture Review Board) narrative documents, 
 | Architecture / ARB / design narrative | `/design --doc-only` (single authored document; no planner/generator/evaluator, no `specs/design/` schema set) |
 | Research / deep dive / analysis | `deep-research` skill |
 
-These lanes skip contracts, ratcheting, and reviewer enforcement **by design** — abstaining from the pipeline is correct behavior here, not a shortcut, and it overrides the default impulse to brainstorm/escalate/TDD before acting. Only escalate to the SDLC pipeline if the artifact is being turned into shipped product code (e.g., a mockup becoming a real component). When in doubt about whether something is product code, ask. For a fully insulated workspace where the SDLC machinery is absent entirely, load the **harness-lite** plugin (`harness-lite/`) instead of this one.
+These lanes skip contracts, ratcheting, and reviewer enforcement **by design** — abstaining from the pipeline is correct behavior here, not a shortcut, and it overrides the default impulse to brainstorm/escalate/TDD before acting. Only escalate to the SDLC pipeline if the artifact is being turned into shipped product code (e.g., a mockup becoming a real component). When in doubt about whether something is product code, ask. For a fully insulated workspace where the SDLC machinery is absent entirely, load the **harness-lite** plugin (`harness-lite/`) instead of this one. For small but *shippable* code, use `/build --lite` inside the full harness, not `harness-lite` — that loadout is only for artifacts that never ship.
 
 ### 1. Think Before Coding
 - State assumptions explicitly. If uncertain, ask — don't guess.

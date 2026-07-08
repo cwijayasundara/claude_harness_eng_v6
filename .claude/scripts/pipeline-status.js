@@ -65,7 +65,6 @@ function renderStatus(s) {
     `Features:  ${s.features.passing} / ${s.features.total} passing`,
     `Coverage:  ${fmtCoverage(s.coverage)}`,
     `Iteration: ${s.iteration.current}/${s.iteration.max} (group ${s.iteration.group || '-'})`,
-    `Reviews:   ${s.pending_reviews} pending`,
     `Next:      ${s.next_action || '-'}`,
   );
   if (s.stories.blocked.length) lines.push(`Blocked:   ${s.stories.blocked.join(', ')}`);

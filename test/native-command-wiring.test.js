@@ -48,5 +48,5 @@ test('/refactor runs native /simplify as a fenced mechanical-cleanup step', () =
   assert.match(refactor, /native \*\*`\/simplify`\*\*/, 'invokes native /simplify');
   assert.match(refactor, /Green precondition/, 'fences on a passing suite');
   assert.match(refactor, /HARNESS_COMMIT_KIND=refactor/, 'commits as a pure refactor');
-  assert.match(refactor, /clean-code-reviewer/, 'still spawns the structural reviewer after');
+  assert.match(refactor, /code-reviewer/, 'still spawns the structural reviewer after');
 });

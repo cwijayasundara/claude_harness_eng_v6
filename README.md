@@ -198,7 +198,7 @@ enforced mode. See [docs/token-governor.md](docs/token-governor.md) and
 | Drift cadence workflow | Copy `.claude/templates/github-workflows/harness-drift.yml` to `.github/workflows/` | Runs drift, harness coverage, flakes, fixtures, contract drift, and optional SLO checks |
 | PR-time E2E re-runs | Copied automatically by /test as .github/workflows/e2e.yml | Re-runs the generated Playwright suite on every PR |
 | Unattended backlog-to-merge | Run `symphony_clone/` separately | `symphony_clone/README.md` |
-| Artifact-only docs/mockups/research | Use `harness-lite` | `harness-lite/README.md` |
+| Artifact-only docs/mockups/research | Use `harness-lite` (not the same as `/build --lite` — see CLAUDE.md's Disposable Artifacts table for which one applies) | `harness-lite/README.md` |
 
 ## Testing This Harness
 

@@ -17,8 +17,7 @@ const ROLES = [
   'evaluator',
   'design-critic',
   'security-reviewer',
-  'diff-reviewer',
-  'clean-code-reviewer',
+  'code-reviewer',
   'codebase-explorer',
 ];
 
@@ -26,7 +25,7 @@ test('three presets exist: cost, balanced, max-quality', () => {
   assert.deepStrictEqual(Object.keys(PRESETS).sort(), ['balanced', 'cost', 'max-quality']);
 });
 
-test('every preset assigns a model to all eight agent roles', () => {
+test('every preset assigns a model to all seven agent roles', () => {
   for (const preset of Object.keys(PRESETS)) {
     const m = modelsForTier(preset);
     assert.deepStrictEqual(Object.keys(m).sort(), ROLES.slice().sort(), `preset ${preset}`);
@@ -67,8 +66,7 @@ test('max-quality: Opus 4.8 across the board; only codebase-explorer stays Sonne
   assert.strictEqual(m.generator, OPUS); // generation bumped to the top tier
   assert.strictEqual(m.evaluator, OPUS);
   assert.strictEqual(m['design-critic'], OPUS);
-  assert.strictEqual(m['diff-reviewer'], OPUS);
-  assert.strictEqual(m['clean-code-reviewer'], OPUS);
+  assert.strictEqual(m['code-reviewer'], OPUS);
   assert.strictEqual(m['security-reviewer'], OPUS);
   assert.strictEqual(m['codebase-explorer'], SONNET5);
 });

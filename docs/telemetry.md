@@ -105,7 +105,6 @@ These appear after you run a Claude Code session with the `.env` loaded.
 |---|---|---|---|
 | `harness_agent_runs_total` | counter | **user**, kind, exit, lane, mode, agent, group, story, iteration, host | Every agent execution with outcome — the core velocity metric |
 | `harness_conversation_turns_total` | counter | **user**, kind, lane, mode, group, story, iteration, host | Every conversation turn |
-| `harness_pending_reviews` | gauge | **user**, lane, mode, group, story, iteration, host | Pending review count at turn end |
 | `harness_iteration_current` | gauge | **user**, group, lane, mode | Current ratchet iteration per group — fewer is more efficient |
 | `harness_story_active` | gauge | **user**, group, story, lane | Stories currently being worked on |
 | `harness_skill_info` | gauge | skill, directory, path, description | Installed skill inventory pushed by replay and hook telemetry |
@@ -171,7 +170,6 @@ Type each one in the expression box and click Execute:
 ```
 harness_agent_runs_total                          ← all agent runs (raw)
 harness_conversation_turns_total                                  ← all turns
-harness_pending_reviews                              ← current pending review count
 sum by (agent) (harness_agent_runs_total)          ← runs grouped by agent
 sum by (exit) (harness_agent_runs_total)           ← success vs failure count
 sum by (lane) (harness_agent_runs_total)           ← work distribution by lane
@@ -308,15 +306,7 @@ sum by (group, agent) (harness_agent_runs_total)
 
 Groups with high error counts or outsized agent-run counts are complexity hotspots. Consider breaking them into smaller groups or adding more specific learned rules.
 
-**7. "Are reviews piling up?"**
-
-```promql
-harness_pending_reviews
-```
-
-Rising pending reviews means the harness is producing faster than humans can review. Either add reviewers or switch to Lean mode to slow output.
-
-**8. "How is each team member using the harness?"**
+**7. "How is each team member using the harness?"**
 
 ```promql
 -- Runs per team member
@@ -350,7 +340,6 @@ Run these queries weekly and track the trend:
 | Generator success rate | `sum(harness_agent_runs_total{agent="generator",exit="ok"}) / sum(harness_agent_runs_total{agent="generator"})` | > 85% |
 | Evaluator pass rate | `sum(harness_agent_runs_total{agent="evaluator",exit="ok"}) / sum(harness_agent_runs_total{agent="evaluator"})` | > 80% |
 | Design-critic / generator ratio | `sum(harness_agent_runs_total{agent="design-critic"}) / sum(harness_agent_runs_total{agent="generator"})` | < 2.0 |
-| Pending reviews | `harness_pending_reviews` | < 5 |
 | Lane distribution | `sum by (lane) (harness_agent_runs_total)` | Bulk in auto/change, minimal in vibe |
 
 ### Cost tracking (native OTEL — available once Claude Code sessions run with .env)

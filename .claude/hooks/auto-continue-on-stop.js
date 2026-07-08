@@ -17,9 +17,6 @@
 // stalls for MAX_NO_PROGRESS_CONTINUES consecutive turns it fails open LOUDLY
 // and lets the session stop — a stuck build is surfaced to a human, not spun
 // forever (the Devin "escalate-don't-spin" distinction).
-//
-// Defers to review-on-stop.js: while a review cycle is open, that gate drives
-// continuation and this one stays silent so the two don't double-count.
 
 const fs = require('fs');
 const path = require('path');
@@ -27,8 +24,8 @@ const { resolveProjectDir, readHookInput, reportFailure } = require('./lib/commo
 
 // Consecutive turns with no new passing feature before the watchdog gives up.
 // A single story group can span several stops before any feature flips to pass,
-// so this is deliberately looser than the review gate's budget; past it, the
-// build is stuck (not idle) and a human should look.
+// so this is deliberately loose; past it, the build is stuck (not idle) and a
+// human should look.
 const MAX_NO_PROGRESS_CONTINUES = 5;
 
 function enabled() {
@@ -59,14 +56,6 @@ function writeIntFile(p, n) {
   } catch (_) {
     /* best effort */
   }
-}
-
-// A review cycle is open when review-on-stop has an unsatisfied queue or a live
-// block counter. While that holds, the review gate owns continuation.
-function reviewCycleOpen(stateDir) {
-  if ((readIntFile(path.join(stateDir, 'review-block-count')) || 0) > 0) return true;
-  const pending = readText(path.join(stateDir, 'pending-reviews.jsonl')).trim();
-  return pending.length > 0;
 }
 
 function parseField(text, field) {
@@ -119,9 +108,6 @@ try {
   const stateDir = path.join(projectDir, '.claude', 'state');
   const countPath = path.join(stateDir, 'auto-continue-count');
   const progressPath = path.join(stateDir, 'auto-continue-progress');
-
-  // Let the review gate finish first; it drives continuation on its own.
-  if (reviewCycleOpen(stateDir)) process.exit(0);
 
   const progress = readText(path.join(projectDir, 'claude-progress.txt'));
   const feats = passingFeatures(projectDir);

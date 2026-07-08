@@ -6,7 +6,7 @@ Top-level navigation for the Claude Harness Engine repository.
 |---|---|
 | `.claude/commands/` | The one true slash command (`/scaffold` bootloader) |
 | `.claude/skills/` | All pipeline workflows as skills (brd, spec, design, implement, evaluate, auto, brownfield, code-map, refactor, change, vibe, …) |
-| `.claude/agents/` | Subagent definitions (planner, generator, evaluator, design-critic, security-reviewer, clean-code-reviewer, codebase-explorer) |
+| `.claude/agents/` | Subagent definitions (planner, generator, evaluator, design-critic, security-reviewer, code-reviewer, codebase-explorer) |
 | `.claude/hooks/` | Lifecycle hooks (pre-write gate, pre-bash gate, verify-on-save, record-run, review-on-stop, graph-refresh, check-git-hooks) + shared `lib/` |
 | `.claude/git-hooks/` | Git-level hooks installed by `/scaffold` (pre-commit ratchet, commit-msg) |
 | `.claude/scripts/` | Standalone utilities (model-tier, trace-check, archive-state, telemetry-*, certification, upstream-watch) |

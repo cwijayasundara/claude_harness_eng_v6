@@ -31,7 +31,6 @@ test('the dashboard surfaces the pipeline-progress gauges and live state metrics
   for (const metric of [
     'harness_features_passing',
     'harness_coverage',
-    'harness_pending_reviews',
     'harness_iteration_current',
     'harness_story_active',
   ]) {

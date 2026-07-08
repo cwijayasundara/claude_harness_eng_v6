@@ -96,8 +96,8 @@ test('scaffold (full) copies the .claude/config/ registry directory', () => {
   const { workDir, target } = scaffoldInto('full');
   try {
     assert.ok(
-      fs.existsSync(path.join(target, '.claude', 'config', 'vertical-glossary-packs.json')),
-      'config/vertical-glossary-packs.json must be copied so vertical-glossary-pack.js finds its registry in a scaffolded project',
+      fs.existsSync(path.join(target, '.claude', 'config', 'scaffold-packs.json')),
+      'config/scaffold-packs.json must be copied so vertical-glossary-pack.js finds its registry in a scaffolded project',
     );
   } finally {
     fs.rmSync(workDir, { recursive: true, force: true });

@@ -152,19 +152,6 @@
       ]
     },
     {
-      "title": "Pending Reviews",
-      "description": "Reviews waiting for humans. Rising = harness outpacing reviewers.",
-      "type": "stat",
-      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 21 },
-      "datasource": { "type": "prometheus" },
-      "targets": [{
-        "expr": "sum by (user) (harness_pending_reviews{job=\"claude_harness_memory\",user=~\"$user\"})",
-        "legendFormat": "{{user}}"
-      }],
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto", "colorMode": "background", "graphMode": "none" },
-      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{"color":"green","value":null},{"color":"yellow","value":3},{"color":"red","value":5}] } }, "overrides": [] }
-    },
-    {
       "type": "row",
       "title": "Effort Analysis",
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 28 },

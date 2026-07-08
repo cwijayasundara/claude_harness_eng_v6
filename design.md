@@ -189,8 +189,7 @@ The `codebase-explorer` agent has `LSP` in its tool grants and uses it for symbo
 | evaluator | Opus 4.8 | + Playwright MCP (navigate, click, fill, snap) | Runs app, 3-layer verification + latency regression ratchet, structured failures |
 | design-critic | Opus 4.8 | + Playwright MCP (resize, hover, screenshot) | GAN scoring (DQ/O/C/F), plateau pivot |
 | security-reviewer | Opus 4.8 | Read · Write · Grep · Glob · Bash | OWASP scan + adversarial find-then-refute; enforced gate (BLOCK on critical/high) |
-| diff-reviewer | Opus 4.8 | Read · Grep · Glob · Bash | Fresh-context correctness review of the group diff |
-| clean-code-reviewer | Opus 4.8 | Read · Grep · Glob · Bash | Structural maintainability review after implementation |
+| code-reviewer | Opus 4.8 | Read · Write · Grep · Glob · Bash | Fresh-context structure (SOLID/maintainability) + correctness review of the diff |
 | codebase-explorer | Sonnet 4.6 | Read · Glob · Grep · Bash · LSP | Read-only brownfield discovery and symbol navigation |
 
 The Model column shows the **`balanced` default**. **Opus 4.8 is the top-capability tier** (prompts are model-agnostic by construction; see `docs/prompting-standards.md`). The cost posture is set by `execution.model_tier` (`cost`/`balanced`/`max-quality`) and stamped as exact model ids into each `.claude/agents/<name>.md` `model:` line; see `docs/model-allocation.md`.
@@ -355,7 +354,7 @@ Gate 4: Architecture alignment   [full/lean]     -- one-way layer imports
 Gate 5: Evaluator verdict        [full/lean]     -- API + Playwright vs running app
 Gate 6: Design critic score      [full only]     -- vision scoring (4 criteria)
 Gate 7: Security gate            [full/lean]     -- security-reviewer, fail on critical/high
-Gate 8: Fresh-context diff review [full/lean]    -- diff-reviewer, fail on correctness BLOCKs
+Gate 8: Fresh-context code review [full/lean]    -- code-reviewer, fail on structure/correctness BLOCKs
 ```
 
 **Coverage as verification, not just testing.** Steve Krenzel's framing: "100% coverage isn't a goal — it's verification that the agent double-checked every line it wrote." Floor 80%. Baseline ratchets upward. Below-baseline commits are rejected.

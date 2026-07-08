@@ -13,13 +13,7 @@ function writeFileIn(projectDir, rel, content) {
   return p;
 }
 
-function readPending(projectDir) {
-  const p = path.join(projectDir, '.claude', 'state', 'pending-reviews.jsonl');
-  if (!fs.existsSync(p)) return [];
-  return fs.readFileSync(p, 'utf8').split('\n').filter(Boolean).map(JSON.parse);
-}
-
-test('queues a source write for review without emitting per-write chatter', async () => {
+test('a normal source write passes without emitting per-write chatter', async () => {
   const projectDir = makeHookProject([HOOK]);
   const p = writeFileIn(projectDir, 'src/service.js', 'module.exports = 1;\n');
   const result = await runHook(projectDir, HOOK, {
@@ -28,21 +22,6 @@ test('queues a source write for review without emitting per-write chatter', asyn
   });
   assert.strictEqual(result.status, 0, result.stdout + result.stderr);
   assert.strictEqual(result.stdout, '', 'no context spam on every write');
-  const pending = readPending(projectDir);
-  assert.strictEqual(pending.length, 1);
-  assert.strictEqual(pending[0].file, p);
-  assert.ok(typeof pending[0].ts === 'number');
-});
-
-test('does not queue test files for review', async () => {
-  const projectDir = makeHookProject([HOOK]);
-  const p = writeFileIn(projectDir, 'tests/service.test.js', 'test("x", () => {});\n');
-  const result = await runHook(projectDir, HOOK, {
-    tool_name: 'Write',
-    tool_input: { file_path: p },
-  });
-  assert.strictEqual(result.status, 0);
-  assert.strictEqual(readPending(projectDir).length, 0);
 });
 
 test('blocks a Python layer violation (service importing api)', async () => {
@@ -88,7 +67,6 @@ test('does not lint, typecheck, or layer-check fixture files', async () => {
     tool_input: { file_path: p },
   });
   assert.strictEqual(result.status, 0, result.stdout + result.stderr);
-  assert.strictEqual(readPending(projectDir).length, 0, 'fixtures are not queued for review');
 });
 
 test('treats "npx canceled due to missing packages" as unprovisioned, not a failure', () => {

@@ -48,15 +48,6 @@ function writeMarker(stateDir, name, value) {
   } catch (_) {}
 }
 
-function countPendingReviews(stateDir) {
-  try {
-    const raw = fs.readFileSync(path.join(stateDir, 'pending-reviews.jsonl'), 'utf8');
-    return raw.split('\n').filter(Boolean).length;
-  } catch (_) {
-    return 0;
-  }
-}
-
 function harnessSha(projectDir) {
   try {
     const head = fs.readFileSync(path.join(projectDir, '.claude', 'HARNESS_SHA'), 'utf8').trim();
@@ -251,7 +242,6 @@ function shouldSkipCommandTelemetry(command) {
         skill_names: skills.map((skill) => skill.name),
         skills,
         skill_inventory: skillInventory,
-        pending_reviews: countPendingReviews(stateDir),
         host: os.hostname(),
       };
       await persistAndPush(receiptPath, stateDir, projectDir, turnRecord);

@@ -143,16 +143,13 @@ function setGauge(gauges, name, labels, value) {
 const metricHelpers = { labelPairs, setGauge, addCounter };
 
 // Handles subagent, turn, and subagent_stop record kinds.
-function processAgentKinds(record, labels, counters, gauges) {
+function processAgentKinds(record, labels, counters) {
   if (record.kind === 'subagent') {
     addCounter(counters, 'harness_agent_runs_total', labelPairs([
       ['kind', 'subagent'], ['exit', record.exit || 'ok'],
     ]).concat(labels));
   } else if (record.kind === 'turn') {
     addCounter(counters, 'harness_conversation_turns_total', labelPairs([['kind', 'turn']]).concat(labels));
-    if (typeof record.pending_reviews === 'number') {
-      setGauge(gauges, 'harness_pending_reviews', labels, record.pending_reviews);
-    }
   } else if (record.kind === 'subagent_stop') {
     addCounter(counters, 'harness_conversation_turns_total', labelPairs([['kind', 'subagent_stop']]).concat(labels));
     if (record.agent && record.agent !== 'unknown') {
@@ -182,8 +179,8 @@ function processCommandKinds(record, counters) {
   }
 }
 
-function processRecordKind(record, labels, counters, gauges) {
-  processAgentKinds(record, labels, counters, gauges);
+function processRecordKind(record, labels, counters) {
+  processAgentKinds(record, labels, counters);
   processCommandKinds(record, counters);
 }
 
@@ -213,7 +210,7 @@ function buildSnapshot(records, skillInventory = []) {
   for (const record of records) {
     collectSkillInventory(record, skillInfo, metricHelpers);
     addSkillUsage(record, counters, skillInventory, metricHelpers);
-    processRecordKind(record, baseLabels(record), counters, gauges);
+    processRecordKind(record, baseLabels(record), counters);
     processRecordGauges(record, gauges);
     processPhaseEval(record, counters, gauges, metricHelpers);
   }

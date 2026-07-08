@@ -132,7 +132,7 @@ When committing, follow **`keeping-refactors-pure`**: commit with `HARNESS_COMMI
 
 ### Step 6 — Mechanical Cleanup Pass (native `/simplify`)
 
-After the principle-driven refactor is complete and the suite is green (Step 5), run Claude Code's native **`/simplify`** over the refactor's changed files to catch mechanical cleanups the manual pass missed — duplicate logic that should reuse a helper, redundant branches, needless intermediate variables, altitude/efficiency tweaks. Native `/simplify` *applies* the kind of fix the harness reviewers only *report*, so it is genuinely additive — not a duplicate of `clean-code-reviewer`, which owns the structural / SOLID / module-depth judgment `/simplify` does not do.
+After the principle-driven refactor is complete and the suite is green (Step 5), run Claude Code's native **`/simplify`** over the refactor's changed files to catch mechanical cleanups the manual pass missed — duplicate logic that should reuse a helper, redundant branches, needless intermediate variables, altitude/efficiency tweaks. Native `/simplify` *applies* the kind of fix the harness reviewers only *report*, so it is genuinely additive — not a duplicate of `code-reviewer`, which owns the structural / SOLID / module-depth judgment `/simplify` does not do.
 
 Fence it with the same behavior-preservation discipline as the rest of this skill:
 
@@ -143,9 +143,9 @@ Fence it with the same behavior-preservation discipline as the rest of this skil
 
 Skip this step when the refactor's entire purpose *was* a single mechanical change `/simplify` would itself propose — there is nothing left to clean.
 
-### Step 7 — Spawn clean-code-reviewer
+### Step 7 — Spawn code-reviewer
 
-After all changes are complete, spawn the `clean-code-reviewer` agent (harness-provided: `.claude/agents/clean-code-reviewer.md`; recognized by the `review-on-stop` Stop hook) on the full diff. Native `/simplify` (Step 6) already absorbed the mechanical cleanups; the reviewer now judges **structure** — SOLID, module depth, abstraction quality, public-interface testing — which `/simplify` does not touch.
+After all changes are complete, spawn the `code-reviewer` agent (harness-provided: `.claude/agents/code-reviewer.md`) on the full diff. Native `/simplify` (Step 6) already absorbed the mechanical cleanups; the reviewer now judges **structure** — SOLID, module depth, abstraction quality, public-interface testing — which `/simplify` does not touch.
 
 The reviewer will return findings at three severity levels:
 - **BLOCK** — must fix before this refactor is considered complete.

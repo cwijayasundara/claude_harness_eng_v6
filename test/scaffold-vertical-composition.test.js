@@ -76,8 +76,8 @@ test('CLI: prints INSTALLED for an enabled vertical and a manual-install block f
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'scaffold-vertical-status-'));
   fs.mkdirSync(path.join(repo, '.claude', 'config'), { recursive: true });
   fs.writeFileSync(
-    path.join(repo, '.claude', 'config', 'vertical-glossary-packs.json'),
-    JSON.stringify({ packs: [testRegistryEntry('private-equity'), testRegistryEntry('wealth-management')] }, null, 2)
+    path.join(repo, '.claude', 'config', 'scaffold-packs.json'),
+    JSON.stringify({ verticalPacks: [testRegistryEntry('private-equity'), testRegistryEntry('wealth-management')] }, null, 2)
   );
   fs.writeFileSync(
     path.join(repo, '.claude', 'settings.json'),
@@ -95,7 +95,7 @@ test('scaffold.md documents the combined tech-stack + domain-vertical question a
     path.join(__dirname, '..', '.claude', 'commands', 'scaffold.md'), 'utf8'
   );
   assert.match(scaffoldMd, /domainVerticalPacks/);
-  assert.match(scaffoldMd, /vertical-glossary-packs\.json/);
+  assert.match(scaffoldMd, /scaffold-packs\.json/);
   assert.match(scaffoldMd, /scaffold-vertical-status\.js/);
   assert.match(scaffoldMd, /claude plugin marketplace add/);
   assert.match(scaffoldMd, /claude plugin install/);

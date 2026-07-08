@@ -174,7 +174,7 @@ If the user picks D, install the `core` scaffold by default, recommend `/build -
    - B) LangChain / LangGraph / DeepAgents (external community pack) — `cwijayasundara/agent_cli_langchain` (9 skills, installed manually from a normal terminal because Claude Code auto-mode blocks external `npx skills add` installs)
    - C) Google ADK — `google/agents-cli` (7 skills, same manual-install caveat as B)
    - D) None
-8. "Enable a domain-vertical plugin?" (single-select; default: None) — reads `.claude/config/vertical-glossary-packs.json` for the list of known verticals; recorded in `project-manifest.json`, installed manually via `claude plugin marketplace add`/`claude plugin install` because Claude Code auto-mode blocks these installs the same way it blocks `npx skills add`.
+8. "Enable a domain-vertical plugin?" (single-select; default: None) — reads `.claude/config/scaffold-packs.json`'s `verticalPacks` array for the list of known verticals; recorded in `project-manifest.json`, installed manually via `claude plugin marketplace add`/`claude plugin install` because Claude Code auto-mode blocks these installs the same way it blocks `npx skills add`.
    - A) Private Equity — `private-equity@claude-for-financial-services`
    - B) None
 
@@ -611,7 +611,7 @@ ls .claude/skills/ | grep -E '^(langchain-agents|google-agents-cli)-' | wc -l
 
 #### Domain Vertical Plugins
 
-Read `.claude/config/vertical-glossary-packs.json` for the list of known verticals to offer (currently: `private-equity`). A selected vertical is a Claude Code marketplace plugin, installed via `claude plugin install` — a different command family from the tech-stack packs above, kept separate in the report below on purpose.
+Read `.claude/config/scaffold-packs.json`'s `verticalPacks` array for the list of known verticals to offer (currently: `private-equity`). A selected vertical is a Claude Code marketplace plugin, installed via `claude plugin install` — a different command family from the tech-stack packs above, kept separate in the report below on purpose.
 
 Once selected, the vertical's `enabled_plugin_prefix` becoming truthy in `.claude/settings.json#enabledPlugins` (via the manual install below) is what makes `/brd` Step 2.7 (`vertical-glossary-pack.js`) start seeding `CONTEXT.md` from that vertical's skill vocabulary automatically — no further scaffold-side action needed once installed.
 

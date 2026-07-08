@@ -130,7 +130,7 @@ test('buildSnapshot produces non-empty output for a turn record', () => {
   const record = {
     kind: 'turn', ts: Date.now(), user: 'dev', lane: 'spec', mode: 'full',
     iteration: '1', group_id: 'A', story_id: 'E1-S1', host: 'host',
-    agent: 'evaluator', pending_reviews: 0,
+    agent: 'evaluator',
   };
   const output = buildSnapshot([record]);
   assert.ok(output.includes('harness_conversation_turns_total'),

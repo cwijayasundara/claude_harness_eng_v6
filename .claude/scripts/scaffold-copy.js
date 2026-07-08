@@ -19,7 +19,7 @@ const path = require('path');
 const SCAFFOLD_PROFILES = new Set(['core', 'brownfield', 'full']);
 
 const CORE_AGENTS = [
-  'clean-code-reviewer.md', 'design-critic.md', 'diff-reviewer.md',
+  'code-reviewer.md', 'design-critic.md',
   'evaluator.md', 'generator.md', 'planner.md', 'security-reviewer.md',
   'codebase-explorer.md',
 ];
@@ -172,11 +172,11 @@ function copyFrameworkPackSkills(pluginSource, target, frameworkSkillPacks) {
   // pluginSource is already the harness `.claude` root (see scaffold-apply.js's
   // resolveOpts, which verifies pluginSource/.claude-plugin/plugin.json directly) —
   // do not join another '.claude' segment onto it here.
-  const registryPath = path.join(pluginSource, 'config', 'framework-skill-packs.json');
+  const registryPath = path.join(pluginSource, 'config', 'scaffold-packs.json');
   if (!fs.existsSync(registryPath) || !Array.isArray(frameworkSkillPacks) || frameworkSkillPacks.length === 0) return;
   const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
   for (const key of frameworkSkillPacks) {
-    const entry = registry.packs.find((p) => p.key === key);
+    const entry = registry.frameworkPacks.find((p) => p.key === key);
     if (!entry || entry.source !== 'local') continue;
     copyNamedFiles(path.join(pluginSource, 'skills'), path.join(target, '.claude', 'skills'), entry.skills);
   }

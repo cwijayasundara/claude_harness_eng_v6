@@ -42,7 +42,7 @@ Every reviewer reads this pack plus the diff and directly touched files. Do not 
 Use the Agent tool to spawn the selected agents **in a single call**:
 
 - **evaluator** — always. Runs sprint contract checks (API, Playwright, architecture); writes `specs/reviews/evaluator-report.md` and updates `features.json`.
-- **diff-reviewer** — always for `/gate`. Fresh-context correctness review of the diff only; writes `specs/reviews/diff-review-verdict.json`.
+- **code-reviewer** — always for `/gate`. Fresh-context review of the diff for both structure and correctness; writes `specs/reviews/code-review-verdict.json`.
 - **security-reviewer** — only when the changed files touch auth/authz, secrets, user input handling, uploads/downloads, network fetch/redirect/proxy code, payments/billing, persistence/schema/migrations, API routes/controllers/middleware, or configured security patterns. Writes `specs/reviews/security-review.md` and `specs/reviews/security-verdict.json`.
 
 - **Approved-fixtures (G12):** when the changed files include any snapshot file (path contains `__snapshots__/` or ends with `.snap`/`.ambr`/`.approved.*`), run `node .claude/scripts/approved-fixtures-gate.js`. It checksums every snapshot against the approved baseline (`specs/test_artefacts/approved-snapshots.json`); a `blocked` verdict (a modified approved snapshot or a new unapproved one, exit 1) is a **BLOCK** (writes `specs/reviews/approved-fixtures-verdict.json`). After reviewing the change, re-bless with `npm run approve-fixtures -- --all` (or `-- --snapshots <files>`). `no-snapshots` / `pass` (removed-only WARN) are non-blocking. When the diff touches no snapshot files, skip.
@@ -68,7 +68,7 @@ Severity levels (BLOCK/WARN/INFO), the BLOCK self-healing loop (generator fix �
 ## Output Files
 
 - `specs/reviews/evaluator-report.md` — PASS/FAIL with per-check detail
-- `specs/reviews/diff-review.md` and `specs/reviews/diff-review-verdict.json` — fresh-context correctness review
+- `specs/reviews/code-review.md` and `specs/reviews/code-review-verdict.json` — fresh-context structure + correctness review
 - `specs/reviews/security-review.md` and `specs/reviews/security-verdict.json` — only when a security trigger fired
 - `specs/reviews/security-scan.json` — computational security scan (secrets/SAST/deps) result; only when a security trigger fired
 - `specs/reviews/canvas-sync-check.md` — living-design sync result when a REASONS Canvas exists
