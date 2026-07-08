@@ -66,7 +66,7 @@ test('design --delta Step D3.5 scopes the modularity pre-check to the amendment'
 test('GATE 2 (Step D7) displays the duplication pre-check result', () => {
   const skill = read('.claude/skills/design/SKILL.md');
   const deltaSection = skill.slice(skill.indexOf('## Delta Mode'), skill.indexOf('## Baseline Recovery Mode'));
-  const d7Section = deltaSection.slice(deltaSection.indexOf('Step D7'));
+  const d7Section = deltaSection.slice(deltaSection.indexOf('### Step D7'));
   assert.match(d7Section, /duplication pre-check/i, 'GATE 2 display list must include the duplication pre-check result');
 });
 
