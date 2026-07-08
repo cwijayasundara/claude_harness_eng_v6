@@ -62,3 +62,7 @@ The human approval question in Step D7 is unchanged in mechanics (still "Does th
 - Changing `modularity-review`'s cadence classification, blocking status, or verdict schema for the existing `/brownfield --full` call site — that invocation is untouched.
 - Any change to `/sprint/SKILL.md` or `/feature/SKILL.md` conductors themselves — both already delegate to `/design --delta` unchanged.
 - Full-repo duplication scanning as part of every sprint (rejected — see Scope's "scoped, not whole-repo").
+
+## Known limitations
+
+- **Structurally weak on the headline motivating case (a net-new component duplicating existing functionality).** `modularity-pack.json`'s `duplicationCandidates` are derived from `code-graph.json` — existing source files only. A design amendment's brand-new components have no source files yet, so they have no pack entries at their paths for the Step D3.5 reviewer to compare against, and the check will typically return `PASS` on them even when they duplicate something that already exists. The mechanism is strongest for changed-existing components and paths pulled in via the amendment's `Governs` list, both of which do have pack entries. A stronger fix — having the reviewer match each new component's stated responsibility (from the amendment narrative) against existing modules' responsibilities, rather than relying solely on path-overlap in the pack — is a separate design, out of scope here.

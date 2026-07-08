@@ -158,6 +158,14 @@ schema diff, not a fresh UI pass. Spawn one `planner` agent:
    record `"duplication_precheck": "inconclusive"` — never silently treated
    as `PASS`.
 
+**Known limitation:** this pre-check compares touched-scope paths against
+*existing* code via the modularity pack (itself derived from
+`code-graph.json`), so it is strongest for changed-existing components and
+paths pulled in via the amendment's `Governs` list — both have pack entries
+to compare against — and weakest for a component that is entirely net-new,
+since a brand-new path has no pack entry yet and will typically read as
+`PASS` even if it duplicates existing functionality.
+
 ### Step D4 — Emit the trace spine + Grounding Gate [HARD BLOCK]
 
 Same mechanism as full mode Step 1.9, scoped to this sprint's stories. Append
