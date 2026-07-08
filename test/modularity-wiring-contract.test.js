@@ -52,3 +52,20 @@ test('modularity-reviewer.md documents an output-path override for scoped caller
     'agent must document that a scoped caller (e.g. design --delta Step D3.5) can override the default output paths'
   );
 });
+
+test('design --delta Step D3.5 scopes the modularity pre-check to the amendment', () => {
+  const skill = read('.claude/skills/design/SKILL.md');
+  const deltaSection = skill.slice(skill.indexOf('## Delta Mode'), skill.indexOf('## Baseline Recovery Mode'));
+  assert.match(deltaSection, /Step D3\.5/, 'must add a Step D3.5');
+  assert.match(deltaSection, /modularity-pack\.js/, 'must refresh the pack');
+  assert.match(deltaSection, /modularity-reviewer/, 'must spawn the scoped reviewer');
+  assert.match(deltaSection, /skipped-no-graph/, 'must document the no-graph skip marker');
+  assert.match(deltaSection, /inconclusive/, 'must document the malformed-verdict marker');
+});
+
+test('GATE 2 (Step D7) displays the duplication pre-check result', () => {
+  const skill = read('.claude/skills/design/SKILL.md');
+  const deltaSection = skill.slice(skill.indexOf('## Delta Mode'), skill.indexOf('## Baseline Recovery Mode'));
+  const d7Section = deltaSection.slice(deltaSection.indexOf('Step D7'));
+  assert.match(d7Section, /duplication pre-check/i, 'GATE 2 display list must include the duplication pre-check result');
+});

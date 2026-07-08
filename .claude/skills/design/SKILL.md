@@ -131,6 +131,33 @@ schema diff, not a fresh UI pass. Spawn one `planner` agent:
 > not make it — find another approach or flag the conflict in the amendment's
 > Breaking Changes section for human resolution at GATE 2.
 
+### Step D3.5 — Duplication pre-check (scoped, non-blocking)
+
+1. Check whether `specs/brownfield/code-graph.json` exists.
+   - Missing (a pure-greenfield sprint that never ran `/brownfield`) — skip
+     the rest of this step entirely. Record
+     `"duplication_precheck": "skipped-no-graph"` to carry into Step D7.
+     Do not run the pack script or spawn a reviewer.
+2. If it exists, refresh the pack: `node .claude/scripts/modularity-pack.js`.
+3. From the amendment just written in Step D3, collect the touched scope:
+   the new/changed `component-map.md` rows and the paths just added to
+   `reasons-canvas.md`'s `Governs` list for this amendment.
+4. Spawn Agent with `subagent_type="modularity-reviewer"`:
+
+   > You are being invoked as part of `/design --delta` Step D3.5, not a
+   > full `/brownfield --full` pass. Read `specs/brownfield/modularity-pack.md`/`.json`
+   > as usual, but restrict your duplication/responsibility/argument-clump
+   > judgment to entries that overlap these paths (this amendment's
+   > new/changed components): `<touched-scope path list>`. Ignore
+   > pre-existing candidates unrelated to this sprint's changes. Write your
+   > output to `specs/reviews/design-delta-duplication-<amendment-id>.md`
+   > and `specs/reviews/design-delta-duplication-<amendment-id>.json`
+   > instead of the default `specs/reviews/modularity-review.md`/`-verdict.json`
+   > — do not touch those default files.
+5. If the agent errors, or the JSON file is absent/unparseable afterward,
+   record `"duplication_precheck": "inconclusive"` — never silently treated
+   as `PASS`.
+
 ### Step D4 — Emit the trace spine + Grounding Gate [HARD BLOCK]
 
 Same mechanism as full mode Step 1.9, scoped to this sprint's stories. Append
@@ -187,6 +214,10 @@ Display:
    amendment file itself
 3. The contract-drift verdict and the amendment's Breaking Changes section side by side
 4. The design-delta evaluator verdict
+5. The duplication pre-check result from Step D3.5 — the verdict and
+   findings from `specs/reviews/design-delta-duplication-<amendment-id>.json`,
+   or the `skipped-no-graph` / `inconclusive` marker if it didn't run to
+   completion
 
 Ask: "Does this design amendment correctly evolve the existing architecture?
 Approve to commit the amendment and proceed, or provide corrections."
