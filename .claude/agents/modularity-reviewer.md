@@ -48,3 +48,5 @@ Write two files:
 ```
 
 `CONCERNS` when any high-severity finding stands; otherwise `PASS`. This is a maintainability sensor, not a merge gate — it informs and prioritizes refactoring, it does not block a build. Report only what you verified against source; do not pad the list to look thorough.
+
+If the invoking prompt specifies explicit output paths, write there instead of the defaults above — this lets a scoped caller (e.g. `/design --delta` Step D3.5) avoid overwriting the periodic `/brownfield --full` review.

@@ -43,3 +43,12 @@ test('manifest registers the two-part modularity sensor as active', () => {
   assert.strictEqual(review.type, 'inferential');
   assert.ok(!('gap_ref' in review), 'no longer a gap');
 });
+
+test('modularity-reviewer.md documents an output-path override for scoped callers', () => {
+  const agent = read('.claude/agents/modularity-reviewer.md');
+  assert.match(
+    agent,
+    /explicit output paths.*instead of the defaults/is,
+    'agent must document that a scoped caller (e.g. design --delta Step D3.5) can override the default output paths'
+  );
+});
