@@ -107,6 +107,12 @@ checked against both, 2026-07-09:
 
 No fix was required by this audit; it documents and cites existing coverage.
 
+A related but distinct concern — single-verifier variance, not either named failure
+mode above — is addressed separately: `/gate`'s security-boundary trigger spawns 3
+independent instances each of `evaluator` and `security-reviewer`, majority-voted
+per axis, so no single instance's blind spot decides the verdict alone (see the
+"Bounded re-verification" step in `.claude/skills/gate/SKILL.md`).
+
 ## Skill-description conventions
 
 Skill-description markers: pipeline *stage* skills carry a leading `[Internal pipeline stage — …]` prefix; discipline micro-skills carry a trailing `[Internal discipline — …]` suffix instead, because their leading "Use when…" phrase is the auto-invocation trigger and must stay first (pinned by `test/skills-consistency.test.js`).
