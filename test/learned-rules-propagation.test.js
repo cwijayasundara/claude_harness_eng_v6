@@ -18,3 +18,10 @@ test('/change reads learned-rules.md before editing', () => {
   assert.match(skill, /\.claude\/state\/learned-rules\.md/, 'must reference learned-rules.md');
   assert.match(skill, /inject its contents verbatim/i, "must inject verbatim, matching /auto's convention");
 });
+
+test('/vibe reads learned-rules.md before finalizing the micro-contract', () => {
+  const skill = read('.claude/skills/vibe/SKILL.md');
+  assert.match(skill, /\.claude\/state\/learned-rules\.md/, 'must reference learned-rules.md');
+  const beforeMicroContract = skill.slice(0, skill.indexOf('### Step 2 — Write a Micro-Contract'));
+  assert.match(beforeMicroContract, /learned-rules\.md/, 'must be read before Step 2 (micro-contract), not after');
+});

@@ -75,6 +75,8 @@ State:
 
 If classification is uncertain, use the `clarify` gate (`.claude/skills/clarify/SKILL.md`) — ask at most 3 questions, prefer recording assumptions over interrogating. If still uncertain, escalate.
 
+**Learned rules:** before writing the micro-contract, read `.claude/state/learned-rules.md`. If it exists and is non-empty, inject its contents verbatim into your working context — a learned rule can affect scope (Step 1) as well as implementation, so read it before the contract is finalized.
+
 ### Step 2 — Write a Micro-Contract
 
 Before editing, write 3-6 bullets:
