@@ -116,6 +116,6 @@ function run(argv, root, deps) {
   return verdict.pass ? 0 : 1;
 }
 
-module.exports = { parseComponentMap, checkOwnership, run };
+module.exports = { parseComponentMap, checkOwnership, run, SOURCE_EXTS, isSource };
 
 if (require.main === module) process.exit(run(process.argv.slice(2), process.cwd()));

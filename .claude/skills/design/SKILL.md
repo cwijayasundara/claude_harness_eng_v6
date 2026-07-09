@@ -157,6 +157,17 @@ schema diff, not a fresh UI pass. Spawn one `planner` agent:
 5. If the agent errors, or the JSON file is absent/unparseable afterward,
    record `"duplication_precheck": "inconclusive"` — never silently treated
    as `PASS`.
+6. If the agent completed (not `inconclusive`, and this step wasn't skipped
+   at 1), record that a real review just ran (gap G19 — the drift-cadence
+   staleness proxy that tells the next drift run which unstable hubs are new
+   since this review): `node .claude/scripts/record-modularity-review.js
+   --scope-path <path1> --scope-path <path2> ...` — pass the SAME
+   touched-scope path list from step 3, one `--scope-path` per path. This is
+   required, not optional: without it the marker would record every
+   currently-unstable hub as "reviewed," including ones this scoped pass
+   never looked at, silently clearing their staleness. With the scope passed,
+   only in-scope hubs are newly marked reviewed; a hub outside scope keeps
+   whatever status it already had (still stale if never reviewed before).
 
 **Known limitation:** this pre-check compares touched-scope paths against
 *existing* code via the modularity pack (itself derived from

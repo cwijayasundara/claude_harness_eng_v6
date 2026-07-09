@@ -340,9 +340,10 @@ The parent dispatches all group-orchestrators in the wave in a single message (m
 
 1. Waits for all group-orchestrator subagents to return.
 2. For each returned summary, runs the roll-up steps above (in dependency-graph order, deterministic).
-3. Merges successful groups' branches into `WAVE_BASE` (sequential merges).
-4. If any group failed: leave its branch unmerged, log the failure under `.claude/state/iteration-log.md`, advance to the next wave with the failed group still incomplete. The next wave may unlock different groups via the dependency graph; failed groups can be retried by re-running `/auto --group {G}` later.
-5. Recompute the wave (Wave Selection Algorithm) and dispatch the next one until all groups are complete or no groups can advance.
+3. **Regression-suite-full gate (G15) — before merging into `WAVE_BASE`.** For each group that passed its own ratchet gate, run `node .claude/scripts/regression-gate.js --exclude-group {G}` against the running app. It re-runs every accumulated Playwright spec under `e2e/` (not just this group's own spec) and re-executes every prior group's sprint-contract `api_checks` live. A `blocked` verdict means this group's own tests passed but an EARLIER group's feature broke — treat it exactly like a failed group (step 5 below): do not merge its branch, log the regression finding under `.claude/state/iteration-log.md`. `no-baseline` (no `e2e/` and no `sprint-contracts/` yet) is a non-blocking note.
+4. Merges successful, regression-clean groups' branches into `WAVE_BASE` (sequential merges).
+5. If any group failed (ratchet or regression gate): leave its branch unmerged, log the failure under `.claude/state/iteration-log.md`, advance to the next wave with the failed group still incomplete. The next wave may unlock different groups via the dependency graph; failed groups can be retried by re-running `/auto --group {G}` later.
+6. Recompute the wave (Wave Selection Algorithm) and dispatch the next one until all groups are complete or no groups can advance.
 
 ### Failure Handling
 
@@ -526,6 +527,14 @@ node .claude/scripts/cycle-gate.js   # exit 1 if the group ADDED an import cycle
 ```
 
 Cycles are a monotonic ratchet like coverage — the count may only stay equal or drop. A new cycle **BLOCKS** with the offending cycle named; removing cycles ratchets the baseline (`.claude/state/cycle-baseline.txt`) down. No graph → skipped loudly, never silently passed.
+
+Also run the **unstable-hub ratchet** (gap G18) alongside it, same code-graph, same cadence:
+
+```bash
+node .claude/scripts/coupling-gate.js   # exit 1 if the group ADDED an unstable hub
+```
+
+Unstable hubs (fan_in >= 5 and instability >= 0.8 — the same thresholds `coupling-report.md` and the drift monitor already use) are a monotonic ratchet like cycles: the count may only stay equal or drop. A new unstable hub **BLOCKS**, naming the specific new hub(s) with fan-in/instability numbers and remediation guidance (extract a narrower interface or split responsibilities to lower fan-in); removing unstable hubs ratchets the baseline (`.claude/state/coupling-baseline.txt`) down. No graph → skipped loudly, never silently passed. This closes the gap where coupling/instability data existed only on the drift cadence (`npm run drift`) or in the on-demand `coupling-report.md`, never fed back to the agent at commit time.
 
 ### Gate 5 — Evaluator (API + Playwright)
 

@@ -78,6 +78,8 @@ If `specs/design/reasons-canvas.md` exists, treat it as the living design contra
 
 ### Step S4 — Write the Failing Test(s) First
 
+**Acceptance test — REQUIRED SUB-SKILL: `writing-acceptance-tests-first`.** Before any other test or implementation code for this story, write its acceptance test(s) first against the Ports-and-Adapters seam identified in Step S2 (or via `/seam-finder` if none exists yet), with a test-double adapter standing in for I/O. Run it and confirm it fails for the right reason. This AT is the primary, business-readable acceptance-criteria verification loop; the AC-by-AC tests below proceed once it is red.
+
 For each acceptance criterion, **write or update the test before the implementation, and observe it fail (red)**:
 
 - If an existing test covers the old behavior and the behavior is changing: update it to assert the *new* expected behavior, then run it and confirm it fails against the current code. Add a comment noting which AC it covers.
@@ -96,6 +98,8 @@ Modify the existing implementation files until the red tests go green. Do not cr
 
 Run the full test suite — all tests must pass. Then run the project's lint and type checks (`npm run lint` / `ruff check .`, and `tsc --noEmit` / `mypy .`) and fix anything the change introduced — don't leave it for the reviewer to catch a diff that already has the error.
 
+**Impact-scoped local regression (G16) — required, in addition to the unit suite above, not instead of it.** The full unit suite only proves this change didn't break its own layer; it says nothing about earlier features — but running the WHOLE accumulated `e2e/` suite on every single `/change` is too expensive for local iteration. Run `node .claude/scripts/local-regression-gate.js` (add `--exclude-group <this change's group>` if the change is scoped to an in-flight sprint group). It computes which prior story-group(s) this change's diff could plausibly affect — a deterministic dependency-graph blast radius over `code-graph.json`, not an LLM guess — via `specs/test_artefacts/verification-matrix.json` (or `specs/design/component-map.md` as a fallback), and re-runs only THOSE groups' e2e specs and sprint-contract `api_checks`, plus any human-curated `project-manifest.json#verification.golden_paths`. A `blocked` verdict is a **BLOCK**: fix the regression before proceeding to Step S6, the same way a failing unit test would block. Tests already quarantined in `specs/drift/flake-history.jsonl` are excluded. This is the fast local complement to gap G15's full regression-suite-full check, which still runs unabridged (the whole accumulated suite, not just the impacted subset) at `/gate` and `/auto`'s pre-merge step as the final backstop before merge.
+
 If `specs/test_artefacts/` exists, update `test-cases.md` and `test-data/` to reflect the changed acceptance criteria — keep the test plan in sync with the actual state of the stories. If Playwright E2E specs exist in `e2e/`, update the affected files to match the new behavior.
 
 ### Step S6 — Adaptive Review
@@ -103,6 +107,8 @@ If `specs/test_artefacts/` exists, update `test-cases.md` and `test-data/` to re
 Write or refresh `specs/reviews/review-context-pack.md` with the story, acceptance criteria, changed files, relevant DeepWiki/code-map links, and the exact test/lint/typecheck commands that passed.
 
 Spawn the `code-reviewer` agent (harness-provided: `.claude/agents/code-reviewer.md`) on the full diff. **Spawn `security-reviewer` only if the diff touches authentication, authorization, secrets, user input handling, uploads/downloads, network fetch/redirect/proxy code, payments/billing, persistence/schema/migrations, API routes/controllers/middleware, or configured security patterns**. Run selected reviewers in parallel in a single message.
+
+If the diff includes a new or changed acceptance-test file (typically under `specs/test_artefacts/acceptance/`), instruct `code-reviewer` to specifically judge that file's **readability**: could a non-technical stakeholder follow the Given/When/Then narrative and understand the requirement it verifies? Note this instruction in the context pack — per Vaccari, readability is itself the correctness signal for whether the story was understood.
 
 Reviewers read only the context pack, final diff, test output, and directly touched files. Do not pass the whole implementation transcript or raw full-suite logs.
 

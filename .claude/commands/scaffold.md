@@ -177,6 +177,11 @@ If the user picks D, install the `core` scaffold by default, recommend `/build -
 8. "Enable a domain-vertical plugin?" (single-select; default: None) — reads `.claude/config/scaffold-packs.json`'s `verticalPacks` array for the list of known verticals; recorded in `project-manifest.json`, installed manually via `claude plugin marketplace add`/`claude plugin install` because Claude Code auto-mode blocks these installs the same way it blocks `npx skills add`.
    - A) Private Equity — `private-equity@claude-for-financial-services`
    - B) None
+9. "Enforce bounded-context boundaries between domain modules?" (single-select; default: No) — a *vertical* import rule, distinct from the default-on horizontal layer/import-direction gate (`architecture.layers` in Step 2): two domain modules (e.g. `src/billing`, `src/user`) may not reach into each other's internals except via a public surface or an explicit exception. Enforced by `.claude/hooks/lib/contexts.js` (gap G8) only when configured — most projects have no bounded contexts and should skip this.
+   - A) Yes — I'll list the context root directories
+   - B) No, skip bounded-context enforcement (default)
+
+   If A, ask a follow-up free-text question: "Which directories are the bounded-context roots? (comma-separated, e.g. `src/billing, src/user`)". Record the answer as `architecture.contexts.roots` for Step 2. Default `allow` to `[]` (strictest — no cross-context imports permitted until the team adds explicit exceptions) and `public` to `["index","public","__init__"]` unless the user names different entry-point conventions.
 
 ## Step 2: Generate project-manifest.json
 
@@ -192,10 +197,11 @@ Based on their answers, write `project-manifest.json` to the project root. Fill 
   - **Lite-shaped default.** For project type D (CLI / library / single-script) and any non-web stack, the renderer drops the cheaper posture in automatically: `model_tier: "cost"`, `ceremony: "trimmed"`, and `verification.mode: "local"` (no Docker deploy phase). Full-stack projects keep `balanced` / `full` / `docker`. Any of these is overridden by an explicit profile field. This is the config-level optimization for small `/build --auto` runs — it never weakens the evaluator, security, or deterministic gates.
 - lsp: detected language servers and install commands (see below)
 - verification: mode, and mode-specific config (see below)
-- architecture (optional): controls the one-way layer-import gate. Read by the layer gates (verify-on-save + pre-commit), which otherwise default to the web-app `{"layers": ["types","config","repository","service","api","ui"], "layer_roots": ["src"]}`. Set it in three cases:
+- architecture (optional): controls the one-way layer-import gate. Read by the layer gates (verify-on-save + pre-commit), which otherwise default to the web-app `{"layers": ["types","config","repository","service","api","ui"], "layer_roots": ["src"]}`. Set it in these cases:
   - **Custom layered layout** — give `layers` (the import hierarchy low→high) and `layer_roots` (directory prefixes containing layer dirs).
   - **Non-layered project shape** — for a library, CLI, data pipeline, ML project, or the minimal preset (D), write `"architecture": {"enabled": false}` so the layer gate does not impose a web-app hierarchy on code that has none. **Default to this for project type D and any non-web stack.**
   - **Standard web app** — omit the block entirely to take the 6-layer default.
+  - **Bounded contexts (vertical, opt-in, sibling to `layers`)** — set `contexts` when the codebase has distinct domain modules (e.g. `src/billing`, `src/user`) that must not reach into each other's internals except via a public surface or an explicit exception. This is the vertical complement to the horizontal `layers` gate above — enforced by `.claude/hooks/lib/contexts.js` (gap G8), on every write and at pre-commit, but only when this block is present; unset is the default for most projects (no false positives on unconfigured repos). Config shape: `"architecture": {"contexts": {"roots": ["src/billing","src/user"], "allow": [["billing","user"]], "public": ["index","public","__init__"]}}` — `roots` are the context directories, `allow` is an explicit list of permitted `[from,to]` cross-context import edges (default `[]`, strictest), and `public` names the entry points that count as a context's public surface (defaults shown). Populate this from the wizard's Q9 ("Enforce bounded-context boundaries…", Step 1.E) when the user opts in; otherwise omit the `contexts` key entirely — there is no `"enabled": false` form for it (that flag belongs to `layers` only).
 
 ```json
 "architecture": {
@@ -255,6 +261,54 @@ For preset stacks:
 - **Custom Node/TypeScript**: include typescript-language-server only
 - **Custom (other)**: match from the table above or leave `servers: []` with a comment
 
+### Mutation Testing Config (auto-detected from stack)
+
+`.claude/scripts/deep-mutation.js` (gap G25) already knows how to drive Stryker or mutmut — its `detectTool()` just needs a starter config or dependency on disk to find, instead of defaulting to `unprovisioned` on every project `/scaffold` produces. Infer the recommended tool from the stack chosen in Step 1 and write a `quality.mutation` block into `project-manifest.json`:
+
+```json
+"quality": {
+  "mutation": {
+    "tool": "stryker",
+    "config_file": "stryker.conf.json",
+    "critical_globs": []
+  }
+}
+```
+
+Use this mapping — Python backend takes priority (deep mutation is usually aimed at backend business logic first); fall back to Stryker whenever a JS/TS side exists:
+
+| Stack signal | Tool | `config_file` |
+|---|---|---|
+| `stack.backend.language` is `python` | mutmut | `pyproject.toml` (`[tool.mutmut]`) |
+| No Python backend, but `stack.backend.language` or `stack.frontend.language` is `javascript`/`typescript` | Stryker | `stryker.conf.json` |
+| Neither (Go, Rust, Java, C#, …) | — | omit the `quality.mutation` block entirely — `deep-mutation.js` already degrades to `unprovisioned` cleanly and there is no tool to recommend |
+
+Leave `critical_globs` empty by default — same reasoning as `verification.golden_paths` (G16): which files are worth the heavier mutation tier is a human judgment call the scaffold shouldn't guess at. The team fills it in once they know which modules are actually critical.
+
+### Provision the Mutation Tool (write starter config)
+
+Detection alone isn't the fix — a team that wants Stryker or mutmut should not have to hand-write a config from scratch. Write the starter file(s) below at the **project root** (not inside `backend/`/`frontend/`) — `detectTool()` only ever checks `process.cwd()`, so a config nested in a subdirectory is invisible to it.
+
+**JS/TS (Stryker) — whenever the mapping above selected it:**
+
+Map the JS/TS side's `test_runner` to a Stryker runner plugin (use the frontend's `test_runner` for presets A/B; the backend's for preset C or any JS/TS-only custom stack):
+
+| `test_runner` | Stryker `testRunner` | Runner package to add |
+|---|---|---|
+| `vitest` | `vitest` | `@stryker-mutator/vitest-runner` |
+| `jest` | `jest` | `@stryker-mutator/jest-runner` |
+| anything else / unset | `command` | none — Stryker's built-in command runner; note this in the Step 10 report so the team can swap in a real plugin later |
+
+Copy `.claude/templates/stryker.conf.json.template` to `stryker.conf.json` at the project root, replacing `{{TEST_RUNNER}}` with the mapped value and `{{MUTATE_GLOB}}` with the JS/TS side's source glob (`frontend/src/**/*.ts` for presets A/B, `backend/src/**/*.ts` for preset C, `src/**/*.ts` for a single-root custom Node/TS project — adjust the extension to `.tsx`/`.js` as the stack requires).
+
+If `package.json` already exists at the project root (a brownfield rescaffold), add `@stryker-mutator/core` and the mapped runner package to its `devDependencies` (merge — never overwrite existing deps). `/scaffold` does not generate application source, so a greenfield project has no `package.json` yet; in that case, note in the Step 10 report that these two packages need adding to the JS/TS side's `package.json` once it exists (typically during `/implement`) — the same "detected, not force-installed" posture the LSP section above takes with missing LSP binaries.
+
+**Python (mutmut) — whenever the mapping above selected it:**
+
+If `pyproject.toml` already exists at the project root (brownfield), add a `[tool.mutmut]` section if one isn't already present, and add `mutmut` via whatever Python dev-dependency mechanism that file already uses (`uv add --dev mutmut`, an existing `[project.optional-dependencies].dev` list, or `[tool.poetry.group.dev.dependencies]`) — match the existing convention, don't introduce a new one.
+
+If no `pyproject.toml` exists yet (the common greenfield case — the real backend project file will later live at `backend/pyproject.toml`, a different path, so this is safe and won't collide), copy `.claude/templates/mutmut-pyproject.template.toml` to `pyproject.toml` at the project root, replacing `{{PATHS_TO_MUTATE}}` with the backend source dir (`backend/src/` for presets A/B, `src/` for a single-root custom Python project) and `{{RUNNER_CMD}}` with the matching test command (`cd backend && uv run pytest -x -q` for presets A/B, `uv run pytest -x -q` for a single-root project). Note in the Step 10 report that `mutmut` itself still needs adding (`uv add --dev mutmut`) once the backend Python project exists.
+
 ### Verification Config (based on the verification-mode decision)
 
 **If Docker (A):**
@@ -278,6 +332,15 @@ For preset stacks:
 "verification": {
   "mode": "stub",
   "stub": { "schema_source": "specs/design/api-contracts.schema.json", "auto_generate_mock_server": true }
+}
+```
+
+**In all three modes**, `verification` also carries an optional `golden_paths` array (gap G16) — e2e spec paths (relative to the project root, e.g. `"e2e/checkout.spec.ts"`) that `local-regression-gate.js` always runs on every `/change`/`/vibe`, regardless of what its impact analysis selects. It's a human-curated safety net under a possibly-stale code-graph, not auto-populated by `/scaffold` — leave it `[]` until the team has stories worth pinning as "must never break," then add them manually:
+```json
+"verification": {
+  "mode": "docker",
+  "docker": { ... },
+  "golden_paths": []
 }
 ```
 
@@ -721,6 +784,16 @@ fi
 
 If `lsp.servers` is empty, replace `{{LSP_HEALTH_CHECKS}}` with `echo "  (no LSP servers configured — add to project-manifest.json lsp.servers if needed)"`.
 
+### Mutation Testing Confirmation (if configured)
+
+Mutation tools have no meaningful `--version` health probe the way an LSP binary does, so this doesn't warrant a full health-check block — just a one-line confirmation. If `project-manifest.json#quality.mutation` is set, use the Edit tool to append one line to the just-written `init.sh`, directly after the LSP health-check block:
+
+```bash
+echo "Mutation testing: {tool} configured (config: {config_file})"
+```
+
+substituting the `tool`/`config_file` values just written. If `quality.mutation` was omitted (no JS/TS or Python side detected), skip this — there is nothing to confirm.
+
 ## Step 8: Initialize Git
 
 ```bash
@@ -818,10 +891,20 @@ LSP servers (auto-detected from stack):
   ✓ {server} ({language})             — found at $(which {binary})
   ✗ {server} ({language})             — not found, install: {install}
 
+{if `project-manifest.json#quality.mutation` was written:}
+Mutation testing (auto-detected from stack):
+  {tool} — starter config written to {config_file}
+  {if the JS/TS or Python dependency file didn't exist yet to receive the package:}
+  Install once the project exists: {npm i -D @stryker-mutator/core @stryker-mutator/{runner}-runner | uv add --dev mutmut}
+  {if it already existed and the dependency was added directly:}
+  Added {@stryker-mutator/core + runner package | mutmut} to {package.json | pyproject.toml} devDependencies
+
 Large codebase tips:
   - Add subdirectory CLAUDE.md files for monorepo modules (see Step 5.B pattern)
   - Run `node .claude/scripts/archive-state.js` if state files grow large
   - Use the codebase-explorer agent for read-only discovery before broad changes
+  {if the project has separate backend/ and frontend/ dirs (stack presets A/B/C — the same multi-module signal Step 5.B uses) and the wizard's bounded-context question (Q9) was not opted into (no `architecture.contexts` in the manifest):}
+  - Bounded-context enforcement is available but not configured — see project-manifest.json#architecture.contexts if this codebase has domain modules (billing/, user/, etc.) that shouldn't reach into each other's internals.
 
 Next steps:
   1. Run /brd to create your Business Requirements Document
@@ -849,6 +932,10 @@ Telemetry (OFF by default — opt-in):
 
 LSP servers (auto-detected from stack):
   {for each lsp.servers entry, run `command -v {binary}` and print ✓ or ✗ — same format as default report}
+
+{if `project-manifest.json#quality.mutation` was written — same format as default report}
+Mutation testing (auto-detected from stack):
+  {tool} — starter config written to {config_file}
 
 Large codebase tips:
   - Run `node .claude/scripts/archive-state.js` if state files grow large

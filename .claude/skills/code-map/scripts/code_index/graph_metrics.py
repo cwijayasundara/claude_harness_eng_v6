@@ -1,5 +1,12 @@
 """Graph metrics: fan-in/out, hubs, and Tarjan SCC cycle detection (iterative)."""
 
+# Same unstable-hub thresholds hooks/lib/drift.js's UNSTABLE_FAN_IN /
+# UNSTABLE_INSTABILITY constants use (coupling-report.md's unstableSection,
+# coupling-gate.js's ratchet). Keep these two implementations in lockstep —
+# a drift here silently changes what counts as unstable in only one runtime.
+UNSTABLE_FAN_IN = 5
+UNSTABLE_INSTABILITY = 0.8
+
 
 def _instability(fan_in, fan_out):
     total = fan_in + fan_out
@@ -34,6 +41,21 @@ def _hubs(node_ids, fan_in, fan_out):
                      'instability': _instability(fi, fo)})
     hubs.sort(key=lambda h: (-h['fan_in'], -h['fan_out']))
     return hubs
+
+
+# Gap G26: `hubs` (above) is truncated to the top 25 for the human-facing
+# coupling report — a reasonable display cap on its own terms, but consumers
+# that run a threshold-based unstable-hub CHECK (coupling-gate.js's ratchet,
+# drift.js's staleness tracking, agent-readiness's modularity-freshness
+# pillar, record-modularity-review.js's marker) were reusing that same
+# truncated list, so a real unstable hub ranked 26th+ by fan-in was
+# structurally invisible to all of them. This sibling computation applies the
+# identical threshold test over the FULL, uncapped hub list so those
+# consumers have an uncapped source to read instead. `hubs` itself and its
+# top-25 truncation are unchanged — this is additive, not a fix to `_hubs()`.
+def _unstable_hubs(all_hubs):
+    return [h for h in all_hubs
+            if h['fan_in'] >= UNSTABLE_FAN_IN and h['instability'] >= UNSTABLE_INSTABILITY]
 
 
 def _strongconnect(start, adj, state):
@@ -88,10 +110,12 @@ def compute(nodes, edges):
     """Metrics block for the code-graph: files, edges, externals, cycles, hubs."""
     node_ids = {n['id'] for n in nodes}
     fan_in, fan_out, adj, internal, external = _adjacency(node_ids, edges)
+    all_hubs = _hubs(node_ids, fan_in, fan_out)
     return {
         'files': len(nodes),
         'edges': internal,
         'external_imports': external,
         'cycles': _cycles(adj),
-        'hubs': _hubs(node_ids, fan_in, fan_out)[:25],
+        'hubs': all_hubs[:25],
+        'unstable_hubs': _unstable_hubs(all_hubs),
     }

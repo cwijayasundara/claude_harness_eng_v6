@@ -149,6 +149,14 @@ node .claude/scripts/modularity-pack.js     # → specs/brownfield/modularity-pa
 
 Then spawn the `modularity-reviewer` agent (artifact/maintainability sensor — inferential) against the pack. It judges semantic duplication, misplaced responsibility, argument clumps, and cycles against the source, confirms which `likely-legitimate` hubs are genuinely fine, and writes `specs/reviews/modularity-review.md` + `modularity-verdict.json`. This is a maintainability *sensor*, not a gate — it informs `change-strategy.md` and prioritizes refactoring; it never blocks. Skip in lean mode.
 
+Once the agent completes, record that a real review just ran (gap G19 — the drift-cadence staleness proxy that tells the next drift run which unstable hubs are new since this review):
+
+```bash
+node .claude/scripts/record-modularity-review.js
+```
+
+This writes/updates `.claude/state/modularity-review-marker.json` with `{timestamp, unstableHubIds}` — the current unstable-hub set at the moment this review ran. Skip only if it errors for lack of a code-graph (already handled loudly by the script itself).
+
 ---
 
 ## Step 4 — Map Risks

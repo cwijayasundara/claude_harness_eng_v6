@@ -86,6 +86,46 @@ for (const profile of ['core', 'brownfield', 'full']) {
         fs.existsSync(path.join(target, '.claude', 'skills', 'pr-respond', 'SKILL.md')),
         'pr-respond/SKILL.md must be copied — the scaffold ships the skill that invokes pr-poll.js',
       );
+      assert.ok(
+        fs.existsSync(path.join(target, '.claude', 'skills', 'writing-acceptance-tests-first', 'SKILL.md')),
+        'writing-acceptance-tests-first/SKILL.md must be copied — /test Step 4.6 and /change Step S4 both reference it as a REQUIRED SUB-SKILL',
+      );
+      assert.ok(
+        fs.existsSync(path.join(target, '.claude', 'skills', 'agent-readiness', 'SKILL.md')),
+        'agent-readiness/SKILL.md must be copied so /agent-readiness works in a scaffolded project',
+      );
+      assert.ok(
+        fs.existsSync(path.join(target, '.claude', 'scripts', 'agent-readiness.js')),
+        'agent-readiness.js must be copied because agent-readiness/SKILL.md invokes it',
+      );
+      assert.ok(
+        fs.existsSync(path.join(target, '.claude', 'scripts', 'cycle-gate.js')),
+        'cycle-gate.js must be copied because /gate and /auto Gate 4 both invoke it',
+      );
+      assert.ok(
+        fs.existsSync(path.join(target, '.claude', 'scripts', 'coupling-gate.js')),
+        'coupling-gate.js must be copied because /gate and /auto Gate 4 both invoke it',
+      );
+      assert.ok(
+        fs.existsSync(path.join(target, '.claude', 'scripts', 'regression-gate.js')),
+        'regression-gate.js must be copied because /gate and /auto\'s pre-merge step invoke it',
+      );
+      assert.ok(
+        fs.existsSync(path.join(target, '.claude', 'scripts', 'local-regression-gate.js')),
+        'local-regression-gate.js must be copied because /change Step S5 and /vibe Step 6 invoke it',
+      );
+      assert.ok(
+        fs.existsSync(path.join(target, '.claude', 'scripts', 'legacy-discipline-gate.js')),
+        'legacy-discipline-gate.js must be copied because the pre-commit hook invokes it by default',
+      );
+      assert.ok(
+        fs.existsSync(path.join(target, '.claude', 'scripts', 'record-coverage-verdict.js')),
+        'record-coverage-verdict.js must be copied because checking-coverage-before-change Step 2 pipes through it',
+      );
+      assert.ok(
+        fs.existsSync(path.join(target, '.claude', 'scripts', 'record-modularity-review.js')),
+        'record-modularity-review.js must be copied because /brownfield Step 3.6 and /design --delta Step D3.5 invoke it',
+      );
     } finally {
       fs.rmSync(workDir, { recursive: true, force: true });
     }

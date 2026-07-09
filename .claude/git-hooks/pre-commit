@@ -148,6 +148,111 @@ function checkOwnership(projectDir, stagedSource) {
   }
 }
 
+// Legacy-discipline-proof gate (gap G17). checking-coverage-before-change,
+// pinning-down-behavior, and sprouting-instead-of-editing were prompt-level
+// instructions only — nothing proved the Iron Law ("no edit to a symbol until
+// you know which tests cover it") actually ran. This re-checks every staged
+// MODIFIED (not newly-added) production source file against the receipts
+// ledger record-coverage-verdict.js writes: no receipt at all, or an UNCOVERED
+// verdict with no pin-down/sprout test staged alongside it, BLOCKs. Default-on
+// (unlike keeping-refactors-pure's opt-in env var) because the Iron Law applies
+// to every legacy edit, not just refactor-classified commits. Lazy require,
+// like checkOwnership: the sensor ships in .claude/scripts.
+function checkLegacyDisciplineGate(projectDir, staged) {
+  if (process.env.HARNESS_LEGACY_DISCIPLINE_GATE === 'off') {
+    noteSkip('legacy-discipline', 'HARNESS_LEGACY_DISCIPLINE_GATE=off');
+    return;
+  }
+  let gate;
+  try {
+    gate = require(path.join(__dirname, '..', 'scripts', 'legacy-discipline-gate'));
+  } catch (_) {
+    noteSkip('legacy-discipline', 'sensor script missing or unloadable from .claude/scripts');
+    return;
+  }
+  const graphPath = path.join(projectDir, 'specs', 'brownfield', 'code-graph.json');
+  if (!fs.existsSync(graphPath)) return; // no brownfield map: nothing to check
+  let graph;
+  try {
+    graph = JSON.parse(fs.readFileSync(graphPath, 'utf8'));
+  } catch (_) {
+    return; // unreadable graph: same "nothing to check" degrade as a missing one
+  }
+  if (!gate.hasSymbolRecords(graph)) return; // regex-fallback producer: no symbol data to check receipts against
+  const modified = execFileSync('git', ['diff', '--cached', '--name-only', '--diff-filter=MR'], {
+    cwd: projectDir,
+    encoding: 'utf8',
+  })
+    .split('\n')
+    .filter(Boolean)
+    .filter((f) => gate.isSource(f) && !gate.isTestFile(f));
+  const verdict = gate.checkLegacyDiscipline(modified, gate.readReceipts(projectDir), staged);
+  if (verdict.pass) return;
+  const lines = [
+    ...verdict.noVerdict.map((f) => `  NO VERDICT RECORDED       ${f}`),
+    ...verdict.uncoveredNoEvidence.map((f) => `  UNCOVERED, NO TEST STAGED ${f}`),
+  ];
+  fail(
+    `BLOCKED: legacy-discipline-proof (G17) — checking-coverage-before-change was not proven for staged file(s):\n` +
+      lines.join('\n') + '\n' +
+      'Fix: run checking-coverage-before-change Step 2 (coverage_map.py piped through record-coverage-verdict.js) for these ' +
+      'files before editing; for an UNCOVERED verdict, stage a pin-down or sprout test in the same commit ' +
+      '(pinning-down-behavior / sprouting-instead-of-editing). A real exception belongs in specs/reviews/sensor-waivers.json ' +
+      '(sensor_id: legacy-discipline-proof, see docs/sensor-arbitration.md); HARNESS_LEGACY_DISCIPLINE_GATE=off only ' +
+      'acknowledges a local skip.\n'
+  );
+}
+
+// AT-first-proof gate (gap G23). writing-acceptance-tests-first's Process
+// step 5 ("confirm it fails for the right reason") was a prompt-level
+// instruction only — nothing proved an AT was actually written and observed
+// red before a story's new production files were committed (G20's disclosed
+// forward item). record-at-red.js (run from the skill's own step) appends a
+// receipt whenever an AT run genuinely fails; this re-checks at commit time
+// that every story owning a NEW (added) staged production file has both the
+// acceptance-test file and a matching receipt. Default-on, same shape as
+// checkLegacyDisciplineGate. Lazy require: the sensor ships in .claude/scripts.
+function reportAtFirstFailure(verdict) {
+  const lines = [
+    ...verdict.missingAt.map((s) => `  NO ACCEPTANCE TEST FILE     ${s}`),
+    ...verdict.missingReceipt.map((m) => `  NO RED RECEIPT              ${m.story} (${m.atPath})`),
+  ];
+  fail(
+    `BLOCKED: at-first-proof (G23) — writing-acceptance-tests-first was not proven for staged new file(s):\n` +
+      lines.join('\n') + '\n' +
+      'Fix: run writing-acceptance-tests-first for the story (write the AT under specs/test_artefacts/acceptance/), ' +
+      'then node .claude/scripts/record-at-red.js --story <id> --at-file <path> --test-cmd "<cmd>" to confirm it fails ' +
+      'and record the receipt. A real exception belongs in specs/reviews/sensor-waivers.json (sensor_id: at-first-proof, ' +
+      'see docs/sensor-arbitration.md); HARNESS_AT_FIRST_GATE=off only acknowledges a local skip.\n'
+  );
+}
+
+function checkAtFirstGate(projectDir) {
+  if (process.env.HARNESS_AT_FIRST_GATE === 'off') {
+    noteSkip('at-first', 'HARNESS_AT_FIRST_GATE=off');
+    return;
+  }
+  let gate;
+  try {
+    gate = require(path.join(__dirname, '..', 'scripts', 'at-first-gate'));
+  } catch (_) {
+    noteSkip('at-first', 'sensor script missing or unloadable from .claude/scripts');
+    return;
+  }
+  const mapPath = path.join(projectDir, 'specs', 'design', 'component-map.md');
+  if (!fs.existsSync(mapPath)) return; // pre-map project or lane: nothing to check
+  const added = execFileSync('git', ['diff', '--cached', '--name-only', '--diff-filter=A'], {
+    cwd: projectDir,
+    encoding: 'utf8',
+  })
+    .split('\n')
+    .filter(Boolean)
+    .filter((f) => gate.isSource(f) && !gate.isTestFile(f));
+  const mapText = fs.readFileSync(mapPath, 'utf8');
+  const verdict = gate.checkAtFirst(projectDir, added, mapText, gate.readReceipts(projectDir));
+  if (verdict.storiesChecked.length > 0 && !verdict.pass) reportAtFirstFailure(verdict);
+}
+
 // Amendment-provenance gate (sprint-delta lane, design spec 2026-07-04): once a
 // design baseline exists, any commit touching specs/design/ must carry a
 // matching record under specs/design/amendments/. Runs on ALL staged files
@@ -474,6 +579,8 @@ try {
   checkLayers(projectDir, stagedSource);
   checkContexts(projectDir, stagedSource);
   checkOwnership(projectDir, stagedSource);
+  checkLegacyDisciplineGate(projectDir, staged);
+  checkAtFirstGate(projectDir);
   checkSprintContract(projectDir);
   checkTypescript(projectDir, stagedTs);
   checkCoverage(projectDir, stagedPy);

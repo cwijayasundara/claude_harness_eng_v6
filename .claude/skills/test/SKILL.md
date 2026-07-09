@@ -149,7 +149,22 @@ node .claude/scripts/verification-matrix-gate.js --phase plan
 
 `specs/reviews/verification-matrix-verdict.json` is also a **HARD BLOCK**: every implementation-ready AC must have a matrix obligation before the plan can be reported.
 
-**If `--plan-only`: STOP HERE.** Steps 4–4.5 (plan + cases + fixtures + trace spine + grounding gate) are the complete deliverable for the planning phase. Do not proceed to Playwright generation — source code does not exist yet. Report the generated artifacts and exit.
+### Step 4.6 — Acceptance Tests First (AT Layer) [REQUIRED SUB-SKILL: `writing-acceptance-tests-first`]
+
+Before implementation begins on each story, write its acceptance test(s) FIRST — a fast, business-readable layer that verifies the AC directly against business logic via a Ports-and-Adapters seam, bypassing the UI/transport stack. This is additive to Step 5's Playwright E2E generation, not a replacement: ATs become the primary per-story verification loop; E2E remains the final full-stack confirmation layer, generated later once source exists. This step runs even in `--plan-only` mode — writing an AT does not require the full running app, only the seam it targets, and an AT that fails because the target function does not exist yet is a legitimate first red state (see the sub-skill's Process step 5).
+
+Follow `.claude/skills/writing-acceptance-tests-first/SKILL.md` in full for each story: locate or request the human-provided AT template (`specs/test_artefacts/at-template.*`), identify the Ports-and-Adapters seam (reuse `/seam-finder` output when `specs/brownfield/seams-<goal-slug>.md` exists for the story's goal; for a brand-new greenfield module, design the port directly from the story's acceptance criteria), write the AT against that seam with a test-double/fake adapter, run it, and confirm it fails for the right reason before implementation starts.
+
+Write acceptance tests to `specs/test_artefacts/acceptance/{story-id}.<ext>` (extension matches the project's test stack) and record each in `specs/test_artefacts/at-traces.json`, tracing to the story's AC id(s) the same way `test-traces.json` does:
+```json
+[
+  { "id": "AT-1", "story": "E1-S1", "text": "registering with a valid email creates an account", "traces": ["E1-S1-AC1"] }
+]
+```
+
+Every implementation-ready AC should have a corresponding AT before the story is handed to implementation. `at-traces.json` is the deterministic signal downstream review should check for. As of gap G23, this is also mechanically enforced at commit time: `at-first-gate.js` (pre-commit) blocks a story's NEW production source files from being committed unless both the AT file and a `record-at-red.js` receipt exist for that story (see `HARNESS.md` G20/G23).
+
+**If `--plan-only`: STOP HERE.** Steps 4–4.6 (plan + cases + fixtures + trace spine + grounding gate + acceptance tests) are the complete deliverable for the planning phase. Do not proceed to Playwright generation — source code does not exist yet. Report the generated artifacts and exit.
 
 ### Step 5 — Generate Playwright E2E Tests (`e2e/`)
 
@@ -251,6 +266,8 @@ Any `net_new` (a delta test tracing to no CR line — scope creep) or `dropped` 
 | `specs/test_artefacts/test-cases.md` | Full test case inventory mapped to ACs |
 | `specs/test_artefacts/test-data/` | JSON fixture files per domain entity |
 | `specs/test_artefacts/test-traces.json` | Trace spine: each test case → AC id(s) and/or `OBL-` id(s) |
+| `specs/test_artefacts/acceptance/{story-id}.<ext>` | Business-readable acceptance test (Ports-and-Adapters seam, test-double adapter), written before implementation |
+| `specs/test_artefacts/at-traces.json` | AT trace spine: each acceptance test → AC id(s) |
 | `specs/test_artefacts/verification-matrix.json` | AC → required verification layers and planned checks |
 | `specs/test_artefacts/unit-traces.json` | Unit test artifacts mapped to `matrix_id` |
 | `specs/test_artefacts/integration-traces.json` | Integration/API test artifacts mapped to `matrix_id` |
@@ -273,3 +290,4 @@ Any `net_new` (a delta test tracing to no CR line — scope creep) or `dropped` 
 - **Testing implementation details.** Test behavior through the public interface, not internal state.
 - **Skipping error paths.** Every documented error path in the AC must have a test.
 - **Leaving schema constraints untested.** When design schemas exist, every `OBL-` obligation from Step 4.4 must be covered by a negative test — the grounding gate blocks otherwise. Generate one representative case per obligation, not one per value.
+- **Routing acceptance verification through the full stack when a seam exists.** This is Vaccari's named E2E-as-AT-implementation antipattern: slow, flaky, and a failure means log-spelunking. Step 4.6's ATs should call business logic directly through a Ports-and-Adapters seam with a fake adapter; Step 5's Playwright suite is the final full-stack confirmation layer, not the primary acceptance loop.

@@ -46,5 +46,6 @@ NO CHANGE TO UNCOVERED CODE WITHOUT A PIN-DOWN TEST YOU HAVE WATCHED BITE
 - [ ] Pin-downs green against unmodified code
 - [ ] Mutation smoke: watched the suite fail on a deliberate flip, then reverted
 - [ ] Pin-downs byte-identical green after the change
+- [ ] The pin-down test file is staged in the SAME commit as the production edit — the pre-commit `legacy-discipline-proof` gate (G17) BLOCKs an UNCOVERED-verdict file with no test-shaped file staged alongside it, as mechanical evidence this step actually happened
 
 Pin what is, watch it bite, then change. No exceptions without your human partner's permission.

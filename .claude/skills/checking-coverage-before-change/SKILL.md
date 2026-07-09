@@ -16,13 +16,14 @@ NO EDIT TO A SYMBOL UNTIL YOU KNOW WHICH TESTS COVER IT
 ## Process
 
 1. Ensure coverage data exists. Python: `pytest --cov --cov-context=test` (writes `.coverage` with per-test contexts). JS: `nyc --reporter=json` (or Jest `--coverage`, file-level). If data is missing or stale, regenerate. **Under time pressure, scope the regen** — `pytest tests/<area> --cov=<affected.module> --cov-context=test` answers the symbol's verdict in minutes; the Iron Law needs this symbol's verdict, not the whole repo's. A scoped regen is compliance; a skipped one is not.
-2. Run the verdict script for every symbol in the planned diff:
+2. Run the verdict script for every symbol in the planned diff, piped through the verdict recorder so the pre-commit `legacy-discipline-proof` gate (G17) can later prove this step actually ran — the pipe is pass-through and never changes the printed verdict:
 
 ```bash
 python3 .claude/skills/code-map/scripts/code_index/coverage_map.py \
   --graph specs/brownfield/code-graph.json \
   --coverage .coverage \
-  --files <each affected file>
+  --files <each affected file> \
+  | node .claude/scripts/record-coverage-verdict.js
 ```
 
 3. Route on the verdict:
@@ -53,7 +54,7 @@ python3 .claude/skills/code-map/scripts/code_index/coverage_map.py \
 ## Checklist
 
 - [ ] Coverage data fresh (regenerated since last suite-affecting change)
-- [ ] Verdict obtained for every symbol in the planned diff
+- [ ] Verdict obtained AND recorded (piped through `record-coverage-verdict.js`) for every symbol in the planned diff — the pre-commit `legacy-discipline-proof` gate (G17) mechanically BLOCKs a staged edit to a file with no recorded verdict, so an unrecorded verdict is not actually compliance
 - [ ] COVERED symbols: oracle tests ran green before the first edit
 - [ ] UNCOVERED symbols: routed to pinning-down-behavior or sprouting-instead-of-editing
 

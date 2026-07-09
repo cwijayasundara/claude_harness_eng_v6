@@ -52,5 +52,6 @@ IF YOU CANNOT PIN IT, DO NOT EDIT IT — SPROUT BESIDE IT
 - [ ] Sprout fully TDD'd as new code
 - [ ] Legacy diff = one call line (or rename pair), verified against symbol ranges
 - [ ] Full suite + oracle tests green
+- [ ] The sprout's new/modified test file is staged in the SAME commit as the one-line legacy edit — satisfies the pre-commit `legacy-discipline-proof` gate (G17)'s evidence requirement for an UNCOVERED-verdict legacy file
 
 New code gets tests; old code gets one line. No exceptions without your human partner's permission.

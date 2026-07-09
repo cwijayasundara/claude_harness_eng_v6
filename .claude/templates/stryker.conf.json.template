@@ -1,0 +1,8 @@
+{
+  "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker-js/master/packages/api/schema/stryker-schema.json",
+  "packageManager": "npm",
+  "reporters": ["html", "clear-text", "progress"],
+  "testRunner": "{{TEST_RUNNER}}",
+  "coverageAnalysis": "perTest",
+  "mutate": ["{{MUTATE_GLOB}}"]
+}

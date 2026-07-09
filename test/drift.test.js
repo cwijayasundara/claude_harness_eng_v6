@@ -98,3 +98,51 @@ test('renderDriftReport is legible and reflects regression state', () => {
   assert.match(md, /New import cycles: 1/);
   assert.match(md, /py:c\.py -> py:d\.py/);
 });
+
+// --- withModularityStaleness (gap G19) -------------------------------------
+
+test('withModularityStaleness flags current unstable hubs absent from the marker', () => {
+  const base = drift.extractMetrics(graph());
+  const m = drift.withModularityStaleness(base, ['py:old-hub.py'], ['py:h.py']);
+  assert.deepStrictEqual(m.modularityStaleHubs, ['py:h.py'], 'py:h.py is not in the marker snapshot');
+});
+
+test('withModularityStaleness treats a hub present in the marker as not stale', () => {
+  const base = drift.extractMetrics(graph());
+  const m = drift.withModularityStaleness(base, ['py:h.py'], ['py:h.py']);
+  assert.deepStrictEqual(m.modularityStaleHubs, []);
+});
+
+test('withModularityStaleness: no marker at all means every current unstable hub is stale', () => {
+  const base = drift.extractMetrics(graph());
+  const m = drift.withModularityStaleness(base, null, ['py:h.py', 'py:g.py']);
+  assert.deepStrictEqual(m.modularityStaleHubs, ['py:g.py', 'py:h.py'].sort());
+});
+
+test('modularity staleness threads through diffSnapshots/hasRegressed like canvasDrift', () => {
+  const base = drift.extractMetrics(graph());
+  const prev = drift.withModularityStaleness(base, ['py:h.py'], ['py:h.py']);
+  const curr = drift.withModularityStaleness(base, ['py:h.py'], ['py:h.py', 'py:new-hub.py']);
+  const d = drift.diffSnapshots(prev, curr);
+  assert.deepStrictEqual(d.newModularityStaleHubs, ['py:new-hub.py']);
+  assert.strictEqual(drift.hasRegressed(d), true, 'a new stale hub must count as drift');
+});
+
+test('an unchanged modularity-staleness snapshot reports no new drift', () => {
+  const base = drift.extractMetrics(graph());
+  const prev = drift.withModularityStaleness(base, ['py:h.py'], ['py:h.py']);
+  const curr = drift.withModularityStaleness(base, ['py:h.py'], ['py:h.py']);
+  assert.strictEqual(drift.hasRegressed(drift.diffSnapshots(prev, curr)), false);
+});
+
+test('renderDriftReport names the new stale hub and suggests the real review commands', () => {
+  const base = drift.extractMetrics(graph());
+  const prev = drift.withModularityStaleness(base, ['py:h.py'], ['py:h.py']);
+  const curr = drift.withModularityStaleness(base, ['py:h.py'], ['py:h.py', 'py:new-hub.py']);
+  const d = drift.diffSnapshots(prev, curr);
+  const md = drift.renderDriftReport(d, curr);
+  assert.match(md, /New modularity-review staleness: 1/);
+  assert.match(md, /py:new-hub\.py/);
+  assert.match(md, /\/brownfield --full/);
+  assert.match(md, /\/design --delta/);
+});

@@ -1,0 +1,8 @@
+# Starter mutation-testing config written by /scaffold (gap G25).
+# This is intentionally a standalone file, separate from the real backend
+# project's pyproject.toml (backend/pyproject.toml, written later by
+# `uv sync` / /implement) — no collision.
+[tool.mutmut]
+paths_to_mutate = ["{{PATHS_TO_MUTATE}}"]
+tests_dir = ["tests/"]
+runner = "{{RUNNER_CMD}}"

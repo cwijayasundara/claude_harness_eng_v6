@@ -125,7 +125,7 @@ test('no doc references a removed agent', () => {
   assert.deepStrictEqual(offenders, [], offenders.join('\n'));
 });
 
-// The five discipline micro-skills are auto-invoked by agents mid-pipeline,
+// The discipline micro-skills are auto-invoked by agents mid-pipeline,
 // not typed by humans; without a marker they read as user commands when a
 // team browses .claude/skills/ (2026-07-02 audit fix #5). The marker is a
 // SUFFIX: the leading "Use when…" trigger phrase drives auto-invocation and
@@ -136,6 +136,7 @@ const INTERNAL_DISCIPLINE_SKILLS = [
   'keeping-refactors-pure',
   'pinning-down-behavior',
   'sprouting-instead-of-editing',
+  'writing-acceptance-tests-first',
 ];
 
 test('internal discipline skills carry the marker after their trigger phrase', () => {

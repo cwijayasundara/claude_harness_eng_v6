@@ -20,6 +20,7 @@ const { runDeps } = require('./security-scan');
 const REPO = process.cwd();
 const GRAPH = path.join(REPO, 'specs', 'brownfield', 'code-graph.json');
 const CANVAS = path.join(REPO, 'specs', 'design', 'reasons-canvas.md');
+const MARKER = path.join(REPO, '.claude', 'state', 'modularity-review-marker.json');
 const OUT_DIR = path.join(REPO, 'specs', 'drift');
 const SNAPSHOT = path.join(OUT_DIR, 'drift-snapshot.json');
 
@@ -45,6 +46,25 @@ function canvasMissing(cwd) {
   }
 }
 
+// The unstable-hub set as of the last REAL modularity review (gap G19),
+// written by record-modularity-review.js after /brownfield --full's Step 3.6
+// or /design --delta's Step D3.5. Degrade loudly, never silently, when no
+// marker exists yet — that is itself a real, actionable signal, not a
+// missing file to shrug off.
+function modularityMarkerHubIds() {
+  const marker = readJson(MARKER);
+  if (!marker) {
+    process.stderr.write(
+      'WARNING: drift monitor — no modularity-review marker at ' +
+      '.claude/state/modularity-review-marker.json. No real modularity review ' +
+      'has ever run — consider `/brownfield --full` or `/design --delta`. ' +
+      'Every currently unstable hub is being treated as stale until one does.\n'
+    );
+    return null;
+  }
+  return Array.isArray(marker.unstableHubIds) ? marker.unstableHubIds : [];
+}
+
 function writeOutputs(report, payload, snapshot) {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   fs.writeFileSync(path.join(OUT_DIR, 'drift-report.md'), report);
@@ -55,7 +75,8 @@ function writeOutputs(report, payload, snapshot) {
 function currentMetrics(graph, prev) {
   let metrics = drift.extractMetrics(graph || {});
   if (!graph) metrics = drift.carryForwardArch(metrics, prev); // don't reset arch baseline on a graphless run
-  return drift.withCanvasDrift(drift.withDepCves(metrics, depCveKeys(REPO)), canvasMissing(REPO));
+  metrics = drift.withCanvasDrift(drift.withDepCves(metrics, depCveKeys(REPO)), canvasMissing(REPO));
+  return drift.withModularityStaleness(metrics, modularityMarkerHubIds(), metrics.unstableHubs);
 }
 
 function main() {
