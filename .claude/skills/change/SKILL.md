@@ -56,6 +56,7 @@ Do not proceed until acceptance criteria are written and confirmed.
 
 Read the current codebase to understand what is affected:
 
+- **Learned rules:** read `.claude/state/learned-rules.md`. If it exists and is non-empty, inject its contents verbatim into your working context before making any edits — the same convention `/auto` already uses for every spawned agent.
 - **Brownfield map:** if `specs/brownfield/` exists, read `codebase-map.md`, `architecture-map.md`, `test-map.md`, `risk-map.md`, and `change-strategy.md` before assessing impact. If this is a non-trivial existing codebase and the brownfield map is missing, recommend `/brownfield` first.
 - **Symbol navigation:** use `specs/brownfield/symbol-map.md` to locate the affected symbols (signatures with `Lstart-Lend` anchors). For files flagged in `skeletons/`, read the `.skel.md` first and then only the relevant symbol slice via `Read(offset, limit)` — never whole-file-read a skeleton-flagged file.
 - **Seam plan:** if `specs/brownfield/seams-<goal-slug>.md` exists for this change's goal (or the user named a seam), read it and prefer its top-ranked seam (`extend`/`wrap`/`introduce-adapter` action) as the cut-point for the change. Note in the impact assessment which seam you adopted or why you rejected it.
