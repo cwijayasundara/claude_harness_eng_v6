@@ -45,6 +45,18 @@ Use the Agent tool to spawn the selected agents **in a single call**:
 - **code-reviewer** — always for `/gate`. Fresh-context review of the diff for both structure and correctness; writes `specs/reviews/code-review-verdict.json`.
 - **security-reviewer** — only when the changed files touch auth/authz, secrets, user input handling, uploads/downloads, network fetch/redirect/proxy code, payments/billing, persistence/schema/migrations, API routes/controllers/middleware, or configured security patterns. Writes `specs/reviews/security-review.md` and `specs/reviews/security-verdict.json`.
 
+- **Bounded re-verification when the security trigger fires (Devin-parity hardening, 2026-07-09).** When the security trigger above fires, spawn **2 additional independent instances** each of `evaluator` and `security-reviewer` (3 total per axis, including the always-on evaluator spawn and the triggered security-reviewer spawn above) — fresh context per instance via the `Agent` tool, no shared conversation between instances. Each instance runs its full existing process unmodified. Resolve each axis independently by majority vote (2-of-3): security PASS/BLOCK and functional PASS/FAIL can legitimately disagree. If an instance errors or times out instead of returning a verdict, fail safe to the stricter outcome (BLOCK/FAIL) for that axis. The existing `specs/reviews/security-verdict.json` and the evaluator's own verdict output are written exactly as before, sourced from the first-spawned instance of each — every existing consumer is unaffected. Additionally write `specs/reviews/reverify-votes.json`:
+  ```json
+  {
+    "gate": "gate-reverify",
+    "trigger": "security-boundary",
+    "security": { "votes": ["pass", "pass", "fail"], "majority": "pass", "fail_safe_triggered": false },
+    "functional": { "votes": ["pass", "pass", "pass"], "majority": "pass", "fail_safe_triggered": false },
+    "timestamp": "<ISO 8601>"
+  }
+  ```
+  This file is an audit trail only — no existing gate logic reads it. Scoped to `/gate` only; `/auto`'s per-group Gate 7 keeps its existing single-pass security review unchanged.
+
 - **Approved-fixtures (G12):** when the changed files include any snapshot file (path contains `__snapshots__/` or ends with `.snap`/`.ambr`/`.approved.*`), run `node .claude/scripts/approved-fixtures-gate.js`. It checksums every snapshot against the approved baseline (`specs/test_artefacts/approved-snapshots.json`); a `blocked` verdict (a modified approved snapshot or a new unapproved one, exit 1) is a **BLOCK** (writes `specs/reviews/approved-fixtures-verdict.json`). After reviewing the change, re-bless with `npm run approve-fixtures -- --all` (or `-- --snapshots <files>`). `no-snapshots` / `pass` (removed-only WARN) are non-blocking. When the diff touches no snapshot files, skip.
 
 - **Contract-drift (G12):** when the changed files include the project's OpenAPI spec (the same changed-files boundary used for security-scan), run `node .claude/scripts/contract-drift-gate.js`. It runs `oasdiff breaking` between the spec at the git base and the working tree; a `breaking` verdict (exit 1) is a **BLOCK** (writes `specs/reviews/contract-drift-verdict.json`). `no-spec` / `new-spec` / `unprovisioned` (oasdiff not installed) are non-blocking notes. When the diff does not touch an OpenAPI spec, skip it.
@@ -75,6 +87,7 @@ Severity levels (BLOCK/WARN/INFO), the BLOCK self-healing loop (generator fix �
 - `specs/reviews/code-review.md` and `specs/reviews/code-review-verdict.json` — fresh-context structure + correctness review
 - `specs/reviews/security-review.md` and `specs/reviews/security-verdict.json` — only when a security trigger fired
 - `specs/reviews/security-scan.json` — computational security scan (secrets/SAST/deps) result; only when a security trigger fired
+- `specs/reviews/reverify-votes.json` — 3-instance majority-vote audit trail; only when a security trigger fired
 - `specs/reviews/canvas-sync-check.md` — living-design sync result when a REASONS Canvas exists
 - `specs/reviews/ownership-check.json` — file-ownership sensor result when a component-map.md exists
 - `specs/reviews/regression-gate-verdict.json` — accumulated e2e + prior sprint-contract regression result when `e2e/` or `sprint-contracts/` exists
