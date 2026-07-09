@@ -25,3 +25,18 @@ test('/vibe reads learned-rules.md before finalizing the micro-contract', () => 
   const beforeMicroContract = skill.slice(0, skill.indexOf('### Step 2 — Write a Micro-Contract'));
   assert.match(beforeMicroContract, /learned-rules\.md/, 'must be read before Step 2 (micro-contract), not after');
 });
+
+test('/feature reads learned-rules.md for its own routing/decomposition reasoning', () => {
+  const skill = read('.claude/skills/feature/SKILL.md');
+  assert.match(skill, /\.claude\/state\/learned-rules\.md/, 'must reference learned-rules.md');
+});
+
+test('/sprint delegates building to /auto rather than duplicating the injection', () => {
+  const skill = read('.claude/skills/sprint/SKILL.md');
+  assert.match(skill, /Run `\/auto`/, '/sprint must hand off to /auto, which already injects learned-rules.md');
+  assert.doesNotMatch(
+    skill,
+    /\.claude\/state\/learned-rules\.md/,
+    '/sprint should not duplicate the injection /auto already performs'
+  );
+});

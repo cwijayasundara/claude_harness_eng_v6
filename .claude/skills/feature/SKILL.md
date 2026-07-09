@@ -59,6 +59,16 @@ The same backbone runs at every scale; only the engine in steps 5–8 differs.
    (default off), invoke `/pr-respond <pr#> --watch` on each PR just opened —
    one bounded response pass; merge remains human-owned. → **GATE 3**.
 
+## Learned rules
+
+Before Step 2 (Decompose), read `.claude/state/learned-rules.md`. If it exists
+and is non-empty, inject its contents verbatim into your working context —
+this informs `/feature`'s own decomposition and lane-routing reasoning.
+Downstream lanes it routes to (`/vibe`, `/change`, `/refactor`, `/build`)
+perform their own injection once invoked (per this plan's Tasks 1-2, and
+`/build`/`/refactor` already did before this plan), so this step is for the
+conductor's own reasoning, not a pass-through.
+
 ## Lanes (autonomous surface)
 
 `/feature` mirrors `/build`'s lane model. Resolve the lane first with
