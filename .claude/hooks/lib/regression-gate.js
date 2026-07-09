@@ -74,13 +74,15 @@ function isQuarantined(name, quarantine) { return quarantine.has(name); }
 // specs[] (flat tests) and/or suites[] (nested describe blocks). Every spec
 // carries its own file/line/title/ok — ok:false means it failed even after
 // retries.
-function extractPlaywrightFailures(report) {
-  const failures = [];
+//
+// Shared tree-walk: visits EVERY spec (pass or fail) and invokes `visit` with
+// the spec and its joined describe-block title prefix. Both
+// extractPlaywrightFailures (fail-only, gap G15) and extractPlaywrightResults
+// (every spec, gap G28) are thin filters over this one walk.
+function walkPlaywrightSpecs(report, visit) {
   function walkSpecs(specs, titlePrefix) {
     for (const spec of specs || []) {
-      if (spec.ok === false) {
-        failures.push({ file: spec.file, line: spec.line || 1, title: [...titlePrefix, spec.title].join(' > ') });
-      }
+      visit(spec, titlePrefix);
     }
   }
   function walkSuite(suite, titlePrefix) {
@@ -88,7 +90,28 @@ function extractPlaywrightFailures(report) {
     for (const child of suite.suites || []) walkSuite(child, [...titlePrefix, child.title]);
   }
   for (const fileSuite of (report && report.suites) || []) walkSuite(fileSuite, []);
+}
+
+function extractPlaywrightFailures(report) {
+  const failures = [];
+  walkPlaywrightSpecs(report, (spec, titlePrefix) => {
+    if (spec.ok === false) {
+      failures.push({ file: spec.file, line: spec.line || 1, title: [...titlePrefix, spec.title].join(' > ') });
+    }
+  });
   return failures;
+}
+
+// gap G28: every spec's {file, line, title, ok}, not just failures — the input
+// flake-detector.js's e2e mode needs to tell "passed in run A, failed in run
+// B" apart, which a failures-only list can never express.
+function extractPlaywrightResults(report) {
+  const results = [];
+  walkPlaywrightSpecs(report, (spec, titlePrefix) => {
+    const title = [...titlePrefix, spec.title].join(' > ');
+    results.push({ file: spec.file, line: spec.line || 1, title, ok: spec.ok === true });
+  });
+  return results;
 }
 
 function splitCmd(cmd) { return cmd.trim().split(/\s+/); }
@@ -209,6 +232,7 @@ module.exports = {
   loadQuarantineNames,
   isQuarantined,
   extractPlaywrightFailures,
+  extractPlaywrightResults,
   runE2eSuite,
   lineOfCheckId,
   bodyMatches,

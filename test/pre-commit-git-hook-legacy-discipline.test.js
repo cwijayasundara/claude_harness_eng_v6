@@ -122,6 +122,113 @@ test('legacy-discipline: an UNCOVERED receipt WITH a staged pin-down test passes
   assert.strictEqual(result.status, 0, result.stdout + result.stderr);
 });
 
+// --- Gap G29 Gap A: range-aware receipt matching (real git diff) -----------
+
+test('gap G29 Gap A: a COVERED receipt for a DIFFERENT symbol in the same file no longer satisfies the gate', async () => {
+  const projectDir = makeGitProject();
+  installLegacyDisciplineScripts(projectDir);
+  // Two distinct symbols in one file: f (lines 1-5, receipted COVERED) and
+  // g (lines 20-25, never checked). The pre-G29 gate would have accepted the
+  // COVERED receipt for the whole FILE; the real edit below only touches g.
+  writeGraph(projectDir, {
+    files: [{ path: 'src/legacy.py', symbols: [{ name: 'f', start: 1, end: 5 }, { name: 'g', start: 20, end: 25 }] }],
+  });
+  writeReceipts(projectDir, [
+    { path: 'src/legacy.py', symbol: '1#f', start: 1, end: 5, verdict: 'COVERED', tests: ['t'], recordedAt: '2026-01-01T00:00:00Z' },
+  ]);
+  const body = Array.from({ length: 30 }, (_, i) => `line ${i}`).join('\n') + '\n';
+  stage(projectDir, 'src/legacy.py', body);
+  commitSeed(projectDir);
+  // Edit only file line 22 (1-indexed) — inside g's range, outside f's.
+  const lines = body.split('\n');
+  lines[21] = 'line 21 CHANGED';
+  stage(projectDir, 'src/legacy.py', lines.join('\n'));
+  const result = await runGitHook(projectDir, HOOK, { HARNESS_COVERAGE_GATE: 'off' });
+  assert.notStrictEqual(result.status, 0, result.stdout + result.stderr);
+  assert.ok(result.stdout.includes('NO VERDICT RECORDED') && result.stdout.includes('src/legacy.py'), result.stdout);
+});
+
+test('gap G29 Gap A: a COVERED receipt that DOES cover the actually-changed range still passes', async () => {
+  const projectDir = makeGitProject();
+  installLegacyDisciplineScripts(projectDir);
+  writeGraph(projectDir, {
+    files: [{ path: 'src/legacy.py', symbols: [{ name: 'f', start: 1, end: 5 }, { name: 'g', start: 20, end: 25 }] }],
+  });
+  writeReceipts(projectDir, [
+    { path: 'src/legacy.py', symbol: '1#f', start: 1, end: 5, verdict: 'COVERED', tests: ['t'], recordedAt: '2026-01-01T00:00:00Z' },
+  ]);
+  const body = Array.from({ length: 30 }, (_, i) => `line ${i}`).join('\n') + '\n';
+  stage(projectDir, 'src/legacy.py', body);
+  commitSeed(projectDir);
+  const lines = body.split('\n');
+  lines[2] = 'line 2 CHANGED'; // inside f's 1-5 range
+  stage(projectDir, 'src/legacy.py', lines.join('\n'));
+  const result = await runGitHook(projectDir, HOOK, { HARNESS_COVERAGE_GATE: 'off' });
+  assert.strictEqual(result.status, 0, result.stdout + result.stderr);
+});
+
+// --- Gap G29 Gap B: per-file/per-story relatedness (real git diff) ---------
+
+function writeComponentMap(projectDir, rows) {
+  const p = path.join(projectDir, 'specs', 'design', 'component-map.md');
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  const table = ['| Story | Files |', '|---|---|', ...rows.map((r) => `| ${r.story} | ${r.files.map((f) => `\`${f}\``).join(', ')} |`)];
+  fs.writeFileSync(p, table.join('\n') + '\n');
+}
+
+test('gap G29 Gap B: component-map.md assigns the staged test to a DIFFERENT story — BLOCKS', async () => {
+  const projectDir = makeGitProject();
+  installLegacyDisciplineScripts(projectDir);
+  writeGraph(projectDir, SYMBOL_GRAPH);
+  writeReceipts(projectDir, [
+    { path: 'src/legacy.py', symbol: '1#f', start: 1, end: 5, verdict: 'UNCOVERED', tests: [], recordedAt: '2026-01-01T00:00:00Z' },
+  ]);
+  writeComponentMap(projectDir, [
+    { story: 'E1-S1', files: ['src/legacy.py'] },
+    { story: 'E2-S2', files: ['tests/test_other.py'] },
+  ]);
+  stage(projectDir, 'src/legacy.py', 'x = 1\n');
+  commitSeed(projectDir);
+  stage(projectDir, 'src/legacy.py', 'x = 2\n');
+  stage(projectDir, 'tests/test_other.py', 'def test_unrelated(): assert True\n');
+  const result = await runGitHook(projectDir, HOOK, { HARNESS_COVERAGE_GATE: 'off' });
+  assert.notStrictEqual(result.status, 0, result.stdout + result.stderr);
+  assert.ok(result.stdout.includes('UNCOVERED, NO TEST STAGED'), result.stdout);
+});
+
+test('gap G29 Gap B: component-map.md assigns the staged test to the SAME story — passes', async () => {
+  const projectDir = makeGitProject();
+  installLegacyDisciplineScripts(projectDir);
+  writeGraph(projectDir, SYMBOL_GRAPH);
+  writeReceipts(projectDir, [
+    { path: 'src/legacy.py', symbol: '1#f', start: 1, end: 5, verdict: 'UNCOVERED', tests: [], recordedAt: '2026-01-01T00:00:00Z' },
+  ]);
+  writeComponentMap(projectDir, [{ story: 'E1-S1', files: ['src/legacy.py', 'tests/test_other.py'] }]);
+  stage(projectDir, 'src/legacy.py', 'x = 1\n');
+  commitSeed(projectDir);
+  stage(projectDir, 'src/legacy.py', 'x = 2\n');
+  stage(projectDir, 'tests/test_other.py', 'def test_unrelated(): assert True\n');
+  const result = await runGitHook(projectDir, HOOK, { HARNESS_COVERAGE_GATE: 'off' });
+  assert.strictEqual(result.status, 0, result.stdout + result.stderr);
+});
+
+// --- Gap G29 Gap B design goal 3: manual-commit bite-check backstop wiring --
+
+test('legacy-discipline bite-check: HARNESS_LEGACY_BITE_CHECK=off disables the backstop without affecting the evidence-path PASS', async () => {
+  const projectDir = makeGitProject();
+  installLegacyDisciplineScripts(projectDir);
+  writeGraph(projectDir, SYMBOL_GRAPH);
+  writeReceipts(projectDir, [
+    { path: 'src/legacy.py', symbol: '1#f', start: 1, end: 5, verdict: 'UNCOVERED', tests: [], recordedAt: '2026-01-01T00:00:00Z' },
+  ]);
+  stage(projectDir, 'src/legacy.py', 'x = 1\n');
+  commitSeed(projectDir);
+  stage(projectDir, 'src/legacy.py', 'x = 2\n');
+  stage(projectDir, 'tests/test_legacy.py', 'def test_f(): assert True\n');
+  const result = await runGitHook(projectDir, HOOK, { HARNESS_COVERAGE_GATE: 'off', HARNESS_LEGACY_BITE_CHECK: 'off' });
+  assert.strictEqual(result.status, 0, result.stdout + result.stderr);
+});
+
 test('legacy-discipline: a regex-fallback graph (no per-file symbol records) degrades loudly, does not BLOCK', async () => {
   // Regression for CR-001: the wired pre-commit path once skipped the
   // hasSymbolRecords guard run() applies, so a Java/C#/Go project (regex

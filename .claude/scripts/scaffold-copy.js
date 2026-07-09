@@ -86,6 +86,7 @@ const CORE_SCRIPTS = [
   'impact-scope.js',
   'local-regression-gate.js',
   'legacy-discipline-gate.js',
+  'sprout-diff-gate.js',
   'record-coverage-verdict.js',
   'at-first-gate.js',
   'record-at-red.js',

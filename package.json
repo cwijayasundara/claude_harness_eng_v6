@@ -8,6 +8,7 @@
     "status": "node .claude/scripts/pipeline-status.js",
     "drift": "node .claude/scripts/drift-report.js",
     "flakes": "node .claude/scripts/flake-detector.js",
+    "flakes:e2e": "node .claude/scripts/flake-detector.js --e2e",
     "harness-coverage": "node .claude/scripts/harness-coverage.js",
     "agent-readiness": "node .claude/scripts/agent-readiness.js",
     "slo": "node .claude/scripts/slo-check.js",

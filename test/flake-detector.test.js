@@ -9,7 +9,7 @@ const { execFileSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
 const SCRIPT = path.join(ROOT, '.claude', 'scripts', 'flake-detector.js');
-const { parseTap, aggregateFlakes } = require('../.claude/scripts/flake-detector.js');
+const { parseTap, aggregateFlakes, parsePlaywrightJson } = require('../.claude/scripts/flake-detector.js');
 
 test('parseTap reads ok/not ok lines, strips directives, ignores plan/comments', () => {
   const tap = 'TAP version 13\n1..2\nok 1 - a\nnot ok 2 - b # AssertionError\n# a comment\n';
@@ -62,6 +62,76 @@ test('CLI on a deterministic-pass command -> exit 0, no flakes', () => {
 });
 
 const rd = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+
+test('parsePlaywrightJson: builds an {title: ok|not ok} map from a real playwright JSON report', () => {
+  // Same captured-shape fixture regression-gate.test.js uses for
+  // extractPlaywrightFailures — one flat spec file, one nested describe.
+  const report = {
+    suites: [
+      { title: 'sample.spec.js', file: 'sample.spec.js', specs: [
+        { title: 'passing test', ok: true, file: 'sample.spec.js', line: 2 },
+        { title: 'failing test', ok: false, file: 'sample.spec.js', line: 5 },
+      ] },
+    ],
+  };
+  const map = parsePlaywrightJson(JSON.stringify(report));
+  assert.deepStrictEqual(map, { 'passing test': 'ok', 'failing test': 'not ok' });
+});
+
+test('parsePlaywrightJson: unparseable stdout returns null (errored run, same as TAP)', () => {
+  assert.strictEqual(parsePlaywrightJson('not json at all'), null);
+});
+
+// CLI: a deterministically-flaky fake Playwright reporter (alternates
+// ok/false by a counter file, same technique flakyFake uses for TAP).
+function flakyPlaywrightFake(dir) {
+  const p = path.join(dir, 'flaky-e2e.sh');
+  fs.writeFileSync(p,
+    '#!/bin/sh\n' +
+    'C=$(cat "$PWD/counter" 2>/dev/null || echo 0)\n' +
+    'echo $((C+1)) > "$PWD/counter"\n' +
+    'if [ $((C % 2)) -eq 0 ]; then OK=true; else OK=false; fi\n' +
+    'echo "{\\"suites\\":[{\\"title\\":\\"sample.spec.js\\",\\"file\\":\\"sample.spec.js\\",' +
+    '\\"specs\\":[{\\"title\\":\\"flaky e2e test\\",\\"ok\\":$OK,\\"file\\":\\"sample.spec.js\\",\\"line\\":2}]}]}"\n');
+  return p;
+}
+
+function runDetectorE2e(dir, testCmd, runs) {
+  let code = 0;
+  try { execFileSync('node', [SCRIPT, '--root', dir, '--e2e', '--test-cmd', testCmd, '--runs', String(runs)], { stdio: 'pipe' }); }
+  catch (e) { code = e.status; }
+  const r = JSON.parse(fs.readFileSync(path.join(dir, 'specs', 'reports', 'flake-report.json'), 'utf8'));
+  return { code, r };
+}
+
+test('CLI --e2e mode detects a flaky Playwright spec across runs -> exit 1, names it', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fl-e2e-'));
+  const { code, r } = runDetectorE2e(dir, `sh ${flakyPlaywrightFake(dir)}`, 4);
+  assert.strictEqual(code, 1);
+  assert.strictEqual(r.flakes.length, 1);
+  assert.strictEqual(r.flakes[0].name, 'flaky e2e test');
+  assert.strictEqual(r.all_consistent, false);
+});
+
+test('CLI --e2e mode on a deterministic-pass Playwright report -> exit 0, no flakes', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fl-e2e-'));
+  const stable = path.join(dir, 'stable-e2e.sh');
+  fs.writeFileSync(stable, '#!/bin/sh\necho \'{"suites":[{"title":"a.spec.js","file":"a.spec.js","specs":[{"title":"stable e2e","ok":true,"file":"a.spec.js","line":1}]}]}\'\n');
+  const { code, r } = runDetectorE2e(dir, `sh ${stable}`, 3);
+  assert.strictEqual(code, 0);
+  assert.strictEqual(r.flakes.length, 0);
+  assert.strictEqual(r.all_consistent, true);
+});
+
+test('CLI --e2e mode: unparseable output across all runs -> exit 2, no completed runs', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fl-e2e-'));
+  const broken = path.join(dir, 'broken-e2e.sh');
+  fs.writeFileSync(broken, '#!/bin/sh\necho "not json"\n');
+  const { code, r } = runDetectorE2e(dir, `sh ${broken}`, 2);
+  assert.strictEqual(code, 2);
+  assert.strictEqual(r.completed_runs, 0);
+  assert.strictEqual(r.errored_runs, 2);
+});
 
 test('G12: flake-detection is scripted + registered active (drift cadence)', () => {
   assert.strictEqual(JSON.parse(rd('package.json')).scripts.flakes, 'node .claude/scripts/flake-detector.js');

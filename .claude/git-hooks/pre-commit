@@ -24,6 +24,7 @@ const { validate: validateSchema } = require(path.join(__dirname, '..', 'hooks',
 const { baselineSecretFindings } = require(path.join(__dirname, '..', 'hooks', 'lib', 'security-scan'));
 const { secretScanExempt } = require(path.join(__dirname, '..', 'hooks', 'lib', 'secrets'));
 const { runMutationOnFiles, renderSurvivors } = require(path.join(__dirname, '..', 'hooks', 'lib', 'mutation-gate'));
+const { biteCheckFiles } = require(path.join(__dirname, '..', 'hooks', 'lib', 'legacy-bite-check'));
 
 const SOURCE_EXTS = new Set(['.py', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
 const FLOOR = 80;
@@ -148,16 +149,51 @@ function checkOwnership(projectDir, stagedSource) {
   }
 }
 
-// Legacy-discipline-proof gate (gap G17). checking-coverage-before-change,
-// pinning-down-behavior, and sprouting-instead-of-editing were prompt-level
-// instructions only — nothing proved the Iron Law ("no edit to a symbol until
-// you know which tests cover it") actually ran. This re-checks every staged
-// MODIFIED (not newly-added) production source file against the receipts
-// ledger record-coverage-verdict.js writes: no receipt at all, or an UNCOVERED
-// verdict with no pin-down/sprout test staged alongside it, BLOCKs. Default-on
-// (unlike keeping-refactors-pure's opt-in env var) because the Iron Law applies
-// to every legacy edit, not just refactor-classified commits. Lazy require,
-// like checkOwnership: the sensor ships in .claude/scripts.
+// Legacy-discipline-proof gate (gap G17; range/relatedness-tightened by gap
+// G29). checking-coverage-before-change, pinning-down-behavior, and
+// sprouting-instead-of-editing were prompt-level instructions only — nothing
+// proved the Iron Law ("no edit to a symbol until you know which tests cover
+// it") actually ran. This re-checks every staged MODIFIED (not newly-added)
+// production source file against the receipts ledger record-coverage-
+// verdict.js writes: no receipt COVERING THE ACTUALLY-CHANGED LINES (gap G29
+// Gap A — a receipt for a different symbol/range in the same file no longer
+// counts), or an UNCOVERED verdict with no RELATED pin-down/sprout test
+// staged alongside it (gap G29 Gap B — relatedness via component-map.md
+// story ownership, then a naming heuristic, not "any test file anywhere in
+// the commit"), BLOCKs. Default-on (unlike keeping-refactors-pure's opt-in
+// env var) because the Iron Law applies to every legacy edit, not just
+// refactor-classified commits. Lazy require, like checkOwnership: the sensor
+// ships in .claude/scripts.
+function computeLegacyDisciplineInputs(projectDir, gate) {
+  const execFn = (cmd, args) => execFileSync(cmd, args, { cwd: projectDir, encoding: 'utf8' });
+  const modified = execFn('git', ['diff', '--cached', '--name-only', '--diff-filter=MR'])
+    .split('\n')
+    .filter(Boolean)
+    .filter((f) => gate.isSource(f) && !gate.isTestFile(f));
+  const changedRanges = gate.gitDiffRanges(execFn, 'MR'); // gap G29 Gap A
+  const mapPath = path.join(projectDir, 'specs', 'design', 'component-map.md');
+  const mapText = fs.existsSync(mapPath) ? fs.readFileSync(mapPath, 'utf8') : null; // gap G29 Gap B
+  return { modified, changedRanges, mapText };
+}
+
+function reportLegacyDisciplineFailure(verdict) {
+  const lines = [
+    ...verdict.noVerdict.map((f) => `  NO VERDICT RECORDED       ${f}`),
+    ...verdict.uncoveredNoEvidence.map((f) => `  UNCOVERED, NO TEST STAGED ${f}`),
+  ];
+  fail(
+    `BLOCKED: legacy-discipline-proof (G17) — checking-coverage-before-change was not proven for staged file(s):\n` +
+      lines.join('\n') + '\n' +
+      'Fix: run checking-coverage-before-change Step 2 (coverage_map.py piped through record-coverage-verdict.js) for the ' +
+      'ACTUALLY-CHANGED lines of these files (a receipt for a different symbol/range in the same file no longer counts, ' +
+      'gap G29); for an UNCOVERED verdict, stage a RELATED pin-down or sprout test in the same commit ' +
+      '(pinning-down-behavior / sprouting-instead-of-editing — relatedness checked via component-map.md story ownership, ' +
+      'then a naming-convention heuristic, gap G29). A real exception belongs in specs/reviews/sensor-waivers.json ' +
+      '(sensor_id: legacy-discipline-proof, see docs/sensor-arbitration.md); HARNESS_LEGACY_DISCIPLINE_GATE=off only ' +
+      'acknowledges a local skip.\n'
+  );
+}
+
 function checkLegacyDisciplineGate(projectDir, staged) {
   if (process.env.HARNESS_LEGACY_DISCIPLINE_GATE === 'off') {
     noteSkip('legacy-discipline', 'HARNESS_LEGACY_DISCIPLINE_GATE=off');
@@ -179,28 +215,129 @@ function checkLegacyDisciplineGate(projectDir, staged) {
     return; // unreadable graph: same "nothing to check" degrade as a missing one
   }
   if (!gate.hasSymbolRecords(graph)) return; // regex-fallback producer: no symbol data to check receipts against
-  const modified = execFileSync('git', ['diff', '--cached', '--name-only', '--diff-filter=MR'], {
-    cwd: projectDir,
-    encoding: 'utf8',
+  const { modified, changedRanges, mapText } = computeLegacyDisciplineInputs(projectDir, gate);
+  const verdict = gate.checkLegacyDiscipline(modified, gate.readReceipts(projectDir), staged, changedRanges, mapText);
+  if (!verdict.pass) { reportLegacyDisciplineFailure(verdict); return; }
+  for (const n of verdict.relatednessNotes || []) process.stdout.write(`note: legacy-discipline — ${n}\n`);
+  checkLegacyBiteBackstop(projectDir, (verdict.uncoveredEvidence || []).map((e) => e.file));
+}
+
+// Gap G29 design goal 3: mutation-gate.js (G7)'s own bite-check backstop only
+// runs inAutoBuild (see checkMutation below) — a manual commit's UNCOVERED-
+// evidence path above was just accepted on relatedness alone, with no proof
+// the related test actually kills anything. A full G7-scale run (up to 12
+// mutants x a full test-suite run each) is too expensive to add
+// unconditionally to every commit's synchronous hook — the same reason
+// checkMutation itself skips manual commits. This runs a much smaller,
+// narrower budget (hooks/lib/legacy-bite-check.js's DEFAULTS: 3 mutants, a
+// 10s timeout each), scoped ONLY to the specific file(s) that just passed via
+// evidence, not the whole commit. Escape hatch: HARNESS_LEGACY_BITE_CHECK=off.
+function checkLegacyBiteBackstop(projectDir, files) {
+  if ((process.env.HARNESS_LEGACY_BITE_CHECK || '').toLowerCase() === 'off') return;
+  if (inAutoBuild(projectDir)) return; // G7's mutation-gate already re-verifies here
+  const outcome = biteCheckFiles(files, projectDir, runMutationOnFiles, {});
+  if (!outcome.ran) return;
+  for (const r of outcome.results) {
+    if (r.skipped) noteSkip(`legacy-discipline bite-check (${r.lang})`, r.reason);
+  }
+  if (outcome.pass) return;
+  const detail = (outcome.blocked || []).map((r) => renderSurvivors(r.survived)).filter(Boolean).join('\n');
+  fail(
+    `BLOCKED: legacy-discipline bite-check (G29) — the staged evidence test does not kill mutants in the UNCOVERED ` +
+      `file(s) it was accepted for:\n${detail}\n` +
+      'Fix: the pin-down/sprout test must fail when this logic breaks — add an assertion on the specific behavior, ' +
+      'then re-commit. HARNESS_LEGACY_BITE_CHECK=off acknowledges the skip (a real exception belongs in ' +
+      'specs/reviews/sensor-waivers.json).\n'
+  );
+}
+
+// Sprout-diff-one-symbol gate (gap G30) — mechanically verifies
+// sprouting-instead-of-editing's Iron Law ("touch the legacy file at exactly
+// one call line, or the rename pair for wrap") against code-graph.json's
+// per-file symbol ranges. Fires only when legacy-discipline-gate.js (G17/G29)
+// already classified a legacy file as UNCOVERED-with-evidence AND the same
+// commit adds a genuinely NEW production file (a sprout, not a pin-down,
+// which touches only test files and has no one-symbol constraint of its
+// own — hooks/lib/sprout-classify.js's job). Independent per-gate
+// computation, the same convention every check* function here follows:
+// recomputes modified/changedRanges/mapText itself rather than threading
+// state out of checkLegacyDisciplineGate. Lazy require: both sensors ship in
+// .claude/scripts.
+function reportSproutDiffFailure(verdict) {
+  const lines = verdict.violations.map((v) => `  TOO MANY SYMBOLS TOUCHED  ${v.file} — ${v.symbols.join(', ')}`);
+  fail(
+    `BLOCKED: sprout-diff-one-symbol (G30) — a legacy file's staged diff touches more symbols than ` +
+      `sprouting-instead-of-editing allows:\n${lines.join('\n')}\n` +
+      'Fix: the Iron Law is "touch the legacy file at exactly one call line" (or the rename pair for a wrap — ' +
+      'at most two symbols). Move the extra logic into the sprout\'s new unit instead of editing these symbols ' +
+      'in place (.claude/skills/sprouting-instead-of-editing/SKILL.md). A real exception belongs in ' +
+      'specs/reviews/sensor-waivers.json (sensor_id: sprout-diff-one-symbol, see docs/sensor-arbitration.md); ' +
+      'HARNESS_SPROUT_DIFF_GATE=off only acknowledges a local skip.\n'
+  );
+}
+
+function gateAddedProdFiles(projectDir, gateModule) {
+  return execFileSync('git', ['diff', '--cached', '--name-only', '--diff-filter=A'], {
+    cwd: projectDir, encoding: 'utf8',
   })
     .split('\n')
     .filter(Boolean)
-    .filter((f) => gate.isSource(f) && !gate.isTestFile(f));
-  const verdict = gate.checkLegacyDiscipline(modified, gate.readReceipts(projectDir), staged);
-  if (verdict.pass) return;
-  const lines = [
-    ...verdict.noVerdict.map((f) => `  NO VERDICT RECORDED       ${f}`),
-    ...verdict.uncoveredNoEvidence.map((f) => `  UNCOVERED, NO TEST STAGED ${f}`),
-  ];
-  fail(
-    `BLOCKED: legacy-discipline-proof (G17) — checking-coverage-before-change was not proven for staged file(s):\n` +
-      lines.join('\n') + '\n' +
-      'Fix: run checking-coverage-before-change Step 2 (coverage_map.py piped through record-coverage-verdict.js) for these ' +
-      'files before editing; for an UNCOVERED verdict, stage a pin-down or sprout test in the same commit ' +
-      '(pinning-down-behavior / sprouting-instead-of-editing). A real exception belongs in specs/reviews/sensor-waivers.json ' +
-      '(sensor_id: legacy-discipline-proof, see docs/sensor-arbitration.md); HARNESS_LEGACY_DISCIPLINE_GATE=off only ' +
-      'acknowledges a local skip.\n'
+    .filter((f) => gateModule.isSource(f) && !gateModule.isTestFile(f));
+}
+
+function noteSproutDiffPassNotes(verdict) {
+  for (const w of verdict.assumedWrapPairs || []) {
+    process.stdout.write(
+      `note: sprout-diff — ${w.file} touches 2 symbols (${w.symbols.join(', ')}) — assumed wrap-rename pair, ` +
+        'not independently verified\n'
+    );
+  }
+  for (const n of verdict.classifyNotes || []) process.stdout.write(`note: sprout-diff — ${n}\n`);
+  for (const f of verdict.noSymbolRecord || []) {
+    process.stdout.write(`note: sprout-diff — no per-file symbol record for ${f}\n`);
+  }
+  for (const f of verdict.unverifiableRanges || []) {
+    process.stdout.write(`note: sprout-diff — changed-range data unavailable for ${f}\n`);
+  }
+}
+
+function loadSproutDiffGates() {
+  return {
+    legacyGate: require(path.join(__dirname, '..', 'scripts', 'legacy-discipline-gate')),
+    sproutGate: require(path.join(__dirname, '..', 'scripts', 'sprout-diff-gate')),
+  };
+}
+
+function checkSproutDiffGate(projectDir, staged) {
+  if (process.env.HARNESS_SPROUT_DIFF_GATE === 'off') {
+    noteSkip('sprout-diff', 'HARNESS_SPROUT_DIFF_GATE=off');
+    return;
+  }
+  let legacyGate, sproutGate;
+  try {
+    ({ legacyGate, sproutGate } = loadSproutDiffGates());
+  } catch (_) {
+    noteSkip('sprout-diff', 'sensor script missing or unloadable from .claude/scripts');
+    return;
+  }
+  const graphPath = path.join(projectDir, 'specs', 'brownfield', 'code-graph.json');
+  if (!fs.existsSync(graphPath)) return; // no brownfield map: nothing to check
+  let graph;
+  try {
+    graph = JSON.parse(fs.readFileSync(graphPath, 'utf8'));
+  } catch (_) {
+    return; // unreadable graph: same "nothing to check" degrade as a missing one
+  }
+  if (!legacyGate.hasSymbolRecords(graph)) return; // regex-fallback producer: no symbol data to check against
+
+  const { modified, changedRanges, mapText } = computeLegacyDisciplineInputs(projectDir, legacyGate);
+  const legacyVerdict = legacyGate.checkLegacyDiscipline(
+    modified, legacyGate.readReceipts(projectDir), staged, changedRanges, mapText
   );
+  const addedProdFiles = gateAddedProdFiles(projectDir, legacyGate);
+  const verdict = sproutGate.checkSproutDiff(legacyVerdict.uncoveredEvidence || [], addedProdFiles, changedRanges, graph, mapText);
+  if (!verdict.pass) { reportSproutDiffFailure(verdict); return; }
+  noteSproutDiffPassNotes(verdict);
 }
 
 // AT-first-proof gate (gap G23). writing-acceptance-tests-first's Process
@@ -580,6 +717,7 @@ try {
   checkContexts(projectDir, stagedSource);
   checkOwnership(projectDir, stagedSource);
   checkLegacyDisciplineGate(projectDir, staged);
+  checkSproutDiffGate(projectDir, staged);
   checkAtFirstGate(projectDir);
   checkSprintContract(projectDir);
   checkTypescript(projectDir, stagedTs);

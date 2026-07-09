@@ -25,7 +25,7 @@ IF YOU CANNOT PIN IT, DO NOT EDIT IT — SPROUT BESIDE IT
 ## Process
 
 1. Write the sprout as a brand-new module/class/function — the existing TDD gate applies in full (failing test first; `superpowers:test-driven-development`).
-2. Touch the legacy file at **exactly one call line** (or the rename pair for wrap). Verify mechanically: the diff to the legacy file intersects one symbol; for the call-line check use the symbol ranges in `specs/brownfield/code-graph.json`.
+2. Touch the legacy file at **exactly one call line** (or the rename pair for wrap). Verify mechanically: the diff to the legacy file intersects one symbol; for the call-line check use the symbol ranges in `specs/brownfield/code-graph.json`. This is now enforced, not just claimed: pre-commit's `sprout-diff-one-symbol` gate (gap G30, `.claude/scripts/sprout-diff-gate.js`) BLOCKs when the legacy file's staged diff touches more than 2 distinct symbols (1 for a plain sprout call line, up to 2 for a legitimate wrap rename pair) — it fires only when `legacy-discipline-gate.js` (G17) already sees this file as UNCOVERED-with-evidence AND the evidence is a genuinely new production file (a sprout, not a pin-down).
 3. Confirm with the code graph that no other caller of the legacy symbol changes behavior unintentionally (`edges` where `target` = the legacy file, `symbol_to` = the symbol).
 4. Run the full suite plus any oracle tests from checking-coverage-before-change.
 
