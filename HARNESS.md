@@ -80,6 +80,33 @@ Status: ✅ active · 🟡 partial (limited/opt-in/report-only) · ⛔ planned (
 
 The harness improves itself between runs: `.claude/program.md` (the steering input that biases `/auto`), `.claude/state/learned-rules.md` (failure-derived rules, injected into future prompts, never deleted), and `review-on-stop.js` (surfaces session learnings as suggested `CLAUDE.md` edits — applied *between* sessions, never mid-run, to preserve the prompt cache).
 
+### Self-audit against Anthropic's named generator-verifier failure modes
+
+Anthropic's engineering writing on the generator-verifier pattern names two specific
+failure modes. This harness's rubric agents and `/auto`'s convergence loop were
+checked against both, 2026-07-09:
+
+- **Rubber-stamping** ("a verifier told only to check whether output is good, with
+  no further criteria, will rubber-stamp"): `evaluator.md`'s artifact mode uses a
+  weighted 5-criteria rubric with a hard `>= 7.0` average and `>= 5` per-criterion
+  floor; runtime mode requires all three verification layers plus the security gate
+  plus the perf ratchet to independently pass — never a bare accept/reject.
+  `security-reviewer.md` requires a mandatory find-then-refute adversarial pass
+  before any BLOCK finding survives. `design-critic.md` scores 4 named criteria on
+  a defined 1-10 rubric with worked calibration examples. None of the three ever
+  emits an unstructured "looks good."
+- **Oscillation without convergence** ("if the generator can't address the
+  verifier's feedback, the system oscillates without converging"): `/auto` has
+  three independent backstops — a 50-total-iteration hard stop, a 3-consecutive-
+  failed-self-heal per-story escalation (marks BLOCKED, logs to `failures.md`,
+  extracts a learned rule, moves on rather than looping forever), and a wall-clock/
+  agent-spawn/est-cost budget cap checked every iteration. `/change` and `/vibe`
+  contain risk by **scope** instead of iteration count — escalate out of the lane
+  the moment a fix would expand past its micro-contract — a deliberate,
+  blast-radius-appropriate alternative to iteration capping, not a gap.
+
+No fix was required by this audit; it documents and cites existing coverage.
+
 ## Skill-description conventions
 
 Skill-description markers: pipeline *stage* skills carry a leading `[Internal pipeline stage — …]` prefix; discipline micro-skills carry a trailing `[Internal discipline — …]` suffix instead, because their leading "Use when…" phrase is the auto-invocation trigger and must stay first (pinned by `test/skills-consistency.test.js`).
