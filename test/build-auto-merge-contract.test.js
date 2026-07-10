@@ -1,13 +1,10 @@
 'use strict';
 
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
 const { test } = require('node:test');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
-const BUILD = fs.readFileSync(
-  path.join(__dirname, '..', '.claude', 'skills', 'build', 'SKILL.md'), 'utf8',
-);
+const BUILD = readSkillCorpus('build');
 
 test('/build documents the --auto-merge flag and AUTO_MERGE env', () => {
   assert.match(BUILD, /--auto-merge/);

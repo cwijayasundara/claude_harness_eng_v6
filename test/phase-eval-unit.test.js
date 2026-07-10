@@ -192,7 +192,7 @@ const skillNames = ['brd', 'spec', 'design', 'brownfield', 'seam-finder', 'deplo
 
 // Progressive-loaded skills: scan full corpus (entry SKILL.md + references/).
 function skillBody(skill) {
-  if (skill === 'design' || skill === 'auto') return readSkillCorpus(skill);
+  if (skill === 'design' || skill === 'auto' || skill === 'build') return readSkillCorpus(skill);
   return fs.readFileSync(path.join(ROOT, '.claude', 'skills', skill, 'SKILL.md'), 'utf8');
 }
 

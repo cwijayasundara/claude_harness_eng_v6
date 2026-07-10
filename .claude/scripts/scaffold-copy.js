@@ -43,6 +43,7 @@ const CORE_SKILLS = [
   'sprouting-instead-of-editing',
   'upgrading-dependencies',
   'writing-acceptance-tests-first',
+  'scaffold-upgrade',
 ];
 const BROWNFIELD_SKILLS = [
   ...CORE_SKILLS,

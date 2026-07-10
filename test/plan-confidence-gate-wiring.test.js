@@ -10,6 +10,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const { test } = require('node:test');
 const { parseCliArgs } = require('../.claude/scripts/plan-confidence');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const ROOT = path.resolve(__dirname, '..');
 const SCRIPT = path.join(ROOT, '.claude', 'scripts', 'plan-confidence.js');
@@ -62,7 +63,7 @@ test('--gate exits 0 for a clean plan and 2 for open questions', () => {
 });
 
 test('/build --auto documents mechanical --gate after Phase 3', () => {
-  const build = read('.claude/skills/build/SKILL.md');
+  const build = readSkillCorpus('build');
   assert.match(build, /plan-confidence\.js/);
   assert.match(build, /--gate/);
   assert.match(build, /exit code \*\*2\*\*|Exit code \*\*2\*\*/i);
@@ -71,7 +72,7 @@ test('/build --auto documents mechanical --gate after Phase 3', () => {
 });
 
 test('lite --auto escalates on low plan confidence via --gate', () => {
-  const build = read('.claude/skills/build/SKILL.md');
+  const build = readSkillCorpus('build');
   assert.match(build, /Low plan confidence is an escalation trigger/);
   assert.match(build, /plan-confidence\.js \. --gate|--gate/);
   assert.match(build, /auto-escalate to the full `--auto` pipeline/);

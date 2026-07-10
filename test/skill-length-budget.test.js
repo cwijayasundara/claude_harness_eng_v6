@@ -15,6 +15,7 @@ const ROOT = path.join(__dirname, '..');
 const ENTRY_BUDGETS = {
   auto: 80, // progressive index + gate name anchors
   design: 80,
+  build: 80,
 };
 
 for (const [skill, budget] of Object.entries(ENTRY_BUDGETS)) {
@@ -41,6 +42,15 @@ test('design has mode references for progressive loading', () => {
   assert.ok(modes.length >= 8, `expected mode-*.md files, got ${modes.length}`);
 });
 
+test('build has section references for progressive loading', () => {
+  const refs = path.join(ROOT, '.claude', 'skills', 'build', 'references');
+  assert.ok(fs.existsSync(refs));
+  const sections = fs.readdirSync(refs).filter((f) => f.startsWith('section-') && f.endsWith('.md'));
+  assert.ok(sections.length >= 5, `expected section-*.md files, got ${sections.length}`);
+  assert.ok(fs.existsSync(path.join(refs, 'lite-lane.md')));
+  assert.ok(fs.existsSync(path.join(refs, 'autonomous-lane.md')));
+});
+
 test('auto corpus still documents load-bearing gates', () => {
   const corpus = readSkillCorpus('auto');
   for (const needle of [
@@ -65,5 +75,17 @@ test('design corpus still documents load-bearing design gates', () => {
     'record-modularity-review.js',
   ]) {
     assert.ok(corpus.includes(needle), `design corpus missing ${needle}`);
+  }
+});
+
+test('build corpus still documents plan-confidence and build-lane', () => {
+  const corpus = readSkillCorpus('build');
+  for (const needle of [
+    'plan-confidence.js',
+    '--gate',
+    'build-lane.js',
+    '/auto',
+  ]) {
+    assert.ok(corpus.includes(needle), `build corpus missing ${needle}`);
   }
 });

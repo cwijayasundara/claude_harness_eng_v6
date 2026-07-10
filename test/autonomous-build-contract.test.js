@@ -8,22 +8,23 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { test } = require('node:test');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const ROOT = path.join(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
-const BUILD = '.claude/skills/build/SKILL.md';
+const BUILD_CORPUS = () => readSkillCorpus('build');
 const LANE = '.claude/skills/build/references/autonomous-lane.md';
 
 test('/build exposes --autonomous with a plan-approve-once model', () => {
-  const b = read(BUILD);
+  const b = BUILD_CORPUS();
   assert.match(b, /--autonomous/);
   assert.match(b, /## Approval model/);
   assert.match(b, /plan-approve-once|approve.*once/i);
 });
 
 test('autonomous mode collapses Phases 1-3 into a single consolidated plan gate', () => {
-  const b = read(BUILD);
+  const b = BUILD_CORPUS();
   assert.match(b, /Phase 3\.5 — Consolidated Plan Approval/);
   // the three per-phase gates must each note the autonomous deferral
   const deferrals = b.match(/In `--autonomous` mode/g) || [];
@@ -31,7 +32,7 @@ test('autonomous mode collapses Phases 1-3 into a single consolidated plan gate'
 });
 
 test('Phase 9.5 deploys locally then runs API tests BEFORE E2E, shape-aware, with a fix loop', () => {
-  const b = read(BUILD);
+  const b = BUILD_CORPUS();
   assert.match(b, /Phase 9\.5 — Pre-PR Verification/);
   assert.match(b, /shape-aware/i);
   assert.match(b, /Deploy locally/i);
@@ -44,7 +45,7 @@ test('Phase 9.5 deploys locally then runs API tests BEFORE E2E, shape-aware, wit
 });
 
 test('Phase 11 raises a PR only when green; merge stays human unless AUTO_MERGE', () => {
-  const b = read(BUILD);
+  const b = BUILD_CORPUS();
   assert.match(b, /Phase 11 — Raise PR/);
   assert.match(b, /gh pr create/);
   assert.match(b, /only.*green|gated on all-green/i);

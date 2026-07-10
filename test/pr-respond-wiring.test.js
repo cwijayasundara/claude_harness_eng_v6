@@ -4,6 +4,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { test } = require('node:test');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const ROOT = path.join(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -26,7 +27,7 @@ test('/pr-respond skill exists with the poller, bounds, and safety rails wired',
 });
 
 test('/build and /feature expose the opt-in --respond flag', () => {
-  assert.match(read('.claude/skills/build/SKILL.md'), /--respond/);
+  assert.match(readSkillCorpus('build'), /--respond/);
   assert.match(read('.claude/skills/feature/SKILL.md'), /--respond/);
 });
 

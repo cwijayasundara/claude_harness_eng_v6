@@ -7,19 +7,20 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { test } = require('node:test');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const ROOT = path.join(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 test('/build documents --plan-only that stops after the architect phases', () => {
-  const b = read('.claude/skills/build/SKILL.md');
+  const b = readSkillCorpus('build');
   assert.match(b, /--plan-only/);
   assert.match(b, /stop before Phase 3\.5|stop.*before.*code|then stop/i);
   assert.match(b, /No.*code generation|no code/i);
 });
 
 test('autonomous mode grounds on the PRD non-interactively (no headless interview)', () => {
-  const b = read('.claude/skills/build/SKILL.md');
+  const b = readSkillCorpus('build');
   assert.match(b, /\/brd --prd/);
   assert.match(b, /not.*the interactive|cannot run headless|non-interactive/i);
 });

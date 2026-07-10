@@ -115,6 +115,7 @@ Large orchestrator skills keep a short **entry** `SKILL.md` and move procedure i
 |---|---|---|
 | `/auto` | ≤80 lines | `skills/auto/references/section-*.md` |
 | `/design` | ≤80 lines | `skills/design/references/mode-*.md` (+ templates) |
+| `/build` | ≤80 lines | `skills/build/references/section-*.md` (+ lite/autonomous lanes) |
 
 Wiring-contract tests read the full **corpus** (`SKILL.md` + `references/*.md`) via `test/helpers/skill-corpus.js`.
 

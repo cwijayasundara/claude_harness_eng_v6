@@ -8,22 +8,23 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { test } = require('node:test');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const ROOT = path.join(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
-const BUILD = '.claude/skills/build/SKILL.md';
+const BUILD_CORPUS = () => readSkillCorpus('build');
 const LANE = '.claude/skills/build/references/autonomous-lane.md';
 
 test('/build exposes --auto as a third (full-auto) approval model', () => {
-  const b = read(BUILD);
+  const b = BUILD_CORPUS();
   assert.match(b, /--auto\b/);
   assert.match(b, /Three approval models/);
   assert.match(b, /Full-auto \(`--auto`\)/);
 });
 
 test('full-auto is semi-auto minus the Phase 3.5 plan gate (zero build-time gates)', () => {
-  const b = read(BUILD);
+  const b = BUILD_CORPUS();
   assert.match(b, /Skipped entirely in `--auto`/);
   assert.match(b, /zero.*human gates|no human stops at all/i);
   // the merge gate is the one retained human touchpoint
@@ -31,7 +32,7 @@ test('full-auto is semi-auto minus the Phase 3.5 plan gate (zero build-time gate
 });
 
 test('full-auto keeps the machine gates and never opens a PR over a red build', () => {
-  const b = read(BUILD);
+  const b = BUILD_CORPUS();
   assert.match(b, /independent of the generator/i);
   assert.match(b, /no PR is ever opened over a red build/i);
   // and the gotcha forbids weakening gates to make it run
@@ -39,7 +40,7 @@ test('full-auto keeps the machine gates and never opens a PR over a red build', 
 });
 
 test('full-auto still grounds on a PRD (no headless interview, scope-hallucination guard)', () => {
-  const b = read(BUILD);
+  const b = BUILD_CORPUS();
   assert.match(b, /`--autonomous` and `--auto` mode the input requirements/);
   assert.match(b, /no plan gate to catch a hallucinated scope/i);
 });

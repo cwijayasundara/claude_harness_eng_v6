@@ -15,7 +15,7 @@ const ROOT = path.join(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 const AUTO_CORPUS = () => readSkillCorpus('auto');
-const BUILD = '.claude/skills/build/SKILL.md';
+const BUILD_CORPUS = () => readSkillCorpus('build');
 const LANE = '.claude/skills/build/references/autonomous-lane.md';
 
 test('/auto exposes --pod with a dedicated Pod mode section', () => {
@@ -60,14 +60,14 @@ test('/auto documents --single-pr flag and forwards it to wave-plan.js', () => {
 });
 
 test('/build documents --single-pr forwarding to /auto', () => {
-  const b = read(BUILD);
+  const b = BUILD_CORPUS();
   assert.match(b, /--single-pr/);
   // bite on the forwarding call itself, not just any mention of the flag
   assert.match(b, /\/auto[^\n]*--single-pr|--single-pr[^\n]*\/auto/);
 });
 
 test('/build surfaces --pod and supersedes the single integrated PR in pod mode', () => {
-  const b = read(BUILD);
+  const b = BUILD_CORPUS();
   assert.match(b, /--pod 3/);
   assert.match(b, /Pod mode/);
   assert.match(b, /superseded|per-cluster PRs/i);

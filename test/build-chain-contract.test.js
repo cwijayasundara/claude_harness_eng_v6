@@ -11,7 +11,7 @@ const ROOT = path.join(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 const AUTO_CORPUS = () => readSkillCorpus('auto');
-const BUILD = '.claude/skills/build/SKILL.md';
+const BUILD_CORPUS = () => readSkillCorpus('build');
 const LANE = '.claude/skills/build/references/autonomous-lane.md';
 const PKG = 'package.json';
 const README = 'README.md';
@@ -30,7 +30,7 @@ test('/auto --once exits cleanly and writes the handoff next_action', () => {
 });
 
 test('/build documents --finalize as the build-chain terminal link', () => {
-  const b = read(BUILD);
+  const b = BUILD_CORPUS();
   assert.match(b, /--finalize\b/);
   assert.match(b, /Phases 9.*9\.5.*10.*11|terminal link/i);
 });

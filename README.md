@@ -48,7 +48,14 @@ Every project gets the lean `core` scaffold by default: `/build`, `/auto`, `/gat
 
 ### Upgrading an already-scaffolded project
 
-Refresh hooks/scripts/git-hooks/agents without wiping `project-manifest.json` or `.claude/state/`:
+Inside Claude Code (scaffolded projects with the skill installed):
+
+```text
+/scaffold-upgrade
+/scaffold-upgrade --apply
+```
+
+Or from a shell — refresh hooks/scripts/git-hooks/agents without wiping `project-manifest.json` or `.claude/state/`:
 
 ```bash
 # dry-run (default)
