@@ -16,6 +16,7 @@
     "sensor-waivers": "node .claude/scripts/validate-sensor-waivers.js",
     "deep-mutation": "node .claude/scripts/deep-mutation.js",
     "mutation": "node .claude/scripts/mutation-gate.js --staged",
+    "test-deletion-gate": "node .claude/scripts/test-deletion-gate.js --staged",
     "cycles": "node .claude/scripts/cycle-gate.js",
     "coupling-gate": "node .claude/scripts/coupling-gate.js",
     "approved-fixtures": "node .claude/scripts/approved-fixtures-gate.js",

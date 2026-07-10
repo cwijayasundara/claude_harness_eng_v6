@@ -340,6 +340,41 @@ function checkSproutDiffGate(projectDir, staged) {
   noteSproutDiffPassNotes(verdict);
 }
 
+// Test-deletion / skip guard (gap G31). G7/G17/G30 above all prove a change
+// didn't silently regress PRODUCTION code; none of them catch a refactor or
+// dependency bump making its own suite pass by deleting, or newly skipping,
+// the test that would have caught it. Lazy require: the sensor ships in
+// .claude/scripts.
+function reportTestDeletionFailure(verdict) {
+  const { findingLine } = require(path.join(__dirname, '..', 'scripts', 'test-deletion-gate'));
+  fail(
+    `BLOCKED: test-deletion-guard (G31) — a staged commit removes or newly skips existing test coverage:\n` +
+      verdict.findings.map(findingLine).join('\n') + '\n' +
+      'Fix: restore the test, or replace it with an equivalent one covering the same behavior — do not make a ' +
+      'suite pass by deleting or skipping the test that catches the regression. A genuine exception (a test for ' +
+      'removed functionality, or a flaky test being quarantined) belongs in specs/reviews/sensor-waivers.json ' +
+      '(sensor_id: test-deletion-guard, see docs/sensor-arbitration.md); HARNESS_TEST_DELETION_GATE=off only ' +
+      'acknowledges a local skip.\n'
+  );
+}
+
+function checkTestDeletionGate(projectDir) {
+  if (process.env.HARNESS_TEST_DELETION_GATE === 'off') {
+    noteSkip('test-deletion-guard', 'HARNESS_TEST_DELETION_GATE=off');
+    return;
+  }
+  let gate;
+  try {
+    gate = require(path.join(__dirname, '..', 'scripts', 'test-deletion-gate'));
+  } catch (_) {
+    noteSkip('test-deletion-guard', 'sensor script missing or unloadable from .claude/scripts');
+    return;
+  }
+  const exec = (cmd, args) => execFileSync(cmd, args, { cwd: projectDir, encoding: 'utf8' });
+  const verdict = gate.checkStaged(exec);
+  if (!verdict.pass) reportTestDeletionFailure(verdict);
+}
+
 // AT-first-proof gate (gap G23). writing-acceptance-tests-first's Process
 // step 5 ("confirm it fails for the right reason") was a prompt-level
 // instruction only — nothing proved an AT was actually written and observed
@@ -702,6 +737,11 @@ try {
   const staged = stagedFiles();
   checkSecrets(projectDir, staged); // before the source-only exit: secrets hide in config/yaml too
   checkAmendmentProvenance(projectDir, staged); // same reason: design docs are markdown/json, not SOURCE_EXTS
+  // Also before the source-only exit: stagedFiles() filters --diff-filter=ACMR
+  // (no D), so a commit that ONLY deletes a test file has an empty `staged`
+  // and would otherwise never reach this gate. test-deletion-gate.js does its
+  // own independent --diff-filter=M/=D git calls, so it needs no `staged` arg.
+  checkTestDeletionGate(projectDir);
   const stagedSource = staged.filter((f) => SOURCE_EXTS.has(path.extname(f).toLowerCase()));
   if (stagedSource.length === 0) process.exit(0); // docs-only commit: nothing else to gate
 

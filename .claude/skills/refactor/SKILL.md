@@ -116,6 +116,8 @@ List every file, what will change, which principle it violates, and any known ca
 
 Apply changes for one principle across all affected files. Then run the test suite. Then proceed to the next principle.
 
+**Canary a large mechanical fix first.** When a single principle's fix spans more than ~10 files (typical of a `--sweep --auto-fix` batch, or a large targeted refactor), apply it to a small trial batch — 3 files, or the smallest representative sample — and run tests, lint, and type checks on that batch before extending the same mechanical edit to the rest. A canary failure is a fast, cheap signal about the mechanical pattern itself; discovering the same defect after applying it to all N files means bisecting after the fact. Skip this for small batches (~10 files or fewer) — the canary's overhead isn't worth it.
+
 Order of execution:
 1. Static typing (lowest risk, foundation for other changes)
 2. Dead code removal
