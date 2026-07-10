@@ -323,6 +323,8 @@ On any Layer 1 or 2 failure, the evaluator reads Docker logs (or process stderr 
 
 The Layer 4 security gate is enforced by `/evaluate` and the `/auto` loop: a functional pass with an open critical/high finding is still a FAIL, and the finding routes into the same self-healing loop. The advisory `security-guidance` plugin (in-session warnings) layers *in front of* this gate but does not satisfy it — only the `security-reviewer` agent's verdict does.
 
+At `/gate`, when the diff crosses a security/data/API boundary, both the evaluator and security-reviewer axes re-verify across 3 independent fresh-context instances (no shared conversation between them) and resolve by majority vote (2-of-3) — the two axes can legitimately disagree with each other, but neither is decided by a single instance's blind spot. An instance that errors or times out fails safe to the stricter outcome (BLOCK/FAIL) for its axis. The vote is recorded in `specs/reviews/reverify-votes.json` alongside the existing `security-verdict.json` and evaluator report, which are still sourced from the first-spawned instance so every existing consumer is unaffected.
+
 ### The Design-Critic GAN Loop
 
 For frontend groups, after the main ratchet passes, the design-critic runs a secondary GAN loop with weighted scoring:
@@ -367,7 +369,7 @@ Types (Layer 1) → Config (Layer 2) → Repository (Layer 3) → Service (Layer
 
 The `verify-on-save` hook scans every file edit and the git `pre-commit` gate re-scans staged files. Upward imports are blocked.
 
-**Learned rules**: when the same error appears 2+ times in `failures.md`, the harness extracts a permanent directive into `learned-rules.md`. Rules are **monotonic** — never deleted, only added. They become institutional knowledge injected into every future agent prompt.
+**Learned rules**: when the same error appears 2+ times in `failures.md`, the harness extracts a permanent directive into `learned-rules.md`. Rules are **monotonic** — never deleted, only added. They become institutional knowledge injected into every future agent prompt — not just `/auto`'s teammate spawns, but every pipeline entry point that can touch production code (`/change`, `/vibe`, `/feature`), so a rule learned in one lane can't be silently unlearned by working through another.
 
 ### Self-Healing Loop
 

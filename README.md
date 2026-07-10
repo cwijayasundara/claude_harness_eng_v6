@@ -81,7 +81,7 @@ The other commands below are still available, but the harness should usually rou
 | `/vibe` | Very small safe edit | Controlled fast lane for tiny changes |
 | `/change` | Behavior change in existing code | Test-first change route; use `--issue N` for a GitHub bug |
 | `/refactor` | No behavior change | Behavior-preserving cleanup with coverage and refactor-purity gates |
-| `/gate` | Before merge or after manual edits | Evaluator + diff review, with security review only when the diff crosses a security/data/API boundary; renamed from old harness `/review` to avoid native `/review` collision |
+| `/gate` | Before merge or after manual edits | Evaluator + diff review, with security review only when the diff crosses a security/data/API boundary; when that trigger fires, both axes re-verify across 3 independent instances, majority-voted (fail-safe to BLOCK/FAIL if an instance errors or times out); renamed from old harness `/review` to avoid native `/review` collision |
 | `/pr-respond <pr#>` | A harness PR has red CI or review comments | Polls checks + comments, classifies via the self-healing table, fixes, pushes, replies with evidence; bounded and budget-metered; never merges |
 | `/status` | See progress | Reads current pipeline state; also available as `npm run status` |
 | `/agent-readiness` | Is this codebase ready for heavy AI-agent use? | 8-pillar synthesis dashboard over signals the harness already collects; also available as `npm run agent-readiness` |
