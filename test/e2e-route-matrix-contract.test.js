@@ -39,9 +39,11 @@ test('vibe live route scaffolds an existing repo and runs /vibe with a vibe-log 
 test('full-auto live route uses /build --auto without --lite', () => {
   const file = read('test/e2e/harness-full-auto-run.test.js');
   assert.match(file, /\/scaffold --yes/);
-  assert.match(file, /runClaude\('\/build --auto --mode lean prd\.md'/);
-  assert.doesNotMatch(file, /\/build --auto[^'`"]*--lite|\/build[^'`"]*--lite[^'`"]*--auto/);
+  assert.match(file, /\/build --auto --mode lean prd\.md/);
+  assert.doesNotMatch(file, /\/build --auto[^'`"\n]*--lite|\/build[^'`"\n]*--lite[^'`"\n]*--auto/);
   assert.match(file, /runProjectSuite/);
+  // Resume path if progressive /build stops after plan only.
+  assert.match(file, /\/auto --mode lean/);
 });
 
 test('gated live route uses plain /build and asserts it stops before autonomous tail', () => {
