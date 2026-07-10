@@ -18,6 +18,7 @@
     "package:skus": "node .claude/scripts/package-sku.js all --clean",
     "package:core": "node .claude/scripts/package-sku.js core --clean",
     "package:lite": "node .claude/scripts/package-sku.js lite --clean",
+    "release:skus": "node .claude/scripts/release-skus.js",
     "scaffold:upgrade": "node .claude/scripts/scaffold-upgrade.js",
     "slo": "node .claude/scripts/slo-check.js",
     "canvas-sync": "node .claude/scripts/canvas-sync-check.js",

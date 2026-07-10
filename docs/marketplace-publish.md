@@ -6,11 +6,19 @@ or private plugin registry. It does not require credentials in the monorepo.
 
 ## Artifacts
 
+```bash
+npm run release:skus
+# → dist/skus/harness-{core,lite,full}
+# → dist/release/claude-harness-{core,lite,full}-<version>.tgz
+```
+
 | SKU | Path after `npm run package:skus` | Plugin name (plugin.json) |
 |---|---|---|
 | Product default | `dist/skus/harness-core` | `claude-harness-core` |
 | Full surface | `dist/skus/harness-full` | `claude-harness-full` |
 | Artifacts only | `dist/skus/harness-lite` | `claude-harness-lite` |
+
+**Not a SKU:** Symphony (`symphony_clone/`) — see [`docs/symphony-product.md`](symphony-product.md).
 
 Each tree is a valid `--plugin-dir` root (contains `.claude-plugin/plugin.json` plus
 skills/agents/hooks/…).

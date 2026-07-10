@@ -19,7 +19,7 @@ This doc is the single place that names:
 
 The monorepo is the source of truth. **Packaging emit is live** (`npm run package:skus` → `dist/skus/<sku>`). Load a built tree with `claude --plugin-dir dist/skus/harness-core`. Marketplace/registry publish remains a follow-on; the vocabulary above is stable.
 
-**Symphony** (`symphony_clone/`) is a separate product boundary (tracker orchestrator). It is not part of harness-core / lite / full SKUs — document and release it on its own cadence.
+**Symphony** (`symphony_clone/`) is a separate product boundary (tracker orchestrator). It is not part of harness-core / lite / full SKUs — see [`docs/symphony-product.md`](symphony-product.md).
 
 ### Scaffold profiles vs SKUs
 

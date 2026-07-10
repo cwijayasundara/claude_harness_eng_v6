@@ -14,6 +14,20 @@ Which commit-time sensors run is also governed by **`project-manifest.json#quali
 
 Normative gate membership table, SKU boundaries, and escape-hatch rules: [`docs/product-skus-and-tiers.md`](product-skus-and-tiers.md). Per-gate `HARNESS_*_GATE=off` remains a local skip, not a substitute for lowering tier or a reviewed waiver.
 
+## Agent-facing message shape
+
+Pre-commit prints `pre-commit: sensor_tier=<tier>` at start. New or refactored **BLOCKED** messages should use `.claude/hooks/lib/gate-result.js` `formatBlock()`:
+
+```text
+BLOCKED [gate-id]: one-line summary
+  ...detail lines...
+Fix: what the agent should do next
+Waive: sensor-waivers.json sensor_id=… or HARNESS_*_GATE=off (local only)
+Tier: active sensor_tier="standard"; this gate runs at standard+
+```
+
+`fail()` automatically appends a `Tier:` footer when the gate registry has set the active tier and the message lacks one. Skip announcements use the same Tier line via `formatSkip()`.
+
 ## Blocking Levels
 
 Every sensor should declare one of these levels in its docs or manifest entry:

@@ -5,22 +5,32 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const { ensureTierFooter, formatSkip } = require('./gate-result');
 
 const SOURCE_EXTS = new Set(['.py', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
 const FLOOR = 80;
 
+/** Optional context set by gate-registry so fail()/noteSkip can print Tier: */
+let failContext = { tier: null };
+
+function setFailContext(ctx) {
+  failContext = { tier: null, ...ctx };
+}
+
+function getFailContext() {
+  return failContext;
+}
+
 function fail(message) {
-  process.stdout.write(message);
-  process.stderr.write(message);
+  const msg = ensureTierFooter(message, failContext.tier);
+  process.stdout.write(msg);
+  process.stderr.write(msg);
   process.exit(1);
 }
 
 // A gate that should have run but failed open is announced, not swallowed.
 function noteSkip(gate, reason) {
-  process.stdout.write(
-    `WARNING: GATE SKIPPED — ${gate} did not run (${reason}). Staged code was NOT verified by this gate.\n` +
-      `         Fix: provision the toolchain, or set the matching *_GATE=off to acknowledge the skip.\n`
-  );
+  process.stdout.write(formatSkip(gate, reason, failContext.tier));
 }
 
 function stagedFiles(projectDir) {
@@ -64,6 +74,8 @@ module.exports = {
   FLOOR,
   fail,
   noteSkip,
+  setFailContext,
+  getFailContext,
   stagedFiles,
   inAutoBuild,
   requireScript,
