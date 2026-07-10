@@ -6,12 +6,10 @@ All notable changes to the Claude Harness Engine are documented here.
 
 ### Unreleased follow-ups (same minor line until next tag)
 
-- Progressive `/design` / `/build` entry indexes + references
-- `/scaffold-upgrade` skill
-- CI gitleaks for Security pillar; Project Zero readiness 7/8
-- `docs/marketplace-publish.md`, `docs/symphony-product.md`
-- `npm run release:skus` (SKU tarballs under `dist/release/`)
-- Gate message shape: `formatBlock` / Tier footer on pre-commit fails
+- Progressive `/auto` `/design` `/build` + `/scaffold-upgrade`
+- CI gitleaks; Project Zero readiness **8/8** (observability convention enabled)
+- All pre-commit gates use `failBlock` / `formatBlock` (Fix / Waive / Tier)
+- `docs/marketplace-publish.md`, `docs/symphony-product.md`, `npm run release:skus`
 
 ### Operability & packaging
 

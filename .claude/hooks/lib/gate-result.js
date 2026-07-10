@@ -1,8 +1,8 @@
 'use strict';
 
 // Standard agent-facing gate message shape (Fix / Waive / Tier).
-// Prefer this when writing new BLOCKED messages; existing gates may still use
-// bare fail() so long as they include a Fix: line.
+// Pre-commit gates call failBlock() → formatBlock(); bare fail() remains for
+// one-off paths that already built a complete message.
 
 /**
  * @param {object} opts

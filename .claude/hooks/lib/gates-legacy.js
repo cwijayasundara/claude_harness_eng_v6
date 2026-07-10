@@ -7,7 +7,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { runMutationOnFiles, renderSurvivors } = require('./mutation-gate');
 const { biteCheckFiles } = require('./legacy-bite-check');
-const { fail, noteSkip, inAutoBuild, requireScript } = require('./pre-commit-util');
+const { failBlock, noteSkip, inAutoBuild, requireScript } = require('./pre-commit-util');
 
 function computeLegacyDisciplineInputs(projectDir, gate) {
   const execFn = (cmd, args) => execFileSync(cmd, args, { cwd: projectDir, encoding: 'utf8' });
@@ -26,17 +26,20 @@ function reportLegacyDisciplineFailure(verdict) {
     ...verdict.noVerdict.map((f) => `  NO VERDICT RECORDED       ${f}`),
     ...verdict.uncoveredNoEvidence.map((f) => `  UNCOVERED, NO TEST STAGED ${f}`),
   ];
-  fail(
-    `BLOCKED: legacy-discipline-proof (G17) — checking-coverage-before-change was not proven for staged file(s):\n` +
-      lines.join('\n') + '\n' +
-      'Fix: run checking-coverage-before-change Step 2 (coverage_map.py piped through record-coverage-verdict.js) for the ' +
+  failBlock({
+    id: 'legacy-discipline-proof',
+    title: 'legacy-discipline-proof (G17) — checking-coverage-before-change was not proven for staged file(s)',
+    detail: `${lines.join('\n')}\n`,
+    fix:
+      'run checking-coverage-before-change Step 2 (coverage_map.py piped through record-coverage-verdict.js) for the ' +
       'ACTUALLY-CHANGED lines of these files (a receipt for a different symbol/range in the same file no longer counts, ' +
       'gap G29); for an UNCOVERED verdict, stage a RELATED pin-down or sprout test in the same commit ' +
       '(pinning-down-behavior / sprouting-instead-of-editing — relatedness checked via component-map.md story ownership, ' +
-      'then a naming-convention heuristic, gap G29). A real exception belongs in specs/reviews/sensor-waivers.json ' +
-      '(sensor_id: legacy-discipline-proof, see docs/sensor-arbitration.md); HARNESS_LEGACY_DISCIPLINE_GATE=off only ' +
-      'acknowledges a local skip.\n'
-  );
+      'then a naming-convention heuristic, gap G29).',
+    waive: 'real exception in specs/reviews/sensor-waivers.json (sensor_id: legacy-discipline-proof)',
+    envOff: 'HARNESS_LEGACY_DISCIPLINE_GATE',
+    minTier: 'standard',
+  });
 }
 
 function checkLegacyBiteBackstop(projectDir, files) {
@@ -49,13 +52,15 @@ function checkLegacyBiteBackstop(projectDir, files) {
   }
   if (outcome.pass) return;
   const detail = (outcome.blocked || []).map((r) => renderSurvivors(r.survived)).filter(Boolean).join('\n');
-  fail(
-    `BLOCKED: legacy-discipline bite-check (G29) — the staged evidence test does not kill mutants in the UNCOVERED ` +
-      `file(s) it was accepted for:\n${detail}\n` +
-      'Fix: the pin-down/sprout test must fail when this logic breaks — add an assertion on the specific behavior, ' +
-      'then re-commit. HARNESS_LEGACY_BITE_CHECK=off acknowledges the skip (a real exception belongs in ' +
-      'specs/reviews/sensor-waivers.json).\n'
-  );
+  failBlock({
+    id: 'legacy-discipline-proof',
+    title: 'legacy-discipline bite-check (G29) — the staged evidence test does not kill mutants in the UNCOVERED file(s)',
+    detail: `${detail}\n`,
+    fix: 'the pin-down/sprout test must fail when this logic breaks — add an assertion on the specific behavior, then re-commit.',
+    waive: 'real exception in specs/reviews/sensor-waivers.json',
+    envOff: 'HARNESS_LEGACY_BITE_CHECK',
+    minTier: 'standard',
+  });
 }
 
 function checkLegacyDisciplineGate(ctx) {
@@ -128,15 +133,18 @@ function checkSproutDiffGate(ctx) {
   const verdict = sproutGate.checkSproutDiff(legacyVerdict.uncoveredEvidence || [], addedProdFiles, changedRanges, graph, mapText);
   if (!verdict.pass) {
     const lines = verdict.violations.map((v) => `  TOO MANY SYMBOLS TOUCHED  ${v.file} — ${v.symbols.join(', ')}`);
-    fail(
-      `BLOCKED: sprout-diff-one-symbol (G30) — a legacy file's staged diff touches more symbols than ` +
-        `sprouting-instead-of-editing allows:\n${lines.join('\n')}\n` +
-        'Fix: the Iron Law is "touch the legacy file at exactly one call line" (or the rename pair for a wrap — ' +
+    failBlock({
+      id: 'sprout-diff',
+      title: 'sprout-diff-one-symbol (G30) — a legacy file\'s staged diff touches more symbols than sprouting-instead-of-editing allows',
+      detail: `${lines.join('\n')}\n`,
+      fix:
+        'the Iron Law is "touch the legacy file at exactly one call line" (or the rename pair for a wrap — ' +
         'at most two symbols). Move the extra logic into the sprout\'s new unit instead of editing these symbols ' +
-        'in place (.claude/skills/sprouting-instead-of-editing/SKILL.md). A real exception belongs in ' +
-        'specs/reviews/sensor-waivers.json (sensor_id: sprout-diff-one-symbol, see docs/sensor-arbitration.md); ' +
-        'HARNESS_SPROUT_DIFF_GATE=off only acknowledges a local skip.\n'
-    );
+        'in place (.claude/skills/sprouting-instead-of-editing/SKILL.md).',
+      waive: 'real exception in specs/reviews/sensor-waivers.json (sensor_id: sprout-diff-one-symbol)',
+      envOff: 'HARNESS_SPROUT_DIFF_GATE',
+      minTier: 'standard',
+    });
     return;
   }
   for (const w of verdict.assumedWrapPairs || []) {
@@ -183,14 +191,18 @@ function checkAtFirstGate(ctx) {
       ...verdict.missingAt.map((s) => `  NO ACCEPTANCE TEST FILE     ${s}`),
       ...verdict.missingReceipt.map((m) => `  NO RED RECEIPT              ${m.story} (${m.atPath})`),
     ];
-    fail(
-      `BLOCKED: at-first-proof (G23) — writing-acceptance-tests-first was not proven for staged new file(s):\n` +
-        lines.join('\n') + '\n' +
-        'Fix: run writing-acceptance-tests-first for the story (write the AT under specs/test_artefacts/acceptance/), ' +
+    failBlock({
+      id: 'at-first-gate',
+      title: 'at-first-proof (G23) — writing-acceptance-tests-first was not proven for staged new file(s)',
+      detail: `${lines.join('\n')}\n`,
+      fix:
+        'run writing-acceptance-tests-first for the story (write the AT under specs/test_artefacts/acceptance/), ' +
         'then node .claude/scripts/record-at-red.js --story <id> --at-file <path> --test-cmd "<cmd>" to confirm it fails ' +
-        'and record the receipt. A real exception belongs in specs/reviews/sensor-waivers.json (sensor_id: at-first-proof, ' +
-        'see docs/sensor-arbitration.md); HARNESS_AT_FIRST_GATE=off only acknowledges a local skip.\n'
-    );
+        'and record the receipt.',
+      waive: 'real exception in specs/reviews/sensor-waivers.json (sensor_id: at-first-proof)',
+      envOff: 'HARNESS_AT_FIRST_GATE',
+      minTier: 'standard',
+    });
   }
 }
 

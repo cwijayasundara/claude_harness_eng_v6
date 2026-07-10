@@ -7,7 +7,7 @@ const path = require('path');
 const { run, output, shouldBlock, skipped } = require('./toolchain');
 const { validate: validateSchema } = require('./contract-schema');
 const { runMutationOnFiles, renderSurvivors } = require('./mutation-gate');
-const { fail, noteSkip, inAutoBuild, FLOOR, requireScript } = require('./pre-commit-util');
+const { failBlock, noteSkip, inAutoBuild, FLOOR, requireScript } = require('./pre-commit-util');
 
 function validateContractShape(projectDir, group) {
   const schemaPath = path.join(projectDir, '.claude', 'skills', 'evaluate', 'references', 'contract-schema.json');
@@ -16,15 +16,22 @@ function validateContractShape(projectDir, group) {
   try {
     contract = JSON.parse(fs.readFileSync(path.join(projectDir, 'sprint-contracts', `${group}.json`), 'utf8'));
   } catch (_) {
-    fail(`BLOCKED: sprint-contracts/${group}.json is not valid JSON.\nFix: re-negotiate the contract (node .claude/scripts/validate-contract.js sprint-contracts/${group}.json to check).\n`);
+    failBlock({
+      id: 'sprint-contract',
+      title: `sprint-contracts/${group}.json is not valid JSON`,
+      fix: `re-negotiate the contract (node .claude/scripts/validate-contract.js sprint-contracts/${group}.json to check).`,
+      minTier: 'minimal',
+    });
   }
   const errors = validateSchema(JSON.parse(fs.readFileSync(schemaPath, 'utf8')), contract);
   if (errors.length > 0) {
-    fail(
-      `BLOCKED: sprint-contracts/${group}.json fails schema validation:\n` +
-      errors.map((e) => `  - ${e}`).join('\n') +
-      `\nFix: correct the contract (node .claude/scripts/validate-contract.js sprint-contracts/${group}.json).\n`
-    );
+    failBlock({
+      id: 'sprint-contract',
+      title: `sprint-contracts/${group}.json fails schema validation`,
+      detail: `${errors.map((e) => `  - ${e}`).join('\n')}\n`,
+      fix: `correct the contract (node .claude/scripts/validate-contract.js sprint-contracts/${group}.json).`,
+      minTier: 'minimal',
+    });
   }
 }
 
@@ -37,7 +44,12 @@ function checkSecurityVerdict(projectDir, group) {
   }
   const passed = verdict && (verdict.pass === true || verdict.verdict === 'PASS');
   if (!passed) {
-    fail(`BLOCKED: security gate for group ${group} not satisfied — specs/reviews/security-verdict.json is missing or not PASS.\nFix: run /evaluate (its security layer writes the verdict), address findings, then retry the commit.\n`);
+    failBlock({
+      id: 'sprint-contract',
+      title: `security gate for group ${group} not satisfied — specs/reviews/security-verdict.json is missing or not PASS`,
+      fix: 'run /evaluate (its security layer writes the verdict), address findings, then retry the commit.',
+      minTier: 'minimal',
+    });
   }
 }
 
@@ -54,7 +66,12 @@ function checkVerificationMatrix(projectDir, group) {
   try {
     verdict = runGate({ root: projectDir, phase: 'executed', group });
   } catch (err) {
-    fail(`BLOCKED: verification-matrix gate could not run: ${err.message}\nFix: repair specs/test_artefacts/verification-matrix.json, then retry the commit.\n`);
+    failBlock({
+      id: 'verification-matrix-gate',
+      title: `verification-matrix gate could not run: ${err.message}`,
+      fix: 'repair specs/test_artefacts/verification-matrix.json, then retry the commit.',
+      minTier: 'minimal',
+    });
   }
   if (verdict.rows_checked === 0) {
     noteSkip('verification-matrix', `no matrix rows in scope for group ${group}`);
@@ -65,12 +82,13 @@ function checkVerificationMatrix(projectDir, group) {
       .slice(0, 10)
       .map((f) => `  - ${f.code}${f.matrix_id ? ` (${f.matrix_id})` : ''}${f.layer ? ` [${f.layer}]` : ''}`);
     const more = verdict.failures.length > 10 ? `  … ${verdict.failures.length - 10} more\n` : '';
-    fail(
-      `BLOCKED: verification matrix (executed phase) not satisfied for group ${group} — ${verdict.failures.length} failure(s):\n` +
-      lines.join('\n') + '\n' + more +
-      `Fix: run /evaluate to (re)generate runtime evidence and update the matrix, then retry the commit.\n` +
-      `Check: node .claude/scripts/verification-matrix-gate.js --phase executed --group "${group}"\n`
-    );
+    failBlock({
+      id: 'verification-matrix-gate',
+      title: `verification matrix (executed phase) not satisfied for group ${group} — ${verdict.failures.length} failure(s)`,
+      detail: `${lines.join('\n')}\n${more}`,
+      fix: 'run /evaluate to (re)generate runtime evidence and update the matrix, then retry the commit. Check: node .claude/scripts/verification-matrix-gate.js --phase executed --group "' + group + '"',
+      minTier: 'minimal',
+    });
   }
 }
 
@@ -96,7 +114,12 @@ function checkSprintContract(ctx) {
     /* missing report = not PASS */
   }
   if (!/^VERDICT:\s*PASS\s*$/m.test(report)) {
-    fail(`BLOCKED: Sprint contract for group ${group} not satisfied. Run /evaluate first.\nFix: Run /evaluate to verify the sprint contract, then retry the commit.\n`);
+    failBlock({
+      id: 'sprint-contract',
+      title: `Sprint contract for group ${group} not satisfied. Run /evaluate first.`,
+      fix: 'Run /evaluate to verify the sprint contract, then retry the commit.',
+      minTier: 'minimal',
+    });
   }
   checkSecurityVerdict(projectDir, group);
   checkVerificationMatrix(projectDir, group);
@@ -108,7 +131,13 @@ function checkTypescript(ctx) {
   if (!fs.existsSync(path.join(projectDir, 'tsconfig.json'))) return;
   const res = run(['npx', '--no-install', 'tsc', '--noEmit'], projectDir, 120000);
   if (shouldBlock(res)) {
-    fail(`BLOCKED: type errors in the project:\n${output(res)}\nFix: resolve the type errors above before committing.\n`);
+    failBlock({
+      id: 'type-check',
+      title: 'type errors in the project',
+      detail: `${output(res)}\n`,
+      fix: 'resolve the type errors above before committing.',
+      minTier: 'minimal',
+    });
   } else if (skipped(res)) {
     noteSkip('TypeScript typecheck (tsc --noEmit)', 'tsc unavailable or unprovisioned');
   }
@@ -154,7 +183,13 @@ function checkCoverage(ctx) {
   const required = baseline !== null ? baseline : FLOOR;
   if (pct < required) {
     const label = baseline !== null ? `baseline ${baseline}%` : `floor ${FLOOR}%`;
-    fail(`BLOCKED: coverage ${pct}% is below the ${label}.\nFix: add tests to restore coverage before committing. The ratchet only moves forward.\n`);
+    failBlock({
+      id: 'coverage-ratchet-py',
+      title: `coverage ${pct}% is below the ${label}`,
+      fix: 'add tests to restore coverage before committing. The ratchet only moves forward.',
+      envOff: 'HARNESS_COVERAGE_GATE',
+      minTier: 'standard',
+    });
   }
   if (baseline === null || pct > baseline) {
     writeBaseline(projectDir, 'py', pct);
@@ -213,7 +248,13 @@ function checkCoverageJs(ctx) {
   const required = baseline !== null ? baseline : FLOOR;
   if (pct < required) {
     const label = baseline !== null ? `baseline ${baseline}%` : `floor ${FLOOR}%`;
-    fail(`BLOCKED: JS/TS coverage ${pct}% is below the ${label}.\nFix: add tests to restore coverage before committing. The ratchet only moves forward.\n`);
+    failBlock({
+      id: 'coverage-ratchet-js',
+      title: `JS/TS coverage ${pct}% is below the ${label}`,
+      fix: 'add tests to restore coverage before committing. The ratchet only moves forward.',
+      envOff: 'HARNESS_COVERAGE_GATE',
+      minTier: 'standard',
+    });
   }
   if (baseline === null || pct > baseline) {
     writeBaseline(projectDir, 'js', pct);
@@ -230,11 +271,14 @@ function checkMutation(ctx) {
   }
   if (blocked.length === 0) return;
   const detail = blocked.map((r) => renderSurvivors(r.survived)).filter(Boolean).join('\n');
-  fail(
-    `BLOCKED: mutation-smoke found tests that pass but don't bite (survivors):\n${detail}\n` +
-    'Fix: add an assertion that fails when the flipped operator above is applied — test the boundary ' +
-    '(off-by-one) or the false branch — then re-commit. HARNESS_MUTATION_GATE=off acknowledges the skip.\n'
-  );
+  failBlock({
+    id: 'mutation-smoke',
+    title: 'mutation-smoke found tests that pass but don\'t bite (survivors)',
+    detail: `${detail}\n`,
+    fix: 'add an assertion that fails when the flipped operator above is applied — test the boundary (off-by-one) or the false branch — then re-commit.',
+    envOff: 'HARNESS_MUTATION_GATE',
+    minTier: 'standard',
+  });
 }
 
 module.exports = {

@@ -10,7 +10,7 @@ const { checkContextContent, loadContextConfig } = require('./contexts');
 const { findImpureFiles } = require(path.join(__dirname, '..', '..', 'git-hooks', 'lib', 'refactor-purity'));
 const { baselineSecretFindings } = require('./security-scan');
 const { secretScanExempt } = require('./secrets');
-const { fail, noteSkip, requireScript } = require('./pre-commit-util');
+const { failBlock, noteSkip, requireScript } = require('./pre-commit-util');
 
 function checkSecrets(ctx) {
   const { projectDir, staged } = ctx;
@@ -18,11 +18,14 @@ function checkSecrets(ctx) {
   const findings = baselineSecretFindings(targets, (f) => fs.readFileSync(path.join(projectDir, f), 'utf8'));
   if (findings.length === 0) return;
   const lines = findings.map((x) => `  ${x.file} — ${x.message}`);
-  fail(
-    `BLOCKED: potential secrets in staged files:\n${lines.join('\n')}\n` +
-    'Fix: move the secret to .env (gitignored) and reference it via an env var; never commit credentials. ' +
-    'If this is a non-secret fixture, place it under an exempt path or rename it.\n'
-  );
+  failBlock({
+    id: 'secret-scan',
+    title: 'potential secrets in staged files',
+    detail: `${lines.join('\n')}\n`,
+    fix: 'move the secret to .env (gitignored) and reference it via an env var; never commit credentials. If this is a non-secret fixture, place it under an exempt path or rename it.',
+    waive: 'reviewed exception in specs/reviews/sensor-waivers.json (sensor_id: secret-scan)',
+    minTier: 'minimal',
+  });
 }
 
 function checkAmendmentProvenance(ctx) {
@@ -47,11 +50,13 @@ function checkAmendmentProvenance(ctx) {
   }
   const verdict = checkFn(staged, baselineExists);
   if (!verdict.pass) {
-    fail(
-      `BLOCKED: ${verdict.reason}\n` +
-      `Fix: write a design amendment under specs/design/amendments/ (see docs/superpowers/specs/2026-07-04-sprint-delta-lane-design.md) ` +
-      `in the same commit as the specs/design/ change, or set HARNESS_AMENDMENT_GATE=off to acknowledge the skip.\n`
-    );
+    failBlock({
+      id: 'amendment-provenance',
+      title: verdict.reason,
+      fix: 'write a design amendment under specs/design/amendments/ (see docs/superpowers/specs/2026-07-04-sprint-delta-lane-design.md) in the same commit as the specs/design/ change.',
+      envOff: 'HARNESS_AMENDMENT_GATE',
+      minTier: 'minimal',
+    });
   }
 }
 
@@ -71,15 +76,15 @@ function checkTestDeletionGate(ctx) {
   const exec = (cmd, args) => execFileSync(cmd, args, { cwd: projectDir, encoding: 'utf8' });
   const verdict = gate.checkStaged(exec);
   if (!verdict.pass) {
-    fail(
-      `BLOCKED: test-deletion-guard (G31) — a staged commit removes or newly skips existing test coverage:\n` +
-        verdict.findings.map(gate.findingLine).join('\n') + '\n' +
-        'Fix: restore the test, or replace it with an equivalent one covering the same behavior — do not make a ' +
-        'suite pass by deleting or skipping the test that catches the regression. A genuine exception (a test for ' +
-        'removed functionality, or a flaky test being quarantined) belongs in specs/reviews/sensor-waivers.json ' +
-        '(sensor_id: test-deletion-guard, see docs/sensor-arbitration.md); HARNESS_TEST_DELETION_GATE=off only ' +
-        'acknowledges a local skip.\n'
-    );
+    failBlock({
+      id: 'test-deletion-guard',
+      title: 'test-deletion-guard (G31) — a staged commit removes or newly skips existing test coverage',
+      detail: `${verdict.findings.map(gate.findingLine).join('\n')}\n`,
+      fix: 'restore the test, or replace it with an equivalent one covering the same behavior — do not make a suite pass by deleting or skipping the test that catches the regression.',
+      waive: 'genuine exception (removed functionality / quarantine) in specs/reviews/sensor-waivers.json (sensor_id: test-deletion-guard)',
+      envOff: 'HARNESS_TEST_DELETION_GATE',
+      minTier: 'standard',
+    });
   }
 }
 
@@ -88,13 +93,13 @@ function checkRefactorPurity(ctx) {
   if (process.env.HARNESS_COMMIT_KIND !== 'refactor') return;
   const impure = findImpureFiles(staged);
   if (impure.length === 0) return;
-  fail(
-    'BLOCKED: refactor commit touches test/snapshot files:\n' +
-    impure.map((f) => `  ${f}`).join('\n') +
-    '\nFix: a refactor commit changes no behavior — tests and snapshots must stay ' +
-    'byte-identical. Split the behavioral work into its own commit ' +
-    '(see .claude/skills/keeping-refactors-pure/SKILL.md).\n'
-  );
+  failBlock({
+    id: 'refactor-purity',
+    title: 'refactor commit touches test/snapshot files',
+    detail: `${impure.map((f) => `  ${f}`).join('\n')}\n`,
+    fix: 'a refactor commit changes no behavior — tests and snapshots must stay byte-identical. Split the behavioral work into its own commit (see .claude/skills/keeping-refactors-pure/SKILL.md).',
+    minTier: 'minimal',
+  });
 }
 
 function checkLayers(ctx) {
@@ -114,7 +119,13 @@ function checkLayers(ctx) {
   }
   if (violations.length > 0) {
     const lines = violations.map((v) => `  ${v.filePath}:${v.line} — ${v.layer} cannot import from ${v.imported}`);
-    fail(`BLOCKED: Architecture violations found — fix before committing:\n${lines.join('\n')}\nFix: Move imports to the correct layer or extract shared types to src/types/.\n`);
+    failBlock({
+      id: 'layer-imports',
+      title: 'Architecture violations found — fix before committing',
+      detail: `${lines.join('\n')}\n`,
+      fix: 'Move imports to the correct layer or extract shared types to src/types/.',
+      minTier: 'minimal',
+    });
   }
   if (mapped === 0 && stagedSource.length > 0) {
     process.stdout.write(
@@ -141,10 +152,13 @@ function checkContexts(ctx) {
   }
   if (violations.length === 0) return;
   const lines = violations.map((v) => `  ${v.filePath}:${v.line} — "${v.from}" reaches into "${v.to}" internals (${v.importPath})`);
-  fail(
-    `BLOCKED: Bounded-context violations — fix before committing:\n${lines.join('\n')}\n` +
-    'Fix: import the other context only through its public surface (root/index), or add the edge to architecture.contexts.allow in project-manifest.json.\n'
-  );
+  failBlock({
+    id: 'bounded-context-rules',
+    title: 'Bounded-context violations — fix before committing',
+    detail: `${lines.join('\n')}\n`,
+    fix: 'import the other context only through its public surface (root/index), or add the edge to architecture.contexts.allow in project-manifest.json.',
+    minTier: 'minimal',
+  });
 }
 
 function checkOwnership(ctx) {
@@ -168,11 +182,14 @@ function checkOwnership(ctx) {
     const reason = verdict.reason === 'empty_map'
       ? 'component-map.md parsed to zero owned paths — the map is stale or malformed.\n'
       : '';
-    fail(
-      `BLOCKED: staged source files are not owned by any story in specs/design/component-map.md:\n` +
-      lines.join('\n') + (lines.length ? '\n' : '') + reason +
-      `Fix: add the file(s) to the owning story's row in component-map.md (or set HARNESS_OWNERSHIP_GATE=off to acknowledge the skip).\n`
-    );
+    failBlock({
+      id: 'ownership-check',
+      title: 'staged source files are not owned by any story in specs/design/component-map.md',
+      detail: `${lines.join('\n')}${lines.length ? '\n' : ''}${reason}`,
+      fix: 'add the file(s) to the owning story\'s row in component-map.md.',
+      envOff: 'HARNESS_OWNERSHIP_GATE',
+      minTier: 'minimal',
+    });
   }
 }
 

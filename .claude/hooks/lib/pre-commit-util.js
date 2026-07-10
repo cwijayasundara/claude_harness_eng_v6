@@ -5,7 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { ensureTierFooter, formatSkip } = require('./gate-result');
+const { ensureTierFooter, formatSkip, formatBlock } = require('./gate-result');
 
 const SOURCE_EXTS = new Set(['.py', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
 const FLOOR = 80;
@@ -26,6 +26,14 @@ function fail(message) {
   process.stdout.write(msg);
   process.stderr.write(msg);
   process.exit(1);
+}
+
+/** BLOCKED message via formatBlock (Fix / Waive / Tier). */
+function failBlock(opts) {
+  fail(formatBlock({
+    ...opts,
+    tier: opts.tier != null ? opts.tier : failContext.tier,
+  }));
 }
 
 // A gate that should have run but failed open is announced, not swallowed.
@@ -73,6 +81,7 @@ module.exports = {
   SOURCE_EXTS,
   FLOOR,
   fail,
+  failBlock,
   noteSkip,
   setFailContext,
   getFailContext,

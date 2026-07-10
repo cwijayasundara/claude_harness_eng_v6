@@ -127,4 +127,3 @@ Emit is live; **publish steps** (marketplace, tarball, interim clone) live in
 ## Out of scope here
 
 - Symphony ops / tracker env (separate product)
-- Observability-on for the harness monorepo itself (stays opted out)

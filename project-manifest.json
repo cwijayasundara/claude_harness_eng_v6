@@ -11,7 +11,14 @@
     "enabled": false
   },
   "observability": {
-    "enabled": false
+    "enabled": true,
+    "metrics_path": "/metrics",
+    "red_labels": ["method", "route", "status"],
+    "slo": {
+      "error_rate_pct": 1,
+      "p95_ms": 500
+    },
+    "note": "Project Zero dogfood: convention flag for harness telemetry/metrics docs. The harness monorepo is not a product server; generators still follow G9 when scaffolding product apps."
   },
   "verification": {
     "mode": "local"

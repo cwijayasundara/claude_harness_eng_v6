@@ -4,8 +4,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { fail, noteSkip, getFailContext } = require('./pre-commit-util');
-const { formatBlock } = require('./gate-result');
+const { failBlock, noteSkip } = require('./pre-commit-util');
 
 // Lazy-require cycle/coupling (coupling-gate pulls drift.js → code-map scripts
 // that fixtures do not copy). Only load when a strict gate actually runs.
@@ -32,14 +31,13 @@ function checkCycleDetection(ctx) {
   const keys = cycleKeys(graph);
   const d = gateDecision(keys, baseline);
   if (d.blocked) {
-    fail(formatBlock({
+    failBlock({
       id: 'cycle-detection',
       title: `import cycles increased ${d.baseline} -> ${d.count} (the ratchet only goes down)`,
       detail: keys.map((k) => `  - ${k}`).join('\n') + '\n',
       fix: 'break the new cycle (extract the shared piece, or invert one dependency), then retry.',
       minTier: 'strict',
-      tier: getFailContext().tier,
-    }));
+    });
   }
   try {
     fs.mkdirSync(path.dirname(baselinePath), { recursive: true });
@@ -80,7 +78,7 @@ function checkCouplingRatchet(ctx) {
       if (!h) return `  - ${id}`;
       return `  - ${id} (fan_in=${h.fan_in}, instability=${Number(h.instability).toFixed(2)})`;
     };
-    fail(formatBlock({
+    failBlock({
       id: 'coupling-ratchet',
       title: `unstable-hub count increased ${d.baseline} -> ${d.count} (the ratchet only goes down)`,
       detail: newIds.map(hubDetail).join('\n') + '\n',
@@ -89,8 +87,7 @@ function checkCouplingRatchet(ctx) {
         "the file's full surface — split responsibilities, or introduce a facade exposing only the " +
         'members callers actually use. Either move lowers fan-in without touching every caller at once. Then retry.',
       minTier: 'strict',
-      tier: getFailContext().tier,
-    }));
+    });
   }
   try {
     fs.mkdirSync(path.dirname(baselinePath), { recursive: true });

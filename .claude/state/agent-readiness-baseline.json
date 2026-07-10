@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-07-10T15:40:18.949Z",
+  "generatedAt": "2026-07-10T15:53:58.914Z",
   "summary": {
-    "active": 7,
-    "partial": 1,
+    "active": 8,
+    "partial": 0,
     "planned": 0
   },
   "pillars": [
@@ -44,9 +44,9 @@
     {
       "id": "observability",
       "label": "Observability",
-      "status": "partial",
-      "detail": "observability.enabled is false — the RED-metrics baseline is explicitly opted out.",
-      "remediation": "Set project-manifest.json#observability.enabled:true if this project has a backend to instrument."
+      "status": "active",
+      "detail": "RED-metrics baseline enabled (metrics_path: /metrics).",
+      "remediation": null
     },
     {
       "id": "security-governance",
