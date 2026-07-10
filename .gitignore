@@ -4,6 +4,8 @@ node_modules/
 dist/
 # Generated SKU trees (npm run package:skus); source of truth remains .claude/ + harness-lite/
 dist/skus/
+# code-index sidecar (regenerated with code-graph; not load-bearing for readiness)
+specs/brownfield/code-graph.meta.json
 build/
 packages/harness-core/
 packages/harness-lite/
