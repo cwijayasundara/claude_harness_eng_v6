@@ -15,7 +15,9 @@ const { freshProject } = require('./helpers/fresh-project');
 const PROJECT_DIR = path.join(__dirname, 'full-auto-output');
 const PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
 const PRD = path.join(__dirname, 'fixtures', 'counter-prd.md');
-const SESSION = 'aaaa0005-0000-4000-8000-000000000005';
+const { randomUUID } = require('crypto');
+// Fresh id per run — hardcoded session ids fail with "already in use" on re-run.
+const SESSION = randomUUID();
 
 test('full-auto: /build --auto prd.md runs the non-lite route and leaves a green project', { timeout: 2100000 }, (t) => {
   freshProject(PROJECT_DIR, PRD);

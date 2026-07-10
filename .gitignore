@@ -49,6 +49,7 @@ test/e2e/plan-output/
 test/e2e/auto-output/
 test/e2e/semi-auto-output/
 test/e2e/feature-output/
+test/e2e/gated-build-output/
 test/e2e/vibe-output/
 test/e2e/brownfield-run-output/
 test/e2e/screenshots/

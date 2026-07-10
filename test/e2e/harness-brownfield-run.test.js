@@ -28,7 +28,9 @@ const { runClaude } = require('./helpers/claude-runner');
 
 const PROJECT_DIR = path.join(__dirname, 'brownfield-run-output');
 const PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
-const SESSION = 'aaaa0009-0000-4000-8000-000000000009';
+const { randomUUID } = require('crypto');
+// Fresh id per run — hardcoded session ids fail with "already in use" on re-run.
+const SESSION = randomUUID();
 
 // A tiny two-module repo: main.js requires calc.js, so the deterministic graph
 // has a real file->file import edge (seam-finder needs structure to rank).

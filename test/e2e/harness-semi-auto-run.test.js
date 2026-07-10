@@ -21,7 +21,9 @@ const { alterAndVerify } = require('./helpers/alter-and-verify');
 
 const PROJECT_DIR = path.join(__dirname, 'semi-auto-output');
 const PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
-const SESSION = 'aaaa0002-0000-4000-8000-000000000002'; // claude --session-id requires a valid UUID
+const { randomUUID } = require('crypto');
+// Fresh id per run — hardcoded session ids fail with "already in use" on re-run.
+const SESSION = randomUUID();
 const APP = 'a Node.js CLI in index.js that reads two integer command-line arguments and prints their sum to stdout, with an npm test that runs it and checks the output';
 
 test('semi-auto: /build --autonomous -> build -> alter (code-map), suite green', { timeout: 1800000 }, (t) => {

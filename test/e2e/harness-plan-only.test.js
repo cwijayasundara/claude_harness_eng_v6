@@ -21,7 +21,9 @@ const { summarizeSpecs, formatSummary } = require('./helpers/specs-summary');
 const PROJECT_DIR = path.join(__dirname, 'plan-output');
 const SAMPLE_PRD = path.join(__dirname, 'fixtures', 'sample-prd.md');
 const HARNESS_PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
-const SESSION_ID = 'aaaa0004-0000-4000-8000-000000000004'; // claude --session-id requires a valid UUID
+const { randomUUID } = require('crypto');
+// Fresh id per run — hardcoded session ids fail with "already in use" on re-run.
+const SESSION_ID = randomUUID();
 
 function resetProject() {
   const resolved = path.resolve(PROJECT_DIR);

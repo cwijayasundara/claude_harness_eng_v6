@@ -26,7 +26,9 @@ const { runProjectSuite } = require('./helpers/project-suite');
 
 const PROJECT_DIR = path.join(__dirname, 'vibe-output');
 const PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
-const SESSION = 'aaaa0008-0000-4000-8000-000000000008';
+const { randomUUID } = require('crypto');
+// Fresh id per run — hardcoded session ids fail with "already in use" on re-run.
+const SESSION = randomUUID();
 
 // A tiny calculator module with its own passing suite — same minimal existing
 // repo as the feature route. /vibe extends it with one narrow function.

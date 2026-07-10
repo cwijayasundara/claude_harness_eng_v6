@@ -46,17 +46,18 @@ test('full-auto live route uses /build --auto without --lite', () => {
 
 test('gated live route uses plain /build and asserts it stops before autonomous tail', () => {
   const file = read('test/e2e/harness-gated-build.test.js');
-  assert.match(file, /runClaude\('\/scaffold'/);
+  // Non-interactive scaffold (--yes) — interactive /scaffold only prints Q1 in claude -p.
+  assert.match(file, /\/scaffold --yes/);
   assert.match(file, /runClaude\('\/build prd\.md'/);
   assert.match(file, /specs\/brd\/brd\.md/);
-  assert.match(file, /claude-progress\.txt/);
-  assert.match(file, /features\.json/);
+  assert.match(file, /must not enter autonomous build before approval/);
 });
 
-test('feature live route scaffolds an existing repo and runs /feature', () => {
+test('feature live route scaffolds an existing repo and runs /feature --auto', () => {
   const file = read('test/e2e/harness-feature-route.test.js');
   assert.match(file, /runClaude\('\/scaffold --yes existing small Node library/);
-  assert.match(file, /runClaude\('\/feature add a multiply/);
+  // Headless: default /feature stops at human gates in claude -p.
+  assert.match(file, /\/feature --auto /);
   assert.match(file, /specs', 'brownfield', 'code-graph\.json/);
   assert.match(file, /runProjectSuite/);
 });

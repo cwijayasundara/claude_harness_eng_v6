@@ -8,6 +8,7 @@ const { describe, test, before, after } = require('node:test');
 const { spawnSync, execFileSync } = require('child_process');
 
 const { runClaude } = require('./helpers/claude-runner');
+const { readSkillCorpus } = require('../helpers/skill-corpus');
 
 const HARNESS_ROOT = path.join(__dirname, '..', '..');
 const RESULTS_DIR = path.join(__dirname, 'results');
@@ -217,14 +218,18 @@ describe('Harness Framework Validation', { timeout: 600000 }, () => {
   });
 
   // ── 7. Skills invoke the evaluator agent (artifact mode) ──────────────
+  // Progressive skills (e.g. design) may park procedure under references/ —
+  // search the full corpus, not only SKILL.md.
   test('Skills: all 6 planning skills reference evaluator (artifact mode)', () => {
     const skills = ['brd', 'spec', 'design', 'brownfield', 'seam-finder', 'deploy'];
     const missing = [];
     for (const skill of skills) {
-      const skillPath = path.join(HARNESS_ROOT, '.claude', 'skills', skill, 'SKILL.md');
-      if (!fs.existsSync(skillPath)) { missing.push(skill + ' (file missing)'); continue; }
-      const content = fs.readFileSync(skillPath, 'utf8');
-      if (!content.includes('evaluator')) missing.push(skill);
+      try {
+        const content = readSkillCorpus(skill, HARNESS_ROOT);
+        if (!content.includes('evaluator')) missing.push(skill);
+      } catch (_) {
+        missing.push(skill + ' (file missing)');
+      }
     }
     assert.strictEqual(missing.length, 0, `Skills missing evaluator reference: ${missing.join(', ')}`);
     console.log('[fw] All 6 skills reference the evaluator agent');

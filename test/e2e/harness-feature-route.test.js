@@ -9,13 +9,15 @@ const path = require('path');
 const assert = require('assert');
 const { execFileSync } = require('child_process');
 const { test } = require('node:test');
+const { randomUUID } = require('crypto');
 
 const { runClaude } = require('./helpers/claude-runner');
 const { runProjectSuite } = require('./helpers/project-suite');
 
 const PROJECT_DIR = path.join(__dirname, 'feature-output');
 const PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
-const SESSION = 'aaaa0007-0000-4000-8000-000000000007';
+// Fresh id per run — hardcoded session ids fail with "already in use" on re-run.
+const SESSION = randomUUID();
 
 function resetExistingProject() {
   const resolved = path.resolve(PROJECT_DIR);
@@ -63,12 +65,17 @@ test('feature: existing repo -> /feature changes behavior and keeps suite green'
   });
   console.log('[feature] scaffold exit:', scaffold.exitCode);
 
-  const result = runClaude('/feature add a multiply(a, b) function exported from calc.js and covered by node:test; keep add(a, b) unchanged', {
-    ...opts,
-    continueSession: true,
-    budgetUsd: '8.00',
-    timeoutMs: 900000,
-  });
+  // Default /feature has 3 human gates and will stop after decomposition in
+  // claude -p. Use --auto so the e2e can prove implement → green suite headless.
+  const result = runClaude(
+    '/feature --auto add a multiply(a, b) function exported from calc.js and covered by node:test; keep add(a, b) unchanged',
+    {
+      ...opts,
+      continueSession: true,
+      budgetUsd: '8.00',
+      timeoutMs: 900000,
+    },
+  );
   console.log('[feature] feature exit:', result.exitCode, 'signal:', result.signal);
 
   t.after(() => console.log('[feature] artifacts: ' + PROJECT_DIR));

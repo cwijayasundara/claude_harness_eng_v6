@@ -122,7 +122,8 @@ test('public docs and scaffold instructions agree on agent count and scaffold co
   const readme = fs.readFileSync(path.join(__dirname, '..', 'README.md'), 'utf8');
   const claudeMd = fs.readFileSync(path.join(__dirname, '..', 'CLAUDE.md'), 'utf8');
 
-  assert.match(readme, /Run `\/scaffold`/);
+  // README shows /scaffold in a code fence (or inline) rather than the older "Run `/scaffold`" prose.
+  assert.match(readme, /\/scaffold/);
   assert.match(readme, /namespaced command, use `\/claude_harness_eng_v5:scaffold`/);
   assert.match(claudeMd, /8-agent team/);
   assert.match(scaffold, /Agent roles table \(8 agents\)/);
