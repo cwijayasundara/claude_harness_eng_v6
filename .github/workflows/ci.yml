@@ -10,12 +10,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Full history helps gitleaks scan commits on PRs
+          fetch-depth: 0
+
       - uses: actions/setup-node@v5
         with:
           node-version: 20
+          cache: npm
+
+      - name: Install JS deps
+        run: npm ci
+
+      - name: Lint harness JS (hooks, scripts, tests)
+        run: npm run lint
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
       - name: Install Python deps for the AST code indexer + deck-builder tests
         # Pinned to the versions the suite is validated against locally; prebuilt
         # wheels (no compiler). Without tree-sitter the code-index AST tests fail
@@ -30,8 +43,23 @@ jobs:
           tree-sitter-c-sharp==0.23.5
           tree-sitter-go==0.25.0
           python-pptx==1.0.2
+
       - name: Unit tests (plugin/skill/hook schema, eval task specs + runner orchestration)
         run: npm test
+
+      - name: Agent readiness (report)
+        run: npm run agent-readiness && npm run agent-readiness:assert
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   evals:
     # Behavioral evals drive a real model and so are gated on the ANTHROPIC_API_KEY
@@ -45,6 +73,9 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 20
+          cache: npm
+      - name: Install JS deps
+        run: npm ci
       - name: Behavioral golden evals (model-gated)
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

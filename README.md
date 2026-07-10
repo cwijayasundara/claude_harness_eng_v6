@@ -152,6 +152,23 @@ Rule: native commands own atomic actions; the harness owns orchestration, ratche
 - Token waste discipline: living DeepWiki/code-map navigation, compact command/search output, and advisory warnings for broad reads or noisy raw commands
 - Human review before merge
 
+### Complexity dial
+
+Commit-time ceremony is dialed by **`project-manifest.json#quality.sensor_tier`**: `minimal` · `standard` (default) · `strict`. Install boundaries are separate products (**harness-lite / core / full**). See [docs/product-skus-and-tiers.md](docs/product-skus-and-tiers.md). This monorepo dogfoods itself (Project Zero) via the root `project-manifest.json`.
+
+### Project Zero CI
+
+Harness JS is linted and secrets-scanned in GitHub Actions:
+
+```bash
+npm ci
+npm run lint                 # eslint on .claude hooks/scripts + tests
+npm test
+npm run agent-readiness      # Style pillar expects eslint configured + installed
+```
+
+gitleaks runs as a separate CI job (`.gitleaks.toml`).
+
 ## Token Usage Optimizer
 
 The lean scaffold now ships a scaffold-native token-saving layer, enabled by

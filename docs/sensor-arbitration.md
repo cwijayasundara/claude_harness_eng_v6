@@ -2,6 +2,18 @@
 
 The harness now has many guides and sensors. This policy keeps them coherent when signals disagree, and gives agents a narrow way to record justified exceptions without hiding drift.
 
+## Sensor tier membership
+
+Which commit-time sensors run is also governed by **`project-manifest.json#quality.sensor_tier`** (`minimal` | `standard` | `strict`). Tiers are the primary complexity dial; blocking levels (below) still apply to every sensor that *does* run.
+
+| Tier | Intent |
+|---|---|
+| `minimal` | Low-ceremony (CLI/library): secrets + structural basics when configured |
+| `standard` | Default product posture — preserves today's full pre-commit set |
+| `strict` | Standard plus architecture ratchets at commit (cycle / coupling) |
+
+Normative gate membership table, SKU boundaries, and escape-hatch rules: [`docs/product-skus-and-tiers.md`](product-skus-and-tiers.md). Per-gate `HARNESS_*_GATE=off` remains a local skip, not a substitute for lowering tier or a reviewed waiver.
+
 ## Blocking Levels
 
 Every sensor should declare one of these levels in its docs or manifest entry:

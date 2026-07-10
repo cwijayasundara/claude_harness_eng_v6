@@ -161,7 +161,11 @@ test('full lifecycle: scaffold -> build -> verify -> modify -> regression (self-
     fixGoal: 'clicking #increment raises #count from 0 to 1',
     steps: async (page) => {
       await page.click('#increment');
-      await page.waitForFunction(() => document.querySelector('#count')?.textContent.trim() === '1', { timeout: 5000 });
+      // String form: body runs in the browser; keep eslint node no-undef clean.
+      await page.waitForFunction(
+        'document.querySelector("#count")?.textContent.trim() === "1"',
+        { timeout: 5000 },
+      );
     },
   });
   assert.ok(v1.ok, `v1 increment must pass within ${MAX_FIX_ATTEMPTS} attempts: ${JSON.stringify(v1)}`);
@@ -180,9 +184,15 @@ test('full lifecycle: scaffold -> build -> verify -> modify -> regression (self-
     fixGoal: 'clicking #decrement lowers #count, and #increment still raises it (no regression)',
     steps: async (page) => {
       await page.click('#increment'); // regression: original feature still works
-      await page.waitForFunction(() => document.querySelector('#count')?.textContent.trim() === '1', { timeout: 5000 });
+      await page.waitForFunction(
+        'document.querySelector("#count")?.textContent.trim() === "1"',
+        { timeout: 5000 },
+      );
       await page.click('#decrement'); // new feature
-      await page.waitForFunction(() => document.querySelector('#count')?.textContent.trim() === '0', { timeout: 5000 });
+      await page.waitForFunction(
+        'document.querySelector("#count")?.textContent.trim() === "0"',
+        { timeout: 5000 },
+      );
     },
   });
   assert.ok(v2.ok, `v2 decrement+regression must pass within ${MAX_FIX_ATTEMPTS} attempts: ${JSON.stringify(v2)}`);

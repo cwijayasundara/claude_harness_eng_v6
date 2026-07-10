@@ -1,0 +1,66 @@
+{
+  "generatedAt": "2026-07-10T15:14:30.190Z",
+  "summary": {
+    "active": 3,
+    "partial": 2,
+    "planned": 3
+  },
+  "pillars": [
+    {
+      "id": "style-validation",
+      "label": "Style & Validation",
+      "status": "active",
+      "detail": "js: configured + provisioned",
+      "remediation": null
+    },
+    {
+      "id": "architecture-fitness",
+      "label": "Architecture Fitness",
+      "status": "planned",
+      "detail": "No cycle or coupling ratchet baseline has been established yet.",
+      "remediation": "Run `/code-map` (or `/brownfield`), then `npm run cycles && npm run coupling-gate`, to establish the architecture ratchets."
+    },
+    {
+      "id": "testing",
+      "label": "Testing",
+      "status": "active",
+      "detail": "Coverage ratchet: yes; mutation gate: yes; regression gates: yes. No acceptance-test artifacts yet under specs/test_artefacts/acceptance/ (G20 not yet adopted — informational, doesn't affect this pillar's status).",
+      "remediation": null
+    },
+    {
+      "id": "modularity-freshness",
+      "label": "Code Quality / Modularity Freshness",
+      "status": "planned",
+      "detail": "No code-graph.json yet — modularity staleness cannot be computed.",
+      "remediation": "Run `/brownfield` (or `/code-map`) to produce a code-graph, then a modularity review to establish a baseline."
+    },
+    {
+      "id": "documentation-navigation",
+      "label": "Documentation / Navigation",
+      "status": "planned",
+      "detail": "No living DeepWiki/code-graph exists yet.",
+      "remediation": "Run `/brownfield` (or `/code-map`) to generate the living navigation, kept fresh by graph-refresh.js."
+    },
+    {
+      "id": "observability",
+      "label": "Observability",
+      "status": "partial",
+      "detail": "observability.enabled is false — the RED-metrics baseline is explicitly opted out.",
+      "remediation": "Set project-manifest.json#observability.enabled:true if this project has a backend to instrument."
+    },
+    {
+      "id": "security-governance",
+      "label": "Security & Governance",
+      "status": "partial",
+      "detail": "Baseline secrets scan always active. Enhanced tools — semgrep: yes, gitleaks: no, dep-audit: yes.",
+      "remediation": "Install the missing enhanced tool(s) (semgrep, gitleaks, and/or npm/pip audit) so `/gate` can run the full computational security tier."
+    },
+    {
+      "id": "dev-environment",
+      "label": "Dev Environment",
+      "status": "active",
+      "detail": "verification.mode: local; init.sh: no.",
+      "remediation": null
+    }
+  ]
+}

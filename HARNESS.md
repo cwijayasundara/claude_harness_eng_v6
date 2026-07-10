@@ -173,13 +173,19 @@ The point of a registry is that gaps are explicit. As of 2026-07 **gaps G1–G30
 
 `agent-readiness.js` (`npm run agent-readiness`, or `/agent-readiness`) answers a different question than the coverage report above: not *what governs what*, but *is this codebase actually ready to hand to a heavy-autonomy agent?* — loosely inspired by Factory.ai's "agent readiness" framing (8 pillars × maturity levels), adapted to what this harness tracks. It reads state its OWN prior sensors and gates already produce — Style & Validation, Architecture Fitness (G8/G18 ratchet baselines), Testing (coverage ratchet + G7/G15/G16 gates + G20 acceptance-test adoption), Code Quality / Modularity Freshness (G19), Documentation / Navigation, Observability (G9), Security & Governance (G3), and Dev Environment — and reports each pillar as `active`/`partial`/`planned` (the same vocabulary `harness-manifest.json#model.statuses` defines) with a one-line remediation when not `active`. It computes no new measurements: every pillar reuses an existing detection primitive (`hooks/lib/toolchain.js`'s run/skipped, `hooks/lib/drift.js`'s `withModularityStaleness`, `hooks/lib/stale-stamp.js`'s `STALE_MARK`) rather than reinventing one. Writes `specs/reviews/agent-readiness.md`/`.json`; report-only, exit 0 always, same convention as `harness-coverage.js` above — and, like it, not registered in `harness-manifest.json`'s `guides[]`/`sensors[]` arrays, since it inspects/reports on existing sensor and codebase state rather than governing code directly. Run it on a cadence via `/schedule`, or on demand before starting heavy autonomous work on a codebase.
 
+## Complexity dial (`sensor_tier`)
+
+Commit-time (and, as the registry lands, related) sensors are filtered by **`project-manifest.json#quality.sensor_tier`**: `minimal` · `standard` (default) · `strict`. This is the operability dial so teams do not memorize a dozen `HARNESS_*_GATE=off` env vars. Env vars remain local escape hatches only.
+
+Product install boundaries (what you copy/install) are separate: **harness-lite / harness-core / harness-full** — see [`docs/product-skus-and-tiers.md`](docs/product-skus-and-tiers.md). This monorepo dogfoods itself as Project Zero via the root `project-manifest.json` and `.claude/state/agent-readiness-baseline.json`.
+
 ## How to extend the harness
 
 When you add a guide or sensor, register it here so it joins the loop instead of rotting:
 
 1. **Build the control** — a hook check, a script, a skill, or a reviewer agent.
 2. **Wire it to a cadence** — session (a `verify-on-save`/`pre-write-gate` check), commit (`git-hooks/pre-commit` or `/gate`), integration (the evaluator), or drift (a scheduled job).
-3. **Register it** — add an entry to `harness-manifest.json` (`guides[]` or `sensors[]`) with a real `wired_at` path, its `axis`, `cadence`, `type`, and `status`. If it closes a gap, set the `gap_ref`.
+3. **Register it** — add an entry to `harness-manifest.json` (`guides[]` or `sensors[]`) with a real `wired_at` path, its `axis`, `cadence`, `type`, and `status`. If it closes a gap, set the `gap_ref`. Declare which **sensor_tier** values include it (see [`docs/product-skus-and-tiers.md`](docs/product-skus-and-tiers.md)).
 4. **Declare the blocking level** — classify the sensor as `hard-block`, `self-correct`, `review-focus`, or `advisory` using [`docs/sensor-arbitration.md`](docs/sensor-arbitration.md). If it can be waived, state the evidence required in `specs/reviews/sensor-waivers.json` (schema: `.claude/templates/sensor-waivers.schema.json`) and the expiry rule.
 5. **Make the signal LLM-legible** — emit a message that tells the agent how to self-correct, not just that it failed (the highest-leverage sensor technique; see G5).
 6. **Update the matrix above** so the human view stays in sync with the manifest.

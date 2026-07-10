@@ -1,0 +1,50 @@
+{
+  "name": "claude-harness-eng-v5",
+  "description": "Claude Harness Engine — plugin monorepo (dogfood / Project Zero)",
+  "topology": "cli-or-library",
+  "stack": {
+    "backend": { "language": "javascript", "framework": "node" },
+    "frontend": null,
+    "database": null
+  },
+  "architecture": {
+    "enabled": false
+  },
+  "observability": {
+    "enabled": false
+  },
+  "verification": {
+    "mode": "local"
+  },
+  "execution": {
+    "default_mode": "full",
+    "model_tier": "balanced",
+    "ceremony": "trimmed",
+    "coverage_threshold": 80
+  },
+  "quality": {
+    "sensor_tier": "standard",
+    "agent_readiness": {
+      "mode": "report",
+      "min_active_pillars": 3,
+      "forbid_regression": false
+    }
+  },
+  "token_governor": {
+    "enabled": true,
+    "mode": "advisory",
+    "living_navigation": true,
+    "context_search_required": true,
+    "max_source_read_lines": 300,
+    "tool_output_token_estimates": true,
+    "compress_tool_output": true,
+    "ccr_enabled": true,
+    "preserve_full_outputs": true,
+    "budget_warn_pct": 80
+  },
+  "evaluation": {
+    "api_base_url": null,
+    "ui_base_url": null,
+    "health_check": null
+  }
+}

@@ -120,6 +120,33 @@ function attachPacksToManifest(manifest, profile) {
   }
 }
 
+// Default sensor tier (PR4 / operability dial). cli-or-library and other lite
+// shapes get minimal; product apps get standard. Explicit profile.sensorTier wins.
+function defaultSensorTier(profile, topology) {
+  const explicit = profile.sensorTier || (profile.quality && profile.quality.sensor_tier);
+  if (explicit === 'minimal' || explicit === 'standard' || explicit === 'strict') return explicit;
+  if (topology === 'cli-or-library') return 'minimal';
+  return 'standard';
+}
+
+function qualityBlock(profile, topology) {
+  const quality = {
+    sensor_tier: defaultSensorTier(profile, topology),
+    agent_readiness: {
+      mode: 'report',
+      min_active_pillars: 3,
+      forbid_regression: false,
+    },
+  };
+  // Preserve optional mutation / drift knobs if the profile already carries them
+  // (interactive scaffold interview or re-scaffold).
+  if (profile.quality && typeof profile.quality === 'object') {
+    if (profile.quality.mutation) quality.mutation = profile.quality.mutation;
+    if (profile.quality.drift) quality.drift = profile.quality.drift;
+  }
+  return quality;
+}
+
 function buildManifest(profile) {
   const stack = profile.stack || {};
   const lite = isLiteShaped(profile);
@@ -139,6 +166,7 @@ function buildManifest(profile) {
     },
     verification: verificationBlock(profile.verificationMode || preset.verification_mode),
     topology,
+    quality: qualityBlock(profile, topology),
     token_governor: tokenGovernorBlock(),
   };
   manifest.observability = observabilityBlock(preset.observability_enabled && !!stack.backend);
@@ -281,5 +309,5 @@ function calibrationProfile(projectType) {
 
 module.exports = {
   lspServers, buildManifest, renderClaudeMd, renderTemplate, initShValues, calibrationProfile,
-  renderProjectReadme, deriveFrameworkPacks,
+  renderProjectReadme, deriveFrameworkPacks, defaultSensorTier, qualityBlock,
 };

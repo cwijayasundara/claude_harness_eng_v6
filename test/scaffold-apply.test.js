@@ -224,10 +224,17 @@ test('core scaffold profile ships the lean product-development spine by default'
 
     assert.ok(!fs.existsSync(path.join(target, '.claude', 'skills', 'install-framework-packs')),
       'core should not ship framework-pack installer');
+    assert.ok(!fs.existsSync(path.join(target, '.claude', 'skills', 'pe-ic-memo')),
+      'core should not ship vertical PE IC memo skill');
     assert.ok(!fs.existsSync(path.join(target, '.claude', 'scripts', 'replay-telemetry.js')),
       'core should not ship telemetry replay tooling');
     assert.ok(!fs.existsSync(path.join(target, '.claude', 'scripts', 'upstream-watch.js')),
       'core should not ship upstream ops watch tooling');
+
+    const manifest = JSON.parse(fs.readFileSync(path.join(target, 'project-manifest.json'), 'utf8'));
+    assert.ok(manifest.quality && manifest.quality.sensor_tier,
+      'scaffold must write quality.sensor_tier');
+    assert.ok(['minimal', 'standard', 'strict'].includes(manifest.quality.sensor_tier));
   } finally {
     fs.rmSync(workDir, { recursive: true, force: true });
   }

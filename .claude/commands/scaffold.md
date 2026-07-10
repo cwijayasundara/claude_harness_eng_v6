@@ -226,6 +226,12 @@ Based on their answers, write `project-manifest.json` to the project root. Fill 
 
 - **Topology:** the manifest records a detected `topology` (`web-app` / `api-service` / `cli-or-library`) and applies its preset bundle of harness knobs (architecture, observability, verification mode, ceremony, model tier). Print the detected topology and its `summary` (from `.claude/scripts/topologies.js`) in the scaffold report, e.g. "Detected topology: web-app → layered architecture · observability · docker verify · full ceremony · balanced model tier." Every field stays overridable in `project-manifest.json`.
 
+- **quality.sensor_tier** (operability dial, PR3/PR4): `"minimal" | "standard" | "strict"`. Filters which pre-commit gates run (see `docs/product-skus-and-tiers.md` and `.claude/hooks/lib/sensor-tier.js`). Deterministic defaults from `scaffold-render.js`:
+  - topology `cli-or-library` (project type D / lite shapes) → **`minimal`**
+  - `web-app` / `api-service` → **`standard`**
+  - Override with profile field `sensorTier` or by editing the written manifest later.
+  Also seed `quality.agent_readiness: { "mode": "report", "min_active_pillars": 3, "forbid_regression": false }` for Project Zero-style readiness reporting. Print in the Step 10 report: `Sensor tier: <value> (change via project-manifest.json#quality.sensor_tier)`.
+
 ### Auto-attach stack-matched specialty packs
 
 `scaffold-apply.js` and `scaffold-render.js` both derive the effective `frameworkPacks` list via a shared `deriveFrameworkPacks(profile)` helper: whatever the user explicitly selected in the tech-stack-pack question (Step 1.E Q7), plus `fastapi-code` whenever `stack.backend.framework === "fastapi"`, plus `react-code` whenever `stack.frontend.framework === "react"` (the Vite variant — Presets A and C; **not** `"nextjs"`, Preset B). This is fully automatic in both interactive and non-interactive (`--yes`) modes — there is no separate question or confirmation-card line for it, and no manual step is required for either pack since both are locally bundled.
@@ -881,6 +887,10 @@ Installed:
   state seeds   → .claude/state/ (from templates/state-seeds/)
   navigation    → living DeepWiki/code-map initialized ({placeholder|fresh})
   1 manifest    → .claude/.claude-plugin/plugin.json
+
+Sensor tier: {project-manifest.json#quality.sensor_tier} (minimal|standard|strict)
+  Change via project-manifest.json#quality.sensor_tier — see docs/product-skus-and-tiers.md
+  Filters pre-commit gates; default is minimal for cli-or-library, standard otherwise
 
 Telemetry (OFF by default — opt-in):
   Enable with /scaffold --telemetry or profile.telemetry=true

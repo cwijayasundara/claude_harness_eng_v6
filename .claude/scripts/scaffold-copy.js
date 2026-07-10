@@ -25,18 +25,40 @@ const CORE_AGENTS = [
 ];
 const BROWNFIELD_AGENTS = [...CORE_AGENTS];
 
+// Product spine — user-facing routes and pipeline stages the lean install needs.
+// Discipline — REQUIRED SUB-SKILLs and legacy-preservation micro-skills.
+// Keep both as flat string entries in CORE_SKILLS so G22 completeness scanning
+// (test/scaffold-copy-completeness.test.js) can parse the array literally.
 const CORE_SKILLS = [
+  // --- product ---
   'auto', 'brd', 'build', 'clarify', 'code-gen', 'deploy', 'design',
   'context', 'evaluate', 'gate', 'implement', 'spec', 'status', 'test',
-  'feature', 'brownfield', 'change', 'checking-coverage-before-change',
-  'checking-migration-safety', 'code-map', 'keeping-refactors-pure',
-  'pinning-down-behavior', 'pr-respond', 'refactor', 'seam-finder',
-  'sprint', 'sprouting-instead-of-editing', 'tracker-publish',
-  'upgrading-dependencies', 'vibe', 'writing-acceptance-tests-first',
-  'agent-readiness',
+  'feature', 'brownfield', 'change', 'code-map', 'pr-respond', 'refactor',
+  'seam-finder', 'sprint', 'tracker-publish', 'vibe', 'agent-readiness',
+  // --- discipline ---
+  'checking-coverage-before-change',
+  'checking-migration-safety',
+  'keeping-refactors-pure',
+  'pinning-down-behavior',
+  'sprouting-instead-of-editing',
+  'upgrading-dependencies',
+  'writing-acceptance-tests-first',
 ];
 const BROWNFIELD_SKILLS = [
   ...CORE_SKILLS,
+];
+
+// Optional surface: profile `full` copies the whole skills/ tree (see
+// selectedCopySet null path). Framework packs may also be copied selectively
+// via copyFrameworkPackSkills. These names must NOT appear in CORE_SKILLS.
+const OPTIONAL_SKILLS = [
+  'pe-ic-memo',
+  'fastapi-code',
+  'react-code',
+  'langchain-code',
+  'langgraph-code',
+  'deepagents-code',
+  'install-framework-packs',
 ];
 
 const CORE_SCRIPTS = [
@@ -211,4 +233,14 @@ function copyFrameworkPackSkills(pluginSource, target, frameworkSkillPacks) {
   }
 }
 
-module.exports = { copyScaffoldTree, pruneSettings, resolveScaffoldProfile, copyFrameworkPackSkills };
+module.exports = {
+  copyScaffoldTree,
+  pruneSettings,
+  resolveScaffoldProfile,
+  copyFrameworkPackSkills,
+  selectedCopySet,
+  CORE_SKILLS,
+  OPTIONAL_SKILLS,
+  CORE_SCRIPTS,
+  CORE_AGENTS,
+};

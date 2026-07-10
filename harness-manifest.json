@@ -26,7 +26,14 @@
       "active": "Wired and enforced.",
       "partial": "Exists but limited in scope, opt-in, or report-only rather than enforced.",
       "planned": "Identified in the gap analysis, not yet built. gap_ref points at the gap id."
-    }
+    },
+    "sensor_tiers": {
+      "minimal": "Secrets + structural basics when configured; low-ceremony CLI/library work.",
+      "standard": "Default product posture — historical pre-commit set (including sprout-diff).",
+      "strict": "Standard plus architecture ratchets at commit (cycle-detection, coupling-ratchet)."
+    },
+    "sensor_tier_loader": ".claude/hooks/lib/sensor-tier.js",
+    "gate_registry": ".claude/hooks/lib/gate-registry.js"
   },
   "steering_loop": [
     { "id": "program", "name": "program.md", "wired_at": ".claude/program.md", "description": "Karpathy human<->agent bridge; the steering input that biases /auto." },
