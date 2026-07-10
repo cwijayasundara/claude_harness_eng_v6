@@ -14,7 +14,7 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 test('auto-run harness: full-auto (zero gates) -> verify -> alter via code-map', () => {
   const h = read('test/e2e/harness-auto-run.test.js');
   assert.match(h, /require\(['"]\.\/helpers\/claude-runner['"]\)/);
-  assert.match(h, /runClaude\('\/scaffold'/);
+  assert.match(h, /\/scaffold --yes/);
   assert.match(h, /runClaude\([`'"]\/build --auto /);
   assert.match(h, /runProjectSuite\(/); // generated app's own suite is the oracle
   assert.match(h, /alterAndVerify\(/); // post-build alteration exercising code-map/brownfield
@@ -23,6 +23,7 @@ test('auto-run harness: full-auto (zero gates) -> verify -> alter via code-map',
 
 test('semi-auto-run harness: /build --autonomous build -> alter via code-map', () => {
   const h = read('test/e2e/harness-semi-auto-run.test.js');
+  assert.match(h, /\/scaffold --yes/);
   assert.match(h, /runClaude\([`'"]\/build --autonomous /);
   assert.match(h, /runProjectSuite\(/); // builds and verifies (headless --autonomous proceeds; the pause is human-only)
   assert.match(h, /alterAndVerify\(/); // then alters, exercising code-map/brownfield

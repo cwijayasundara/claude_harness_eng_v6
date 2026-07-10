@@ -28,7 +28,7 @@ test('autonomous mode grounds on the PRD non-interactively (no headless intervie
 test('the plan smoke runs scaffold + build --plan-only and summarizes specs/', () => {
   const smoke = read('test/e2e/harness-plan-only.test.js');
   assert.match(smoke, /require\(['"]\.\/helpers\/claude-runner['"]\)/);
-  assert.match(smoke, /runClaude\('\/scaffold'/);
+  assert.match(smoke, /\/scaffold --yes/);
   assert.match(smoke, /runClaude\('\/build --autonomous --plan-only/);
   assert.match(smoke, /summarizeSpecs\(/);
   // must NOT generate code or raise a PR in plan-only

@@ -66,7 +66,21 @@ function runClaude(prompt, options = {}) {
   const { result, stdout, stderr } = spawnCapturedGroup('claude', args, {
     input: prompt, cwd, timeoutMs, env: buildClaudeEnv(),
   });
-  return { stdout, stderr, exitCode: result.status, signal: result.signal, error: result.error };
+  const combined = `${stdout || ''}\n${stderr || ''}`;
+  // Surface account/session caps immediately so live e2e fails with a clear
+  // message instead of looking like a silent scaffold no-op.
+  const sessionLimited = /hit your session limit|session limit · resets/i.test(combined);
+  return {
+    stdout,
+    stderr,
+    exitCode: result.status,
+    signal: result.signal,
+    error: result.error,
+    sessionLimited,
+    limitMessage: sessionLimited
+      ? (combined.match(/You've hit your session limit[^\n]*/i) || ['session limit hit'])[0]
+      : null,
+  };
 }
 
 function readTextOr(p, fallback) {
