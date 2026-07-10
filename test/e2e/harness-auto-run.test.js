@@ -31,8 +31,16 @@ test('full-auto (lite/lean): trivial CLI -> autonomous build, zero gates, suite 
   freshProject(PROJECT_DIR, null);
   const opts = { cwd: PROJECT_DIR, model: 'sonnet', pluginDir: PLUGIN_DIR, sessionId: SESSION };
 
-  const scaffold = runClaude('/scaffold', { ...opts, budgetUsd: '2.00', timeoutMs: 240000 });
+  const scaffold = runClaude(
+    `/scaffold --yes ${APP}; CLI surface; no team integrations, no tracker, no framework packs`,
+    { ...opts, budgetUsd: '3.00', timeoutMs: 300000 },
+  );
   console.log('[auto] scaffold exit:', scaffold.exitCode);
+  assert.ok(
+    require('fs').existsSync(path.join(PROJECT_DIR, 'project-manifest.json'))
+      || require('fs').existsSync(path.join(PROJECT_DIR, 'CLAUDE.md')),
+    'scaffold must install harness before /build',
+  );
 
   // Full-auto over the compressed lane: zero gates, no GAN loop, trivial scope.
   const build = runClaude(`/build --auto --mode lean --lite ${APP}`, { ...opts, continueSession: true, budgetUsd: '10.00', timeoutMs: 1080000 });

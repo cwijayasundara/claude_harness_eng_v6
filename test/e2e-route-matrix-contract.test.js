@@ -38,7 +38,7 @@ test('vibe live route scaffolds an existing repo and runs /vibe with a vibe-log 
 
 test('full-auto live route uses /build --auto without --lite', () => {
   const file = read('test/e2e/harness-full-auto-run.test.js');
-  assert.match(file, /runClaude\('\/scaffold'/);
+  assert.match(file, /\/scaffold --yes/);
   assert.match(file, /runClaude\('\/build --auto --mode lean prd\.md'/);
   assert.doesNotMatch(file, /\/build --auto[^'`"]*--lite|\/build[^'`"]*--lite[^'`"]*--auto/);
   assert.match(file, /runProjectSuite/);

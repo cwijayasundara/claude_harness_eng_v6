@@ -30,8 +30,16 @@ test('semi-auto: /build --autonomous -> build -> alter (code-map), suite green',
   freshProject(PROJECT_DIR, null);
   const opts = { cwd: PROJECT_DIR, model: 'sonnet', pluginDir: PLUGIN_DIR, sessionId: SESSION };
 
-  const scaffold = runClaude('/scaffold', { ...opts, budgetUsd: '2.00', timeoutMs: 240000 });
+  const scaffold = runClaude(
+    `/scaffold --yes ${APP}; CLI surface; no team integrations, no tracker, no framework packs`,
+    { ...opts, budgetUsd: '3.00', timeoutMs: 300000 },
+  );
   console.log('[semi] scaffold exit:', scaffold.exitCode);
+  assert.ok(
+    require('fs').existsSync(path.join(PROJECT_DIR, 'project-manifest.json'))
+      || require('fs').existsSync(path.join(PROJECT_DIR, 'CLAUDE.md')),
+    'scaffold must install harness before /build',
+  );
 
   const build = runClaude(`/build --autonomous --lite ${APP}`, { ...opts, continueSession: true, budgetUsd: '10.00', timeoutMs: 1080000 });
   console.log('[semi] build exit:', build.exitCode, 'signal:', build.signal);

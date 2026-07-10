@@ -40,8 +40,16 @@ test('plan-only: PRD -> specs/ for inspection (no code, no PR)', { timeout: 1200
   resetProject();
   const opts = { cwd: PROJECT_DIR, model: 'sonnet', pluginDir: HARNESS_PLUGIN_DIR, sessionId: SESSION_ID };
 
-  const scaffold = runClaude('/scaffold', { ...opts, budgetUsd: '2.00', timeoutMs: 300000 });
+  const scaffold = runClaude(
+    '/scaffold --yes a Node.js bookmarks CLI from prd.md; CLI surface; no team integrations, no tracker, no framework packs',
+    { ...opts, budgetUsd: '3.00', timeoutMs: 300000 },
+  );
   console.log('[plan] scaffold exit:', scaffold.exitCode);
+  assert.ok(
+    fs.existsSync(path.join(PROJECT_DIR, 'project-manifest.json'))
+      || fs.existsSync(path.join(PROJECT_DIR, 'CLAUDE.md')),
+    'scaffold must install harness before /build',
+  );
 
   const plan = runClaude('/build --autonomous --plan-only prd.md', {
     ...opts, continueSession: true, budgetUsd: '6.00', timeoutMs: 900000,

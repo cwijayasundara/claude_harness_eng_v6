@@ -48,6 +48,7 @@ test/e2e/smoke-output/
 test/e2e/plan-output/
 test/e2e/auto-output/
 test/e2e/semi-auto-output/
+test/e2e/full-auto-output/
 test/e2e/feature-output/
 test/e2e/gated-build-output/
 test/e2e/vibe-output/
