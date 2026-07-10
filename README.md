@@ -2,7 +2,7 @@
 
 A Claude Code plugin for building and changing software with a generator/evaluator loop, ratcheting quality gates, and explicit human review before merge.
 
-Current version: `2.0.0`
+Current version: `2.1.0`
 
 ## Start Here
 

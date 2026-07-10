@@ -54,6 +54,13 @@ jobs:
           npm run agent-readiness
           npm run agent-readiness:assert
 
+      - name: Package SKU smoke (harness-core)
+        run: |
+          npm run package:core
+          test -f dist/skus/harness-core/.claude-plugin/plugin.json
+          test -f dist/skus/harness-core/skills/build/SKILL.md
+          test ! -d dist/skus/harness-core/skills/pe-ic-memo
+
   gitleaks:
     runs-on: ubuntu-latest
     steps:

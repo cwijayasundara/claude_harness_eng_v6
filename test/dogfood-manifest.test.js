@@ -39,7 +39,7 @@ test('quality.agent_readiness is ratchet mode for Project Zero (Phase 2)', () =>
   const ar = m.quality.agent_readiness;
   assert.ok(ar, 'quality.agent_readiness required');
   assert.strictEqual(ar.mode, 'ratchet');
-  assert.ok(ar.min_active_pillars >= 3);
+  assert.ok(ar.min_active_pillars >= 5);
   assert.strictEqual(ar.forbid_regression, true);
 });
 

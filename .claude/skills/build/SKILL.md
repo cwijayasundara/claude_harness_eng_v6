@@ -79,7 +79,7 @@ For a **small** new project (single language/runtime, one module, no DB/auth, �
 
 - **PRD grounding replaces the interview.** The input is a PRD file path, not a one-liner. Derive the lite-lane Step 1 fields (name, runtime, capability, deps, interface) from the PRD instead of asking; record assumptions rather than questions. If no usable PRD is supplied, stop and say so — do not invent scope.
 - **Automated eligibility gate with auto-escalation.** Before writing any artifact, check the PRD against the lite-lane eligibility caps. If it exceeds them (a database, a second service, auth, >5 stories, a real public API), **auto-escalate to the full `--auto` pipeline** (Phase 0 below) instead of cramming the project into 5 stories — there is no human to ask, so escalation is automatic and must be logged.
-- **Low plan confidence is an escalation trigger.** After the compressed plan is written, run `node .claude/scripts/plan-confidence.js`. A **low** band (open questions or an undecomposable story) means the PRD is too under-determined for the headless lite lane — **auto-escalate to the full `--auto` pipeline** (which has the clarify-on-low confidence gate at Phase 3.5) rather than compressing ambiguity into 5 stories. Log the escalation reason, exactly as the eligibility caps do.
+- **Low plan confidence is an escalation trigger.** After the compressed plan is written, run `node .claude/scripts/plan-confidence.js .` then `node .claude/scripts/plan-confidence.js . --gate`. Exit code **2** (band **low** — open questions or an undecomposable story) means the PRD is too under-determined for the headless lite lane — **auto-escalate to the full `--auto` pipeline** (which has the clarify-on-low confidence gate at Phase 3.5) rather than compressing ambiguity into 5 stories. Log the escalation reason, exactly as the eligibility caps do.
 - **The Step 7 approval gate is dropped** (that is what `--auto` means) and the lane **auto-invokes `/auto --group A`**, then runs the autonomous tail (Phase 9.5 pre-PR verify → PR). `--lite --autonomous` keeps the *one* consolidated approval before handoff; `--lite --auto` keeps zero gates. Either way the machine gates — ratchet, evaluator, adaptive review, Phase 9.5 — run unchanged; headless lite compresses planning, never verification.
 
 ---
@@ -148,7 +148,14 @@ Do NOT proceed without a clear "yes" or "approved" from the user. *(In `--autono
 
 **Skipped entirely in `--auto` (full-auto).** In full-auto there is no human approval gate — Phases 1–3 produce the plan and the pipeline proceeds straight to Phase 4. (In `--auto` you may still print the plan summary below for the log, but do **not** stop for approval.)
 
-**Confidence gate in `--auto` — the one exception to "zero gates".** After Phase 3 writes `specs/plan-confidence.json`, read the band. If **high** or **medium**, proceed to Phase 4 with no stop (unchanged). If **low**, auto-invoke `/clarify` **once** — it resolves what it can from local context and records assumptions headlessly — then recompute with `node .claude/scripts/plan-confidence.js`. If it clears to high/medium, proceed. If it is **still low with unresolved open questions**, stop and surface them rather than building blind — the same bar `--auto` already applies to a missing PRD. Never loop `/clarify` more than once; a plan that stays under-determined after one pass is a human decision, not a retry.
+**Confidence gate in `--auto` — the one exception to "zero gates".** After Phase 3 writes `specs/plan-confidence.json`, enforce it **mechanically** as well as in prose:
+
+1. Run `node .claude/scripts/plan-confidence.js .` (writes the artifact) then `node .claude/scripts/plan-confidence.js . --gate`.
+2. Exit code **0** (band high|medium) → proceed to Phase 4 with no stop.
+3. Exit code **2** (band **low**) → auto-invoke `/clarify` **once** (local context + recorded assumptions; headless). Recompute: `node .claude/scripts/plan-confidence.js .` then `node .claude/scripts/plan-confidence.js . --gate` again.
+4. If the second `--gate` is still **2**, **stop** and surface `specs/plan-confidence.json` drivers — do not start `/auto` / Phase 4. Never loop `/clarify` more than once; a plan that stays under-determined after one pass is a human decision, not a retry.
+
+(The same bar as a missing PRD: unattended mode must not invent a sure plan.)
 
 In `--autonomous` mode this is the **single** human gate. After Phases 1–3 have produced the BRD, stories, design, and test plan **without stopping**, present them together in one summary:
 1. BRD: problem, scope (in/out), **Forbidden Actions**, success metrics.

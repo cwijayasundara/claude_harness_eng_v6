@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-07-10T15:30:03.682Z",
+  "generatedAt": "2026-07-10T15:38:04.511Z",
   "summary": {
-    "active": 3,
+    "active": 6,
     "partial": 2,
-    "planned": 3
+    "planned": 0
   },
   "pillars": [
     {
@@ -16,9 +16,9 @@
     {
       "id": "architecture-fitness",
       "label": "Architecture Fitness",
-      "status": "planned",
-      "detail": "No cycle or coupling ratchet baseline has been established yet.",
-      "remediation": "Run `/code-map` (or `/brownfield`), then `npm run cycles && npm run coupling-gate`, to establish the architecture ratchets."
+      "status": "active",
+      "detail": "Cycle and coupling ratchets established (baseline: 0 cycle(s), 0 unstable hub(s)).",
+      "remediation": null
     },
     {
       "id": "testing",
@@ -30,16 +30,16 @@
     {
       "id": "modularity-freshness",
       "label": "Code Quality / Modularity Freshness",
-      "status": "planned",
-      "detail": "No code-graph.json yet — modularity staleness cannot be computed.",
-      "remediation": "Run `/brownfield` (or `/code-map`) to produce a code-graph, then a modularity review to establish a baseline."
+      "status": "active",
+      "detail": "No modularity staleness — the last real review covers all currently unstable hubs.",
+      "remediation": null
     },
     {
       "id": "documentation-navigation",
       "label": "Documentation / Navigation",
-      "status": "planned",
-      "detail": "No living DeepWiki/code-graph exists yet.",
-      "remediation": "Run `/brownfield` (or `/code-map`) to generate the living navigation, kept fresh by graph-refresh.js."
+      "status": "active",
+      "detail": "Living code-graph exists and derived navigation is present and not stamped stale.",
+      "remediation": null
     },
     {
       "id": "observability",

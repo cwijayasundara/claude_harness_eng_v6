@@ -1,6 +1,6 @@
 # Proposal: Confidence-Gated Planning Checkpoint
 
-Status: Draft (design narrative — not yet implemented)
+Status: **Implemented** (skill prose + `plan-confidence.js --gate` exit codes; see `.claude/skills/build/SKILL.md` Phase 3 / 3.5 and lite-lane headless notes)
 Author: harness maintainers
 Roadmap link: S2 "symphony Planning state" in `autonomous-engineer-roadmap` memory.
 

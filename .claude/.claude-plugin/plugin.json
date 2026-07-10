@@ -1,6 +1,6 @@
 {
   "name": "claude_harness_eng_v5",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Claude Harness Engine scaffold for autonomous long-running application development",
   "author": {
     "name": "Claude Harness Engine"

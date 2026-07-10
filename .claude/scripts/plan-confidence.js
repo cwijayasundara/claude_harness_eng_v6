@@ -209,6 +209,7 @@ module.exports = {
   countSchemaGaps,
   countBrownfieldConflicts,
   gatherSignals,
+  parseCliArgs,
 };
 
 // ---- CLI ----------------------------------------------------------------
@@ -223,10 +224,24 @@ function loadConfig(readText) {
   }
 }
 
+function parseCliArgs(argv) {
+  // Supports: plan-confidence.js [root] [--gate] [--root path]
+  // --gate: exit 0 when band is high|medium, exit 2 when low (headless stop signal).
+  let root = '.';
+  let gate = false;
+  for (let i = 2; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--gate') gate = true;
+    else if (a === '--root') root = argv[++i] || root;
+    else if (!a.startsWith('-')) root = a;
+  }
+  return { root, gate };
+}
+
 if (require.main === module) {
   const fs = require('fs');
   const path = require('path');
-  const root = process.argv[2] || '.';
+  const { root, gate } = parseCliArgs(process.argv);
   const readText = (rel) => {
     try {
       return fs.readFileSync(path.join(root, rel), 'utf8');
@@ -244,4 +259,17 @@ if (require.main === module) {
 
   const detail = result.drivers.map((d) => d.detail).join(', ') || 'no risk drivers';
   process.stdout.write(`Plan confidence: ${result.band.toUpperCase()} (score ${result.score}) — ${detail}\n`);
+
+  if (gate) {
+    // Exit 2 = still low after planning/clarify: callers must stop unattended builds.
+    // Exit 0 = high|medium: safe to proceed to implementation.
+    if (result.band === 'low') {
+      process.stderr.write(
+        'plan-confidence --gate: band is LOW — do not start /auto unattended. ' +
+          'Resolve drivers (or run /clarify once and recompute), then retry.\n'
+      );
+      process.exit(2);
+    }
+    process.exit(0);
+  }
 }
