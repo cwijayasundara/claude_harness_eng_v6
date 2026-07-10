@@ -12,6 +12,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const ROOT = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -52,7 +53,7 @@ test('/gate and /auto keep running the FULL regression-gate.js sweep unchanged (
   // that substring also matches a bare /regression-gate\.js/ check.
   const fullGateRe = /(?<!local-)regression-gate\.js/;
   const gate = read('.claude/skills/gate/SKILL.md');
-  const auto = read('.claude/skills/auto/SKILL.md');
+  const auto = readSkillCorpus('auto');
   assert.match(gate, fullGateRe, '/gate must still run the FULL regression-gate.js sweep');
   assert.match(auto, fullGateRe, '/auto must still run the FULL regression-gate.js sweep');
   assert.doesNotMatch(gate, /local-regression-gate\.js/, '/gate must not have been rewired to the local/scoped gate');

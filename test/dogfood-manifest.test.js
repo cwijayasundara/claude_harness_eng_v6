@@ -34,13 +34,13 @@ test('quality.sensor_tier is a known tier and defaults to standard here', () => 
   assert.strictEqual(m.quality.sensor_tier, 'standard');
 });
 
-test('quality.agent_readiness is report mode for Phase 0', () => {
+test('quality.agent_readiness is ratchet mode for Project Zero (Phase 2)', () => {
   const m = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
   const ar = m.quality.agent_readiness;
   assert.ok(ar, 'quality.agent_readiness required');
-  assert.strictEqual(ar.mode, 'report');
-  assert.ok(Number.isFinite(ar.min_active_pillars));
-  assert.strictEqual(typeof ar.forbid_regression, 'boolean');
+  assert.strictEqual(ar.mode, 'ratchet');
+  assert.ok(ar.min_active_pillars >= 3);
+  assert.strictEqual(ar.forbid_regression, true);
 });
 
 test('verification.mode is local (no docker product stack required)', () => {

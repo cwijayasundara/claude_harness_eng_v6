@@ -47,8 +47,12 @@ jobs:
       - name: Unit tests (plugin/skill/hook schema, eval task specs + runner orchestration)
         run: npm test
 
-      - name: Agent readiness (report)
-        run: npm run agent-readiness && npm run agent-readiness:assert
+      - name: Agent readiness ratchet (Project Zero)
+        # Hard-fails when active pillars drop below min_active_pillars or the
+        # committed baseline (project-manifest.json#quality.agent_readiness).
+        run: |
+          npm run agent-readiness
+          npm run agent-readiness:assert
 
   gitleaks:
     runs-on: ubuntu-latest

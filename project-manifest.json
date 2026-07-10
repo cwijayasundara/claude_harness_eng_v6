@@ -25,9 +25,9 @@
   "quality": {
     "sensor_tier": "standard",
     "agent_readiness": {
-      "mode": "report",
+      "mode": "ratchet",
       "min_active_pillars": 3,
-      "forbid_regression": false
+      "forbid_regression": true
     }
   },
   "token_governor": {

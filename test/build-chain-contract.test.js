@@ -5,24 +5,25 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { test } = require('node:test');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const ROOT = path.join(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
-const AUTO = '.claude/skills/auto/SKILL.md';
+const AUTO_CORPUS = () => readSkillCorpus('auto');
 const BUILD = '.claude/skills/build/SKILL.md';
 const LANE = '.claude/skills/build/references/autonomous-lane.md';
 const PKG = 'package.json';
 const README = 'README.md';
 
 test('/auto documents --once single-wave mode', () => {
-  const a = read(AUTO);
+  const a = AUTO_CORPUS();
   assert.match(a, /--once\b/);
   assert.match(a, /single-wave|exactly one wave|one wave/i);
 });
 
 test('/auto --once exits cleanly and writes the handoff next_action', () => {
-  const a = read(AUTO);
+  const a = AUTO_CORPUS();
   // it must tell the next process what to do: DONE when finished, CONTINUE otherwise
   assert.match(a, /next_action:\s*DONE/);
   assert.match(a, /next_action:\s*CONTINUE|CONTINUE —/);

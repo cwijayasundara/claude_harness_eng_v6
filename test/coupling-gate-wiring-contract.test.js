@@ -6,6 +6,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const ROOT = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -25,7 +26,7 @@ test('coupling-gate lib reuses drift.js and cycle-gate.js instead of reimplement
 test('package.json exposes the coupling-gate script; /auto Gate 4 and /gate run it', () => {
   const pkg = JSON.parse(read('package.json'));
   assert.strictEqual(pkg.scripts['coupling-gate'], 'node .claude/scripts/coupling-gate.js');
-  assert.match(read('.claude/skills/auto/SKILL.md'), /coupling-gate\.js/, 'Gate 4 must run the coupling ratchet');
+  assert.match(readSkillCorpus('auto'), /coupling-gate\.js/, 'Gate 4 must run the coupling ratchet');
   assert.match(read('.claude/skills/gate/SKILL.md'), /coupling-gate\.js/, '/gate must run the coupling ratchet');
 });
 

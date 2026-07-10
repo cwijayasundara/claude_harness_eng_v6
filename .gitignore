@@ -2,7 +2,12 @@
 .claude/tdd-guard/
 node_modules/
 dist/
+# Generated SKU trees (npm run package:skus); source of truth remains .claude/ + harness-lite/
+dist/skus/
 build/
+packages/harness-core/
+packages/harness-lite/
+packages/harness-full/
 !.claude/skills/build/
 .next/
 .venv/

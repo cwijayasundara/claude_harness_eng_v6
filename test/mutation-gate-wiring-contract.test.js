@@ -9,16 +9,22 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const ROOT = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 test('pre-commit wires the mutation gate, scoped to /auto builds', () => {
-  const src = read('.claude/git-hooks/pre-commit');
-  assert.match(src, /runMutationOnFiles/, 'must import the mutation orchestrator');
-  assert.match(src, /checkMutation\(projectDir, stagedSource\)/, 'must call checkMutation');
-  assert.match(src, /inAutoBuild\(projectDir\)/, 'mutation gate must be scoped to active /auto builds');
-  assert.match(src, /HARNESS_MUTATION_GATE/, 'must honor the off switch');
+  // PR3: thin pre-commit dispatches via gate-registry; mutation lives in gates-quality.js
+  const hook = read('.claude/git-hooks/pre-commit');
+  assert.match(hook, /gate-registry/, 'pre-commit must dispatch through gate-registry');
+  const registry = read('.claude/hooks/lib/gate-registry.js');
+  assert.match(registry, /mutation-smoke/, 'catalog must register mutation-smoke');
+  assert.match(registry, /checkMutation/, 'catalog must bind quality.checkMutation');
+  const quality = read('.claude/hooks/lib/gates-quality.js');
+  assert.match(quality, /runMutationOnFiles/, 'must import the mutation orchestrator');
+  assert.match(quality, /inAutoBuild/, 'mutation gate must be scoped to active /auto builds');
+  assert.match(quality, /HARNESS_MUTATION_GATE/, 'must honor the off switch');
 });
 
 test('mutation-gate CLI reuses the lib, which drives the existing smoke runner', () => {
@@ -47,7 +53,7 @@ test('package.json exposes the mutation script and manifest marks it active', ()
 });
 
 test('/auto Gate 3 documents the mutation-smoke step', () => {
-  const skill = read('.claude/skills/auto/SKILL.md');
+  const skill = readSkillCorpus('auto');
   assert.match(skill, /mutation-gate\.js/, 'Gate 3 must reference the mutation gate');
   assert.match(skill, /survivor/i, 'Gate 3 must explain survivors');
 });

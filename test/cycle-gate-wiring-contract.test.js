@@ -6,6 +6,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const ROOT = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -19,7 +20,7 @@ test('cycle-gate CLI reuses the lib and is require-safe', () => {
 test('package.json exposes the cycles script; /auto Gate 4 runs it', () => {
   const pkg = JSON.parse(read('package.json'));
   assert.strictEqual(pkg.scripts.cycles, 'node .claude/scripts/cycle-gate.js');
-  assert.match(read('.claude/skills/auto/SKILL.md'), /cycle-gate\.js/, 'Gate 4 must run the cycle ratchet');
+  assert.match(readSkillCorpus('auto'), /cycle-gate\.js/, 'Gate 4 must run the cycle ratchet');
 });
 
 test('manifest marks cycle-detection active and enforced', () => {

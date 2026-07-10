@@ -11,6 +11,7 @@ const ROOT = path.join(__dirname, '..');
 const SCRIPT = path.join(ROOT, '.claude', 'scripts', 'contract-accessibility-default.js');
 const VALIDATOR = path.join(ROOT, '.claude', 'scripts', 'validate-contract.js');
 const { normalizeContract } = require('../.claude/scripts/contract-accessibility-default.js');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const A11Y = { required: true, block_impacts: ['serious', 'critical'] };
 
@@ -104,7 +105,7 @@ test('CLI + validate-contract round-trip: injected accessibility_checks is schem
 const rd = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 test('G12: default-on a11y is wired into /auto + registered active', () => {
-  assert.ok(/contract-accessibility-default\.js/.test(rd('.claude/skills/auto/SKILL.md')),
+  assert.ok(/contract-accessibility-default\.js/.test(readSkillCorpus('auto')),
     '/auto must run the accessibility normalizer');
   const m = JSON.parse(rd('harness-manifest.json'));
   const s = m.sensors.find((x) => x.id === 'accessibility');

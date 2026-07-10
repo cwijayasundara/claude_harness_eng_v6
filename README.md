@@ -6,21 +6,57 @@ Current version: `2.0.0`
 
 ## Start Here
 
+### Recommended: load a packaged SKU
+
+From a checkout of this repo (or a release artifact):
+
+```bash
+# Build local plugin trees (core = lean product, lite = artifacts only)
+npm run package:skus
+# → dist/skus/harness-core , dist/skus/harness-lite , dist/skus/harness-full
+
+cd ~/my-project
+claude --plugin-dir /path/to/claude_harness_eng_v5/dist/skus/harness-core
+```
+
+Then inside Claude Code:
+
+```text
+/scaffold
+```
+
+| SKU | Load | Use when |
+|---|---|---|
+| **harness-core** (default product) | `dist/skus/harness-core` | Building/changing software |
+| **harness-full** | `dist/skus/harness-full` | Need optional skills / full surface |
+| **harness-lite** | `dist/skus/harness-lite` | Mockups / ARB docs / research only |
+
+SKU vocabulary: [docs/product-skus-and-tiers.md](docs/product-skus-and-tiers.md). Marketplace publish is a follow-on; local `--plugin-dir` is the supported install path today.
+
+### Contributors: clone + monorepo plugin dir
+
 ```bash
 git clone https://github.com/cwijayasundara/claude_harness_eng_v5.git ~/claude_harness_eng_v5
 cd ~/my-project
 claude --plugin-dir ~/claude_harness_eng_v5/.claude
 ```
 
-Then, inside Claude Code:
-
-```text
-/scaffold
-```
-
-Run `/scaffold` once per target project. If your Claude Code UI shows a namespaced command, use `/claude_harness_eng_v5:scaffold`.
+If your Claude Code UI shows a namespaced command, use `/claude_harness_eng_v5:scaffold`.
 
 Every project gets the lean `core` scaffold by default: `/build`, `/auto`, `/gate`, plus the minimal brownfield spine (`/feature`, `/brownfield`, `/code-map`, `/change`, `/refactor`, `/vibe`, tracker publishing). Use `/scaffold --full` only when you explicitly want the optional harness surface.
+
+### Upgrading an already-scaffolded project
+
+Refresh hooks/scripts/git-hooks/agents without wiping `project-manifest.json` or `.claude/state/`:
+
+```bash
+# dry-run (default)
+node /path/to/claude_harness_eng_v5/.claude/scripts/scaffold-upgrade.js --target ~/my-project
+# apply
+node /path/to/claude_harness_eng_v5/.claude/scripts/scaffold-upgrade.js --target ~/my-project --apply
+# also refresh skills (larger prompt surface change)
+node …/scaffold-upgrade.js --target ~/my-project --apply --include-skills
+```
 
 ## Dashboard
 
@@ -164,10 +200,25 @@ Harness JS is linted and secrets-scanned in GitHub Actions:
 npm ci
 npm run lint                 # eslint on .claude hooks/scripts + tests
 npm test
-npm run agent-readiness      # Style pillar expects eslint configured + installed
+npm run agent-readiness      # regenerate readiness report
+npm run agent-readiness:assert   # hard ratchet: min active pillars + no regression vs baseline
 ```
 
 gitleaks runs as a separate CI job (`.gitleaks.toml`).
+
+After a deliberate readiness improvement (new pillar becomes active), refresh the committed baseline:
+
+```bash
+npm run agent-readiness:baseline
+# then commit .claude/state/agent-readiness-baseline.json
+```
+
+Runtime churn hygiene (local; `*.jsonl` is gitignored):
+
+```bash
+npm run retention:dry   # preview
+npm run retention       # prune .claude/runs (>14d) and state/archive (>30d)
+```
 
 ## Token Usage Optimizer
 

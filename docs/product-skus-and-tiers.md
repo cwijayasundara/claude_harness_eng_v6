@@ -17,7 +17,9 @@ This doc is the single place that names:
 | **harness-full** | Teams that want the full optional surface | Core + optional skills (framework packs, verticals), full plugin set, telemetry templates |
 | **symphony** *(future product boundary)* | Headless tracker → PR factory | Orchestrator outside Claude Code; not part of core install |
 
-Today the monorepo is the source of truth; install is still clone + `--plugin-dir` / `/scaffold`. Packaging emit and marketplace install are **Phase 3** and must not change this vocabulary.
+The monorepo is the source of truth. **Packaging emit is live** (`npm run package:skus` → `dist/skus/<sku>`). Load a built tree with `claude --plugin-dir dist/skus/harness-core`. Marketplace/registry publish remains a follow-on; the vocabulary above is stable.
+
+**Symphony** (`symphony_clone/`) is a separate product boundary (tracker orchestrator). It is not part of harness-core / lite / full SKUs — document and release it on its own cadence.
 
 ### Scaffold profiles vs SKUs
 
@@ -91,16 +93,34 @@ The harness monorepo dogfoods itself via root `project-manifest.json`:
 - `topology`: `cli-or-library`
 - `architecture.enabled`: `false` (plugin control plane is not a layered product app)
 - `quality.sensor_tier`: `standard`
-- `quality.agent_readiness.mode`: `report` until the readiness ratchet is turned on in CI
+- `quality.agent_readiness.mode`: **`ratchet`** (Phase 2) with `min_active_pillars: 3` and `forbid_regression: true`
 
-Readiness baseline (committed): `.claude/state/agent-readiness-baseline.json`  
-Compare tool: `node .claude/scripts/assert-readiness-ratchet.js`
+Readiness baseline (committed): `.claude/state/agent-readiness-baseline.json`
+
+```bash
+npm run agent-readiness          # write specs/reviews/agent-readiness.json (gitignored)
+npm run agent-readiness:assert   # hard-fail if below min or below baseline
+npm run agent-readiness:baseline # raise (or --force rewrite) the committed baseline after a real improvement
+npm run retention:dry            # preview prune of .claude/runs + state/archive
+npm run retention                # prune runs >14d, archive >30d
+```
+
+CI runs generate + assert on every PR/main push. Scaffolded product apps still default to `agent_readiness.mode: "report"` — only this monorepo is ratcheted.
+
+## Progressive skill loading (Phase 4)
+
+Large orchestrator skills keep a short **entry** `SKILL.md` and move procedure into `references/`. Agents load only the section they are executing.
+
+| Skill | Entry budget | Procedure |
+|---|---|---|
+| `/auto` | ≤80 lines | `skills/auto/references/section-*.md` |
+
+Wiring-contract tests read the full **corpus** (`SKILL.md` + `references/*.md`) via `test/helpers/skill-corpus.js`.
 
 ## What is deliberately not in this doc
 
-- Marketplace release mechanics
-- Progressive skill-loading of `/auto`
-- Plan-confidence pause behavior
-- Symphony ops / tracker env
+- Marketplace release mechanics (emit is live; publish credentials/process separate)
+- Plan-confidence pause behavior for `/build --auto`
+- Symphony ops / tracker env (separate product)
 
-Those stay in their own proposals and later phases.
+Those stay in their own proposals.

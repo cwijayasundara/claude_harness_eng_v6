@@ -80,9 +80,9 @@ test('forbid_regression without baseline fails in ratchet mode', () => {
   assert.ok(r.reasons.some((x) => x.includes('baseline is missing')));
 });
 
-test('loadReadinessConfig reads Project Zero manifest as report mode', () => {
+test('loadReadinessConfig reads Project Zero manifest as ratchet mode', () => {
   const cfg = loadReadinessConfig(ROOT);
-  assert.strictEqual(cfg.mode, 'report');
-  assert.ok(cfg.minActivePillars >= 0);
-  assert.strictEqual(typeof cfg.forbidRegression, 'boolean');
+  assert.strictEqual(cfg.mode, 'ratchet');
+  assert.ok(cfg.minActivePillars >= 3);
+  assert.strictEqual(cfg.forbidRegression, true);
 });

@@ -1,0 +1,23 @@
+## SECTION 2: Context Recovery (Step 1 of Every Iteration)
+
+At the start of EVERY iteration — including the first — read these files in order:
+
+1. **`.claude/program.md`** — Constraints may have changed mid-run. Re-read every iteration. Never cache.
+2. **`.claude/state/learned-rules.md`** — Accumulated project rules. Inject verbatim into ALL agent prompts spawned this iteration.
+3. **`claude-progress.txt`** — Read the LAST session block (the block after the final `=== Session` marker). Extract: `current_group`, `groups_completed`, `groups_remaining`, `last_commit`, `next_action`. If the file does not exist (`/auto` invoked standalone, without `/build`), create it now with a Session 0 block in the SECTION 10 format before reading.
+4. **`features.json`** — Current pass/fail state for all features. Determines what work remains.
+5. **`specs/stories/dependency-graph.md`** — Compute the current wave (Section 4B Wave Selection Algorithm). A group is "unfinished" if any of its stories' features are not passing in `features.json`. Respect dependency ordering: do not start a group whose upstream dependencies have failing features. With `--sequential` (or `--parallel-groups 1`), the wave is the single next unfinished group; with default `--parallel-groups 3`, the wave is up to 3 concurrently-ready groups.
+6. **Target group story files** — Verify every story in every selected group is marked `Readiness: ready`. If any story is `needs_breakdown`, stop and request a story decomposition pass before implementation.
+
+If `claude-progress.txt` indicates a `current_group` (or `current_wave`) that is not yet complete, resume from there. Otherwise, compute a fresh wave per Section 4B.
+
+**First context window vs continuation — do the matching preflight.** The *first* window of a build initializes; *later* windows recover-and-execute. They are not the same job, so do not run identical logic on window 1 and window N. Decide which window you are in from the state you just read, and run its preflight before selecting work:
+
+- **First window** — only a Session 0 block exists (no `=== Session N ===` with N ≥ 1), `groups_completed: []`, and `current_group: none`. Before computing the first wave, confirm the initializer left a coherent project: `features.json` is a populated feature array (not the empty `[]` seed), `init.sh` exists and is executable, and the SECTION 1 `specs/` prerequisites are present. If any is absent, stop and report exactly what the initializer left undone — do not build against a half-scaffolded project.
+- **Continuation window** — any later window. Run the startup smoke check below, then resume from the last block's `current_group` / `next_action`.
+
+**Startup smoke check on resume — catch undocumented bugs before building on them.** The first time you reach SECTION 2 in this process *and* there is prior committed work to boot against (`groups_completed` non-empty or an in-flight `current_group`), boot the app and confirm it is healthy **before** selecting work. A prior window may have been killed mid-group, leaving a broken or half-built tree that the append-only log never recorded; booting first turns that into an explicit infrastructure failure rather than a confusing build error three steps later. Boot it the way the evaluator does (`project-manifest.json#verification.mode`) and run the evaluator's **Health-Check Retry** loop (`.claude/agents/evaluator.md`). Keep the noise out of the orchestrator context: redirect boot output to `.claude/state/smoke-boot.log` and surface only the verdict. On failure, `tail -n 50 .claude/state/smoke-boot.log`, treat it as `failure_layer: "infrastructure"`, and route to the SECTION 6 self-healing loop instead of starting new work. Skip the check on the first window (nothing is built yet) and on later in-process iterations (the previous iteration's PASS already booted the app).
+
+**Budget metering.** If `.claude/state/budget-start` does not exist, create it now with the current epoch-ms (`node -e 'process.stdout.write(String(Date.now()))' > .claude/state/budget-start` — portable; do **not** use `date +%s%3N`, which is GNU-only and on macOS/BSD writes a malformed `…N`-suffixed value) — this stamps the run origin so wall-clock metering has a start (`/build` Phase 4 already stamps it; this covers standalone `/auto`). Then read the live budget with `node .claude/scripts/budget-state.js` and honor the result per SECTION 11 criterion 1 — if it reports `[exhausted]`, stop at this iteration boundary before dispatching the group. A `warn` band is non-blocking: note it in the iteration log and keep building.
+
+---

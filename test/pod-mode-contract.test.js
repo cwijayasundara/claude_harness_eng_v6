@@ -9,23 +9,24 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { test } = require('node:test');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const ROOT = path.join(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
-const AUTO = '.claude/skills/auto/SKILL.md';
+const AUTO_CORPUS = () => readSkillCorpus('auto');
 const BUILD = '.claude/skills/build/SKILL.md';
 const LANE = '.claude/skills/build/references/autonomous-lane.md';
 
 test('/auto exposes --pod with a dedicated Pod mode section', () => {
-  const a = read(AUTO);
+  const a = AUTO_CORPUS();
   assert.match(a, /--pod N/);
   assert.match(a, /### Pod mode/);
   assert.match(a, /implies `--parallel-groups/);
 });
 
 test('pod mode raises a PR per cluster via wave-pr.js and does NOT wait for merges', () => {
-  const a = read(AUTO);
+  const a = AUTO_CORPUS();
   // PRs are opened via wave-pr.js (not gh pr create --draft directly)
   assert.match(a, /wave-pr\.js/);
   // PR granularity decided by wave-plan.js
@@ -39,21 +40,21 @@ test('pod mode raises a PR per cluster via wave-pr.js and does NOT wait for merg
 });
 
 test('pod mode verifies each cluster (Phase 9.5 scoped) before its PR', () => {
-  const a = read(AUTO);
+  const a = AUTO_CORPUS();
   assert.match(a, /Phase 9\.5 pre-PR ladder/i);
   assert.match(a, /scoped to (its|that) cluster|for THIS cluster/i);
   assert.match(a, /does \*\*not\*\* open a PR|do NOT open a PR/i);
 });
 
 test('pod mode documents the structural conflict defense (disjoint ownership + foundation-first)', () => {
-  const a = read(AUTO);
+  const a = AUTO_CORPUS();
   assert.match(a, /disjoint file ownership/i);
   assert.match(a, /foundation clusters/i);
   assert.match(a, /23%/);
 });
 
 test('/auto documents --single-pr flag and forwards it to wave-plan.js', () => {
-  const a = read(AUTO);
+  const a = AUTO_CORPUS();
   assert.match(a, /--single-pr/);
   assert.match(a, /wave-plan\.js.*--single-pr|--single-pr.*wave-plan\.js/s);
 });

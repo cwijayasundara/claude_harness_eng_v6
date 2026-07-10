@@ -1,13 +1,10 @@
 'use strict';
 
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
 const { test } = require('node:test');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
-const AUTO = fs.readFileSync(
-  path.join(__dirname, '..', '.claude', 'skills', 'auto', 'SKILL.md'), 'utf8',
-);
+const AUTO = readSkillCorpus('auto');
 
 test('pod mode wires the deterministic planner and PR opener', () => {
   assert.ok(AUTO.includes('wave-plan.js'), 'must call wave-plan.js');

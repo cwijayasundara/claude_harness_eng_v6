@@ -16,6 +16,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const ROOT = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -49,7 +50,7 @@ test('/change Step S5 no longer requires the full regression-gate.js sweep (move
 });
 
 test('/auto runs regression-gate.js before merging a group/wave/cluster into WAVE_BASE', () => {
-  const skill = read('.claude/skills/auto/SKILL.md');
+  const skill = readSkillCorpus('auto');
   assert.match(skill, /regression-gate\.js/, '/auto must run the regression-suite-full gate before merge');
 });
 

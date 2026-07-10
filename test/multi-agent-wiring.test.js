@@ -10,6 +10,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { test } = require('node:test');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const ROOT = path.join(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -45,7 +46,7 @@ test('GAN separation: the evaluator declares it never generates', () => {
 });
 
 test('the /auto orchestrator delegates generation and verification to separate agents', () => {
-  const auto = read('.claude/skills/auto/SKILL.md');
+  const auto = readSkillCorpus('auto');
   assert.match(auto, /delegated to the \*\*generator\*\*/i, 'generation is delegated, not done inline');
   assert.match(auto, /delegated to the \*\*evaluator\*\*/i, 'verification is delegated to a distinct agent');
 });
