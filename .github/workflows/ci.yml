@@ -44,12 +44,24 @@ jobs:
           tree-sitter-go==0.25.0
           python-pptx==1.0.2
 
+      - name: Install gitleaks (Security pillar / enhanced secret scan)
+        # Makes agent-readiness Security pillar "active" in CI (gitleaks on PATH).
+        # Separate gitleaks job still scans history; this is for readiness + tooling parity.
+        env:
+          GITLEAKS_VERSION: 8.24.3
+        run: |
+          curl -sL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /tmp
+          sudo mv /tmp/gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
       - name: Unit tests (plugin/skill/hook schema, eval task specs + runner orchestration)
         run: npm test
 
       - name: Agent readiness ratchet (Project Zero)
         # Hard-fails when active pillars drop below min_active_pillars or the
         # committed baseline (project-manifest.json#quality.agent_readiness).
+        # PATH includes gitleaks from the previous step.
         run: |
           npm run agent-readiness
           npm run agent-readiness:assert

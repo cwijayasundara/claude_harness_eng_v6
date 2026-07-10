@@ -4,6 +4,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { test } = require('node:test');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const REPO_ROOT = path.join(__dirname, '..');
 
@@ -25,7 +26,7 @@ test('/spec requires reading CONTEXT.md and reusing its terms before writing sto
 });
 
 test('/design requires a glossary read before naming entities, and runs the vocabulary-check gate', () => {
-  const design = read('.claude/skills/design/SKILL.md');
+  const design = readSkillCorpus('design');
   assert.match(design, /Required glossary read/);
   assert.match(design, /vocabulary-check\.js/);
   assert.match(design, /vocabulary-consistency gate/);

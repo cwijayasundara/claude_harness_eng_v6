@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { test } = require('node:test');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const ROOT = path.join(__dirname, '..');
 
@@ -189,11 +190,15 @@ test('telemetry-memory.js requires phase eval module', () => {
 
 const skillNames = ['brd', 'spec', 'design', 'brownfield', 'seam-finder', 'deploy'];
 
+// Progressive-loaded skills: scan full corpus (entry SKILL.md + references/).
+function skillBody(skill) {
+  if (skill === 'design' || skill === 'auto') return readSkillCorpus(skill);
+  return fs.readFileSync(path.join(ROOT, '.claude', 'skills', skill, 'SKILL.md'), 'utf8');
+}
+
 for (const skill of skillNames) {
   test(`${skill}/SKILL.md spawns evaluator in artifact mode (not the removed phase-evaluator)`, () => {
-    const content = fs.readFileSync(
-      path.join(ROOT, '.claude', 'skills', skill, 'SKILL.md'), 'utf8'
-    );
+    const content = skillBody(skill);
     assert.doesNotMatch(content, /phase-evaluator/, 'phase-evaluator was merged into evaluator');
     assert.match(content, /evaluator/);
     assert.match(content, /artifact mode/i);
@@ -202,9 +207,7 @@ for (const skill of skillNames) {
 
 for (const skill of skillNames) {
   test(`${skill}/SKILL.md contains Phase Evaluation Gate or Ratchet text`, () => {
-    const content = fs.readFileSync(
-      path.join(ROOT, '.claude', 'skills', skill, 'SKILL.md'), 'utf8'
-    );
+    const content = skillBody(skill);
     assert.ok(
       /Phase Evaluation Gate/i.test(content) || /Ratchet/i.test(content),
       `${skill}/SKILL.md should reference Phase Evaluation Gate or Ratchet`
@@ -222,9 +225,7 @@ test('spec/SKILL.md references specs/brd/brd.md as upstream', () => {
 });
 
 test('design/SKILL.md references specs/stories/ as upstream', () => {
-  const content = fs.readFileSync(
-    path.join(ROOT, '.claude', 'skills', 'design', 'SKILL.md'), 'utf8'
-  );
+  const content = readSkillCorpus('design');
   assert.match(content, /specs\/stories\//);
 });
 

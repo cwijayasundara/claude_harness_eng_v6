@@ -8,6 +8,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const ROOT = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -54,7 +55,7 @@ test('modularity-reviewer.md documents an output-path override for scoped caller
 });
 
 test('design --delta Step D3.5 scopes the modularity pre-check to the amendment', () => {
-  const skill = read('.claude/skills/design/SKILL.md');
+  const skill = readSkillCorpus('design');
   const deltaSection = skill.slice(skill.indexOf('## Delta Mode'), skill.indexOf('## Baseline Recovery Mode'));
   assert.match(deltaSection, /Step D3\.5/, 'must add a Step D3.5');
   assert.match(deltaSection, /modularity-pack\.js/, 'must refresh the pack');
@@ -64,7 +65,7 @@ test('design --delta Step D3.5 scopes the modularity pre-check to the amendment'
 });
 
 test('GATE 2 (Step D7) displays the duplication pre-check result', () => {
-  const skill = read('.claude/skills/design/SKILL.md');
+  const skill = readSkillCorpus('design');
   const deltaSection = skill.slice(skill.indexOf('## Delta Mode'), skill.indexOf('## Baseline Recovery Mode'));
   const d7Section = deltaSection.slice(deltaSection.indexOf('### Step D7'));
   assert.match(d7Section, /duplication pre-check/i, 'GATE 2 display list must include the duplication pre-check result');

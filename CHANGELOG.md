@@ -4,6 +4,12 @@ All notable changes to the Claude Harness Engine are documented here.
 
 ## 2.1.0 — 2026-07-10
 
+### Unreleased follow-ups (same minor line until next tag)
+
+- Progressive `/design` entry index + `references/mode-*.md`
+- CI installs gitleaks before agent-readiness (Security pillar active when tools present)
+- `docs/marketplace-publish.md` publish process
+
 ### Operability & packaging
 
 - **Sensor tiers** (`minimal` | `standard` | `strict`) filter pre-commit via a gate registry; default `standard` preserves prior commit-time behavior.

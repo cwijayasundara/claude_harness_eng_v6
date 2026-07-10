@@ -6,6 +6,8 @@ dist/
 dist/skus/
 # code-index sidecar (regenerated with code-graph; not load-bearing for readiness)
 specs/brownfield/code-graph.meta.json
+# Local toolchain installs (gitleaks etc.) — CI installs its own copies
+.tools/
 build/
 packages/harness-core/
 packages/harness-lite/

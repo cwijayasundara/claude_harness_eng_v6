@@ -12,9 +12,10 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 const canvas = require(path.join(ROOT, '.claude/hooks/lib/canvas.js'));
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 test('/design emits the Canvas and runs the structure gate', () => {
-  const skill = read('.claude/skills/design/SKILL.md');
+  const skill = readSkillCorpus('design');
   assert.match(skill, /reasons-canvas\.md/, '/design must emit the Canvas');
   assert.match(skill, /validate-canvas\.js/, '/design Step 1.9 must run the structure gate');
   assert.match(skill, /fix the prompt first/i, 'the living-artifact discipline must be documented');

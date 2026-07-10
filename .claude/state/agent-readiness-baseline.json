@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-07-10T15:38:04.511Z",
+  "generatedAt": "2026-07-10T15:40:18.949Z",
   "summary": {
-    "active": 6,
-    "partial": 2,
+    "active": 7,
+    "partial": 1,
     "planned": 0
   },
   "pillars": [
@@ -51,9 +51,9 @@
     {
       "id": "security-governance",
       "label": "Security & Governance",
-      "status": "partial",
-      "detail": "Baseline secrets scan always active. Enhanced tools — semgrep: yes, gitleaks: no, dep-audit: yes.",
-      "remediation": "Install the missing enhanced tool(s) (semgrep, gitleaks, and/or npm/pip audit) so `/gate` can run the full computational security tier."
+      "status": "active",
+      "detail": "Baseline secrets scan always active. Enhanced tools — semgrep: yes, gitleaks: yes, dep-audit: yes.",
+      "remediation": null
     },
     {
       "id": "dev-environment",

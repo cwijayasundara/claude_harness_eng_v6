@@ -4,6 +4,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const ROOT = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -95,7 +96,7 @@ test('Canvas sync checker compares changed files with the living Canvas', () => 
 });
 
 test('design guidance performs greenfield modularity assessment before code', () => {
-  const design = read('.claude/skills/design/SKILL.md');
+  const design = readSkillCorpus('design');
   for (const phrase of [
     'core/supporting/generic',
     'volatility',
@@ -109,7 +110,7 @@ test('design guidance performs greenfield modularity assessment before code', ()
 
 test('spec and design consume the BRD analysis pack downstream', () => {
   const spec = read('.claude/skills/spec/SKILL.md');
-  const design = read('.claude/skills/design/SKILL.md');
+  const design = readSkillCorpus('design');
   for (const doc of [spec, design]) {
     assert.match(doc, /brd-analysis\.json/);
     assert.match(doc, /ambiguity_table/);

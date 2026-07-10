@@ -93,7 +93,7 @@ The harness monorepo dogfoods itself via root `project-manifest.json`:
 - `topology`: `cli-or-library`
 - `architecture.enabled`: `false` (plugin control plane is not a layered product app)
 - `quality.sensor_tier`: `standard`
-- `quality.agent_readiness.mode`: **`ratchet`** (Phase 2) with `min_active_pillars: 3` and `forbid_regression: true`
+- `quality.agent_readiness.mode`: **`ratchet`** with `min_active_pillars: 5` and `forbid_regression: true`
 
 Readiness baseline (committed): `.claude/state/agent-readiness-baseline.json`
 
@@ -107,20 +107,23 @@ npm run retention                # prune runs >14d, archive >30d
 
 CI runs generate + assert on every PR/main push. Scaffolded product apps still default to `agent_readiness.mode: "report"` — only this monorepo is ratcheted.
 
-## Progressive skill loading (Phase 4)
+## Progressive skill loading
 
-Large orchestrator skills keep a short **entry** `SKILL.md` and move procedure into `references/`. Agents load only the section they are executing.
+Large orchestrator skills keep a short **entry** `SKILL.md` and move procedure into `references/`. Agents load only the section/mode they are executing.
 
 | Skill | Entry budget | Procedure |
 |---|---|---|
 | `/auto` | ≤80 lines | `skills/auto/references/section-*.md` |
+| `/design` | ≤80 lines | `skills/design/references/mode-*.md` (+ templates) |
 
 Wiring-contract tests read the full **corpus** (`SKILL.md` + `references/*.md`) via `test/helpers/skill-corpus.js`.
 
-## What is deliberately not in this doc
+## Marketplace publish
 
-- Marketplace release mechanics (emit is live; publish credentials/process separate)
-- Plan-confidence pause behavior for `/build --auto`
+Emit is live; **publish steps** (marketplace, tarball, interim clone) live in
+[`docs/marketplace-publish.md`](marketplace-publish.md).
+
+## Out of scope here
+
 - Symphony ops / tracker env (separate product)
-
-Those stay in their own proposals.
+- Observability-on for the harness monorepo itself (stays opted out)

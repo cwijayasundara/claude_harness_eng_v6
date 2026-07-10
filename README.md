@@ -31,7 +31,8 @@ Then inside Claude Code:
 | **harness-full** | `dist/skus/harness-full` | Need optional skills / full surface |
 | **harness-lite** | `dist/skus/harness-lite` | Mockups / ARB docs / research only |
 
-SKU vocabulary: [docs/product-skus-and-tiers.md](docs/product-skus-and-tiers.md). Marketplace publish is a follow-on; local `--plugin-dir` is the supported install path today.
+SKU vocabulary: [docs/product-skus-and-tiers.md](docs/product-skus-and-tiers.md).  
+Publish process (marketplace / tarball / interim): [docs/marketplace-publish.md](docs/marketplace-publish.md).
 
 ### Contributors: clone + monorepo plugin dir
 
