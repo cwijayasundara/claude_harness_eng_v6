@@ -4,6 +4,8 @@ A Claude Code plugin for building and changing software with a generator/evaluat
 
 Current version: `2.1.0`
 
+**Field guide (navigable HTML):** open [docs/harness-guide.html](docs/harness-guide.html) in a browser — architecture diagrams, lane picker, GAN/ratchet under the covers, playbooks, and glossary. Offline; no build step.
+
 ## Start Here
 
 ### Recommended: load a packaged SKU
@@ -313,6 +315,7 @@ E2E logs land in `test/e2e/results/logs/`; summary JSON lands at `test/e2e/resul
 
 | Topic | Where |
 |---|---|
+| **Comprehensive field guide (HTML)** | [docs/harness-guide.html](docs/harness-guide.html) |
 | PRD format | [docs/prd-format.md](docs/prd-format.md) |
 | Model/cost posture | [docs/model-allocation.md](docs/model-allocation.md) |
 | Enterprise token cost | [docs/token-cost-playbook.md](docs/token-cost-playbook.md) |

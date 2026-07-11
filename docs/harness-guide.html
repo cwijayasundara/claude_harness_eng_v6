@@ -1,0 +1,2191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Claude Harness Engine — Comprehensive Guide</title>
+<meta name="description" content="Navigable field guide to the Claude Harness Engine: architecture, lanes, GAN loop, ratchets, brownfield, and effective use." />
+<style>
+  :root {
+    --bg: #0b0f14;
+    --bg-elev: #111821;
+    --bg-card: #151d28;
+    --bg-hover: #1a2433;
+    --border: #243041;
+    --border-soft: #1c2634;
+    --text: #e7eef8;
+    --text-dim: #9aabbf;
+    --text-mute: #6b7c91;
+    --accent: #5b9dff;
+    --accent-2: #7c5cff;
+    --accent-3: #2dd4bf;
+    --warn: #f5a524;
+    --danger: #f87171;
+    --ok: #34d399;
+    --gen: #60a5fa;
+    --eval: #c084fc;
+    --human: #fbbf24;
+    --sidebar-w: 280px;
+    --radius: 12px;
+    --font: "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    --shadow: 0 12px 40px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    font-size: 15.5px;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, kbd, .mono {
+    font-family: var(--mono);
+    font-size: 0.88em;
+  }
+  code {
+    background: rgba(91,157,255,.1);
+    border: 1px solid rgba(91,157,255,.18);
+    padding: 0.1em 0.4em;
+    border-radius: 6px;
+    color: #c7dcff;
+  }
+  pre {
+    background: #0a1018;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    line-height: 1.5;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+  }
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #d6e4ff;
+  }
+  kbd {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    padding: 0.05em 0.45em;
+    border-radius: 6px;
+    color: var(--text-dim);
+  }
+
+  /* Layout */
+  .shell { display: flex; min-height: 100vh; }
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: var(--sidebar-w);
+    background: linear-gradient(180deg, #0d131b 0%, #0a0f15 100%);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    z-index: 40;
+  }
+  .sidebar-head {
+    padding: 1.1rem 1rem 0.85rem;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .brand {
+    display: flex;
+    gap: .7rem;
+    align-items: center;
+    margin-bottom: .85rem;
+  }
+  .brand-mark {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: grid; place-items: center;
+    font-weight: 800;
+    font-size: 13px;
+    color: white;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 8px 24px rgba(91,157,255,.25);
+  }
+  .brand h1 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .brand p {
+    margin: 0;
+    font-size: 0.72rem;
+    color: var(--text-mute);
+  }
+  .search-wrap { position: relative; }
+  .search-wrap input {
+    width: 100%;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    padding: 0.55rem 0.7rem 0.55rem 2rem;
+    font: inherit;
+    font-size: 0.85rem;
+    outline: none;
+  }
+  .search-wrap input:focus {
+    border-color: rgba(91,157,255,.55);
+    box-shadow: 0 0 0 3px rgba(91,157,255,.12);
+  }
+  .search-wrap::before {
+    content: "⌕";
+    position: absolute;
+    left: .65rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-mute);
+    font-size: .95rem;
+  }
+  .nav {
+    overflow-y: auto;
+    padding: .75rem .55rem 1.5rem;
+    flex: 1;
+  }
+  .nav-group {
+    margin-bottom: .85rem;
+  }
+  .nav-group-title {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text-mute);
+    padding: .35rem .55rem;
+    font-weight: 700;
+  }
+  .nav a {
+    display: block;
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: .38rem .55rem;
+    border-radius: 8px;
+    font-size: 0.84rem;
+    border: 1px solid transparent;
+  }
+  .nav a:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+    text-decoration: none;
+  }
+  .nav a.active {
+    background: rgba(91,157,255,.12);
+    color: #d6e8ff;
+    border-color: rgba(91,157,255,.22);
+  }
+  .nav a.hidden { display: none; }
+
+  .main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    min-width: 0;
+  }
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    backdrop-filter: blur(14px);
+    background: rgba(11,15,20,.78);
+    border-bottom: 1px solid var(--border-soft);
+    padding: .7rem 1.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+  .topbar .crumbs {
+    color: var(--text-mute);
+    font-size: .84rem;
+  }
+  .topbar .crumbs strong { color: var(--text-dim); font-weight: 600; }
+  .pill-row { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .pill {
+    font-size: .72rem;
+    font-weight: 600;
+    padding: .22rem .55rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    background: var(--bg-card);
+  }
+  .pill.accent { border-color: rgba(91,157,255,.4); color: #b9d6ff; background: rgba(91,157,255,.1); }
+  .pill.ok { border-color: rgba(52,211,153,.35); color: #9ff0c8; background: rgba(52,211,153,.08); }
+
+  .content {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 1.5rem 1.75rem 5rem;
+  }
+
+  section.section {
+    margin-bottom: 3.25rem;
+    scroll-margin-top: 76px;
+  }
+  .section > h2 {
+    font-size: 1.65rem;
+    letter-spacing: -0.03em;
+    margin: 0 0 .35rem;
+    padding-top: .25rem;
+  }
+  .section > .lede {
+    color: var(--text-dim);
+    font-size: 1.02rem;
+    margin: 0 0 1.35rem;
+    max-width: 62ch;
+  }
+  h3 {
+    font-size: 1.15rem;
+    margin: 1.75rem 0 .65rem;
+    letter-spacing: -0.02em;
+  }
+  h4 {
+    font-size: .98rem;
+    margin: 1.25rem 0 .5rem;
+    color: #dbe7f7;
+  }
+  p { margin: .55rem 0 0.9rem; color: #d2dceb; }
+  ul, ol { margin: .4rem 0 1rem; padding-left: 1.25rem; color: #d2dceb; }
+  li { margin: .28rem 0; }
+  li::marker { color: var(--text-mute); }
+
+  /* Hero */
+  .hero {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 1.75rem 1.6rem 1.5rem;
+    background:
+      radial-gradient(900px 280px at 10% -20%, rgba(91,157,255,.18), transparent 60%),
+      radial-gradient(700px 260px at 90% 0%, rgba(124,92,255,.16), transparent 55%),
+      linear-gradient(180deg, #121a24 0%, #0e141c 100%);
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+    overflow: hidden;
+  }
+  .hero h2 {
+    font-size: 2rem;
+    letter-spacing: -0.04em;
+    margin: 0 0 .5rem;
+    line-height: 1.15;
+  }
+  .hero p {
+    font-size: 1.05rem;
+    color: var(--text-dim);
+    max-width: 58ch;
+    margin: 0 0 1.1rem;
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: .75rem;
+    margin-top: 1rem;
+  }
+  .hero-stat {
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    padding: .85rem .9rem;
+  }
+  .hero-stat .n {
+    font-size: 1.35rem;
+    font-weight: 750;
+    letter-spacing: -0.03em;
+    color: #fff;
+  }
+  .hero-stat .l {
+    font-size: .78rem;
+    color: var(--text-mute);
+    margin-top: .15rem;
+  }
+
+  /* Cards */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: .85rem;
+    margin: 1rem 0 1.25rem;
+  }
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.05rem;
+    transition: border-color .15s, transform .15s;
+  }
+  .card:hover {
+    border-color: rgba(91,157,255,.35);
+    transform: translateY(-1px);
+  }
+  .card .tag {
+    display: inline-block;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: .45rem;
+  }
+  .card h4 { margin: 0 0 .35rem; font-size: .98rem; }
+  .card p { margin: 0; font-size: .88rem; color: var(--text-dim); }
+
+  /* Callouts */
+  .callout {
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    padding: .95rem 1.05rem;
+    margin: 1rem 0;
+  }
+  .callout.tip { border-color: rgba(45,212,191,.3); background: rgba(45,212,191,.06); }
+  .callout.warn { border-color: rgba(245,165,36,.35); background: rgba(245,165,36,.07); }
+  .callout.danger { border-color: rgba(248,113,113,.35); background: rgba(248,113,113,.06); }
+  .callout.info { border-color: rgba(91,157,255,.35); background: rgba(91,157,255,.07); }
+  .callout .label {
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin-bottom: .3rem;
+    color: var(--text-dim);
+  }
+  .callout.tip .label { color: var(--accent-3); }
+  .callout.warn .label { color: var(--warn); }
+  .callout.danger .label { color: var(--danger); }
+  .callout.info .label { color: var(--accent); }
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* Tables */
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin: 1rem 0 1.25rem;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .88rem;
+    min-width: 560px;
+  }
+  th, td {
+    text-align: left;
+    padding: .65rem .8rem;
+    border-bottom: 1px solid var(--border-soft);
+    vertical-align: top;
+  }
+  th {
+    background: #101821;
+    color: var(--text-dim);
+    font-weight: 650;
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: rgba(255,255,255,.015); }
+
+  /* Diagram shells */
+  .diagram {
+    background: #0a1018;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.15rem;
+    margin: 1rem 0 1.35rem;
+    overflow-x: auto;
+  }
+  .diagram .cap {
+    font-size: .75rem;
+    color: var(--text-mute);
+    margin-top: .85rem;
+    text-align: center;
+  }
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .45rem;
+    justify-content: center;
+  }
+  .flow-node {
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    border-radius: 10px;
+    padding: .55rem .75rem;
+    font-size: .82rem;
+    font-weight: 600;
+    min-width: 88px;
+    text-align: center;
+  }
+  .flow-node.gen { border-color: rgba(96,165,250,.45); color: #b8d7ff; background: rgba(96,165,250,.08); }
+  .flow-node.eval { border-color: rgba(192,132,252,.45); color: #e4c9ff; background: rgba(192,132,252,.08); }
+  .flow-node.human { border-color: rgba(251,191,36,.45); color: #ffe4a3; background: rgba(251,191,36,.08); }
+  .flow-node.ok { border-color: rgba(52,211,153,.4); color: #b8f5d8; background: rgba(52,211,153,.08); }
+  .flow-node.sys { border-color: rgba(45,212,191,.35); color: #a8f0e2; background: rgba(45,212,191,.07); }
+  .flow-arrow {
+    color: var(--text-mute);
+    font-size: 1.1rem;
+    user-select: none;
+  }
+
+  .lane-tree {
+    font-family: var(--mono);
+    font-size: .82rem;
+    line-height: 1.55;
+    color: #c7d7ee;
+    white-space: pre-wrap;
+  }
+
+  .steps {
+    counter-reset: step;
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0;
+  }
+  .steps li {
+    counter-increment: step;
+    position: relative;
+    padding: .85rem 1rem .85rem 3.1rem;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    border-radius: 12px;
+    margin: .55rem 0;
+  }
+  .steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: .85rem;
+    top: .9rem;
+    width: 1.55rem;
+    height: 1.55rem;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    font-size: .78rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: white;
+  }
+  .steps strong { color: #fff; }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  @media (max-width: 860px) {
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    .main { margin-left: 0; }
+    .two-col, .hero-grid { grid-template-columns: 1fr; }
+    .menu-btn { display: inline-flex !important; }
+  }
+  .menu-btn {
+    display: none;
+    align-items: center;
+    gap: .4rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: .4rem .65rem;
+    font: inherit;
+    cursor: pointer;
+  }
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 35;
+  }
+  .overlay.show { display: block; }
+
+  /* Ratchet rail */
+  .ratchet {
+    display: grid;
+    gap: .4rem;
+  }
+  .ratchet-row {
+    display: grid;
+    grid-template-columns: 56px 1fr auto;
+    gap: .65rem;
+    align-items: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: .55rem .75rem;
+  }
+  .ratchet-row .g {
+    font-family: var(--mono);
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .ratchet-row .name { font-weight: 600; font-size: .88rem; }
+  .ratchet-row .meta { font-size: .75rem; color: var(--text-mute); }
+  .badge {
+    font-size: .68rem;
+    font-weight: 700;
+    padding: .18rem .45rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+  .badge.full { color: #c4b5fd; border-color: rgba(192,132,252,.35); }
+  .badge.all { color: #9ff0c8; border-color: rgba(52,211,153,.35); }
+
+  /* SVG diagram helpers */
+  .svg-wrap { width: 100%; min-width: 640px; }
+  svg text { font-family: var(--font); }
+
+  .toc-jump {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .45rem;
+    margin: 1rem 0 0;
+  }
+  .toc-jump a {
+    font-size: .8rem;
+    padding: .35rem .65rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.03);
+    color: var(--text-dim);
+    text-decoration: none;
+  }
+  .toc-jump a:hover {
+    border-color: rgba(91,157,255,.4);
+    color: #d6e8ff;
+    text-decoration: none;
+  }
+
+  footer.page-foot {
+    border-top: 1px solid var(--border-soft);
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    color: var(--text-mute);
+    font-size: .82rem;
+  }
+
+  .axis-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: .75rem;
+  }
+  .axis {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: .9rem 1rem;
+    background: linear-gradient(180deg, #141c27, #10171f);
+  }
+  .axis h4 { margin: 0 0 .35rem; display: flex; align-items: center; gap: .45rem; }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    display: inline-block;
+  }
+  .dot.m { background: var(--accent); }
+  .dot.a { background: var(--accent-2); }
+  .dot.b { background: var(--ok); }
+  .dot.t { background: var(--warn); }
+
+  .zl-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: .5rem;
+    margin: 1rem 0;
+  }
+  .zl-band {
+    border-radius: 12px;
+    padding: .9rem;
+    border: 1px solid var(--border);
+    text-align: center;
+  }
+  .zl-band.l { background: rgba(52,211,153,.08); border-color: rgba(52,211,153,.3); }
+  .zl-band.m { background: rgba(91,157,255,.08); border-color: rgba(91,157,255,.3); }
+  .zl-band.z { background: rgba(248,113,113,.08); border-color: rgba(248,113,113,.3); }
+  .zl-band strong { display: block; font-size: 1.1rem; margin-bottom: .25rem; }
+  .zl-band span { font-size: .8rem; color: var(--text-dim); }
+
+  .matrix {
+    display: grid;
+    grid-template-columns: 120px 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 1rem 0;
+    font-size: .84rem;
+  }
+  .matrix > div { background: var(--bg-card); padding: .7rem .75rem; }
+  .matrix .head { background: #101821; color: var(--text-dim); font-weight: 700; font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
+  .matrix .rowh { background: #101821; font-weight: 650; color: #d7e4f7; }
+
+  /* Print */
+  @media print {
+    .sidebar, .topbar, .overlay, .menu-btn { display: none !important; }
+    .main { margin: 0; }
+    .content { max-width: none; }
+    body { background: white; color: black; }
+    .card, .diagram, .callout, pre { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-head">
+    <div class="brand">
+      <div class="brand-mark">H</div>
+      <div>
+        <h1>Harness Guide</h1>
+        <p>v2.1 · field manual</p>
+      </div>
+    </div>
+    <div class="search-wrap">
+      <input id="nav-search" type="search" placeholder="Filter sections…" autocomplete="off" />
+    </div>
+  </div>
+  <nav class="nav" id="nav">
+    <div class="nav-group">
+      <div class="nav-group-title">Start</div>
+      <a href="#overview">Overview</a>
+      <a href="#mental-model">Mental model</a>
+      <a href="#quickstart">Quick start</a>
+      <a href="#skus">SKUs &amp; install</a>
+      <a href="#pick-lane">Pick your lane</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">Commands</div>
+      <a href="#command-surface">Command surface</a>
+      <a href="#greenfield">Greenfield: /build</a>
+      <a href="#brownfield-route">Brownfield: /feature</a>
+      <a href="#sprint">Sprint evolution</a>
+      <a href="#fast-lanes">Fast lanes</a>
+      <a href="#gate-pr">Gate &amp; PR loop</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">Under the covers</div>
+      <a href="#system-map">System map</a>
+      <a href="#gan">GAN architecture</a>
+      <a href="#auto-loop">/auto loop</a>
+      <a href="#ratchet">Ratchet gates</a>
+      <a href="#contracts">Sprint contracts</a>
+      <a href="#eval-layers">Evaluation layers</a>
+      <a href="#agents">Agent team</a>
+      <a href="#hooks">Hooks &amp; git gates</a>
+      <a href="#pre-commit">Pre-commit registry</a>
+      <a href="#receipt-flows">Receipt-proof disciplines</a>
+      <a href="#session-chain">Session chaining</a>
+      <a href="#control-system">Control system</a>
+      <a href="#deepwiki">DeepWiki &amp; code-map</a>
+      <a href="#token-gov">Token governor</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">Operate well</div>
+      <a href="#zl">Z/L continuum</a>
+      <a href="#trust">Human trust surfaces</a>
+      <a href="#models">Models &amp; cost</a>
+      <a href="#budget">Budget &amp; recovery</a>
+      <a href="#playbooks">Playbooks</a>
+      <a href="#ops-extras">Ops &amp; power-ups</a>
+      <a href="#regression">Regression strategy</a>
+      <a href="#artifacts">Key artifacts</a>
+      <a href="#upgrade">Upgrade scaffold</a>
+      <a href="#symphony">Symphony factory</a>
+      <a href="#contributors">Contributor testing</a>
+      <a href="#anti-patterns">Anti-patterns</a>
+      <a href="#glossary">Glossary</a>
+      <a href="#deep-links">Deep links</a>
+    </div>
+  </nav>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:.75rem;">
+      <button class="menu-btn" onclick="openSidebar()" type="button">☰ Menu</button>
+      <div class="crumbs">Claude Harness Engine · <strong id="crumb">Overview</strong></div>
+    </div>
+    <div class="pill-row">
+      <span class="pill accent">Claude Code plugin</span>
+      <span class="pill ok">GAN + Ratchet</span>
+      <span class="pill">2.1.0</span>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- OVERVIEW -->
+    <header class="hero" id="overview">
+      <h2>Build and change software with a trustworthy agent harness</h2>
+      <p>
+        The Claude Harness Engine is a <strong>Claude Code plugin</strong> that turns a raw coding model into a
+        controlled engineering system: generator/evaluator separation, monotonic quality ratchets,
+        session chaining, brownfield maps, and human-owned merge.
+      </p>
+      <div class="hero-grid">
+        <div class="hero-stat"><div class="n">9</div><div class="l">Specialized agents</div></div>
+        <div class="hero-stat"><div class="n">30+</div><div class="l">Skills &amp; pipeline stages</div></div>
+        <div class="hero-stat"><div class="n">4</div><div class="l">Quality axes governed</div></div>
+      </div>
+      <div class="toc-jump">
+        <a href="#pick-lane">Pick a lane</a>
+        <a href="#system-map">See the map</a>
+        <a href="#gan">How GAN works</a>
+        <a href="#pre-commit">Pre-commit registry</a>
+        <a href="#receipt-flows">Receipt proofs</a>
+        <a href="#playbooks">Usage playbooks</a>
+        <a href="#deep-links">Source docs</a>
+      </div>
+    </header>
+
+    <section class="section" id="mental-model">
+      <h2>Mental model</h2>
+      <p class="lede">Agent = Model + Harness. The model writes code; the harness makes the output trustworthy.</p>
+
+      <div class="diagram">
+        <svg class="svg-wrap" viewBox="0 0 900 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Agent equals Model plus Harness">
+          <defs>
+            <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#5b9dff"/><stop offset="100%" stop-color="#7c5cff"/>
+            </linearGradient>
+            <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#6b7c91"/>
+            </marker>
+          </defs>
+          <rect x="20" y="40" width="200" height="200" rx="16" fill="#151d28" stroke="#243041"/>
+          <text x="120" y="78" text-anchor="middle" fill="#e7eef8" font-size="16" font-weight="700">Model</text>
+          <text x="120" y="108" text-anchor="middle" fill="#9aabbf" font-size="12">Writes code</text>
+          <text x="120" y="140" text-anchor="middle" fill="#6b7c91" font-size="11">Sonnet / Opus / Haiku</text>
+          <text x="120" y="168" text-anchor="middle" fill="#6b7c91" font-size="11">by role &amp; tier</text>
+          <rect x="50" y="190" width="140" height="28" rx="8" fill="rgba(96,165,250,.12)" stroke="rgba(96,165,250,.35)"/>
+          <text x="120" y="209" text-anchor="middle" fill="#b8d7ff" font-size="12">generator volume</text>
+
+          <text x="250" y="145" fill="#9aabbf" font-size="28" font-weight="700">+</text>
+
+          <rect x="290" y="40" width="280" height="200" rx="16" fill="#151d28" stroke="#243041"/>
+          <text x="430" y="78" text-anchor="middle" fill="#e7eef8" font-size="16" font-weight="700">Harness</text>
+          <text x="430" y="105" text-anchor="middle" fill="#9aabbf" font-size="12">Everything around the model</text>
+          <rect x="310" y="120" width="110" height="44" rx="8" fill="rgba(45,212,191,.08)" stroke="rgba(45,212,191,.35)"/>
+          <text x="365" y="140" text-anchor="middle" fill="#a8f0e2" font-size="12" font-weight="650">Guides</text>
+          <text x="365" y="156" text-anchor="middle" fill="#6b7c91" font-size="10">before action</text>
+          <rect x="440" y="120" width="110" height="44" rx="8" fill="rgba(192,132,252,.08)" stroke="rgba(192,132,252,.35)"/>
+          <text x="495" y="140" text-anchor="middle" fill="#e4c9ff" font-size="12" font-weight="650">Sensors</text>
+          <text x="495" y="156" text-anchor="middle" fill="#6b7c91" font-size="10">after action</text>
+          <rect x="310" y="180" width="240" height="40" rx="8" fill="rgba(251,191,36,.08)" stroke="rgba(251,191,36,.35)"/>
+          <text x="430" y="205" text-anchor="middle" fill="#ffe4a3" font-size="12" font-weight="650">Human steering loop</text>
+
+          <text x="600" y="145" fill="#9aabbf" font-size="28" font-weight="700">=</text>
+
+          <rect x="640" y="40" width="240" height="200" rx="16" fill="url(#g1)" opacity="0.15" stroke="#5b9dff"/>
+          <rect x="640" y="40" width="240" height="200" rx="16" fill="none" stroke="#5b9dff"/>
+          <text x="760" y="100" text-anchor="middle" fill="#e7eef8" font-size="16" font-weight="700">Trustworthy agent</text>
+          <text x="760" y="130" text-anchor="middle" fill="#9aabbf" font-size="12">No self-grading</text>
+          <text x="760" y="152" text-anchor="middle" fill="#9aabbf" font-size="12">Monotonic quality</text>
+          <text x="760" y="174" text-anchor="middle" fill="#9aabbf" font-size="12">Resumable sessions</text>
+          <text x="760" y="196" text-anchor="middle" fill="#9aabbf" font-size="12">Human-owned merge</text>
+        </svg>
+        <div class="cap">Guides steer before the agent acts; sensors detect after; humans improve both over time (HARNESS.md).</div>
+      </div>
+
+      <div class="axis-grid">
+        <div class="axis">
+          <h4><span class="dot m"></span> Maintainability</h4>
+          <p style="margin:0;font-size:.88rem;color:var(--text-dim)">Lint, types, length caps, coverage ratchet, modularity review, mutation smoke.</p>
+        </div>
+        <div class="axis">
+          <h4><span class="dot a"></span> Architecture</h4>
+          <p style="margin:0;font-size:.88rem;color:var(--text-dim)">Layer imports, cycles, unstable hubs, API contract drift, topology presets.</p>
+        </div>
+        <div class="axis">
+          <h4><span class="dot b"></span> Behaviour</h4>
+          <p style="margin:0;font-size:.88rem;color:var(--text-dim)">Unit tests, API/Playwright/vision eval, security, ATs, regression suites.</p>
+        </div>
+        <div class="axis">
+          <h4><span class="dot t"></span> Traceability</h4>
+          <p style="margin:0;font-size:.88rem;color:var(--text-dim)">FRD→BRD→spec→test grounding, ownership, canvas sync, verification matrix.</p>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <div class="label">Core law</div>
+        <p>The generator never grades itself. The evaluator never writes production code. Machine gates always stay on — even in full-auto mode. Humans always own merge.</p>
+      </div>
+    </section>
+
+    <section class="section" id="quickstart">
+      <h2>Quick start</h2>
+      <p class="lede">Load a packaged SKU, scaffold the target repo, then pick a work route.</p>
+
+      <ol class="steps">
+        <li>
+          <strong>Build / load a SKU</strong>
+          <pre><code># From harness checkout
+npm run package:skus
+# → dist/skus/harness-core | harness-full | harness-lite
+
+cd ~/my-project
+claude --plugin-dir /path/to/claude_harness_eng_v5/dist/skus/harness-core</code></pre>
+        </li>
+        <li>
+          <strong>Scaffold</strong>
+          <pre><code>/scaffold
+# optional: /scaffold --full | --telemetry | --brownfield (alias of core)</code></pre>
+        </li>
+        <li>
+          <strong>Work</strong>
+          <pre><code># New product
+/build docs/prd.md
+# Existing product
+/feature "add password reset flow"
+# Before merge
+/gate</code></pre>
+        </li>
+      </ol>
+
+      <div class="callout info">
+        <div class="label">Contributors</div>
+        <p>Clone the monorepo and load <code>claude --plugin-dir ~/claude_harness_eng_v5/.claude</code>. UI may show namespaced commands like <code>/claude_harness_eng_v5:scaffold</code>.</p>
+      </div>
+    </section>
+
+    <section class="section" id="skus">
+      <h2>SKUs &amp; install boundaries</h2>
+      <p class="lede">Install boundary (what you load) is separate from sensor tier (how much ceremony commits enforce).</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>SKU</th><th>Load path</th><th>Use when</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>harness-core</strong></td><td><code>dist/skus/harness-core</code></td><td>Default product teams — build/feature/gate + brownfield spine</td></tr>
+            <tr><td><strong>harness-full</strong></td><td><code>dist/skus/harness-full</code></td><td>Optional skills, full plugin surface, extras</td></tr>
+            <tr><td><strong>harness-lite</strong></td><td><code>dist/skus/harness-lite</code></td><td>Mockups, ARB docs, research only — no SDLC/GAN</td></tr>
+            <tr><td><strong>symphony</strong></td><td><code>symphony_clone/</code></td><td>Separate tracker→PR factory product (not part of core install)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Sensor tier (complexity dial)</h3>
+      <p>Set in <code>project-manifest.json#quality.sensor_tier</code>:</p>
+      <div class="cards">
+        <div class="card"><div class="tag">minimal</div><h4>CLI / library</h4><p>Secrets + structural basics; low ceremony.</p></div>
+        <div class="card"><div class="tag">standard</div><h4>Default product</h4><p>Full pre-commit set including AT-first, legacy discipline, mutation.</p></div>
+        <div class="card"><div class="tag">strict</div><h4>Hard architecture</h4><p>Standard + cycle and coupling ratchets at commit.</p></div>
+      </div>
+
+      <h3>Disposable vs shippable</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Artifact</th><th>Lane</th><th>Pipeline?</th></tr></thead>
+          <tbody>
+            <tr><td>UI mockup</td><td><code>frontend-design</code> skill / harness-lite</td><td>No</td></tr>
+            <tr><td>ARB / design narrative</td><td><code>/design --doc-only</code></td><td>No</td></tr>
+            <tr><td>Research report</td><td><code>deep-research</code> / harness-lite</td><td>No</td></tr>
+            <tr><td>Small shippable code</td><td><code>/build --lite</code> or <code>/vibe</code></td><td>Yes (lean)</td></tr>
+            <tr><td>Production feature</td><td><code>/build</code> / <code>/feature</code> / <code>/sprint</code></td><td>Yes (full)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" id="pick-lane">
+      <h2>Pick your lane</h2>
+      <p class="lede">The harness should classify work before it edits. When unsure, describe the request plainly and let routing decide.</p>
+
+      <div class="diagram">
+        <div class="lane-tree">What are you doing?
+│
+├─ Installing harness into a repo ──────────────► /scaffold
+│
+├─ Building something NEW
+│   ├─ Small (CLI, lib, ≤5 stories) ─────────────► /build --lite
+│   ├─ Normal PRD, human gates ─────────────────► /build &lt;prd&gt;
+│   └─ Hands-off PRD→PR ────────────────────────► /build &lt;prd&gt; --auto
+│
+├─ Existing product, next full PRD ─────────────► /sprint &lt;prd-file&gt;
+│
+└─ Existing codebase change
+    ├─ Discovery only ──────────────────────────► /brownfield [--seams]
+    ├─ Normal request ──────────────────────────► /feature "&lt;request&gt;"
+    │     (routes to /vibe | /change | /refactor | epic path)
+    ├─ Tiny safe edit (≤3 files, &lt;150 LOC) ─────► /vibe
+    ├─ Behavior change / bug ───────────────────► /change [--issue N]
+    └─ Structure only ──────────────────────────► /refactor
+
+Always before merge ────────────────────────────► /gate</div>
+        <div class="cap">Public surface is intentionally small: /build · /feature · /sprint · /gate. Other commands are still available; the harness usually routes to them.</div>
+      </div>
+
+      <div class="callout warn">
+        <div class="label">Mis-routing is the failure mode</div>
+        <p>Using <code>/vibe</code> for auth, migrations, or multi-story work burns time and skips the gates that would have caught the risk. Score the task on the <a href="#zl">Z/L continuum</a> when the lane is unclear.</p>
+      </div>
+    </section>
+
+    <!-- COMMANDS -->
+    <section class="section" id="command-surface">
+      <h2>Command surface</h2>
+      <p class="lede">Primary product commands vs power-user / internal stages.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Command</th><th>When</th><th>What happens</th></tr></thead>
+          <tbody>
+            <tr><td><code>/scaffold</code></td><td>New target setup</td><td>Installs lean core harness, hooks, state seeds, manifest, project guide</td></tr>
+            <tr><td><code>/build</code></td><td>Greenfield product</td><td>BRD → stories → design/test → state → <code>/auto</code>, with human gates</td></tr>
+            <tr><td><code>/build --lite</code></td><td>Small greenfield</td><td>Compressed plan, one group, then <code>/auto</code></td></tr>
+            <tr><td><code>/build --auto</code></td><td>Hands-off PRD→PR</td><td>Zero human gates; machine gates still block red builds</td></tr>
+            <tr><td><code>/sprint</code></td><td>PRD N on existing system</td><td>Requirement delta + design amendment (never full regen) → <code>/auto</code></td></tr>
+            <tr><td><code>/feature</code></td><td>Existing-code request</td><td>Refresh DeepWiki, story/tracker, route lane, gate, open PR</td></tr>
+            <tr><td><code>/brownfield</code></td><td>Discovery only</td><td>Graph/wiki + architecture/test/risk/change strategy; no code</td></tr>
+            <tr><td><code>/code-map</code></td><td>Need deterministic map</td><td><code>code-graph.json</code>, <code>symbol-map.md</code>, <code>wiki/WIKI.md</code></td></tr>
+            <tr><td><code>/vibe</code></td><td>Tiny safe edit</td><td>Micro-contract + targeted verification</td></tr>
+            <tr><td><code>/change</code></td><td>Behavior change</td><td>Test-first change route; <code>--issue N</code> for GitHub bugs</td></tr>
+            <tr><td><code>/refactor</code></td><td>No behavior change</td><td>Coverage + refactor-purity gates</td></tr>
+            <tr><td><code>/gate</code></td><td>Pre-merge</td><td>Adaptive quality gate + quality-card + walkthrough + CODEBASE.md</td></tr>
+            <tr><td><code>/pr-respond</code></td><td>Red CI / review comments</td><td>Bounded fix loop; never merges</td></tr>
+            <tr><td><code>/status</code></td><td>Progress snapshot</td><td>Pipeline state, token savings, budget</td></tr>
+            <tr><td><code>/agent-readiness</code></td><td>Maturity dashboard</td><td>8-pillar synthesis over existing sensors</td></tr>
+            <tr><td><code>/context</code></td><td>Before broad reads</td><td>Bounded, cited context pack from code-map/DeepWiki</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Harness vs native Claude Code</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Need</th><th>Native</th><th>Harness</th></tr></thead>
+          <tbody>
+            <tr><td>Review a GitHub PR</td><td><code>/review</code></td><td>—</td></tr>
+            <tr><td>Blocking pre-merge checks</td><td>—</td><td><code>/gate</code></td></tr>
+            <tr><td>Scored app verification</td><td><code>/run</code>, <code>/verify</code></td><td><code>/evaluate</code></td></tr>
+            <tr><td>Mechanical cleanup</td><td><code>/simplify</code></td><td><code>/refactor</code> wraps with purity gates</td></tr>
+            <tr><td>Bootstrap</td><td><code>/init</code> (CLAUDE.md only)</td><td><code>/scaffold</code> full harness</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>Rule:</strong> native commands own atomic actions; the harness owns orchestration, ratcheting, and writer/grader separation.</p>
+    </section>
+
+    <section class="section" id="greenfield">
+      <h2>Greenfield: /build pipeline</h2>
+      <p class="lede">End-to-end SDLC with optional human gates on planning phases.</p>
+
+      <div class="diagram">
+        <div class="flow">
+          <div class="flow-node human">PRD / idea</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node">/brd</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node">/spec</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node">/design ∥ /test</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node sys">state init</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node gen">/auto</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node">/gate</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node human">Human merge</div>
+        </div>
+        <div class="cap">Phases 1–3 can pause for human approval (gated mode). --auto skips human gates but not machine gates.</div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Approval mode</th><th>Command</th><th>Human gates</th></tr></thead>
+          <tbody>
+            <tr><td>Gated</td><td><code>/build &lt;prd&gt;</code></td><td>Approve BRD, stories, design/test plan</td></tr>
+            <tr><td>Semi-auto</td><td><code>/build &lt;prd&gt; --autonomous</code></td><td>One plan approval gate</td></tr>
+            <tr><td>Full-auto</td><td><code>/build &lt;prd&gt; --auto</code></td><td>Zero human gates</td></tr>
+            <tr><td>Lite</td><td><code>/build --lite</code></td><td>Short interview / compact plan (≤5 stories, one group)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout danger">
+        <div class="label">Iron law — --auto never stops after planning</div>
+        <p>Completing BRD/stories/design is only Phases 1–3. <code>--auto</code> must continue into state init and <code>/auto</code> so production code and tests exist. Ending with only <code>specs/</code> is a failed run unless <code>--plan-only</code>.</p>
+      </div>
+    </section>
+
+    <section class="section" id="brownfield-route">
+      <h2>Brownfield: /feature route</h2>
+      <p class="lede">Existing-code work from intent to a reviewed PR, with living maps and lane routing.</p>
+
+      <div class="diagram">
+        <svg class="svg-wrap" viewBox="0 0 900 320" xmlns="http://www.w3.org/2000/svg" aria-label="Feature route flow">
+          <rect x="20" y="20" width="860" height="60" rx="12" fill="#151d28" stroke="#243041"/>
+          <text x="450" y="55" text-anchor="middle" fill="#e7eef8" font-size="14" font-weight="700">/feature "&lt;request&gt;"</text>
+
+          <rect x="40" y="110" width="150" height="70" rx="10" fill="rgba(45,212,191,.08)" stroke="rgba(45,212,191,.4)"/>
+          <text x="115" y="140" text-anchor="middle" fill="#a8f0e2" font-size="12" font-weight="650">1. Refresh maps</text>
+          <text x="115" y="160" text-anchor="middle" fill="#6b7c91" font-size="10">DeepWiki + code-graph</text>
+
+          <rect x="220" y="110" width="150" height="70" rx="10" fill="rgba(91,157,255,.08)" stroke="rgba(91,157,255,.4)"/>
+          <text x="295" y="140" text-anchor="middle" fill="#b8d7ff" font-size="12" font-weight="650">2. Story / tracker</text>
+          <text x="295" y="160" text-anchor="middle" fill="#6b7c91" font-size="10">Linear/Jira if configured</text>
+
+          <rect x="400" y="110" width="150" height="70" rx="10" fill="rgba(192,132,252,.08)" stroke="rgba(192,132,252,.4)"/>
+          <text x="475" y="140" text-anchor="middle" fill="#e4c9ff" font-size="12" font-weight="650">3. Route lane</text>
+          <text x="475" y="160" text-anchor="middle" fill="#6b7c91" font-size="10">vibe / change / refactor / epic</text>
+
+          <rect x="580" y="110" width="140" height="70" rx="10" fill="rgba(52,211,153,.08)" stroke="rgba(52,211,153,.4)"/>
+          <text x="650" y="140" text-anchor="middle" fill="#b8f5d8" font-size="12" font-weight="650">4. /gate</text>
+          <text x="650" y="160" text-anchor="middle" fill="#6b7c91" font-size="10">quality + security</text>
+
+          <rect x="740" y="110" width="120" height="70" rx="10" fill="rgba(251,191,36,.08)" stroke="rgba(251,191,36,.4)"/>
+          <text x="800" y="140" text-anchor="middle" fill="#ffe4a3" font-size="12" font-weight="650">5. PR</text>
+          <text x="800" y="160" text-anchor="middle" fill="#6b7c91" font-size="10">Human Review</text>
+
+          <path d="M190 145 H220 M370 145 H400 M550 145 H580 M720 145 H740" stroke="#6b7c91" stroke-width="1.5" marker-end="url(#arr)"/>
+
+          <rect x="40" y="220" width="200" height="70" rx="10" fill="#111821" stroke="#243041"/>
+          <text x="140" y="250" text-anchor="middle" fill="#9aabbf" font-size="11">Context-first iron law</text>
+          <text x="140" y="270" text-anchor="middle" fill="#6b7c91" font-size="10">context-pack before broad reads</text>
+
+          <rect x="270" y="220" width="280" height="70" rx="10" fill="#111821" stroke="#243041"/>
+          <text x="410" y="250" text-anchor="middle" fill="#9aabbf" font-size="11">Legacy discipline</text>
+          <text x="410" y="270" text-anchor="middle" fill="#6b7c91" font-size="10">coverage check → pin or sprout → edit</text>
+
+          <rect x="580" y="220" width="280" height="70" rx="10" fill="#111821" stroke="#243041"/>
+          <text x="720" y="250" text-anchor="middle" fill="#9aabbf" font-size="11">Impact-scoped regression</text>
+          <text x="720" y="270" text-anchor="middle" fill="#6b7c91" font-size="10">fast local TIA every iteration</text>
+        </svg>
+        <div class="cap">/feature is the normal existing-code entry. Use /brownfield alone only for discovery without implementation.</div>
+      </div>
+
+      <ul>
+        <li><code>/brownfield --seams "&lt;goal&gt;"</code> — rank safest cut-points before a risky change</li>
+        <li><code>/brownfield --full</code> — heavier inventory + modularity reviewer</li>
+        <li>Architecture claims should cite <code>specs/brownfield/code-graph.json</code></li>
+      </ul>
+    </section>
+
+    <section class="section" id="sprint">
+      <h2>Sprint evolution: /sprint</h2>
+      <p class="lede">PRD-per-sprint evolution of an existing harness-built (or brownfield) system — without regenerating the living design from scratch.</p>
+      <div class="flow" style="justify-content:flex-start;margin:1rem 0;">
+        <div class="flow-node">New PRD</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node sys">Ground vs prior spine</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node human">Approve delta</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node">Design amendment</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node human">Approve amend</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node gen">/auto</div>
+      </div>
+      <p>Companion to <code>/build</code> (sprint 1) and <code>/feature</code> (single-story). Amendment approval is never skipped even in semi-auto mode.</p>
+    </section>
+
+    <section class="section" id="fast-lanes">
+      <h2>Fast lanes: /vibe · /change · /refactor</h2>
+      <div class="cards">
+        <div class="card">
+          <div class="tag">/vibe</div>
+          <h4>Controlled vibe</h4>
+          <p>Micro-contract, ≤3 files, &lt;150 LOC, no auth/API/migration. Escalates out if scope grows.</p>
+        </div>
+        <div class="card">
+          <div class="tag">/change</div>
+          <h4>Behavior change</h4>
+          <p>Story-driven, AT-first / TDD, local regression, full verification. <code>--issue N</code> for GitHub bugs.</p>
+        </div>
+        <div class="card">
+          <div class="tag">/refactor</div>
+          <h4>Structure only</h4>
+          <p>Behavior-preserving. Refactor commits stay refactor-free of behavior; purity gate enforces it.</p>
+        </div>
+      </div>
+
+      <h3>Legacy preservation disciplines (auto-applied)</h3>
+      <ul>
+        <li><strong>checking-coverage-before-change</strong> — know which tests cover a symbol before editing</li>
+        <li><strong>pinning-down-behavior</strong> — characterization tests at the nearest seam for UNCOVERED symbols</li>
+        <li><strong>sprouting-instead-of-editing</strong> — add new tested unit when god-files have no clean boundary</li>
+        <li><strong>keeping-refactors-pure</strong> — separate structure from behavior commits</li>
+        <li><strong>checking-migration-safety</strong> — expand/contract + reversibility for schema changes</li>
+        <li><strong>writing-acceptance-tests-first</strong> — business-readable ATs against a Ports-and-Adapters seam</li>
+      </ul>
+    </section>
+
+    <section class="section" id="gate-pr">
+      <h2>Gate &amp; PR loop</h2>
+      <p class="lede"><code>/gate</code> is the adaptive pre-merge quality gate (renamed from harness <code>/review</code> to avoid clashing with native PR review).</p>
+      <ul>
+        <li>Deterministic checks (lint/types/coverage/architecture/regression…)</li>
+        <li>Evaluator (running app vs contract)</li>
+        <li>Fresh-context diff review (<code>code-reviewer</code>)</li>
+        <li>Security review when the diff crosses security/data/API boundaries — 3-instance majority vote</li>
+        <li>Always ends with <strong>quality-card</strong> + logical <strong>walkthrough</strong> + <code>docs/CODEBASE.md</code> refresh</li>
+      </ul>
+      <p><code>/pr-respond &lt;pr#&gt;</code> polls CI + review comments, classifies, fixes, pushes, replies with evidence — bounded and budget-metered, <strong>never merges</strong>.</p>
+    </section>
+
+    <!-- UNDER THE COVERS -->
+    <section class="section" id="system-map">
+      <h2>System map</h2>
+      <p class="lede">One scaffold, two runtimes, one work contract.</p>
+
+      <div class="diagram">
+        <svg class="svg-wrap" viewBox="0 0 920 520" xmlns="http://www.w3.org/2000/svg" aria-label="End-to-end system map">
+          <!-- Layer 0 -->
+          <rect x="20" y="15" width="880" height="90" rx="14" fill="#151d28" stroke="#243041"/>
+          <text x="40" y="42" fill="#5b9dff" font-size="11" font-weight="700" letter-spacing="1">0 · AUTHORING</text>
+          <text x="40" y="68" fill="#e7eef8" font-size="13">/scaffold → project-manifest · CLAUDE.md · agents · skills · hooks · state seeds</text>
+          <text x="40" y="88" fill="#6b7c91" font-size="11">Optional: framework packs · tracker config · telemetry</text>
+
+          <!-- Layer 1 -->
+          <rect x="20" y="125" width="880" height="90" rx="14" fill="#151d28" stroke="#243041"/>
+          <text x="40" y="152" fill="#7c5cff" font-size="11" font-weight="700" letter-spacing="1">1 · PLANNING</text>
+          <text x="40" y="178" fill="#e7eef8" font-size="13">Greenfield: /brd → /spec → /design ∥ /test    ·    Brownfield: /brownfield → maps    ·    Fix: /vibe|/change</text>
+          <text x="40" y="198" fill="#6b7c91" font-size="11">Outputs: dependency-graph · component-map · test_artefacts · features.json</text>
+
+          <!-- Layer 2 dual -->
+          <rect x="20" y="235" width="420" height="120" rx="14" fill="rgba(91,157,255,.07)" stroke="rgba(91,157,255,.35)"/>
+          <text x="40" y="262" fill="#5b9dff" font-size="11" font-weight="700" letter-spacing="1">2a · LOCAL RUNTIME</text>
+          <text x="40" y="288" fill="#d2dceb" font-size="12">Human in Claude Code</text>
+          <text x="40" y="310" fill="#9aabbf" font-size="12">/auto --group … or next wave</text>
+          <text x="40" y="332" fill="#6b7c91" font-size="11">Fast loop · full chat feedback</text>
+
+          <rect x="480" y="235" width="420" height="120" rx="14" fill="rgba(192,132,252,.07)" stroke="rgba(192,132,252,.35)"/>
+          <text x="500" y="262" fill="#c084fc" font-size="11" font-weight="700" letter-spacing="1">2b · AGENT FACTORY</text>
+          <text x="500" y="288" fill="#d2dceb" font-size="12">symphony_clone + tracker</text>
+          <text x="500" y="310" fill="#9aabbf" font-size="12">Poll Ready → clone → claude -p /auto</text>
+          <text x="500" y="332" fill="#6b7c91" font-size="11">PR + proof · Human Review state</text>
+
+          <!-- Layer 3 -->
+          <rect x="20" y="375" width="880" height="60" rx="14" fill="#151d28" stroke="#243041"/>
+          <text x="40" y="400" fill="#2dd4bf" font-size="11" font-weight="700" letter-spacing="1">3 · EXECUTION (identical work contract)</text>
+          <text x="40" y="420" fill="#9aabbf" font-size="12">Recover → negotiate contract → agent team → 8 ratchet gates → self-heal → commit</text>
+
+          <!-- Layer 4 -->
+          <rect x="20" y="455" width="880" height="50" rx="14" fill="rgba(251,191,36,.07)" stroke="rgba(251,191,36,.35)"/>
+          <text x="40" y="485" fill="#fbbf24" font-size="11" font-weight="700" letter-spacing="1">4 · DELIVERY — humans own merge (optional AUTO_MERGE opt-in only)</text>
+        </svg>
+        <div class="cap">Neither runtime changes how /auto runs inside the workspace — only who picks the next group and where proof appears.</div>
+      </div>
+    </section>
+
+    <section class="section" id="gan">
+      <h2>GAN architecture</h2>
+      <p class="lede">Structural separation eliminates self-evaluation bias — the dominant failure mode of autonomous coding.</p>
+
+      <div class="diagram">
+        <svg class="svg-wrap" viewBox="0 0 900 380" xmlns="http://www.w3.org/2000/svg" aria-label="Generator evaluator GAN loop">
+          <rect x="40" y="40" width="280" height="300" rx="16" fill="rgba(96,165,250,.08)" stroke="rgba(96,165,250,.4)"/>
+          <text x="180" y="75" text-anchor="middle" fill="#60a5fa" font-size="16" font-weight="700">Generator</text>
+          <text x="180" y="98" text-anchor="middle" fill="#6b7c91" font-size="11">Sonnet · writes · cannot evaluate</text>
+          <text x="60" y="140" fill="#d2dceb" font-size="12">• Propose sprint contract</text>
+          <text x="60" y="165" fill="#d2dceb" font-size="12">• TDD: red → green → refactor</text>
+          <text x="60" y="190" fill="#d2dceb" font-size="12">• Spawn agent team (≤5 //)</text>
+          <text x="60" y="215" fill="#d2dceb" font-size="12">• Self-heal from failure JSON</text>
+          <text x="60" y="240" fill="#d2dceb" font-size="12">• Never grades own work</text>
+
+          <rect x="580" y="40" width="280" height="300" rx="16" fill="rgba(192,132,252,.08)" stroke="rgba(192,132,252,.4)"/>
+          <text x="720" y="75" text-anchor="middle" fill="#c084fc" font-size="16" font-weight="700">Evaluator</text>
+          <text x="720" y="98" text-anchor="middle" fill="#6b7c91" font-size="11">Opus · judges · cannot write code</text>
+          <text x="600" y="140" fill="#d2dceb" font-size="12">• Finalize sprint contract</text>
+          <text x="600" y="165" fill="#d2dceb" font-size="12">• Start app (docker/local/stub)</text>
+          <text x="600" y="190" fill="#d2dceb" font-size="12">• Layer 1: API checks</text>
+          <text x="600" y="215" fill="#d2dceb" font-size="12">• Layer 2: Playwright flows</text>
+          <text x="600" y="240" fill="#d2dceb" font-size="12">• Layer 3: Vision (design-critic)</text>
+          <text x="600" y="265" fill="#d2dceb" font-size="12">• Security gate (critical/high)</text>
+          <text x="600" y="290" fill="#d2dceb" font-size="12">• Binary VERDICT + failure JSON</text>
+
+          <!-- arrows -->
+          <path d="M320 130 H560" stroke="#9aabbf" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="440" y="122" text-anchor="middle" fill="#6b7c91" font-size="10">1–2 negotiate</text>
+          <path d="M320 200 H560" stroke="#9aabbf" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="440" y="192" text-anchor="middle" fill="#6b7c91" font-size="10">3 implement</text>
+          <path d="M560 270 H320" stroke="#34d399" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="440" y="290" text-anchor="middle" fill="#6b7c91" font-size="10">9 PASS / FAIL</text>
+        </svg>
+        <div class="cap">Biases removed by structure: confirmation bias, rationalization, scope creep. Max 3 self-heal attempts, then BLOCKED + learn.</div>
+      </div>
+
+      <h3>Why this exists</h3>
+      <div class="cards">
+        <div class="card"><div class="tag">Failure 1</div><h4>Self-evaluation bias</h4><p>Same agent writes and grades → rationalizes failures and skips edge cases.</p></div>
+        <div class="card"><div class="tag">Failure 2</div><h4>Quality regression</h4><p>Without ratchets, coverage drops and architecture drifts across iterations.</p></div>
+        <div class="card"><div class="tag">Failure 3</div><h4>Context exhaustion</h4><p>Projects exceed one window; without recovery, work restarts from scratch.</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="auto-loop">
+      <h2>/auto loop — under the covers</h2>
+      <p class="lede">The autonomous build loop: recover → negotiate → execute → ratchet → learn → chain.</p>
+
+      <div class="diagram">
+        <svg class="svg-wrap" viewBox="0 0 900 240" xmlns="http://www.w3.org/2000/svg" aria-label="Auto iteration cycle">
+          <defs>
+            <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#5b9dff"/><stop offset="50%" stop-color="#7c5cff"/><stop offset="100%" stop-color="#2dd4bf"/>
+            </linearGradient>
+          </defs>
+          <!-- cycle nodes in a row with loop back -->
+          <g font-size="11" font-weight="650">
+            <rect x="30" y="70" width="110" height="56" rx="12" fill="#151d28" stroke="#5b9dff"/>
+            <text x="85" y="95" text-anchor="middle" fill="#b8d7ff">1 Recover</text>
+            <text x="85" y="112" text-anchor="middle" fill="#6b7c91" font-size="9">state + rules</text>
+
+            <rect x="170" y="70" width="110" height="56" rx="12" fill="#151d28" stroke="#7c5cff"/>
+            <text x="225" y="95" text-anchor="middle" fill="#e4c9ff">2 Negotiate</text>
+            <text x="225" y="112" text-anchor="middle" fill="#6b7c91" font-size="9">sprint contract</text>
+
+            <rect x="310" y="70" width="110" height="56" rx="12" fill="#151d28" stroke="#60a5fa"/>
+            <text x="365" y="95" text-anchor="middle" fill="#b8d7ff">3 Team</text>
+            <text x="365" y="112" text-anchor="middle" fill="#6b7c91" font-size="9">phased DAG</text>
+
+            <rect x="450" y="70" width="110" height="56" rx="12" fill="#151d28" stroke="#2dd4bf"/>
+            <text x="505" y="95" text-anchor="middle" fill="#a8f0e2">4 Ratchet</text>
+            <text x="505" y="112" text-anchor="middle" fill="#6b7c91" font-size="9">8 gates</text>
+
+            <rect x="590" y="70" width="110" height="56" rx="12" fill="#151d28" stroke="#fbbf24"/>
+            <text x="645" y="95" text-anchor="middle" fill="#ffe4a3">5 Pass/Fail</text>
+            <text x="645" y="112" text-anchor="middle" fill="#6b7c91" font-size="9">heal ≤3</text>
+
+            <rect x="730" y="70" width="130" height="56" rx="12" fill="#151d28" stroke="#34d399"/>
+            <text x="795" y="95" text-anchor="middle" fill="#b8f5d8">6 Commit</text>
+            <text x="795" y="112" text-anchor="middle" fill="#6b7c91" font-size="9">progress log</text>
+          </g>
+          <path d="M140 98 H170 M280 98 H310 M420 98 H450 M560 98 H590 M700 98 H730" stroke="#6b7c91" stroke-width="1.5"/>
+          <path d="M795 126 V175 H85 V126" fill="none" stroke="url(#ring)" stroke-width="2" stroke-dasharray="4 3"/>
+          <text x="450" y="200" text-anchor="middle" fill="#9aabbf" font-size="12">Next unblocked group · until features.json all pass or budget/stop</text>
+        </svg>
+        <div class="cap">Recovery ~700–1000 tokens/iteration reads: program.md · learned-rules.md · claude-progress.txt · features.json · dependency-graph.md</div>
+      </div>
+
+      <div class="two-col">
+        <div>
+          <h4>Stopping criteria</h4>
+          <ul>
+            <li>All features pass</li>
+            <li>50 total iterations hard stop</li>
+            <li>3 consecutive failed self-heals → BLOCKED, learn, move on</li>
+            <li>Budget caps (wall-clock / spawns / est. cost)</li>
+          </ul>
+        </div>
+        <div>
+          <h4>State files that matter</h4>
+          <ul>
+            <li><code>claude-progress.txt</code> — append-only resume log</li>
+            <li><code>features.json</code> — pass/fail registry</li>
+            <li><code>learned-rules.md</code> — monotonic institutional memory</li>
+            <li><code>.claude/program.md</code> — human steering input</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="ratchet">
+      <h2>Karpathy ratchet gates</h2>
+      <p class="lede">Every metric can only move forward. Once coverage is 85%, it never drops below 85%. Learned rules are never deleted.</p>
+
+      <div class="ratchet">
+        <div class="ratchet-row"><div class="g">G1</div><div><div class="name">Unit tests pass</div><div class="meta">pytest / vitest exit 0</div></div><span class="badge all">all modes</span></div>
+        <div class="ratchet-row"><div class="g">G2</div><div><div class="name">Lint + types clean</div><div class="meta">ruff / mypy / eslint / tsc</div></div><span class="badge all">all modes</span></div>
+        <div class="ratchet-row"><div class="g">G3</div><div><div class="name">Coverage ≥ baseline</div><div class="meta">floor 80%, monotonic ratchet</div></div><span class="badge all">all modes</span></div>
+        <div class="ratchet-row"><div class="g">G4</div><div><div class="name">Architecture alignment</div><div class="meta">layers · cycles · coupling hubs</div></div><span class="badge all">full/lean</span></div>
+        <div class="ratchet-row"><div class="g">G5</div><div><div class="name">Evaluator verdict</div><div class="meta">API + Playwright vs running app</div></div><span class="badge all">full/lean</span></div>
+        <div class="ratchet-row"><div class="g">G6</div><div><div class="name">Design critic</div><div class="meta">DQ · Originality · Craft · Functionality</div></div><span class="badge full">full only</span></div>
+        <div class="ratchet-row"><div class="g">G7</div><div><div class="name">Security gate</div><div class="meta">BLOCK on critical/high</div></div><span class="badge all">full/lean</span></div>
+        <div class="ratchet-row"><div class="g">G8</div><div><div class="name">Fresh-context review</div><div class="meta">code-reviewer structure + correctness</div></div><span class="badge all">full/lean</span></div>
+      </div>
+
+      <h3>Layering (one-way imports)</h3>
+      <div class="diagram">
+        <div class="flow">
+          <div class="flow-node">Types</div><div class="flow-arrow">→</div>
+          <div class="flow-node">Config</div><div class="flow-arrow">→</div>
+          <div class="flow-node">Repository</div><div class="flow-arrow">→</div>
+          <div class="flow-node">Service</div><div class="flow-arrow">→</div>
+          <div class="flow-node">API</div><div class="flow-arrow">→</div>
+          <div class="flow-node">UI</div>
+        </div>
+        <div class="cap">Upward imports blocked on every save (verify-on-save) and again at pre-commit.</div>
+      </div>
+
+      <h3>Execution modes</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Mode</th><th>Design critic</th><th>When</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Full</strong></td><td>Yes</td><td>Production apps, complex UI</td></tr>
+            <tr><td><strong>Lean</strong></td><td>Skipped</td><td>Backend-heavy / internal tools</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Both still run evaluator + security. For tiny work use <code>/build --lite</code> or <code>/vibe</code> — not a weaker verification mode that skips the GAN.</p>
+    </section>
+
+    <section class="section" id="contracts">
+      <h2>Sprint contracts</h2>
+      <p class="lede">Machine-readable definition of “done,” negotiated in exactly two calls: generator proposes → evaluator finalizes. Then immutable.</p>
+      <pre><code>{
+  "group": "C",
+  "stories": ["E3-S1", "E3-S2"],
+  "contract": {
+    "api_checks": [{ "method": "POST", "path": "/documents/upload", "expected_status": 201 }],
+    "playwright_checks": [{ "url": "/upload", "steps": [/* navigate, fill, click, assert */] }],
+    "design_checks": { "visual_hierarchy": { "min_score": 7 } },
+    "performance_checks": [{ "endpoint": "/documents/upload", "max_response_time_ms": 2000 }]
+  }
+}</code></pre>
+      <div class="callout tip">
+        <div class="label">Integration tests must round-trip real artifacts</div>
+        <p>Never hand-build fixtures that skip the real validator. A fixture with the wrong shape keeps tests green while the feature is inert. Use the real contract schema + <code>validate-contract</code>.</p>
+      </div>
+    </section>
+
+    <section class="section" id="eval-layers">
+      <h2>Three-layer evaluation (+ security)</h2>
+      <p class="lede">The evaluator never reads source code. It only runs the application and checks observable behavior.</p>
+
+      <div class="diagram">
+        <svg class="svg-wrap" viewBox="0 0 900 220" xmlns="http://www.w3.org/2000/svg" aria-label="Evaluation layers">
+          <rect x="30" y="40" width="190" height="140" rx="14" fill="rgba(91,157,255,.1)" stroke="rgba(91,157,255,.4)"/>
+          <text x="125" y="80" text-anchor="middle" fill="#60a5fa" font-size="14" font-weight="700">Layer 1 · API</text>
+          <text x="125" y="110" text-anchor="middle" fill="#9aabbf" font-size="11">curl + schema</text>
+          <text x="125" y="132" text-anchor="middle" fill="#6b7c91" font-size="10">backend logic</text>
+          <text x="125" y="150" text-anchor="middle" fill="#6b7c91" font-size="10">error handling</text>
+
+          <rect x="250" y="40" width="190" height="140" rx="14" fill="rgba(45,212,191,.1)" stroke="rgba(45,212,191,.4)"/>
+          <text x="345" y="80" text-anchor="middle" fill="#2dd4bf" font-size="14" font-weight="700">Layer 2 · UI</text>
+          <text x="345" y="110" text-anchor="middle" fill="#9aabbf" font-size="11">Playwright MCP</text>
+          <text x="345" y="132" text-anchor="middle" fill="#6b7c91" font-size="10">forms · flows</text>
+          <text x="345" y="150" text-anchor="middle" fill="#6b7c91" font-size="10">semantic selectors</text>
+
+          <rect x="470" y="40" width="190" height="140" rx="14" fill="rgba(192,132,252,.1)" stroke="rgba(192,132,252,.4)"/>
+          <text x="565" y="80" text-anchor="middle" fill="#c084fc" font-size="14" font-weight="700">Layer 3 · Vision</text>
+          <text x="565" y="110" text-anchor="middle" fill="#9aabbf" font-size="11">design-critic</text>
+          <text x="565" y="132" text-anchor="middle" fill="#6b7c91" font-size="10">DQ · O · C · F</text>
+          <text x="565" y="150" text-anchor="middle" fill="#6b7c91" font-size="10">avg ≥7, each ≥5</text>
+
+          <rect x="690" y="40" width="180" height="140" rx="14" fill="rgba(248,113,113,.1)" stroke="rgba(248,113,113,.4)"/>
+          <text x="780" y="80" text-anchor="middle" fill="#f87171" font-size="14" font-weight="700">Security</text>
+          <text x="780" y="110" text-anchor="middle" fill="#9aabbf" font-size="11">OWASP + refute</text>
+          <text x="780" y="132" text-anchor="middle" fill="#6b7c91" font-size="10">crit/high = FAIL</text>
+          <text x="780" y="150" text-anchor="middle" fill="#6b7c91" font-size="10">3-vote at /gate</text>
+        </svg>
+        <div class="cap">Verification modes: docker (default) · local · stub (mock from api-contracts schema). On fail, Docker logs / stderr feed the generator exact stacks.</div>
+      </div>
+
+      <p>Design-critic score: <code>(DQ×1.5 + O×1.5 + C×0.75 + F×0.75) / 4.5</code>. Plateau across 3 iterations forces a pivot.</p>
+      <p>AT-first layer sits <em>below</em> E2E: fast business-readable acceptance tests through a Ports-and-Adapters seam with test-double adapters — primary per-story loop; Playwright remains the full-stack confirmer.</p>
+    </section>
+
+    <section class="section" id="agents">
+      <h2>Agent team</h2>
+      <p class="lede">Nine specialized roles with tool allowlists and model pins. Generation is high volume (Sonnet); judgment is low volume (Opus).</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Agent</th><th>Default model*</th><th>Responsibility</th></tr></thead>
+          <tbody>
+            <tr><td><code>planner</code></td><td>Opus 4.8</td><td>BRD, stories, dep graph, architecture, schemas</td></tr>
+            <tr><td><code>generator</code></td><td>Sonnet 5</td><td>Code + tests, agent teams, TDD, contract negotiation</td></tr>
+            <tr><td><code>evaluator</code></td><td>Opus 4.8</td><td>Runtime verification + artifact rubric scoring</td></tr>
+            <tr><td><code>design-critic</code></td><td>Opus 4.8</td><td>Screenshot scoring (DQ/O/C/F)</td></tr>
+            <tr><td><code>security-reviewer</code></td><td>Opus 4.8</td><td>OWASP + adversarial find-then-refute</td></tr>
+            <tr><td><code>code-reviewer</code></td><td>Opus 4.8</td><td>Fresh-context structure + correctness on the diff</td></tr>
+            <tr><td><code>modularity-reviewer</code></td><td>Opus 4.8</td><td>Coupling/hubs grounded in modularity-pack</td></tr>
+            <tr><td><code>advisor</code></td><td>Opus 4.8</td><td>Mid-run structural re-rank / unblock / pivot (read-only)</td></tr>
+            <tr><td><code>codebase-explorer</code></td><td>Sonnet 5†</td><td>Read-only discovery, LSP navigation</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:.85rem;color:var(--text-mute)">*balanced monorepo defaults. †Haiku on <code>cost</code>/<code>enterprise</code> tier. See <a href="#models">Models &amp; cost</a>.</p>
+
+      <h3>Phased agent teams</h3>
+      <div class="diagram">
+        <div class="flow">
+          <div class="flow-node gen">Phase 1 · parallel</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node gen">Phase 2 · consumers</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node sys">Phase 3 · integrate</div>
+        </div>
+        <div class="cap">Shared files get a designated integrator. Max 5 teammates per phase. Each gets owned files only — no full-repo dump.</div>
+      </div>
+    </section>
+
+    <section class="section" id="hooks">
+      <h2>Hooks &amp; git gates</h2>
+      <p class="lede">Enforcement fires on every matching edit — including ad-hoc edits outside slash commands. Hooks include remediation text (“Fix: …”), not just blocks.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Event</th><th>Hook</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td>SessionStart</td><td><code>check-git-hooks.js</code></td><td>Advisory: missing commit-time gates</td></tr>
+            <tr><td>PreToolUse Write|Edit</td><td><code>pre-write-gate.js</code></td><td>Scope, prefix-cache, secrets, length, TDD existence</td></tr>
+            <tr><td>PreToolUse Bash</td><td><code>pre-bash-gate.js</code></td><td>Shell write bypass protection</td></tr>
+            <tr><td>PostToolUse</td><td><code>verify-on-save.js</code></td><td>Layer imports + lint/types (report-only)</td></tr>
+            <tr><td>Stop</td><td><code>review-on-stop.js</code></td><td>Reviewer force + session learnings</td></tr>
+            <tr><td>git pre-commit</td><td>real git hook</td><td>Coverage, AT-first, mutation, layers, contracts…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <div class="label">Prompt cache prefix protection</div>
+        <p>Mid-session writes to <code>CLAUDE.md</code>, <code>.mcp.json</code>, and <code>.claude/settings*.json</code> are blocked. Escape only between sessions with <code>HARNESS_PREFIX_EDIT=1</code>. Don’t swap the orchestrator model mid-run.</p>
+      </div>
+
+      <h3>Sensor cadence (keep quality left)</h3>
+      <div class="diagram">
+        <div class="flow">
+          <div class="flow-node">planning</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node">session</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node">commit</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node">integration</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node">drift</div>
+        </div>
+        <div class="cap">Earlier sensors are cheaper. Drift runs outside the change cycle via drift-report.js / optional GitHub workflow.</div>
+      </div>
+    </section>
+
+    <section class="section" id="pre-commit">
+      <h2>Pre-commit gate registry</h2>
+      <p class="lede">Real git hooks — not Claude-only. The thin <code>pre-commit</code> dispatcher runs gates from <code>gate-registry.js</code>, filtered by <code>quality.sensor_tier</code>.</p>
+
+      <div class="diagram">
+        <svg class="svg-wrap" viewBox="0 0 920 280" xmlns="http://www.w3.org/2000/svg" aria-label="Pre-commit dispatch flow">
+          <rect x="20" y="30" width="160" height="70" rx="12" fill="#151d28" stroke="#243041"/>
+          <text x="100" y="60" text-anchor="middle" fill="#e7eef8" font-size="13" font-weight="650">git commit</text>
+          <text x="100" y="80" text-anchor="middle" fill="#6b7c91" font-size="10">any tool / agent / human</text>
+
+          <text x="200" y="70" fill="#6b7c91" font-size="18">→</text>
+
+          <rect x="230" y="30" width="180" height="70" rx="12" fill="rgba(91,157,255,.1)" stroke="rgba(91,157,255,.4)"/>
+          <text x="320" y="60" text-anchor="middle" fill="#b8d7ff" font-size="13" font-weight="650">pre-commit hook</text>
+          <text x="320" y="80" text-anchor="middle" fill="#6b7c91" font-size="10">thin dispatcher</text>
+
+          <text x="430" y="70" fill="#6b7c91" font-size="18">→</text>
+
+          <rect x="460" y="20" width="200" height="90" rx="12" fill="rgba(192,132,252,.1)" stroke="rgba(192,132,252,.4)"/>
+          <text x="560" y="50" text-anchor="middle" fill="#e4c9ff" font-size="13" font-weight="650">gate-registry.js</text>
+          <text x="560" y="72" text-anchor="middle" fill="#6b7c91" font-size="10">filter by sensor_tier</text>
+          <text x="560" y="92" text-anchor="middle" fill="#6b7c91" font-size="10">order 10 → 210</text>
+
+          <text x="680" y="70" fill="#6b7c91" font-size="18">→</text>
+
+          <rect x="710" y="20" width="190" height="90" rx="12" fill="rgba(52,211,153,.1)" stroke="rgba(52,211,153,.4)"/>
+          <text x="805" y="50" text-anchor="middle" fill="#b8f5d8" font-size="13" font-weight="650">PASS → commit</text>
+          <text x="805" y="72" text-anchor="middle" fill="#6b7c91" font-size="10">FAIL → block + Fix:</text>
+          <text x="805" y="92" text-anchor="middle" fill="#6b7c91" font-size="10">SKIP → loud WARNING</text>
+
+          <!-- tier strip -->
+          <rect x="20" y="140" width="880" height="110" rx="14" fill="#0a1018" stroke="#243041"/>
+          <text x="40" y="168" fill="#9aabbf" font-size="12" font-weight="650">Tier membership (project-manifest.json#quality.sensor_tier)</text>
+
+          <rect x="40" y="185" width="260" height="45" rx="8" fill="rgba(45,212,191,.08)" stroke="rgba(45,212,191,.3)"/>
+          <text x="170" y="205" text-anchor="middle" fill="#a8f0e2" font-size="11" font-weight="650">minimal</text>
+          <text x="170" y="220" text-anchor="middle" fill="#6b7c91" font-size="9">secrets · purity · layers* · contract</text>
+
+          <rect x="320" y="185" width="280" height="45" rx="8" fill="rgba(91,157,255,.1)" stroke="rgba(91,157,255,.35)"/>
+          <text x="460" y="205" text-anchor="middle" fill="#b8d7ff" font-size="11" font-weight="650">standard (default)</text>
+          <text x="460" y="220" text-anchor="middle" fill="#6b7c91" font-size="9">+ legacy · AT-first · coverage · mutation</text>
+
+          <rect x="620" y="185" width="260" height="45" rx="8" fill="rgba(248,113,113,.08)" stroke="rgba(248,113,113,.35)"/>
+          <text x="750" y="205" text-anchor="middle" fill="#fca5a5" font-size="11" font-weight="650">strict</text>
+          <text x="750" y="220" text-anchor="middle" fill="#6b7c91" font-size="9">+ cycle · coupling ratchets</text>
+        </svg>
+        <div class="cap">Install boundaries (SKU) ≠ ceremony dial (sensor_tier). Escape hatches: reviewed sensor-waivers.json preferred over HARNESS_*_GATE=off.</div>
+      </div>
+
+      <h3>Gate order (standard product set)</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Order</th><th>Gate id</th><th>minimal</th><th>standard</th><th>strict</th><th>What it proves</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>10</td><td><code>secret-scan</code></td><td>✓</td><td>✓</td><td>✓</td><td>No secrets in staged content</td></tr>
+            <tr><td>20</td><td><code>amendment-provenance</code></td><td>✓</td><td>✓</td><td>✓</td><td>Design edits match sprint amendment</td></tr>
+            <tr><td>30</td><td><code>test-deletion-guard</code></td><td></td><td>✓</td><td>✓</td><td>Tests not silently deleted</td></tr>
+            <tr><td>40</td><td><code>refactor-purity</code></td><td>✓</td><td>✓</td><td>✓</td><td>Refactor commits stay behavior-free</td></tr>
+            <tr><td>50</td><td><code>layer-imports</code></td><td>✓*</td><td>✓</td><td>✓</td><td>One-way architecture layers</td></tr>
+            <tr><td>60</td><td><code>bounded-context-rules</code></td><td>✓*</td><td>✓</td><td>✓</td><td>Context allow-lists (opt-in config)</td></tr>
+            <tr><td>70</td><td><code>ownership-check</code></td><td>✓*</td><td>✓</td><td>✓</td><td>Files owned by component-map stories</td></tr>
+            <tr><td>80</td><td><code>legacy-discipline-proof</code></td><td></td><td>✓</td><td>✓</td><td>Coverage verdict / pin-or-sprout receipt</td></tr>
+            <tr><td>90</td><td><code>sprout-diff</code></td><td></td><td>✓</td><td>✓</td><td>Sprout shape constraints</td></tr>
+            <tr><td>100</td><td><code>at-first-gate</code></td><td></td><td>✓</td><td>✓</td><td>AT written &amp; observed red before impl</td></tr>
+            <tr><td>110</td><td><code>sprint-contract</code></td><td>✓</td><td>✓</td><td>✓</td><td>Contract VERDICT + matrix backstop</td></tr>
+            <tr><td>120</td><td><code>type-check</code></td><td>✓</td><td>✓</td><td>✓</td><td><code>tsc --noEmit</code> when TS staged</td></tr>
+            <tr><td>130–140</td><td><code>coverage-ratchet-*</code></td><td></td><td>✓</td><td>✓</td><td>Coverage never drops below baseline</td></tr>
+            <tr><td>150</td><td><code>mutation-smoke</code></td><td></td><td>✓</td><td>✓</td><td>Diff-scoped: tests bite</td></tr>
+            <tr><td>200</td><td><code>cycle-detection</code></td><td></td><td></td><td>✓</td><td>No new import cycles</td></tr>
+            <tr><td>210</td><td><code>coupling-ratchet</code></td><td></td><td></td><td>✓</td><td>No new unstable hubs</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:.85rem;color:var(--text-mute)">* When architecture/contexts/component-map are configured; otherwise no-op or loud skip. Source: <code>.claude/hooks/lib/gate-registry.js</code> + <code>docs/product-skus-and-tiers.md</code>.</p>
+
+      <div class="callout tip">
+        <div class="label">Fail open is never silent</div>
+        <p>If a toolchain is missing or times out, the gate prints <code>WARNING: GATE SKIPPED</code> — so a silent skip is never mistaken for a pass. Hook crashes append to <code>.claude/state/hook-errors.log</code>.</p>
+      </div>
+    </section>
+
+    <section class="section" id="receipt-flows">
+      <h2>Receipt-proof disciplines</h2>
+      <p class="lede">Prompt-only discipline fails under pressure. These gates require on-disk receipts — same pattern for legacy edits and AT-first stories.</p>
+
+      <h3>Legacy: check coverage → pin or sprout → edit</h3>
+      <div class="diagram">
+        <svg class="svg-wrap" viewBox="0 0 920 340" xmlns="http://www.w3.org/2000/svg" aria-label="Legacy discipline receipt flow">
+          <!-- steps -->
+          <rect x="20" y="25" width="170" height="80" rx="12" fill="rgba(91,157,255,.1)" stroke="rgba(91,157,255,.4)"/>
+          <text x="105" y="55" text-anchor="middle" fill="#b8d7ff" font-size="12" font-weight="650">1. Coverage map</text>
+          <text x="105" y="78" text-anchor="middle" fill="#6b7c91" font-size="10">checking-coverage…</text>
+          <text x="105" y="94" text-anchor="middle" fill="#6b7c91" font-size="10">coverage_map.py</text>
+
+          <text x="205" y="70" fill="#6b7c91" font-size="16">→</text>
+
+          <rect x="230" y="25" width="200" height="80" rx="12" fill="rgba(192,132,252,.1)" stroke="rgba(192,132,252,.4)"/>
+          <text x="330" y="55" text-anchor="middle" fill="#e4c9ff" font-size="12" font-weight="650">2. Record verdict</text>
+          <text x="330" y="78" text-anchor="middle" fill="#6b7c91" font-size="10">record-coverage-verdict.js</text>
+          <text x="330" y="94" text-anchor="middle" fill="#6b7c91" font-size="10">→ coverage-verdicts.jsonl</text>
+
+          <text x="445" y="70" fill="#6b7c91" font-size="16">→</text>
+
+          <!-- branch -->
+          <rect x="470" y="10" width="200" height="50" rx="10" fill="rgba(52,211,153,.1)" stroke="rgba(52,211,153,.4)"/>
+          <text x="570" y="40" text-anchor="middle" fill="#b8f5d8" font-size="11" font-weight="650">COVERED → edit OK</text>
+
+          <rect x="470" y="70" width="200" height="50" rx="10" fill="rgba(251,191,36,.1)" stroke="rgba(251,191,36,.4)"/>
+          <text x="570" y="100" text-anchor="middle" fill="#ffe4a3" font-size="11" font-weight="650">UNCOVERED → pin / sprout</text>
+
+          <text x="685" y="70" fill="#6b7c91" font-size="16">→</text>
+
+          <rect x="710" y="25" width="190" height="80" rx="12" fill="#151d28" stroke="#243041"/>
+          <text x="805" y="55" text-anchor="middle" fill="#e7eef8" font-size="12" font-weight="650">3. Stage tests</text>
+          <text x="805" y="78" text-anchor="middle" fill="#6b7c91" font-size="10">pin-down or new unit</text>
+          <text x="805" y="94" text-anchor="middle" fill="#6b7c91" font-size="10">+ production edit</text>
+
+          <!-- commit check -->
+          <rect x="20" y="140" width="880" height="175" rx="14" fill="#0a1018" stroke="#243041"/>
+          <text x="40" y="170" fill="#fbbf24" font-size="12" font-weight="700">At pre-commit · legacy-discipline-proof (order 80)</text>
+          <text x="40" y="198" fill="#d2dceb" font-size="12">For every staged MODIFIED production source file:</text>
+          <text x="40" y="225" fill="#9aabbf" font-size="12">• No receipt at all → BLOCK (run checking-coverage-before-change first)</text>
+          <text x="40" y="250" fill="#9aabbf" font-size="12">• Latest verdict UNCOVERED and no new/modified test staged → BLOCK</text>
+          <text x="40" y="275" fill="#9aabbf" font-size="12">• COVERED, or UNCOVERED + pin/sprout tests staged → PASS</text>
+          <text x="40" y="300" fill="#6b7c91" font-size="11">Composes with mutation-smoke (order 150): tests exist and tests bite. Env skip: HARNESS_LEGACY_DISCIPLINE_GATE=off (local only).</text>
+        </svg>
+        <div class="cap">Sprouting is for god-files / low seam scores — new fully-tested unit instead of editing legacy in place. Pure refactors use keeping-refactors-pure + refactor-purity gate.</div>
+      </div>
+
+      <h3>AT-first: red receipt before new production code</h3>
+      <div class="diagram">
+        <svg class="svg-wrap" viewBox="0 0 920 360" xmlns="http://www.w3.org/2000/svg" aria-label="AT-first receipt flow">
+          <rect x="20" y="20" width="200" height="90" rx="12" fill="rgba(45,212,191,.1)" stroke="rgba(45,212,191,.4)"/>
+          <text x="120" y="50" text-anchor="middle" fill="#a8f0e2" font-size="12" font-weight="650">1. Write AT</text>
+          <text x="120" y="72" text-anchor="middle" fill="#6b7c91" font-size="10">acceptance/{story-id}.*</text>
+          <text x="120" y="92" text-anchor="middle" fill="#6b7c91" font-size="10">P&amp;A seam + test double</text>
+
+          <text x="235" y="70" fill="#6b7c91" font-size="16">→</text>
+
+          <rect x="260" y="20" width="220" height="90" rx="12" fill="rgba(248,113,113,.1)" stroke="rgba(248,113,113,.4)"/>
+          <text x="370" y="50" text-anchor="middle" fill="#fca5a5" font-size="12" font-weight="650">2. Observe RED</text>
+          <text x="370" y="72" text-anchor="middle" fill="#6b7c91" font-size="10">record-at-red.js</text>
+          <text x="370" y="92" text-anchor="middle" fill="#6b7c91" font-size="10">PASS → no receipt (loud)</text>
+
+          <text x="495" y="70" fill="#6b7c91" font-size="16">→</text>
+
+          <rect x="520" y="20" width="180" height="90" rx="12" fill="rgba(91,157,255,.1)" stroke="rgba(91,157,255,.4)"/>
+          <text x="610" y="50" text-anchor="middle" fill="#b8d7ff" font-size="12" font-weight="650">3. Receipt</text>
+          <text x="610" y="72" text-anchor="middle" fill="#6b7c91" font-size="10">at-red-receipts.jsonl</text>
+          <text x="610" y="92" text-anchor="middle" fill="#6b7c91" font-size="10">{storyId, atPath, …}</text>
+
+          <text x="715" y="70" fill="#6b7c91" font-size="16">→</text>
+
+          <rect x="740" y="20" width="160" height="90" rx="12" fill="rgba(96,165,250,.12)" stroke="rgba(96,165,250,.4)"/>
+          <text x="820" y="50" text-anchor="middle" fill="#b8d7ff" font-size="12" font-weight="650">4. Implement</text>
+          <text x="820" y="72" text-anchor="middle" fill="#6b7c91" font-size="10">green the AT</text>
+          <text x="820" y="92" text-anchor="middle" fill="#6b7c91" font-size="10">+ production code</text>
+
+          <rect x="20" y="140" width="880" height="90" rx="12" fill="#151d28" stroke="#243041"/>
+          <text x="40" y="175" fill="#c084fc" font-size="12" font-weight="650">Why AT ≠ E2E</text>
+          <text x="40" y="200" fill="#9aabbf" font-size="12">AT calls business logic through an in-process port (fast, stable, business-readable Given/When/Then).</text>
+          <text x="40" y="220" fill="#6b7c91" font-size="11">Playwright E2E stays the final full-stack confirmer — not the primary acceptance loop (Vaccari).</text>
+
+          <rect x="20" y="250" width="880" height="90" rx="12" fill="rgba(248,113,113,.06)" stroke="rgba(248,113,113,.3)"/>
+          <text x="40" y="280" fill="#f87171" font-size="12" font-weight="650">At pre-commit · at-first-gate (order 100)</text>
+          <text x="40" y="305" fill="#9aabbf" font-size="12">New staged production file for a story → requires AT file on disk + matching red receipt, or BLOCK.</text>
+          <text x="40" y="325" fill="#6b7c91" font-size="11">Story ownership from component-map.md. Local skip: HARNESS_AT_FIRST_GATE=off. Prefer a waiver for real exceptions.</text>
+        </svg>
+        <div class="cap">An AT that passes against unimplemented code proves nothing — record-at-red refuses to write a receipt on green.</div>
+      </div>
+
+      <div class="two-col">
+        <div class="callout info">
+          <div class="label">Receipt files (usually gitignored under reviews)</div>
+          <p style="margin:0;font-size:.88rem"><code>specs/reviews/coverage-verdicts.jsonl</code><br/><code>specs/reviews/at-red-receipts.jsonl</code><br/>Session/CI can still prove presence at commit time from the working tree.</p>
+        </div>
+        <div class="callout warn">
+          <div class="label">Known limitation (AT-first)</div>
+          <p style="margin:0;font-size:.88rem">Receipt proves the AT was red by commit time — not strict chronological order vs every later implementation hunk. Still far stronger than prompt-only discipline.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="session-chain">
+      <h2>Session chaining &amp; self-heal</h2>
+      <p class="lede">Long builds span many context windows. Progress is externalized so a fresh process continues without re-deriving intent.</p>
+
+      <div class="diagram">
+        <svg class="svg-wrap" viewBox="0 0 920 300" xmlns="http://www.w3.org/2000/svg" aria-label="Session chaining and self-heal">
+          <!-- windows -->
+          <rect x="30" y="30" width="160" height="70" rx="12" fill="rgba(91,157,255,.1)" stroke="rgba(91,157,255,.4)"/>
+          <text x="110" y="60" text-anchor="middle" fill="#b8d7ff" font-size="12" font-weight="650">Window N</text>
+          <text x="110" y="80" text-anchor="middle" fill="#6b7c91" font-size="10">work + append progress</text>
+
+          <text x="210" y="70" fill="#6b7c91" font-size="16">→</text>
+
+          <rect x="240" y="20" width="200" height="90" rx="12" fill="#151d28" stroke="#243041"/>
+          <text x="340" y="48" text-anchor="middle" fill="#e7eef8" font-size="12" font-weight="650">Disk state</text>
+          <text x="340" y="70" text-anchor="middle" fill="#6b7c91" font-size="10">progress · features · rules</text>
+          <text x="340" y="90" text-anchor="middle" fill="#6b7c91" font-size="10">git commits · contracts</text>
+
+          <text x="460" y="70" fill="#6b7c91" font-size="16">→</text>
+
+          <rect x="490" y="30" width="180" height="70" rx="12" fill="rgba(45,212,191,.1)" stroke="rgba(45,212,191,.4)"/>
+          <text x="580" y="60" text-anchor="middle" fill="#a8f0e2" font-size="12" font-weight="650">Window N+1</text>
+          <text x="580" y="80" text-anchor="middle" fill="#6b7c91" font-size="10">recover ~700–1k tok</text>
+
+          <text x="690" y="70" fill="#6b7c91" font-size="16">→</text>
+
+          <rect x="720" y="30" width="170" height="70" rx="12" fill="rgba(52,211,153,.1)" stroke="rgba(52,211,153,.4)"/>
+          <text x="805" y="60" text-anchor="middle" fill="#b8f5d8" font-size="12" font-weight="650">Resume smoke</text>
+          <text x="805" y="80" text-anchor="middle" fill="#6b7c91" font-size="10">boot app before build</text>
+
+          <!-- self heal box -->
+          <rect x="30" y="140" width="860" height="140" rx="14" fill="#0a1018" stroke="#243041"/>
+          <text x="50" y="170" fill="#c084fc" font-size="12" font-weight="700">Self-heal loop (max 3 attempts · different strategy each)</text>
+          <text x="50" y="200" fill="#9aabbf" font-size="12">FAIL + failure JSON → targeted fix → re-evaluate → if still fail, try new strategy</text>
+          <text x="50" y="225" fill="#9aabbf" font-size="12">After 3: revert · extract learned-rules.md entry · mark group BLOCKED · next unblocked group</text>
+          <text x="50" y="255" fill="#6b7c91" font-size="11">Categories: lint_format · type_error · import_error · key_error · timeout · connection_refused · validation_error · assertion_error · api_transient · api_permanent</text>
+        </svg>
+        <div class="cap">build-chain.js starts a fresh claude -p per wave for unattended PRD→PR. Budget stops are clean stops — re-invoke /auto.</div>
+      </div>
+
+      <div class="cards">
+        <div class="card"><div class="tag">Recover</div><h4>Every iteration Step 1</h4><p>program.md · learned-rules · last progress block · features.json · dependency-graph</p></div>
+        <div class="card"><div class="tag">Learn</div><h4>Monotonic rules</h4><p>Same failure 2+ times → permanent directive injected into future agent prompts (all lanes)</p></div>
+        <div class="card"><div class="tag">Stop</div><h4>No infinite thrash</h4><p>50-iter hard stop · 3-heal BLOCKED · wall-clock/spawn/cost budget</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="control-system">
+      <h2>Control system registry</h2>
+      <p class="lede"><code>HARNESS.md</code> + <code>harness-manifest.json</code> are the single source of truth for what governs what.</p>
+
+      <div class="matrix">
+        <div class="head"></div>
+        <div class="head">Guides (feedforward)</div>
+        <div class="head">Sensors (feedback)</div>
+        <div class="rowh">Maintainability</div>
+        <div>code-gen principles · clarify</div>
+        <div>lint/types · length · coverage · mutation · modularity</div>
+        <div class="rowh">Architecture</div>
+        <div>architecture.md · manifest layers · topology · constitution</div>
+        <div>import layers · cycles · hubs · oasdiff · design-vs-code</div>
+        <div class="rowh">Behaviour</div>
+        <div>BRD/spec/contracts · AT-first · REASONS Canvas</div>
+        <div>tests · 3-layer eval · security · regression · A11y</div>
+        <div class="rowh">Traceability</div>
+        <div>FRD baseline · arbitration · token governor</div>
+        <div>grounding · trace · vocabulary · ownership · matrix</div>
+      </div>
+
+      <p>Sensors are <strong>computational</strong> (deterministic), <strong>inferential</strong> (LLM judgment), or <strong>hybrid</strong>. Prefer computational for hot paths; reserve inferential for commit/integration.</p>
+      <p>Waivers live in reviewed <code>specs/reviews/sensor-waivers.json</code> — not silent env skips (env is for local unreviewed escape only).</p>
+    </section>
+
+    <section class="section" id="deepwiki">
+      <h2>DeepWiki &amp; code-map (Devin-inspired living nav)</h2>
+      <p class="lede">Like Devin’s DeepWiki: auto-maintained architecture maps with source links — but deterministic and scaffold-native.</p>
+
+      <div class="diagram">
+        <svg class="svg-wrap" viewBox="0 0 900 200" xmlns="http://www.w3.org/2000/svg" aria-label="Living navigation pipeline">
+          <rect x="30" y="50" width="160" height="90" rx="12" fill="#151d28" stroke="#243041"/>
+          <text x="110" y="90" text-anchor="middle" fill="#e7eef8" font-size="13" font-weight="650">Source tree</text>
+          <text x="110" y="112" text-anchor="middle" fill="#6b7c91" font-size="10">AST + tree-sitter</text>
+
+          <text x="210" y="100" fill="#6b7c91" font-size="18">→</text>
+
+          <rect x="240" y="50" width="180" height="90" rx="12" fill="rgba(91,157,255,.1)" stroke="rgba(91,157,255,.4)"/>
+          <text x="330" y="90" text-anchor="middle" fill="#b8d7ff" font-size="13" font-weight="650">code-graph.json</text>
+          <text x="330" y="112" text-anchor="middle" fill="#6b7c91" font-size="10">symbols · edges · hubs</text>
+
+          <text x="440" y="100" fill="#6b7c91" font-size="18">→</text>
+
+          <rect x="470" y="35" width="170" height="55" rx="10" fill="rgba(45,212,191,.1)" stroke="rgba(45,212,191,.4)"/>
+          <text x="555" y="68" text-anchor="middle" fill="#a8f0e2" font-size="12" font-weight="650">symbol-map.md</text>
+
+          <rect x="470" y="105" width="170" height="55" rx="10" fill="rgba(192,132,252,.1)" stroke="rgba(192,132,252,.4)"/>
+          <text x="555" y="138" text-anchor="middle" fill="#e4c9ff" font-size="12" font-weight="650">wiki/WIKI.md</text>
+
+          <text x="660" y="100" fill="#6b7c91" font-size="18">→</text>
+
+          <rect x="690" y="50" width="180" height="90" rx="12" fill="rgba(251,191,36,.1)" stroke="rgba(251,191,36,.4)"/>
+          <text x="780" y="90" text-anchor="middle" fill="#ffe4a3" font-size="13" font-weight="650">context-pack</text>
+          <text x="780" y="112" text-anchor="middle" fill="#6b7c91" font-size="10">cited file:line ranges</text>
+        </svg>
+        <div class="cap">graph-refresh keeps maps current after edits. /context and context-pack.js force agents to read slices, not whole god files.</div>
+      </div>
+
+      <pre><code># Preferred navigation order
+node .claude/scripts/context-pack.js --diff --budget 1600 "where is session validation?"
+# then read only cited ranges — not entire files
+
+# Full rebuild when needed
+/code-map
+# or
+node .claude/scripts/nav-query.js pack --diff --budget 1600 "&lt;question&gt;"</code></pre>
+    </section>
+
+    <section class="section" id="token-gov">
+      <h2>Token governor</h2>
+      <p class="lede">Default-on cost control without blocking product work (advisory mode). Enterprise can set enforced.</p>
+      <ul>
+        <li><strong>Living navigation</strong> — DeepWiki + code-graph from scaffold day one</li>
+        <li><strong>CCR</strong> — Compress-Cache-Retrieve: raw tool output stored by hash; agent sees compact evidence first</li>
+        <li><code>run-compact.js</code> / <code>search-compact.js</code> — noisy commands and searches</li>
+        <li><code>token-advisor.js</code> — non-blocking warnings on broad reads / verbose bash</li>
+        <li><code>/status</code> reports freshness + estimated savings</li>
+      </ul>
+      <pre><code>project-manifest.json#token_governor
+  mode: advisory | enforced | off
+  context_search_required: true
+  max_source_read_lines: …</code></pre>
+    </section>
+
+    <!-- OPERATE -->
+    <section class="section" id="zl">
+      <h2>Z/L continuum — place each task</h2>
+      <p class="lede">You are not “Team vibe” or “Team read every line.” <strong>Each task</strong> gets a band, then a lane and a human read plan.</p>
+
+      <div class="zl-bar">
+        <div class="zl-band l"><strong>L · 0–2</strong><span>/vibe or disposable · skim walkthrough</span></div>
+        <div class="zl-band m"><strong>M · 3–5</strong><span>/change · /feature · contracts + hunks</span></div>
+        <div class="zl-band z"><strong>Z · 6–10</strong><span>full gate · line-read risk surface</span></div>
+      </div>
+
+      <p>Score axes 0–2: blast radius · observability of done · longevity · coverage of touched symbols · ownership. Hard overrides to Z: auth, money, PII, migrations, public API, UNCOVERED god-files.</p>
+      <p>Full rubric: <code>docs/zl-continuum-rubric.md</code>.</p>
+    </section>
+
+    <section class="section" id="trust">
+      <h2>Human trust surfaces</h2>
+      <p class="lede">When agents generate code, humans need proof and a map — not alphabetical PR noise.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Command / script</th><th>What you get</th></tr></thead>
+          <tbody>
+            <tr><td><code>/gate</code></td><td>Full pre-merge gate + card + walkthrough</td></tr>
+            <tr><td><code>npm run quality-card</code></td><td>Single trust receipt</td></tr>
+            <tr><td><code>npm run walkthrough</code></td><td>Logical change groups + severity + blast radius</td></tr>
+            <tr><td><code>npm run pr-body -- --require-gate</code></td><td>PR body embedding both (fails if red)</td></tr>
+            <tr><td><code>npm run human-codebase</code></td><td><code>docs/CODEBASE.md</code> homepage from graph</td></tr>
+            <tr><td><code>npm run ask -- "where is auth?"</code></td><td>Cited, slice-level answers</td></tr>
+            <tr><td><code>/agent-readiness</code></td><td>Is this codebase ready for heavy agent use?</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" id="models">
+      <h2>Models &amp; cost posture</h2>
+      <p class="lede">Set <code>execution.model_tier</code> in the project manifest. Prompts are model-agnostic; pins live on agent frontmatter via <code>model-tier.js</code>.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Role</th><th>cost / enterprise</th><th>balanced</th><th>max-quality</th></tr></thead>
+          <tbody>
+            <tr><td>generator</td><td>Sonnet 5</td><td>Sonnet 5</td><td>Opus 4.8</td></tr>
+            <tr><td>explorer</td><td>Haiku 4.5</td><td>Sonnet 5</td><td>Sonnet 5</td></tr>
+            <tr><td>judgment roles</td><td>Opus 4.8</td><td>Opus 4.8</td><td>Opus 4.8</td></tr>
+            <tr><td>session orchestrator</td><td colspan="3">Prefer Opus 4.8 even on cost (reliability / cache)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Product scaffolds default to <code>cost</code>. This monorepo dogfoods <code>balanced</code>.</p>
+      <pre><code>node .claude/scripts/model-tier.js cost --apply .claude/agents
+node .claude/scripts/cost-report.js</code></pre>
+    </section>
+
+    <section class="section" id="budget">
+      <h2>Budget &amp; recovery</h2>
+      <p class="lede">Runs are resumable by design. A killed session loses nothing that was committed.</p>
+
+      <div class="cards">
+        <div class="card"><div class="tag">Resume</div><h4>Just re-invoke /auto</h4><p>Reads claude-progress.txt, features.json, git state; resume smoke check first.</p></div>
+        <div class="card"><div class="tag">Budget stop</div><h4>Clean stop at iteration boundary</h4><p>next_action: "BUDGET — …". Raise caps or resume later.</p></div>
+        <div class="card"><div class="tag">Long PRD→PR</div><h4>build-chain.js</h4><p>Fresh claude -p process per wave through the same progress file.</p></div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Tier</th><th>Wall-clock</th><th>Agent spawns</th><th>Est. cost</th></tr></thead>
+          <tbody>
+            <tr><td><code>cost</code></td><td>30 min</td><td>80</td><td>~$8</td></tr>
+            <tr><td><code>balanced</code></td><td>90 min</td><td>200</td><td>~$25</td></tr>
+            <tr><td><code>max-quality</code></td><td>180 min</td><td>400</td><td>~$60</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <pre><code>/status
+node .claude/scripts/pipeline-status.js status
+node .claude/scripts/build-chain.js docs/prd.md
+# budget via project-manifest.json#execution.budget or /build … --budget</code></pre>
+    </section>
+
+    <section class="section" id="playbooks">
+      <h2>Playbooks — use this effectively</h2>
+      <p class="lede">Concrete recipes for the patterns that show up most.</p>
+
+      <h3>1. First product from a PRD</h3>
+      <ol class="steps">
+        <li><strong>Scaffold</strong> the empty or starter repo with <code>/scaffold</code> (topology: web-app or api-service).</li>
+        <li><strong>Write a good PRD</strong> (see <code>docs/prd-format.md</code>) — acceptance criteria must be testable.</li>
+        <li><strong>Run gated build</strong> <code>/build docs/prd.md</code> and approve BRD → stories → design.</li>
+        <li><strong>Let /auto run</strong>; watch <code>/status</code>; if BUDGET stops, resume.</li>
+        <li><strong>/gate</strong> then read walkthrough + quality-card before merge.</li>
+      </ol>
+
+      <h3>2. Brownfield feature on a living system</h3>
+      <ol class="steps">
+        <li>Ensure maps are fresh (or let <code>/feature</code> refresh them).</li>
+        <li><code>/feature "…"</code> — do not jump straight to editing.</li>
+        <li>Context-pack before deep reads; pin or sprout UNCOVERED symbols.</li>
+        <li>Ship PR with gate receipts; use <code>/pr-respond</code> for CI/comments.</li>
+      </ol>
+
+      <h3>3. Risky seam (auth, migration, god-file)</h3>
+      <ol class="steps">
+        <li><code>/brownfield --seams "…"</code> to rank cut-points.</li>
+        <li>Score Z/L — expect Z; plan whole-branch review.</li>
+        <li>Prefer sprout or expand-contract over editing uncovered cores in place.</li>
+        <li>Full <code>/gate</code> with security path; majority re-verify when boundary fires.</li>
+      </ol>
+
+      <h3>4. Sprint N evolution</h3>
+      <ol class="steps">
+        <li>Author next PRD against what already shipped.</li>
+        <li><code>/sprint docs/prd-sN.md</code> — approve requirement delta + design amendment only.</li>
+        <li>Never regenerate design wholesale; amendments keep provenance.</li>
+      </ol>
+
+      <h3>5. Cheap day-to-day hygiene</h3>
+      <ul>
+        <li>Steer via <code>.claude/program.md</code> between sessions</li>
+        <li>Apply suggested CLAUDE.md learnings <em>between</em> sessions only</li>
+        <li><code>npm run drift</code> on a schedule; copy harness-drift workflow if needed</li>
+        <li><code>/agent-readiness</code> monthly; raise baseline when pillars improve</li>
+        <li>Upgrade control plane with <code>/scaffold-upgrade --apply</code> without wiping state</li>
+      </ul>
+    </section>
+
+    <section class="section" id="ops-extras">
+      <h2>Ops &amp; optional power-ups</h2>
+      <p class="lede">Core product is lean. Turn these on only when you need them.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Power-up</th><th>How</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>Telemetry dashboards</td><td><code>/scaffold --telemetry</code></td><td>OTEL + Prometheus/Grafana; cache hit-rate alerts. See <code>docs/telemetry.md</code></td></tr>
+            <tr><td>Token optimizer / DeepWiki</td><td>On by default</td><td><code>token_governor</code> advisory; set <code>enforced</code> for org policy</td></tr>
+            <tr><td>Framework skill packs</td><td>Scaffold interview + manual install</td><td>LangChain / LangGraph / DeepAgents / Google ADK; <code>/install-framework-packs</code></td></tr>
+            <tr><td>Tracker orchestration</td><td>Linear / Jira / Azure DevOps config</td><td><code>/tracker-publish</code> + optional Symphony</td></tr>
+            <tr><td>Drift cadence</td><td>Copy <code>harness-drift.yml</code> workflow</td><td>cycles/hubs, dead code, CVEs, modularity staleness</td></tr>
+            <tr><td>PR E2E re-runs</td><td>Auto-copied by <code>/test</code></td><td><code>.github/workflows/e2e.yml</code></td></tr>
+            <tr><td>Superpowers plugin</td><td>Default-on in settings</td><td>Brainstorm / TDD / debug at pipeline stages; degrade inline if missing</td></tr>
+            <tr><td>LSP servers</td><td>Auto-detected at scaffold</td><td>pyright, tsserver, gopls, … checked by <code>init.sh</code></td></tr>
+            <tr><td>MCP servers</td><td><code>.mcp.json</code></td><td>Settle before long <code>/auto</code> (prompt-cache rule)</td></tr>
+            <tr><td>Advisor mid-run</td><td><code>/advise</code></td><td>Compact structural re-rank / unblock; read-only Opus advisor</td></tr>
+            <tr><td>Bounded clarify</td><td><code>/clarify</code></td><td>Planning-stage uncertainty without interview exhaustion</td></tr>
+            <tr><td>Design modes</td><td><code>/design --doc-only|--delta|…</code></td><td>ARB narrative; living amendment; not full pipeline for docs</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout tip">
+        <div class="label">Prompt-cache operating rules</div>
+        <p>Don’t churn tools/MCP, don’t edit <code>CLAUDE.md</code>, and don’t swap the orchestrator model mid-session. Apply session learnings between sessions only.</p>
+      </div>
+    </section>
+
+    <section class="section" id="regression">
+      <h2>Regression strategy (two speeds)</h2>
+      <p class="lede">Don’t run the entire Playwright history on every tiny edit — but don’t skip cross-feature protection at merge either.</p>
+      <div class="diagram">
+        <svg class="svg-wrap" viewBox="0 0 900 200" xmlns="http://www.w3.org/2000/svg" aria-label="Two-speed regression">
+          <rect x="30" y="30" width="400" height="140" rx="14" fill="rgba(91,157,255,.08)" stroke="rgba(91,157,255,.4)"/>
+          <text x="230" y="65" text-anchor="middle" fill="#b8d7ff" font-size="14" font-weight="700">Local / every iteration</text>
+          <text x="230" y="95" text-anchor="middle" fill="#9aabbf" font-size="12">impact-scope.js (TIA over code-graph)</text>
+          <text x="230" y="118" text-anchor="middle" fill="#6b7c91" font-size="11">only affected e2e + prior contracts</text>
+          <text x="230" y="140" text-anchor="middle" fill="#6b7c91" font-size="11">/change Step S5 · /vibe Step 6</text>
+
+          <rect x="470" y="30" width="400" height="140" rx="14" fill="rgba(248,113,113,.08)" stroke="rgba(248,113,113,.4)"/>
+          <text x="670" y="65" text-anchor="middle" fill="#fca5a5" font-size="14" font-weight="700">Merge-time / pre-merge</text>
+          <text x="670" y="95" text-anchor="middle" fill="#9aabbf" font-size="12">regression-gate.js full sweep</text>
+          <text x="670" y="118" text-anchor="middle" fill="#6b7c91" font-size="11">all e2e + prior sprint-contract APIs</text>
+          <text x="670" y="140" text-anchor="middle" fill="#6b7c91" font-size="11">/gate · /auto pre-merge to WAVE_BASE</text>
+        </svg>
+        <div class="cap">Golden paths in project-manifest#verification.golden_paths are always unioned into the local subset as a safety net.</div>
+      </div>
+    </section>
+
+    <section class="section" id="artifacts">
+      <h2>Key artifacts after scaffold / build</h2>
+      <p class="lede">Orientation map for humans and agents — what lives where.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Path</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code>project-manifest.json</code></td><td>Topology, layers, model tier, sensor_tier, token_governor, budget, verification mode</td></tr>
+            <tr><td><code>CLAUDE.md</code></td><td>Always-on project rules (prompt-cache prefix — edit between sessions)</td></tr>
+            <tr><td><code>.claude/program.md</code></td><td>Human steering input for <code>/auto</code></td></tr>
+            <tr><td><code>.claude/state/learned-rules.md</code></td><td>Monotonic failure-derived rules</td></tr>
+            <tr><td><code>claude-progress.txt</code></td><td>Append-only resume log</td></tr>
+            <tr><td><code>features.json</code></td><td>Pass/fail feature registry</td></tr>
+            <tr><td><code>specs/stories/</code></td><td>Epics, stories, dependency-graph</td></tr>
+            <tr><td><code>specs/design/</code></td><td>Architecture, component-map, REASONS Canvas, schemas</td></tr>
+            <tr><td><code>specs/brownfield/</code></td><td>code-graph, symbol-map, wiki, risk/strategy maps</td></tr>
+            <tr><td><code>specs/test_artefacts/</code></td><td>Test plan, cases, fixtures, acceptance ATs</td></tr>
+            <tr><td><code>specs/reviews/</code></td><td>Quality card, walkthrough, verdicts, waivers</td></tr>
+            <tr><td><code>sprint-contracts/</code></td><td>Per-group machine contracts + VERDICT</td></tr>
+            <tr><td><code>wiki/WIKI.md</code></td><td>DeepWiki entry (also under brownfield paths in some layouts)</td></tr>
+            <tr><td><code>docs/CODEBASE.md</code></td><td>Human homepage regenerated from the graph</td></tr>
+            <tr><td><code>HARNESS.md</code> / <code>harness-manifest.json</code></td><td>Control-system registry (what governs what)</td></tr>
+            <tr><td><code>.claude/hooks/</code> · <code>git-hooks/</code></td><td>Session sensors + real commit gates</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" id="upgrade">
+      <h2>Upgrade an already-scaffolded project</h2>
+      <p class="lede">Refresh harness control-plane files without wiping project state or the manifest.</p>
+      <pre><code># Inside Claude Code
+/scaffold-upgrade          # dry-run
+/scaffold-upgrade --apply
+/scaffold-upgrade --apply --include-skills   # larger prompt-surface change
+
+# From shell
+node /path/to/harness/.claude/scripts/scaffold-upgrade.js --target ~/my-project
+node …/scaffold-upgrade.js --target ~/my-project --apply
+node …/scaffold-upgrade.js --target ~/my-project --apply --include-skills</code></pre>
+      <p>Default dry-run is intentional. Skills refresh is opt-in because it changes the cached prompt surface more aggressively than hooks/scripts alone.</p>
+    </section>
+
+    <section class="section" id="symphony">
+      <h2>Symphony — agent factory runtime</h2>
+      <p class="lede">Optional Docker orchestrator that polls Linear/Jira, clones workspaces, runs <code>claude --print</code> with <code>/auto</code>, opens PRs, and moves issues to Human Review.</p>
+      <ul>
+        <li>Same work contract as local (<code>dependency-graph.md</code>, contracts, <code>features.json</code>)</li>
+        <li>Human still owns merge (unless AUTO_MERGE opt-in)</li>
+        <li>Not part of harness-core SKU — see <code>symphony_clone/README.md</code> and <code>docs/symphony-product.md</code></li>
+      </ul>
+    </section>
+
+    <section class="section" id="contributors">
+      <h2>Contributor testing (this monorepo)</h2>
+      <p class="lede">How we dogfood the harness itself — Project Zero.</p>
+      <pre><code>npm test                 # fast unit/contract suite (no live Claude)
+npm run lint
+npm run agent-readiness
+npm run agent-readiness:assert   # ratchet vs baseline
+npm run test:e2e:fast
+npm run test:routes      # live Claude route suite (costs tokens)
+npm run test:e2e:live
+npm run test:e2e:cert
+npm run harness-coverage
+npm run drift
+npm run retention:dry    # prune .claude/runs + archive previews</code></pre>
+      <p>Topology here is <code>cli-or-library</code> with architecture layers off; <code>quality.sensor_tier: standard</code>. Live E2E logs: <code>test/e2e/results/</code>. Details: <code>docs/testing.md</code>.</p>
+      <div class="callout warn">
+        <div class="label">iCloud / Documents path hygiene</div>
+        <p>If this checkout lives under a synced <code>Documents/</code> path, parallel agents can spawn <code>&lt;name&gt; 2.&lt;ext&gt;</code> duplicate files that hang tests. Kill orphaned <code>node --test</code> processes, delete the <code> 2.</code>-suffixed dupes, re-run. Prefer clones outside the synced path for heavy work.</p>
+      </div>
+    </section>
+
+    <section class="section" id="anti-patterns">
+      <h2>Anti-patterns</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Smell</th><th>Why it fails</th><th>Fix</th></tr></thead>
+          <tbody>
+            <tr><td>Identity L / “we vibe everything”</td><td>Auth and migrations need Z</td><td>Re-score every task</td></tr>
+            <tr><td>Skipping /gate because “models got better”</td><td>Ceremony ≠ evaluator</td><td>Always gate before merge</td></tr>
+            <tr><td>Generator grades itself</td><td>Self-eval bias</td><td>Keep GAN roles strict</td></tr>
+            <tr><td>Editing CLAUDE.md mid-run</td><td>Busts prompt cache</td><td>Between sessions only</td></tr>
+            <tr><td>Broad whole-file reads on god modules</td><td>Token burn + lost focus</td><td>context-pack / symbol-map</td></tr>
+            <tr><td>Hand-built contract fixtures</td><td>Green tests, dead feature</td><td>Round-trip real validators</td></tr>
+            <tr><td>Silent env gate offs in CI</td><td>Ungoverned quality</td><td>Waivers or sensor_tier</td></tr>
+            <tr><td>Ultracode on during /auto</td><td>Double orchestration</td><td>Off for /auto; on for divergent design</td></tr>
+            <tr><td>Pipeline for mockups</td><td>Wasted ceremony</td><td>harness-lite / doc-only lanes</td></tr>
+            <tr><td>Merge by the agent</td><td>Trust collapse</td><td>Human owns Done</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" id="glossary">
+      <h2>Glossary</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td>GAN</td><td>Generator–evaluator separation (adversarial roles)</td></tr>
+            <tr><td>Ratchet</td><td>Monotonic quality metric — never moves backward</td></tr>
+            <tr><td>Sprint contract</td><td>JSON “done” agreement for a story group</td></tr>
+            <tr><td>Guide</td><td>Feedforward control (skill, spec, convention)</td></tr>
+            <tr><td>Sensor</td><td>Feedback control (test, lint, review agent)</td></tr>
+            <tr><td>DeepWiki</td><td>Living wiki rendered from the code-graph</td></tr>
+            <tr><td>Context pack</td><td>Bounded, cited orientation before broad reads</td></tr>
+            <tr><td>Sprout</td><td>New fully-tested unit instead of editing legacy core</td></tr>
+            <tr><td>Pin-down</td><td>Characterization test that locks observed behavior</td></tr>
+            <tr><td>AT-first</td><td>Acceptance tests before implementation (P&amp;A seam)</td></tr>
+            <tr><td>Z/L</td><td>Task placement continuum: automate vs line-read</td></tr>
+            <tr><td>SKU</td><td>Install boundary: lite / core / full</td></tr>
+            <tr><td>Sensor tier</td><td>Commit ceremony dial: minimal / standard / strict</td></tr>
+            <tr><td>REASONS Canvas</td><td>Living design artifact with Governs list</td></tr>
+            <tr><td>Symphony</td><td>Tracker-driven agent factory runtime</td></tr>
+            <tr><td>Gate registry</td><td>Ordered pre-commit sensors filtered by sensor_tier</td></tr>
+            <tr><td>Receipt proof</td><td>jsonl evidence that a discipline actually ran (coverage / AT-red)</td></tr>
+            <tr><td>Session chain</td><td>Externalized state so a new context window resumes /auto</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" id="deep-links">
+      <h2>Deep links into the repo</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Topic</th><th>Path</th></tr></thead>
+          <tbody>
+            <tr><td>User README</td><td><code>README.md</code></td></tr>
+            <tr><td>This field guide</td><td><code>docs/harness-guide.html</code></td></tr>
+            <tr><td>Architecture reference</td><td><code>design.md</code></td></tr>
+            <tr><td>Control system registry</td><td><code>HARNESS.md</code> · <code>harness-manifest.json</code></td></tr>
+            <tr><td>Pre-commit gate list</td><td><code>.claude/hooks/lib/gate-registry.js</code></td></tr>
+            <tr><td>Scaffold upgrade script</td><td><code>.claude/scripts/scaffold-upgrade.js</code></td></tr>
+            <tr><td>Testing this harness</td><td><code>docs/testing.md</code></td></tr>
+            <tr><td>Telemetry</td><td><code>docs/telemetry.md</code></td></tr>
+            <tr><td>Extras / trackers / packs</td><td><code>docs/extras.md</code></td></tr>
+            <tr><td>Symphony product</td><td><code>docs/symphony-product.md</code> · <code>symphony_clone/</code></td></tr>
+            <tr><td>Always-on agent rules</td><td><code>CLAUDE.md</code></td></tr>
+            <tr><td>SKUs &amp; sensor tiers</td><td><code>docs/product-skus-and-tiers.md</code></td></tr>
+            <tr><td>Model allocation</td><td><code>docs/model-allocation.md</code></td></tr>
+            <tr><td>Token governor</td><td><code>docs/token-governor.md</code></td></tr>
+            <tr><td>Token cost playbook</td><td><code>docs/token-cost-playbook.md</code></td></tr>
+            <tr><td>Z/L rubric</td><td><code>docs/zl-continuum-rubric.md</code></td></tr>
+            <tr><td>Sensor arbitration</td><td><code>docs/sensor-arbitration.md</code></td></tr>
+            <tr><td>Behavior preservation</td><td><code>docs/behavior-preservation.md</code></td></tr>
+            <tr><td>Prompting standards</td><td><code>docs/prompting-standards.md</code></td></tr>
+            <tr><td>PRD format</td><td><code>docs/prd-format.md</code></td></tr>
+            <tr><td>Telemetry</td><td><code>docs/telemetry.md</code></td></tr>
+            <tr><td>Skill sources of truth</td><td><code>.claude/skills/*/SKILL.md</code></td></tr>
+            <tr><td>Agent definitions</td><td><code>.claude/agents/*.md</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <footer class="page-foot">
+        Claude Harness Engine v5 · comprehensive field guide · generated for navigable offline use.<br />
+        Open this file in a browser: <code>docs/harness-guide.html</code>. Diagrams are SVG; no network required.
+      </footer>
+    </section>
+  </div>
+</div>
+
+<script>
+  const nav = document.getElementById('nav');
+  const links = [...nav.querySelectorAll('a[href^="#"]')];
+  const sections = links
+    .map(a => document.querySelector(a.getAttribute('href')))
+    .filter(Boolean);
+  const crumb = document.getElementById('crumb');
+  const search = document.getElementById('nav-search');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+
+  function openSidebar() {
+    sidebar.classList.add('open');
+    overlay.classList.add('show');
+  }
+  function closeSidebar() {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('show');
+  }
+
+  // Active section observer
+  const io = new IntersectionObserver((entries) => {
+    const visible = entries
+      .filter(e => e.isIntersecting)
+      .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+    if (!visible) return;
+    const id = '#' + visible.target.id;
+    links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === id));
+    const active = links.find(a => a.getAttribute('href') === id);
+    if (active) crumb.textContent = active.textContent;
+  }, { rootMargin: '-20% 0px -60% 0px', threshold: [0, 0.2, 0.5, 1] });
+
+  sections.forEach(s => io.observe(s));
+  // also observe hero
+  const overview = document.getElementById('overview');
+  if (overview) io.observe(overview);
+
+  links.forEach(a => a.addEventListener('click', () => {
+    if (window.innerWidth <= 860) closeSidebar();
+  }));
+
+  search.addEventListener('input', () => {
+    const q = search.value.trim().toLowerCase();
+    links.forEach(a => {
+      const hit = !q || a.textContent.toLowerCase().includes(q);
+      a.classList.toggle('hidden', !hit);
+    });
+    // hide empty groups
+    nav.querySelectorAll('.nav-group').forEach(g => {
+      const any = [...g.querySelectorAll('a')].some(a => !a.classList.contains('hidden'));
+      g.style.display = any ? '' : 'none';
+    });
+  });
+
+  // Keyboard: / focuses search
+  document.addEventListener('keydown', (e) => {
+    if (e.key === '/' && document.activeElement !== search) {
+      e.preventDefault();
+      search.focus();
+    }
+    if (e.key === 'Escape') {
+      search.blur();
+      closeSidebar();
+    }
+  });
+</script>
+</body>
+</html>
