@@ -125,7 +125,7 @@ The other commands below are still available, but the harness should usually rou
 | `/vibe` | Very small safe edit | Controlled fast lane for tiny changes |
 | `/change` | Behavior change in existing code | Test-first change route; use `--issue N` for a GitHub bug |
 | `/refactor` | No behavior change | Behavior-preserving cleanup with coverage and refactor-purity gates |
-| `/gate` | Before merge or after manual edits | Evaluator + diff review, with security review only when the diff crosses a security/data/API boundary; when that trigger fires, both axes re-verify across 3 independent instances, majority-voted (fail-safe to BLOCK/FAIL if an instance errors or times out); renamed from old harness `/review` to avoid native `/review` collision |
+| `/gate` | Before merge or after manual edits | Evaluator + diff review + observability/perf-smell ratchets; security review when the diff crosses a security/data/API boundary (3-instance majority vote when triggered); always ends with **quality-card** + logical **walkthrough** + `docs/CODEBASE.md` refresh. Renamed from old harness `/review` to avoid native `/review` collision |
 | `/pr-respond <pr#>` | A harness PR has red CI or review comments | Polls checks + comments, classifies via the self-healing table, fixes, pushes, replies with evidence; bounded and budget-metered; never merges |
 | `/status` | See progress | Reads current pipeline state; also available as `npm run status` |
 | `/agent-readiness` | Is this codebase ready for heavy AI-agent use? | 8-pillar synthesis dashboard over signals the harness already collects; also available as `npm run agent-readiness` |
@@ -227,6 +227,22 @@ Runtime churn hygiene (local; `*.jsonl` is gitignored):
 npm run retention:dry   # preview
 npm run retention       # prune .claude/runs (>14d) and state/archive (>30d)
 ```
+
+## Human trust surfaces (review without drowning in diffs)
+
+When agents generate code, humans need **proof** and a **map** — not alphabetical PR noise:
+
+| Command | What you get |
+|---------|----------------|
+| `/gate` | Full pre-merge gate; always ends with quality card + walkthrough |
+| `npm run quality-card` | Single trust receipt (`specs/reviews/quality-card.md`) |
+| `npm run walkthrough` | Logical change groups + severity + blast radius |
+| `npm run pr-body -- --require-gate` | PR body that embeds both (exits 1 if red) |
+| `npm run human-codebase` | `docs/CODEBASE.md` human homepage from the code-graph |
+| `npm run ask -- "where is auth?"` | Ask the codebase (cited, slice-level) |
+| `npm run observability-gate -- --staged` | Static logging/exception ratchet |
+| `npm run perf-smell -- --staged` | N+1 / sync-in-async / unbounded-load smells |
+| `npm run readiness-digest` | Weekly ops view of agent-readiness + card freshness |
 
 ## Token Usage Optimizer
 

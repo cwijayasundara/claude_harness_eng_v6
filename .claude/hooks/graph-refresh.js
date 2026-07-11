@@ -76,6 +76,7 @@ function refresh(projectDir, rels) {
     path.join(projectDir, '.claude', 'scripts', 'nav-cochange.js'),
     path.join(projectDir, '.claude', 'scripts', 'nav-concepts.js'),
     path.join(projectDir, '.claude', 'scripts', 'nav-brownfield-maps.js'),
+    path.join(projectDir, '.claude', 'scripts', 'human-codebase.js'),
   ];
   for (const script of navScripts) {
     if (!fs.existsSync(script)) continue;

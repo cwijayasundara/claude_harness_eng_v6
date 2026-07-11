@@ -81,12 +81,21 @@ pass/fail; the generator only repairs.
 ## Phase 11 — raise PR
 
 Reachable only when the applicable Phase 9.5 suites and `/gate` (evaluator +
-security) are green. Push the branch, `gh pr create` with a body covering:
-stories delivered, Phase 9.5 proof (suites + results), `/gate` verdict,
-Forbidden-Actions check, and a link to the source PRD/requirement. **Do not
-merge** — merge is a separate decision (human, or `AUTO_MERGE` — activated locally via
-`--auto-merge` flag / `AUTO_MERGE=true` env through `.claude/scripts/auto-merge.js`,
-or via symphony's `AUTO_MERGE` key).
+security + quality-card) are green. Push the branch, then open the PR with a
+**machine-assembled** body (never a thin hand summary):
+
+```bash
+node .claude/scripts/pr-body.js --require-gate --title "<stories>" > /tmp/pr-body.md
+gh pr create --title "..." --body-file /tmp/pr-body.md
+```
+
+`pr-body.js` embeds `quality-card.md` + logical `walkthrough.md` + navigation
+links and **exits 1** if the quality card is FAIL/incomplete — refuse PR open
+in that case. Cover stories delivered, Phase 9.5 proof, and the PRD link in
+the title/extra sections. **Do not merge** — merge is a separate decision
+(human, or `AUTO_MERGE` — activated locally via `--auto-merge` flag /
+`AUTO_MERGE=true` env through `.claude/scripts/auto-merge.js`, or via
+symphony's `AUTO_MERGE` key).
 
 ## Pod mode (`--pod N`) — one PR per cluster
 

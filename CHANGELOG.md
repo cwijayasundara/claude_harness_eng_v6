@@ -2,6 +2,20 @@
 
 All notable changes to the Claude Harness Engine are documented here.
 
+## Unreleased
+
+### Human trust + production-quality surfaces (P0–P3)
+
+World-class human review and codebase understanding (Devin DeepWiki/Review + OpenAI harness patterns):
+
+- **P0 quality card + walkthrough:** `quality-card.js`, `pr-walkthrough.js`, `pr-body.js` — `/gate` Step 4 always writes a trust receipt + logical PR tour; Phase 11 opens PRs via `pr-body.js --require-gate` (refuses red cards).
+- **P0 human homepage:** `human-codebase.js` → `docs/CODEBASE.md` from code-graph + CONTEXT + concepts; fail-open on graph-refresh.
+- **P1 observability ratchet:** `observability-gate.js` — BLOCK swallowed exceptions/empty catches; WARN unstructured logs / boundary without logger / middleware without request_id.
+- **P2 Ask CLI:** `ask-codebase.js` / `npm run ask -- "…"` — human-readable context-pack answers with citations.
+- **P3 perf smells + digest:** `perf-smell-gate.js` (N+1 / sync-in-async BLOCKs); `readiness-digest.js` weekly ops view.
+
+Sensors registered in `harness-manifest.json`; scripts on `CORE_SCRIPTS` + npm scripts.
+
 ## 2.1.0 — 2026-07-10
 
 ### Unreleased follow-ups (same minor line until next tag)

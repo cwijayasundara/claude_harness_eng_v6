@@ -245,10 +245,16 @@ Commit the README: `git add README.md && git commit -m "docs: add README with ar
 
 ### Phase 11 — Raise PR [gated on all-green]
 
-The pipeline's terminal step. **Only reachable when Phase 9.5 passed** (applicable API + E2E suites green) and `/gate` (evaluator + adaptive review) is clean — never raise a PR over a failing or unverified build.
+The pipeline's terminal step. **Only reachable when Phase 9.5 passed** (applicable API + E2E suites green) and `/gate` (evaluator + adaptive review + quality-card) is clean — never raise a PR over a failing or unverified build.
 
-1. Run `/gate` if it has not already run on the final integrated state; abort the PR on any block-level finding.
-2. Push the build branch and open the PR with `gh pr create`, body summarizing: stories delivered, the Phase 9.5 proof (which suites ran + results), `/gate` verdict, and any Forbidden-Actions checks. Link the source requirement/PRD.
+1. Run `/gate` if it has not already run on the final integrated state; abort the PR on any block-level finding. `/gate` Step 4 must have written `specs/reviews/quality-card.md` + `walkthrough.md` (and stamped `.claude/state/gate-receipt.json`).
+2. Compose the PR body from the gate receipts (do **not** hand-roll a thin summary):
+   ```bash
+   node .claude/scripts/pr-body.js --require-gate --title "<stories delivered>" > /tmp/pr-body.md
+   # exit 1 if quality-card is FAIL/incomplete — abort PR open
+   gh pr create --title "..." --body-file /tmp/pr-body.md
+   ```
+   The body includes the quality card, logical walkthrough, and navigation links (`docs/CODEBASE.md`, DeepWiki, `npm run ask`). Append Phase 9.5 proof and the PRD link under the generated body or via `--extra`. Pod mode: pass the same body into `wave-pr.js --body "$(node .claude/scripts/pr-body.js --require-gate)"`.
 3. **Merge.** Raising the PR is the autonomous boundary, and merge stays human
    **unless** AUTO_MERGE is active — the `--auto-merge` flag or `AUTO_MERGE=true`
    env (method from `MERGE_METHOD`, default `merge`). When active, run

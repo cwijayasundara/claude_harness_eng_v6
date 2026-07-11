@@ -140,6 +140,14 @@ const CORE_SCRIPTS = [
   'vocabulary-check.js',
   'wave-plan.js',
   'wave-pr.js',
+  'quality-card.js',
+  'pr-walkthrough.js',
+  'pr-body.js',
+  'human-codebase.js',
+  'observability-gate.js',
+  'perf-smell-gate.js',
+  'ask-codebase.js',
+  'readiness-digest.js',
 ];
 const BROWNFIELD_SCRIPTS = [
   ...CORE_SCRIPTS,

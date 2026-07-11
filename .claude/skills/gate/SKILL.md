@@ -77,9 +77,31 @@ When a security trigger fires, also run the **computational security scan** (gap
 
 If no security trigger fired, run neither `security-reviewer` nor the computational scan; record `security_review: skipped_no_boundary` in the context pack instead.
 
+### Step 2.5 — Static production-readiness gates (always, when production source changed)
+
+When the changed-file set includes any production source (not only docs/tests):
+
+1. **Observability ratchet:** `node .claude/scripts/observability-gate.js --files <changed production files>` (or `--staged` / `--diff-base <base>`). Writes `specs/reviews/observability-verdict.json`. A `pass: false` (BLOCK-level swallowed exceptions / empty catches) is a **BLOCK**.
+2. **Perf-smell gate:** `node .claude/scripts/perf-smell-gate.js --files <changed production files>` (or `--staged` / `--diff-base <base>`). Writes `specs/reviews/perf-smell-verdict.json`. N+1-in-loop / sync-in-async BLOCKs are a **BLOCK**; unbounded-load WARNs are non-blocking but appear on the quality card.
+
+Skip both only when the diff has zero production source files (docs-only / pure test). Record the skip in the context pack.
+
 ### Step 3 — Apply the Canonical Gate Semantics
 
 Severity levels (BLOCK/WARN/INFO), the BLOCK self-healing loop (generator fix → full re-run, max 3 cycles, then escalate), and the security verdict format are defined once in `/evaluate` (`.claude/skills/evaluate/SKILL.md`) — follow them exactly from there. Do not merge or mark a group complete while any BLOCK finding remains open, and always re-run the full review after fixes.
+
+### Step 4 — Human trust surfaces (always, end of gate)
+
+After all reviewers and static gates settle (including after fix cycles), **always** emit the human-facing receipts. Missing these is itself a BLOCK for PR-open:
+
+1. **Logical walkthrough:** `node .claude/scripts/pr-walkthrough.js --base <git-base-or-omit>`
+   - Writes `specs/reviews/walkthrough.md` + `walkthrough.json` (Devin Review–class: logical groups, severity, blast radius, 5-minute review script).
+2. **Quality card:** `node .claude/scripts/quality-card.js --range <base..head>`
+   - Writes `specs/reviews/quality-card.md` + `quality-card.json` and stamps `.claude/state/gate-receipt.json`.
+   - Aggregates evaluator, code-review, security, observability, perf-smell, regression, ownership, etc.
+3. **Human homepage (refresh):** `node .claude/scripts/human-codebase.js` (idempotent; keeps `docs/CODEBASE.md` current).
+
+A quality-card with `pass: false` or missing core inputs (evaluator report / code-review verdict) means the gate is not green — do not open a PR.
 
 ## Output Files
 
@@ -93,6 +115,11 @@ Severity levels (BLOCK/WARN/INFO), the BLOCK self-healing loop (generator fix �
 - `specs/reviews/regression-gate-verdict.json` — accumulated e2e + prior sprint-contract regression result when `e2e/` or `sprint-contracts/` exists
 - `specs/reviews/sensor-waivers-verdict.json` — waiver validation result when waivers are present or checked
 - `specs/reviews/review-context-pack.md` — compact shared review input
+- `specs/reviews/observability-verdict.json` — static logging/exception ratchet (Step 2.5)
+- `specs/reviews/perf-smell-verdict.json` — static perf smell ratchet (Step 2.5)
+- `specs/reviews/walkthrough.md` + `walkthrough.json` — logical PR walkthrough for humans (Step 4)
+- `specs/reviews/quality-card.md` + `quality-card.json` — single trust receipt (Step 4)
+- `docs/CODEBASE.md` — human homepage refresh (Step 4)
 
 Every selected output must exist before the review is complete; a missing selected output is itself a BLOCK finding.
 
