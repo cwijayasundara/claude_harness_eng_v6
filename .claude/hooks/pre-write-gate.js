@@ -19,6 +19,7 @@ const { blockingHits } = require('./lib/security-patterns');
 const { FILE_HARD_LIMIT, FUNC_HARD_LIMIT, oversizedFunctions } = require('./lib/length');
 const { missingTest } = require('./lib/tdd');
 const { isHarnessRepo, machineryViolation } = require('./lib/trust-boundary');
+const { prefixCacheViolation, prefixCacheBlockMessage } = require('./lib/prefix-cache');
 const { coveragePreflight } = require('./lib/coverage-preflight');
 
 function block(message) {
@@ -46,6 +47,12 @@ function checkTrustBoundary(projectDir, filePath) {
     `Agents may not modify the gates that verify their own work.\n` +
     `Fix: if this change is genuinely intended, a human applies it (HARNESS_PROTECT=off) or it lands in the harness repo and is re-scaffolded.\n`
   );
+}
+
+function checkPrefixCache(projectDir, filePath) {
+  const rel = prefixCacheViolation(projectDir, filePath);
+  if (!rel) return;
+  block(prefixCacheBlockMessage(rel));
 }
 
 function checkSecrets(filePath, inserted, projectDir) {
@@ -113,6 +120,7 @@ try {
 
   checkScope(projectDir, path.resolve(filePath));
   checkTrustBoundary(realResolve(projectDir), realResolve(filePath));
+  checkPrefixCache(realResolve(projectDir), realResolve(filePath));
   if (isProtectedEnvFile(filePath)) {
     block(`BLOCKED: Cannot modify ${path.basename(filePath)} — environment files contain real secrets. Edit manually.\nFix: Edit .env.example instead for documentation, or edit .env manually outside Claude.\n`);
   }

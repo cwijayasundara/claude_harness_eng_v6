@@ -11,11 +11,13 @@
 // machinery trust-boundary, and protected env files. Content-level checks
 // (secrets, length, TDD) cannot be reproduced from a shell string and remain the
 // Write path's responsibility — agents should prefer Write/Edit for source so
-// those checks apply. Escape hatch: HARNESS_PROTECT=off (machinery only).
+// those checks apply. Escape hatches: HARNESS_PROTECT=off (machinery only);
+// HARNESS_PREFIX_EDIT=1 (prompt-cache prefix files only).
 
 const path = require('path');
 const { resolveProjectDir, readHookInput, realResolve, isWriteInScope, reportFailure } = require('./lib/common');
 const { isHarnessRepo, machineryViolation } = require('./lib/trust-boundary');
+const { prefixCacheViolation, prefixCacheBlockMessage } = require('./lib/prefix-cache');
 const { isProtectedEnvFile } = require('./lib/secrets');
 const { extractWriteTargets } = require('./lib/bash-targets');
 
@@ -50,6 +52,15 @@ function checkTarget(projectDir, target, command, opts) {
         `Agents may not modify the gates that verify their own work — not even via the shell.\n` +
         `Fix: a human applies machinery changes (HARNESS_PROTECT=off), or they land in the harness repo and are re-scaffolded.\n`);
     }
+  }
+  // Prompt-cache prefix applies even in the harness repo (unlike machinery).
+  const prefixRel = prefixCacheViolation(realResolve(projectDir), resolved);
+  if (prefixRel) {
+    block(
+      `BLOCKED: Bash write to prompt-cache prefix: ${prefixRel}\n` +
+        `(from: ${command})\n` +
+        prefixCacheBlockMessage(prefixRel)
+    );
   }
   if (isProtectedEnvFile(resolved)) {
     block(`BLOCKED: Bash write to ${path.basename(resolved)} — environment files contain real secrets. Edit them manually.\n` +

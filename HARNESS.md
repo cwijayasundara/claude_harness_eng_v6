@@ -78,7 +78,7 @@ Status: ✅ active · 🟡 partial (limited/opt-in/report-only) · ⛔ planned (
 
 ## Steering loop (the human layer)
 
-The harness improves itself between runs: `.claude/program.md` (the steering input that biases `/auto`), `.claude/state/learned-rules.md` (failure-derived rules, injected into future prompts, never deleted), and `review-on-stop.js` (surfaces session learnings as suggested `CLAUDE.md` edits — applied *between* sessions, never mid-run, to preserve the prompt cache).
+The harness improves itself between runs: `.claude/program.md` (the steering input that biases `/auto`), `.claude/state/learned-rules.md` (failure-derived rules, injected into future prompts, never deleted), and `review-on-stop.js` (surfaces session learnings as suggested `CLAUDE.md` edits — applied *between* sessions, never mid-run, to preserve the prompt cache). Mid-session writes to `CLAUDE.md`, `.mcp.json`, and `.claude/settings*.json` are **blocked** by the `prompt-cache-prefix` sensor (`lib/prefix-cache.js` via pre-write + pre-bash gates; escape `HARNESS_PREFIX_EDIT=1` only between sessions).
 
 ### Self-audit against Anthropic's named generator-verifier failure modes
 

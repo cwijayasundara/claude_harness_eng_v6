@@ -103,12 +103,15 @@ Three rules keep the prefix stable during a run:
 2. **Don't edit `CLAUDE.md` mid-session.** It's cached per-project; an edit busts the prefix for every later turn. The `session-learnings` Stop hook only *suggests* updates — apply them between sessions, not during a build.
 3. **Don't swap the orchestrator's model mid-session.** Model changes happen via subagents with their own context windows (planner=Opus, generator=Sonnet, etc. — see the Agents table), never by `/model`-switching the main loop. Dynamic values (dates, timestamps) belong in messages / `<system-reminder>` tags, never in cached content.
 
+**Enforced:** `pre-write-gate` + `pre-bash-gate` block writes to `CLAUDE.md`, `.mcp.json`, and `.claude/settings*.json` (see `.claude/hooks/lib/prefix-cache.js`). Escape for intentional inter-session work only: `HARNESS_PREFIX_EDIT=1`.
+
 Monitor cache hit rate like uptime. Telemetry is **off by default** (opt-in) — enable it per the README's "Enable telemetry" section (`CLAUDE_CODE_ENABLE_TELEMETRY=1` + the OTEL/Pushgateway env vars in `.claude/settings.json`). Once enabled, `telemetry/cache-alerts.rules.yml` (wired into `telemetry/prometheus.yml`) and `telemetry/grafana/dashboards/cache-health.json` (auto-provisioned) add a hit-rate alert and dashboard on top of it. See `telemetry/CACHE_MONITORING.md`.
 
 ## Key Files
 
 - `.claude/program.md` — Karpathy human-agent bridge (edit to steer /auto)
 - `.claude/settings.json` — Hook config, permissions, enabled plugins
+- `.mcp.json` — Project MCP servers (dogfood: `harness-nav` via `nav-mcp-server.js`; settle before long runs)
 - `.claude/workflows/` — Slot for dynamic workflows you author (each `.js` you add becomes a `/<name>` command). Ships empty; `/scaffold` copies the slot to target projects. See `.claude/workflows/README.md`
 - `design.md` — Full architecture reference (copied to target projects)
 - `HARNESS.md` + `harness-manifest.json` — Registry of the control system (guides × sensors across maintainability/architecture/behaviour/traceability). Read before adding or changing any gate/sensor/reviewer so the new control gets registered, not orphaned; keep the manifest honest (`node .claude/scripts/validate-harness-manifest.js`, enforced by `npm test`)

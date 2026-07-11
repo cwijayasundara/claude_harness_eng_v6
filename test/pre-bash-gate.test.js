@@ -82,7 +82,10 @@ test('machinery writes are allowed inside the harness repo itself', async () => 
 
 test('HARNESS_PROTECT=off bypasses the machinery gate deliberately', async () => {
   const projectDir = makeHookProject([HOOK]);
-  const result = await bash(projectDir, 'echo "{}" > .claude/settings.json', { HARNESS_PROTECT: 'off' });
+  // Pure machinery path — not a prompt-cache prefix file (settings.json is dual-guarded).
+  const result = await bash(projectDir, 'echo "[]" > .claude/security-patterns.json', {
+    HARNESS_PROTECT: 'off',
+  });
   assert.strictEqual(result.status, 0, result.stdout);
 });
 

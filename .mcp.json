@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "harness-nav": {
+      "command": "node",
+      "args": [".claude/scripts/nav-mcp-server.js"],
+      "env": {
+        "HARNESS_PROJECT_DIR": "${workspaceFolder}"
+      }
+    }
+  }
+}

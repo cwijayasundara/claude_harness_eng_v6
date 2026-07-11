@@ -120,6 +120,7 @@ node .claude/scripts/nav-query.js refresh
 
 Optional MCP (same tools as nav-query) — merge `.claude/templates/mcp-nav.snippet.json`
 into project `.mcp.json` **before** long agent runs (do not churn MCP mid-session).
+The harness monorepo dogfoods this at the repo-root `.mcp.json` (`harness-nav`).
 
 Wiki steering (DeepWiki-style): `.harness/wiki.json` (`repo_notes`, `priority_paths`,
 `max_concept_pages`) shapes concept pages under `specs/brownfield/wiki/concepts/`.
