@@ -691,6 +691,11 @@
       <a href="#token-gov">Token governor</a>
     </div>
     <div class="nav-group">
+      <div class="nav-group-title">Compare</div>
+      <a href="#vs-devin">vs Devin</a>
+      <a href="#vs-devin-when">When to use which</a>
+    </div>
+    <div class="nav-group">
       <div class="nav-group-title">Operate well</div>
       <a href="#zl">Z/L continuum</a>
       <a href="#trust">Human trust surfaces</a>
@@ -743,6 +748,7 @@
         <a href="#gan">How GAN works</a>
         <a href="#pre-commit">Pre-commit registry</a>
         <a href="#receipt-flows">Receipt proofs</a>
+        <a href="#vs-devin">vs Devin</a>
         <a href="#playbooks">Usage playbooks</a>
         <a href="#deep-links">Source docs</a>
       </div>
@@ -1782,6 +1788,286 @@ node .claude/scripts/nav-query.js pack --diff --budget 1600 "&lt;question&gt;"</
   max_source_read_lines: …</code></pre>
     </section>
 
+    <!-- COMPARE -->
+    <section class="section" id="vs-devin">
+      <h2>Harness vs Devin — multi-dimension comparison</h2>
+      <p class="lede">
+        Different products, overlapping jobs. <strong>Devin</strong> (Cognition) is a hosted autonomous software engineer
+        with its own cloud workspace, IDE, browser, DeepWiki, and team UI.
+        <strong>This harness</strong> is an open control system for Claude Code: guides, sensors, GAN roles, ratchets,
+        and explicit human merge — running in <em>your</em> repo and CI.
+      </p>
+
+      <div class="callout info">
+        <div class="label">How to read this</div>
+        <p>
+          Not a scoreboard to “win.” Devin optimizes for <em>delegating engineering work to a cloud agent product</em>.
+          The harness optimizes for <em>making Claude Code runs trustworthy, resumable, and governed inside an existing SDLC</em>.
+          Teams often use complementary patterns: product agents for parallel backlog crush; harnesses for monorepo discipline and merge-ready proof.
+          Devin product details below track public docs (e.g. <a href="https://docs.devin.ai/" target="_blank" rel="noopener">docs.devin.ai</a>); both products evolve quickly.
+        </p>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <div class="tag">Devin</div>
+          <h4>AI software engineer product</h4>
+          <p>Cloud sessions · embedded IDE · shell · browser · Slack/Teams · DeepWiki · playbooks · API/CLI · parallel backlog work.</p>
+        </div>
+        <div class="card">
+          <div class="tag">This harness</div>
+          <h4>Control plane on Claude Code</h4>
+          <p>Open plugin · generator≠evaluator · sprint contracts · pre-commit registry · living code-map · /feature|/build|/gate · human-owned merge.</p>
+        </div>
+        <div class="card">
+          <div class="tag">Shared DNA</div>
+          <h4>Long-running agent work</h4>
+          <p>Both care about repo understanding, multi-step tasks, PRs, self-correction from failures, and not losing state across long sessions.</p>
+        </div>
+      </div>
+
+      <h3>At a glance</h3>
+      <div class="diagram">
+        <svg class="svg-wrap" viewBox="0 0 920 260" xmlns="http://www.w3.org/2000/svg" aria-label="Harness vs Devin at a glance">
+          <rect x="30" y="20" width="400" height="220" rx="16" fill="rgba(91,157,255,.08)" stroke="rgba(91,157,255,.4)"/>
+          <text x="230" y="55" text-anchor="middle" fill="#60a5fa" font-size="16" font-weight="700">Claude Harness Engine</text>
+          <text x="50" y="90" fill="#d2dceb" font-size="12">• Runs where Claude Code runs (local / your CI)</text>
+          <text x="50" y="115" fill="#d2dceb" font-size="12">• You own models, git, secrets, merge</text>
+          <text x="50" y="140" fill="#d2dceb" font-size="12">• Structural GAN + monotonic ratchets</text>
+          <text x="50" y="165" fill="#d2dceb" font-size="12">• Sensors are code you can read &amp; extend</text>
+          <text x="50" y="190" fill="#d2dceb" font-size="12">• Lane routing: build / feature / vibe / gate</text>
+          <text x="50" y="215" fill="#d2dceb" font-size="12">• DeepWiki-style maps, deterministic graph</text>
+
+          <rect x="490" y="20" width="400" height="220" rx="16" fill="rgba(192,132,252,.08)" stroke="rgba(192,132,252,.4)"/>
+          <text x="690" y="55" text-anchor="middle" fill="#c084fc" font-size="16" font-weight="700">Devin (Cognition)</text>
+          <text x="510" y="90" fill="#d2dceb" font-size="12">• Hosted agent product + cloud workspace</text>
+          <text x="510" y="115" fill="#d2dceb" font-size="12">• IDE / shell / browser in the session UI</text>
+          <text x="510" y="140" fill="#d2dceb" font-size="12">• Strong parallel backlog &amp; ticket intake</text>
+          <text x="510" y="165" fill="#d2dceb" font-size="12">• Knowledge, playbooks, DeepWiki / search</text>
+          <text x="510" y="190" fill="#d2dceb" font-size="12">• Slack / Teams / API / Devin CLI</text>
+          <text x="510" y="215" fill="#d2dceb" font-size="12">• Optimized for “delegate &amp; review PRs”</text>
+        </svg>
+        <div class="cap">Same problem space (agentic software engineering); different layer of the stack (control plane vs full agent product).</div>
+      </div>
+
+      <h3>1. Product &amp; packaging</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Dimension</th><th>Claude Harness Engine</th><th>Devin</th></tr></thead>
+          <tbody>
+            <tr><td><strong>What it is</strong></td><td>Open Claude Code plugin / scaffold (SKU: lite · core · full)</td><td>Commercial AI software engineer product (web + CLI + API)</td></tr>
+            <tr><td><strong>Primary surface</strong></td><td>Claude Code chat + repo-local hooks/skills/agents</td><td>app.devin.ai session UI; Devin CLI; integrations</td></tr>
+            <tr><td><strong>Who hosts compute</strong></td><td>Your machine / your runners; Anthropic for model APIs</td><td>Cognition cloud workspace (plus local CLI for lighter work)</td></tr>
+            <tr><td><strong>Vendor lock-in of control logic</strong></td><td>Low — gates/skills live in the repo; you can fork</td><td>Product-controlled agent + platform features</td></tr>
+            <tr><td><strong>Install</strong></td><td><code>claude --plugin-dir …</code> then <code>/scaffold</code></td><td>Sign up; connect repos; optional CLI install</td></tr>
+            <tr><td><strong>Symphony analogue</strong></td><td>Optional <code>symphony_clone</code> tracker→PR factory</td><td>Native multi-session backlog + ticket integrations</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>2. Runtime environment &amp; tools</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Dimension</th><th>Harness</th><th>Devin</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Shell / IDE</strong></td><td>Your terminal + editor via Claude Code</td><td>Embedded IDE, shell, interactive takeover in-session</td></tr>
+            <tr><td><strong>Browser</strong></td><td>Playwright MCP for eval / design-critic (not a general browse product)</td><td>First-class session browser for docs + app testing</td></tr>
+            <tr><td><strong>Verification modes</strong></td><td>docker · local · stub contracts</td><td>Run/test in cloud workspace; CI feedback loops</td></tr>
+            <tr><td><strong>Takeover UX</strong></td><td>You always work in the same Claude Code session / git tree</td><td>Watch agent, jump into IDE/browser mid-task</td></tr>
+            <tr><td><strong>Secrets / env</strong></td><td>Your project envs, <code>init.sh</code>, pre-write env protection</td><td>Managed session environment + org setup / snapshots</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>3. Architecture of agency</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Dimension</th><th>Harness</th><th>Devin</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Role separation</strong></td><td><strong>Hard GAN</strong>: generator cannot evaluate; evaluator cannot write production code</td><td>Unified agent product (may use internal tools/subagents; not exposed as a repo-level GAN contract)</td></tr>
+            <tr><td><strong>Specialized agents</strong></td><td>Explicit 9 roles (planner, generator, evaluator, security, critic, reviewer, …) with model pins</td><td>Session agent + platform tooling (wiki, knowledge, CLI handoff, etc.)</td></tr>
+            <tr><td><strong>“Done” definition</strong></td><td>Machine-readable <strong>sprint contracts</strong> (API + Playwright + design + perf)</td><td>Task prompt + completion criteria; CI/PR as practical done signal</td></tr>
+            <tr><td><strong>Self-heal</strong></td><td>Max 3 strategies from structured failure JSON; then BLOCKED + learned rule</td><td>Iterate from errors/logs inside the session (product loop)</td></tr>
+            <tr><td><strong>Self-eval bias defense</strong></td><td>Structural (separate agents + binary verdict + majority re-verify at /gate)</td><td>Process/product design; human reviews PRs</td></tr>
+            <tr><td><strong>Parallel code agents</strong></td><td>Phased DAG teams ≤5; file ownership from component-map</td><td>Strong multi-session / multi-ticket parallelism across the org backlog</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>4. Quality system &amp; governance</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Dimension</th><th>Harness</th><th>Devin</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Ratchets</strong></td><td>Coverage, cycles, coupling, mutation smoke, learned rules (monotonic)</td><td>Not a published repo-local ratchet registry; quality via tests/CI/human review</td></tr>
+            <tr><td><strong>Commit-time enforcement</strong></td><td>Real <code>pre-commit</code> gate registry filtered by <code>sensor_tier</code></td><td>Commits from agent; enforcement is whatever your git/CI already require</td></tr>
+            <tr><td><strong>Security</strong></td><td>security-reviewer (find-then-refute) + secret scan + semgrep/audit at /gate; 3-instance majority on boundary</td><td>Platform + your org policies; not the same explicit OWASP agent gate in-repo</td></tr>
+            <tr><td><strong>Traceability</strong></td><td>FRD→BRD→spec→test grounding, ownership-check, verification matrix, amendments</td><td>Session history / knowledge / tickets; less “hard-block artifact chain” in-repo</td></tr>
+            <tr><td><strong>Waivers</strong></td><td>Reviewed <code>sensor-waivers.json</code> + arbitration policy</td><td>Human judgment in PR/review tools</td></tr>
+            <tr><td><strong>Agent readiness</strong></td><td><code>/agent-readiness</code> 8-pillar dashboard over existing sensors</td><td>Repo setup / snapshots / knowledge quality (product-side)</td></tr>
+            <tr><td><strong>Merge authority</strong></td><td>Human owns merge by default (AUTO_MERGE opt-in only)</td><td>Draft PRs for human review (typical successful workflow)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>5. Planning, lanes &amp; SDLC shape</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Dimension</th><th>Harness</th><th>Devin</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Greenfield</strong></td><td><code>/build</code> BRD→spec→design→test→/auto with human gates</td><td>Prompt-driven features / internal tools from scratch</td></tr>
+            <tr><td><strong>Brownfield</strong></td><td><code>/feature</code>, <code>/brownfield</code>, seams, pin/sprout, AT-first</td><td>Strong on migrations, refactors, flag cleanup, ticket-sized changes</td></tr>
+            <tr><td><strong>Sprint evolution</strong></td><td><code>/sprint</code> amends living design (never full regen)</td><td>Sequential sessions / playbooks; design continuity is process-dependent</td></tr>
+            <tr><td><strong>Lane routing</strong></td><td>Explicit: vibe · change · refactor · epic · disposable lite</td><td>Task sizing guidance (“~3 hours” rule of thumb); CLI vs cloud handoff</td></tr>
+            <tr><td><strong>Z/L placement</strong></td><td>Documented continuum for human line-reading vs automation</td><td>Implicit via task selection and review rigor</td></tr>
+            <tr><td><strong>Disposable artifacts</strong></td><td>harness-lite / doc-only / mockup lanes (no GAN)</td><td>Not the product focus; sessions aim at shippable engineering work</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>6. Codebase understanding &amp; knowledge</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Dimension</th><th>Harness</th><th>Devin</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Wiki / DeepWiki</strong></td><td>Scaffold-native living wiki + <code>code-graph.json</code> (AST / tree-sitter), refreshed by hooks</td><td>DeepWiki product: auto wiki + search for public/private repos; integrated into sessions</td></tr>
+            <tr><td><strong>Graph nature</strong></td><td>Deterministic symbols, edges, hubs, cycles, line ranges</td><td>Agentic wiki generation (v2: stronger reasoning / subagents); citation-style Q&amp;A</td></tr>
+            <tr><td><strong>Context-first reads</strong></td><td><code>context-pack</code> / token governor (advisory or enforced)</td><td>DeepWiki answers + repo intelligence; knowledge retrieval</td></tr>
+            <tr><td><strong>Institutional memory</strong></td><td><code>learned-rules.md</code> (monotonic) + <code>program.md</code> steering</td><td>Knowledge base (folders, macros, triggers) + playbooks + agentic knowledge writes</td></tr>
+            <tr><td><strong>Ask the codebase</strong></td><td><code>npm run ask</code>, <code>/context</code>, nav-query / harness-nav MCP</td><td>In-session DeepWiki-like answers; DeepWiki MCP for external tools</td></tr>
+            <tr><td><strong>Public repo docs</strong></td><td>Your project’s wiki is private to the repo</td><td>deepwiki.com free public indexing at scale</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>7. Verification &amp; frontend quality</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Dimension</th><th>Harness</th><th>Devin</th></tr></thead>
+          <tbody>
+            <tr><td><strong>API checks</strong></td><td>Contract <code>api_checks</code> against running app</td><td>Agent runs tests/commands as needed</td></tr>
+            <tr><td><strong>Browser flows</strong></td><td>Playwright contract steps + E2E suite</td><td>Session browser to exercise the app</td></tr>
+            <tr><td><strong>Vision / design score</strong></td><td>design-critic GAN (DQ/O/C/F weighted rubric)</td><td>Visual judgment via agent/browser; no published 4-criterion repo gate</td></tr>
+            <tr><td><strong>AT-first</strong></td><td>Ports-and-Adapters ATs + red receipts + commit gate</td><td>Can write tests; not a fixed AT-first mechanical proof in-repo</td></tr>
+            <tr><td><strong>Regression</strong></td><td>Two-speed: impact-scoped local + full merge sweep</td><td>CI on PR + re-runs; depends on your pipeline</td></tr>
+            <tr><td><strong>Human trust pack</strong></td><td>quality-card + walkthrough + CODEBASE.md always from /gate</td><td>Session worklog + PR diff; review in GitHub/GitLab</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>8. Cost, models &amp; operations</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Dimension</th><th>Harness</th><th>Devin</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Model choice</strong></td><td>Pinned per role; tiers cost / balanced / max-quality (Opus judgment, Sonnet gen, …)</td><td>Platform model stack (Cognition-operated); less per-role open config in-repo</td></tr>
+            <tr><td><strong>Spend control</strong></td><td>Budget caps (wall-clock, spawns, est. $); token governor; cost-report</td><td>Plan / ACU-style product metering (e.g. wiki generation cost surfaced in product)</td></tr>
+            <tr><td><strong>Resume after death</strong></td><td>Re-invoke <code>/auto</code> from progress log; build-chain multi-process waves</td><td>Session persistence in product; CLI→cloud handoff for long work</td></tr>
+            <tr><td><strong>Telemetry</strong></td><td>Optional OTEL + Grafana (cache hit rate, etc.)</td><td>Product analytics (sessions, playbook usage, …)</td></tr>
+            <tr><td><strong>Upgrade control plane</strong></td><td><code>/scaffold-upgrade</code> without wiping state</td><td>Product updates from Cognition</td></tr>
+            <tr><td><strong>Dogfood / open tests</strong></td><td>This monorepo’s large unit/e2e suite for the harness itself</td><td>Closed product; customer success measured on their repos</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>9. Collaboration &amp; org workflow</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Dimension</th><th>Harness</th><th>Devin</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Chat / tickets</strong></td><td>Claude Code; optional Linear/Jira via tracker-publish + Symphony</td><td>First-class Slack / Teams tagging; Linear/Jira ticket crushing</td></tr>
+            <tr><td><strong>PR loop</strong></td><td><code>/pr-respond</code> bounded CI/comment fix (never merges)</td><td>Opens draft PRs; humans review; PR review is a named strength area</td></tr>
+            <tr><td><strong>Multi-repo org</strong></td><td>Per-repo scaffold; factory optional</td><td>Org workspace, knowledge folders, snapshots, multi-repo indexing</td></tr>
+            <tr><td><strong>Playbooks / macros</strong></td><td>Skills + program.md + learned rules</td><td>Playbooks + knowledge macros (<code>!…</code>) + triggers</td></tr>
+            <tr><td><strong>Best task shape (vendor guidance)</strong></td><td>Lane-fit + contracts + verifiable ACs</td><td>Clear completion criteria; ~≤3h tasks excel; verifiable via CI/deploy</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>10. Strengths map (honest)</h3>
+      <div class="diagram">
+        <div class="two-col">
+          <div>
+            <h4 style="margin-top:0;color:#b8d7ff">Harness tends to win when…</h4>
+            <ul>
+              <li>You need <strong>auditable, repo-owned gates</strong> every commit</li>
+              <li>Self-eval bias is unacceptable (GAN + binary contracts)</li>
+              <li>You want <strong>model tiering</strong> and open prompt surfaces</li>
+              <li>Brownfield needs pin/sprout, AT-first, amendment provenance</li>
+              <li>Air-gapped / strict data-boundary: code stays on your runners</li>
+              <li>You’re building a <strong>long-lived product</strong> with sprint evolution</li>
+            </ul>
+          </div>
+          <div>
+            <h4 style="margin-top:0;color:#e4c9ff">Devin tends to win when…</h4>
+            <ul>
+              <li>You want a <strong>turnkey cloud engineer</strong> with IDE + browser UX</li>
+              <li>High <strong>parallel backlog</strong> intake (Slack/Jira → many sessions)</li>
+              <li>Migrations / bulk refactors as fire-and-review PRs</li>
+              <li>Org-wide <strong>Knowledge + DeepWiki</strong> without building a harness</li>
+              <li>Non-Claude-Code users need a full product UI</li>
+              <li>You value product velocity over owning the control plane</li>
+            </ul>
+          </div>
+        </div>
+        <div class="cap" style="margin-top:1rem">Neither replaces senior engineering judgment on Z-band work (auth, money, migrations, public API).</div>
+      </div>
+
+      <h3>Ideas this harness shares with the Devin-era playbook</h3>
+      <p>Without claiming feature parity or shared implementation:</p>
+      <ul>
+        <li><strong>Living wiki / search</strong> — DeepWiki-inspired navigation; harness keeps a deterministic graph + wiki in-repo</li>
+        <li><strong>Long-running sessions</strong> — externalized progress (progress log, features.json) similar in spirit to durable agent sessions</li>
+        <li><strong>PR as handoff</strong> — agents draft; humans merge</li>
+        <li><strong>Knowledge that triggers</strong> — learned-rules / program.md vs Devin knowledge triggers &amp; playbooks</li>
+        <li><strong>Ask the codebase</strong> — cited answers before thrashing files</li>
+      </ul>
+    </section>
+
+    <section class="section" id="vs-devin-when">
+      <h2>When to use which (decision aid)</h2>
+      <p class="lede">A practical chooser — not mutually exclusive.</p>
+
+      <div class="diagram">
+        <div class="lane-tree">Need a hosted agent product with IDE + browser + Slack for the whole team?
+├── Yes, and you don’t want to own hooks/gates ──────────────► Devin (or similar)
+└── No / prefer Claude Code in our monorepo
+    ├── Need structural GAN + commit ratchets + sprint contracts ─► Harness
+    ├── Need parallel ticket factory on Linear/Jira
+    │   ├── Want open control plane ───────────────────────────► Harness + Symphony
+    │   └── Want turnkey multi-session product ────────────────► Devin
+    ├── Brownfield god-files / coverage discipline ────────────► Harness (/feature, pin/sprout)
+    ├── Org-wide DeepWiki for many repos with zero scaffold ───► Devin DeepWiki
+    └── Both: product agent for backlog + harness gates on merge ─► Compatible combo
+        (agent opens PR; harness /gate + CI remain source of truth)</div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Scenario</th><th>Lean</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>Greenfield product with multi-sprint design spine</td><td><strong>Harness</strong> <code>/build</code> → <code>/sprint</code></td><td>Living design amendments + contracts</td></tr>
+            <tr><td>20 small tickets this week from Slack</td><td><strong>Devin</strong></td><td>Parallel sessions + intake UX</td></tr>
+            <tr><td>Auth / payments change</td><td><strong>Either + heavy human Z-band</strong></td><td>Harness adds security gate + receipts; Devin still needs line review</td></tr>
+            <tr><td>Angular major upgrade migration</td><td><strong>Devin</strong> strong fit; harness <code>/refactor</code> if staying in Claude Code</td><td>Bulk mechanical + reviewable PRs</td></tr>
+            <tr><td>Regulated / code must not leave VPC</td><td><strong>Harness</strong> on private runners</td><td>No Cognition workspace required</td></tr>
+            <tr><td>Team already lives in Claude Code</td><td><strong>Harness</strong></td><td>Native skills/hooks/agents</td></tr>
+            <tr><td>Team wants one vendor agent UI</td><td><strong>Devin</strong></td><td>Full product surface</td></tr>
+            <tr><td>“Is this repo agent-ready?”</td><td><strong>Harness</strong> <code>/agent-readiness</code></td><td>Sensor synthesis dashboard</td></tr>
+            <tr><td>Public OSS explainability site</td><td><strong>Devin DeepWiki</strong> (deepwiki.com)</td><td>Free public indexing at scale</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout tip">
+        <div class="label">Compatible stack</div>
+        <p>
+          Use Devin (or any agent) to produce a PR, then require harness <code>/gate</code> (or the same CI sensors) before merge.
+          The harness’s value is the <em>control system</em>; Devin’s value is the <em>agent product &amp; workspace</em>. They compose.
+        </p>
+      </div>
+    </section>
+
     <!-- OPERATE -->
     <section class="section" id="zl">
       <h2>Z/L continuum — place each task</h2>
@@ -2075,6 +2361,9 @@ npm run retention:dry    # prune .claude/runs + archive previews</code></pre>
             <tr><td>Gate registry</td><td>Ordered pre-commit sensors filtered by sensor_tier</td></tr>
             <tr><td>Receipt proof</td><td>jsonl evidence that a discipline actually ran (coverage / AT-red)</td></tr>
             <tr><td>Session chain</td><td>Externalized state so a new context window resumes /auto</td></tr>
+            <tr><td>Devin</td><td>Cognition’s hosted AI software engineer product (IDE, browser, DeepWiki, sessions)</td></tr>
+            <tr><td>DeepWiki</td><td>Devin’s auto repo wiki/search; harness has a deterministic in-repo analogue</td></tr>
+            <tr><td>ACU</td><td>Devin product usage metering unit (see Cognition billing docs)</td></tr>
           </tbody>
         </table>
       </div>

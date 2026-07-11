@@ -4,7 +4,7 @@ A Claude Code plugin for building and changing software with a generator/evaluat
 
 Current version: `2.1.0`
 
-**Field guide (navigable HTML):** open [docs/harness-guide.html](docs/harness-guide.html) in a browser — architecture diagrams, lane picker, GAN/ratchet under the covers, playbooks, and glossary. Offline; no build step.
+**Field guide (navigable HTML):** open [docs/harness-guide.html](docs/harness-guide.html) in a browser — architecture diagrams, lane picker, GAN/ratchet under the covers, multi-dimension **vs Devin** comparison, playbooks, and glossary. Offline; no build step.
 
 ## Start Here
 
