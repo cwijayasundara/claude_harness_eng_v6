@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Productive Agentic Engineering — White Paper</title>
+<meta name="description" content="Human judgment, machine loops, and commercial software that ships without agent psychosis. Z/L continuum, skill research, domain gaps, harness operating model." />
+<style>
+  :root {
+    --bg: #0b0f14;
+    --bg-elev: #111821;
+    --bg-card: #151d28;
+    --bg-hover: #1a2433;
+    --border: #243041;
+    --border-soft: #1c2634;
+    --text: #e7eef8;
+    --text-dim: #9aabbf;
+    --text-mute: #6b7c91;
+    --accent: #5b9dff;
+    --accent-2: #7c5cff;
+    --accent-3: #2dd4bf;
+    --warn: #f5a524;
+    --danger: #f87171;
+    --ok: #34d399;
+    --gen: #60a5fa;
+    --eval: #c084fc;
+    --human: #fbbf24;
+    --sidebar-w: 280px;
+    --radius: 12px;
+    --font: "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    --shadow: 0 12px 40px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    font-size: 15.5px;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, kbd, .mono {
+    font-family: var(--mono);
+    font-size: 0.88em;
+  }
+  code {
+    background: rgba(91,157,255,.1);
+    border: 1px solid rgba(91,157,255,.18);
+    padding: 0.1em 0.4em;
+    border-radius: 6px;
+    color: #c7dcff;
+  }
+  pre {
+    background: #0a1018;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    line-height: 1.5;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+  }
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #d6e4ff;
+  }
+  kbd {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    padding: 0.05em 0.45em;
+    border-radius: 6px;
+    color: var(--text-dim);
+  }
+  blockquote.doctrine {
+    margin: 1.25rem 0;
+    padding: 1.1rem 1.25rem;
+    border-left: 3px solid var(--accent-2);
+    background: linear-gradient(90deg, rgba(124,92,255,.12), transparent 70%);
+    border-radius: 0 12px 12px 0;
+    font-size: 1.12rem;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    color: #f0f4ff;
+  }
+  blockquote.doctrine p { margin: 0; color: inherit; }
+
+  .shell { display: flex; min-height: 100vh; }
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: var(--sidebar-w);
+    background: linear-gradient(180deg, #0d131b 0%, #0a0f15 100%);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    z-index: 40;
+  }
+  .sidebar-head {
+    padding: 1.1rem 1rem 0.85rem;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .brand {
+    display: flex;
+    gap: .7rem;
+    align-items: center;
+    margin-bottom: .85rem;
+  }
+  .brand-mark {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: grid; place-items: center;
+    font-weight: 800;
+    font-size: 12px;
+    color: white;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 8px 24px rgba(91,157,255,.25);
+  }
+  .brand h1 {
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .brand p {
+    margin: 0;
+    font-size: 0.72rem;
+    color: var(--text-mute);
+  }
+  .search-wrap { position: relative; }
+  .search-wrap input {
+    width: 100%;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    padding: 0.55rem 0.7rem 0.55rem 2rem;
+    font: inherit;
+    font-size: 0.85rem;
+    outline: none;
+  }
+  .search-wrap input:focus {
+    border-color: rgba(91,157,255,.55);
+    box-shadow: 0 0 0 3px rgba(91,157,255,.12);
+  }
+  .search-wrap::before {
+    content: "⌕";
+    position: absolute;
+    left: .65rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-mute);
+    font-size: .95rem;
+  }
+  .nav {
+    overflow-y: auto;
+    padding: .75rem .55rem 1.5rem;
+    flex: 1;
+  }
+  .nav-group { margin-bottom: .85rem; }
+  .nav-group-title {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text-mute);
+    padding: .35rem .55rem;
+    font-weight: 700;
+  }
+  .nav a {
+    display: block;
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: .38rem .55rem;
+    border-radius: 8px;
+    font-size: 0.84rem;
+    border: 1px solid transparent;
+  }
+  .nav a:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+    text-decoration: none;
+  }
+  .nav a.active {
+    background: rgba(91,157,255,.12);
+    color: #d6e8ff;
+    border-color: rgba(91,157,255,.22);
+  }
+  .nav a.hidden { display: none; }
+
+  .main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    min-width: 0;
+  }
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    backdrop-filter: blur(14px);
+    background: rgba(11,15,20,.78);
+    border-bottom: 1px solid var(--border-soft);
+    padding: .7rem 1.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+  .topbar .crumbs {
+    color: var(--text-mute);
+    font-size: .84rem;
+  }
+  .topbar .crumbs strong { color: var(--text-dim); font-weight: 600; }
+  .pill-row { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .pill {
+    font-size: .72rem;
+    font-weight: 600;
+    padding: .22rem .55rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    background: var(--bg-card);
+  }
+  .pill.accent { border-color: rgba(91,157,255,.4); color: #b9d6ff; background: rgba(91,157,255,.1); }
+  .pill.ok { border-color: rgba(52,211,153,.35); color: #9ff0c8; background: rgba(52,211,153,.08); }
+  .pill.warn { border-color: rgba(245,165,36,.35); color: #ffd899; background: rgba(245,165,36,.08); }
+
+  .content {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 1.5rem 1.75rem 5rem;
+  }
+
+  section.section {
+    margin-bottom: 3.25rem;
+    scroll-margin-top: 76px;
+  }
+  .section > h2 {
+    font-size: 1.65rem;
+    letter-spacing: -0.03em;
+    margin: 0 0 .35rem;
+    padding-top: .25rem;
+  }
+  .section > .lede {
+    color: var(--text-dim);
+    font-size: 1.02rem;
+    margin: 0 0 1.35rem;
+    max-width: 62ch;
+  }
+  h3 {
+    font-size: 1.15rem;
+    margin: 1.75rem 0 .65rem;
+    letter-spacing: -0.02em;
+  }
+  h4 {
+    font-size: .98rem;
+    margin: 1.25rem 0 .5rem;
+    color: #dbe7f7;
+  }
+  p { margin: .55rem 0 0.9rem; color: #d2dceb; }
+  ul, ol { margin: .4rem 0 1rem; padding-left: 1.25rem; color: #d2dceb; }
+  li { margin: .28rem 0; }
+  li::marker { color: var(--text-mute); }
+
+  .hero {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 1.75rem 1.6rem 1.5rem;
+    background:
+      radial-gradient(900px 280px at 10% -20%, rgba(91,157,255,.18), transparent 60%),
+      radial-gradient(700px 260px at 90% 0%, rgba(124,92,255,.16), transparent 55%),
+      linear-gradient(180deg, #121a24 0%, #0e141c 100%);
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+    overflow: hidden;
+  }
+  .hero .eyebrow {
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: .55rem;
+  }
+  .hero h2 {
+    font-size: 2rem;
+    letter-spacing: -0.04em;
+    margin: 0 0 .5rem;
+    line-height: 1.15;
+  }
+  .hero p {
+    font-size: 1.05rem;
+    color: var(--text-dim);
+    max-width: 60ch;
+    margin: 0 0 1.1rem;
+  }
+  .hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem .85rem;
+    font-size: .82rem;
+    color: var(--text-mute);
+    margin-bottom: 1rem;
+  }
+  .hero-meta span strong { color: var(--text-dim); font-weight: 600; }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: .75rem;
+    margin-top: 1rem;
+  }
+  .hero-stat {
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    padding: .85rem .9rem;
+  }
+  .hero-stat .n {
+    font-size: 1.2rem;
+    font-weight: 750;
+    letter-spacing: -0.03em;
+    color: #fff;
+  }
+  .hero-stat .l {
+    font-size: .78rem;
+    color: var(--text-mute);
+    margin-top: .15rem;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: .85rem;
+    margin: 1rem 0 1.25rem;
+  }
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.05rem;
+    transition: border-color .15s, transform .15s;
+  }
+  .card:hover {
+    border-color: rgba(91,157,255,.35);
+    transform: translateY(-1px);
+  }
+  .card .tag {
+    display: inline-block;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: .45rem;
+  }
+  .card .tag.danger { color: var(--danger); }
+  .card .tag.warn { color: var(--warn); }
+  .card .tag.ok { color: var(--ok); }
+  .card .tag.human { color: var(--human); }
+  .card h4 { margin: 0 0 .35rem; font-size: .98rem; }
+  .card p { margin: 0; font-size: .88rem; color: var(--text-dim); }
+
+  .callout {
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    padding: .95rem 1.05rem;
+    margin: 1rem 0;
+  }
+  .callout.tip { border-color: rgba(45,212,191,.3); background: rgba(45,212,191,.06); }
+  .callout.warn { border-color: rgba(245,165,36,.35); background: rgba(245,165,36,.07); }
+  .callout.danger { border-color: rgba(248,113,113,.35); background: rgba(248,113,113,.06); }
+  .callout.info { border-color: rgba(91,157,255,.35); background: rgba(91,157,255,.07); }
+  .callout .label {
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin-bottom: .3rem;
+    color: var(--text-dim);
+  }
+  .callout.tip .label { color: var(--accent-3); }
+  .callout.warn .label { color: var(--warn); }
+  .callout.danger .label { color: var(--danger); }
+  .callout.info .label { color: var(--accent); }
+  .callout p:last-child { margin-bottom: 0; }
+
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin: 1rem 0 1.25rem;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .88rem;
+    min-width: 520px;
+  }
+  th, td {
+    text-align: left;
+    padding: .65rem .8rem;
+    border-bottom: 1px solid var(--border-soft);
+    vertical-align: top;
+  }
+  th {
+    background: #101821;
+    color: var(--text-dim);
+    font-weight: 650;
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: rgba(255,255,255,.015); }
+
+  .diagram {
+    background: #0a1018;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.15rem;
+    margin: 1rem 0 1.35rem;
+    overflow-x: auto;
+  }
+  .diagram .cap {
+    font-size: .75rem;
+    color: var(--text-mute);
+    margin-top: .85rem;
+    text-align: center;
+  }
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: .45rem;
+    justify-content: center;
+  }
+  .flow-node {
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    border-radius: 10px;
+    padding: .65rem .85rem;
+    font-size: .82rem;
+    font-weight: 600;
+    min-width: 120px;
+    text-align: center;
+  }
+  .flow-node small {
+    display: block;
+    font-weight: 500;
+    font-size: .72rem;
+    color: var(--text-mute);
+    margin-top: .2rem;
+  }
+  .flow-node.gen { border-color: rgba(96,165,250,.45); color: #b8d7ff; background: rgba(96,165,250,.08); }
+  .flow-node.eval { border-color: rgba(192,132,252,.45); color: #e4c9ff; background: rgba(192,132,252,.08); }
+  .flow-node.human { border-color: rgba(251,191,36,.45); color: #ffe4a3; background: rgba(251,191,36,.08); }
+  .flow-node.ok { border-color: rgba(52,211,153,.4); color: #b8f5d8; background: rgba(52,211,153,.08); }
+  .flow-arrow {
+    color: var(--text-mute);
+    font-size: 1.1rem;
+    user-select: none;
+    align-self: center;
+  }
+
+  .lane-tree {
+    font-family: var(--mono);
+    font-size: .8rem;
+    line-height: 1.55;
+    color: #c7d7ee;
+    white-space: pre-wrap;
+  }
+
+  .steps {
+    counter-reset: step;
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0;
+  }
+  .steps li {
+    counter-increment: step;
+    position: relative;
+    padding: .85rem 1rem .85rem 3.1rem;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    border-radius: 12px;
+    margin: .55rem 0;
+  }
+  .steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: .85rem;
+    top: .9rem;
+    width: 1.55rem;
+    height: 1.55rem;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    font-size: .78rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: white;
+  }
+  .steps strong { color: #fff; }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  .split-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+  .split-list .col {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.05rem;
+    background: var(--bg-card);
+  }
+  .split-list .col.yes { border-color: rgba(52,211,153,.28); }
+  .split-list .col.no { border-color: rgba(248,113,113,.28); }
+  .split-list h4 { margin: 0 0 .55rem; }
+  .split-list.yes h4 { color: var(--ok); }
+  .split-list .col.yes h4 { color: var(--ok); }
+  .split-list .col.no h4 { color: var(--danger); }
+  .split-list ul { margin: 0; padding-left: 1.1rem; }
+
+  @media (max-width: 860px) {
+    .sidebar { transform: translateX(-100%); transition: transform .2s; }
+    .sidebar.open { transform: translateX(0); }
+    .main { margin-left: 0; }
+    .two-col, .hero-grid, .split-list, .zl-bar { grid-template-columns: 1fr !important; }
+    .menu-btn { display: inline-flex !important; }
+  }
+  .menu-btn {
+    display: none;
+    align-items: center;
+    gap: .4rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: .4rem .65rem;
+    font: inherit;
+    cursor: pointer;
+  }
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 35;
+  }
+  .overlay.show { display: block; }
+
+  .toc-jump {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .45rem;
+    margin: 1rem 0 0;
+  }
+  .toc-jump a {
+    font-size: .8rem;
+    padding: .35rem .65rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.03);
+    color: var(--text-dim);
+    text-decoration: none;
+  }
+  .toc-jump a:hover {
+    border-color: rgba(91,157,255,.4);
+    color: #d6e8ff;
+    text-decoration: none;
+  }
+
+  footer.page-foot {
+    border-top: 1px solid var(--border-soft);
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    color: var(--text-mute);
+    font-size: .82rem;
+  }
+
+  .zl-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: .5rem;
+    margin: 1rem 0;
+  }
+  .zl-band {
+    border-radius: 12px;
+    padding: .9rem;
+    border: 1px solid var(--border);
+    text-align: center;
+  }
+  .zl-band.l { background: rgba(52,211,153,.08); border-color: rgba(52,211,153,.3); }
+  .zl-band.m { background: rgba(91,157,255,.08); border-color: rgba(91,157,255,.3); }
+  .zl-band.z { background: rgba(248,113,113,.08); border-color: rgba(248,113,113,.3); }
+  .zl-band strong { display: block; font-size: 1.1rem; margin-bottom: .25rem; }
+  .zl-band span { font-size: .8rem; color: var(--text-dim); }
+
+  .spectrum {
+    margin: 1.25rem 0;
+    padding: 1rem 1.1rem;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: linear-gradient(90deg,
+      rgba(52,211,153,.12) 0%,
+      rgba(91,157,255,.1) 50%,
+      rgba(248,113,113,.12) 100%);
+  }
+  .spectrum .labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: .8rem;
+    font-weight: 700;
+    margin-bottom: .55rem;
+  }
+  .spectrum .labels .l { color: var(--ok); }
+  .spectrum .labels .z { color: var(--danger); }
+  .spectrum .track {
+    height: 8px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--ok), var(--accent), var(--danger));
+    position: relative;
+  }
+  .spectrum .note {
+    margin-top: .65rem;
+    font-size: .85rem;
+    color: var(--text-dim);
+    text-align: center;
+  }
+
+  .rec-list {
+    counter-reset: rec;
+    list-style: none;
+    padding: 0;
+  }
+  .rec-list li {
+    counter-increment: rec;
+    position: relative;
+    padding: .85rem 1rem .85rem 3.1rem;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    border-radius: 12px;
+    margin: .5rem 0;
+  }
+  .rec-list li::before {
+    content: counter(rec);
+    position: absolute;
+    left: .85rem;
+    top: .9rem;
+    width: 1.55rem;
+    height: 1.55rem;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    font-size: .78rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--ok), var(--accent));
+    color: #061018;
+  }
+
+  .fail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: .75rem;
+    margin: 1rem 0;
+  }
+  .fail-card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: .9rem 1rem;
+    background: var(--bg-card);
+  }
+  .fail-card h4 {
+    margin: 0 0 .35rem;
+    font-size: .92rem;
+    color: #ffc9c9;
+  }
+  .fail-card p { margin: 0; font-size: .84rem; color: var(--text-dim); }
+  .fail-card .fix {
+    margin-top: .45rem;
+    font-size: .8rem;
+    color: var(--ok);
+  }
+
+  @media print {
+    .sidebar, .topbar, .overlay, .menu-btn { display: none !important; }
+    .main { margin: 0; }
+    .content { max-width: none; }
+    body { background: white; color: black; }
+    .card, .diagram, .callout, pre { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-head">
+    <div class="brand">
+      <div class="brand-mark">AE</div>
+      <div>
+        <h1>Agentic Engineering</h1>
+        <p>white paper · v1.0</p>
+      </div>
+    </div>
+    <div class="search-wrap">
+      <input id="nav-search" type="search" placeholder="Filter sections…" autocomplete="off" />
+    </div>
+  </div>
+  <nav class="nav" id="nav">
+    <div class="nav-group">
+      <div class="nav-group-title">Start</div>
+      <a href="#abstract">Abstract</a>
+      <a href="#problem">1. The problem</a>
+      <a href="#research">2. Research</a>
+      <a href="#zl">3. Z/L continuum</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">Practice</div>
+      <a href="#domain">4. Domain-heavy work</a>
+      <a href="#harness">5. Harness engineering</a>
+      <a href="#sweet-spot">6. Productive sweet spot</a>
+      <a href="#playbook">7. Org playbook</a>
+      <a href="#patterns">8. Product patterns</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">Close</div>
+      <a href="#failures">9. Failure gallery</a>
+      <a href="#recommendations">10. Recommendations</a>
+      <a href="#closing">11. Closing</a>
+      <a href="#references">References</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">Appendices</div>
+      <a href="#appendix-a">A. PR template</a>
+      <a href="#appendix-b">B. Decision tree</a>
+      <a href="#appendix-c">C. Skill modes</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">Companions</div>
+      <a href="./harness-guide.html">Harness field guide</a>
+      <a href="./zl-continuum-rubric.md">Z/L one-pager</a>
+    </div>
+  </nav>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:.75rem;">
+      <button class="menu-btn" id="menu-btn" type="button" onclick="openSidebar()">☰ Menu</button>
+      <div class="crumbs"><strong>White paper</strong> · productive agentic engineering</div>
+    </div>
+    <div class="pill-row">
+      <span class="pill accent">v1.0</span>
+      <span class="pill">2026-07-11</span>
+      <span class="pill warn">leadership + eng</span>
+      <span class="pill ok">offline</span>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- HERO -->
+    <header class="hero" id="top">
+      <div class="eyebrow">White paper · agentic software engineering</div>
+      <h2>Productive Agentic Engineering</h2>
+      <p>Human judgment, machine loops, and commercial software that ships without “agent psychosis.” How to use Claude Code, Codex, Grok CLI, and harnesses without treating every click as an agent task—or every model draft as domain truth.</p>
+      <div class="hero-meta">
+        <span><strong>Audience:</strong> eng leaders, staff/principal, teams rolling out coding agents</span>
+        <span><strong>Companions:</strong> <a href="./harness-guide.html">harness-guide.html</a> · <a href="./zl-continuum-rubric.md">zl-continuum-rubric.md</a></span>
+      </div>
+      <div class="hero-grid">
+        <div class="hero-stat">
+          <div class="n">Route, don’t abdicate</div>
+          <div class="l">Place each task on Z/L — not each person</div>
+        </div>
+        <div class="hero-stat">
+          <div class="n">~17pp quiz drop</div>
+          <div class="l">AI delegation impairs mastery (Shen &amp; Tamkin)</div>
+        </div>
+        <div class="hero-stat">
+          <div class="n">Domain ≠ pure tech</div>
+          <div class="l">PE / BFS / insurance need human-owned BRD</div>
+        </div>
+      </div>
+      <div class="toc-jump">
+        <a href="#abstract">Abstract</a>
+        <a href="#zl">Z/L continuum</a>
+        <a href="#domain">Domain gravity</a>
+        <a href="#sweet-spot">Sweet spot</a>
+        <a href="#playbook">Playbook</a>
+        <a href="#recommendations">Recommendations</a>
+      </div>
+    </header>
+
+    <!-- ABSTRACT -->
+    <section class="section" id="abstract">
+      <h2>Abstract</h2>
+      <p class="lede">Coding agents are now fast enough that <strong>overuse</strong>, not underuse, is the default failure mode.</p>
+      <p>Engineers hand the agent every click—including “check the ADO board”—while models still lack durable <strong>domain judgment</strong> in private equity, banking, insurance, and other regulated verticals. Stage rhetoric splits into extremes (“code is free, zero human review” vs “read every line”), but productive teams do neither as a personality cult.</p>
+      <p>This white paper consolidates:</p>
+      <ol>
+        <li>The <strong>Z/L Continuum</strong> (Zechner ↔ Lopopolo): place <em>each task</em>, not each person.</li>
+        <li>Empirical evidence that AI assistance can <strong>impair skill formation</strong> (especially debugging and code reading) when used as pure delegation.</li>
+        <li>Evidence of <strong>cognitive offloading</strong> and reduced engagement under unguided GenAI use.</li>
+        <li>Field patterns from <strong>harness engineering</strong>: contracts, generators vs evaluators, ratchets, and human gates where silent wrongness is expensive.</li>
+        <li>A practical operating model for <strong>commercial / production software</strong>: keep humans on requirements and design; let agents generate under verification; always do <em>band-appropriate</em> review (never blank-on-the-diff).</li>
+      </ol>
+      <div class="callout info">
+        <div class="label">Thesis</div>
+        <p>Productivity in agentic engineering is not “use the agent more.” It is <strong>routing</strong>—which work goes to agents, which stays human, how hard verification must be, and where domain experts must veto plausible-sounding fiction.</p>
+      </div>
+    </section>
+
+    <!-- 1 PROBLEM -->
+    <section class="section" id="problem">
+      <h2>1. The problem we actually have</h2>
+      <p class="lede">Once a team gets a strong coding agent plus a harness, the sticky chat window becomes the default interface for everything.</p>
+
+      <h3>1.1 Agent as default interface</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Intended use</th><th>Observed misuse</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Implement a story under a contract</td><td>“Ask the agent to do the sprint plan <em>and</em> the tickets <em>and</em> the standup notes”</td></tr>
+            <tr><td>Run tests / fix red CI</td><td>“Agent, open ADO and tell me if the board is green”</td></tr>
+            <tr><td>Draft a technical spike</td><td>“Agent, invent the PE waterfall / insurance reserve rules from memory”</td></tr>
+            <tr><td>High-confidence pure-tech refactor</td><td>Same ceremony as a multi-epic domain product</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>The agent is a <strong>powerful hammer</strong>. Without explicit norms, everything becomes a nail. That is not a model failure; it is an <strong>attention and policy</strong> failure.</p>
+
+      <h3>1.2 Two conferences, opposite standing ovations</h3>
+      <p>At AI Engineer Europe, OpenAI’s Ryan Lopopolo argued (in spirit) that <strong>code is cheap</strong>, that extreme harness + token volume can push human-authored LOC and human review toward zero on some frontiers. Mario Zechner closed the same conference arguing the opposite social contract: <strong>slow down and read critical code</strong>. Both got applause. Both can be right <strong>for different tasks</strong>.</p>
+      <p>Alex Volkov named the space between them the <strong>Z/L Continuum</strong> (Zechner ↔ Lopopolo): you are not permanently “Team Z” or “Team L.” <strong>Every task</strong> gets a place on the continuum; <strong>placing it correctly is the skill</strong>.</p>
+
+      <div class="spectrum">
+        <div class="labels">
+          <span class="l">L — Lopopolo · code is cheap</span>
+          <span class="z">Z — Zechner · read critical lines</span>
+        </div>
+        <div class="track"></div>
+        <div class="note">You are not a pole. You place <strong>this PR / this story / this decision</strong>.</div>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <div class="tag danger">Signal</div>
+          <h4>Agent psychosis</h4>
+          <p>Shipping unread agent diffs; community pushback on vibe-only shipping.</p>
+        </div>
+        <div class="card">
+          <div class="tag warn">Correction</div>
+          <h4>“Let the agent cook”</h4>
+          <p>Maximalism walked back toward reintroducing human reading on non-trivial work.</p>
+        </div>
+        <div class="card">
+          <div class="tag">Frontier</div>
+          <h4>&gt;80% AI-authored</h4>
+          <p>Anthropic: Claude authored &gt;80% of merged production lines by mid-2026—humans still direct and review.</p>
+        </div>
+      </div>
+
+      <h3>1.3 Domain gravity: why PE / BFS / insurance bite harder</h3>
+      <p>Frontier models are excellent at <strong>generic software patterns</strong>: CRUD APIs, React/Vite UI, document parsing pipelines, infra glue, test scaffolding. They are weak at <strong>domain-grounded product definition</strong>.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Layer</th><th>Pure technical (e.g. document intelligence)</th><th>Domain-heavy (PE, BFS, insurance)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Vocabulary</td><td>Shared across Stack Overflow</td><td>Vertical jargon, conflicting house styles</td></tr>
+            <tr><td>“Correct”</td><td>Tests + schemas often decide</td><td>Regulation, product policy, fund docs, actuarial intent</td></tr>
+            <tr><td>BRD / epic / story</td><td>Model can invent plausible structure</td><td>Invents <strong>plausible but wrong</strong> processes (NAV, covenants, claims, KYC)</td></tr>
+            <tr><td>Silent failure</td><td>Often fails tests or demos</td><td>Passes demos while encoding wrong business law</td></tr>
+            <tr><td>Who owns truth</td><td>Staff engineer + QA</td><td>Domain SMEs + compliance + engineering</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout warn">
+        <div class="label">Field pattern</div>
+        <p>Agentic tools work well when the <em>specification is technical and verifiable</em>. They become expensive when the <em>specification is domain-heavy</em> and the team treats the model as a junior product owner. Document intelligence sits further <strong>L</strong>; IC memo semantics and insurance product rules sit further <strong>Z</strong> until humans freeze vocabulary and acceptance.</p>
+      </div>
+    </section>
+
+    <!-- 2 RESEARCH -->
+    <section class="section" id="research">
+      <h2>2. What the research actually says</h2>
+      <p class="lede">This section is not anti-AI. It is anti-<strong>magical oversight</strong>.</p>
+
+      <h3>2.1 Skill formation: faster and dumber at the same time</h3>
+      <p>Anthropic’s RCT (<em>How AI Impacts Skill Formation</em>, Shen &amp; Tamkin, arXiv:2601.20245) studied developers learning an unfamiliar async library (Trio) with vs without AI assistance.</p>
+      <div class="cards">
+        <div class="card">
+          <div class="tag danger">Quiz</div>
+          <h4>~17 points lower</h4>
+          <p>AI group ≈50% vs control ≈67% (large effect, <em>p</em> ≈ 0.01).</p>
+        </div>
+        <div class="card">
+          <div class="tag warn">Worst gap</div>
+          <h4>Debugging</h4>
+          <p>Exactly the skill needed to supervise AI-written code.</p>
+        </div>
+        <div class="card">
+          <div class="tag">Speed</div>
+          <h4>Not significant</h4>
+          <p>Prompting time often ate the win in the learning setting.</p>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <div class="tag danger">Low mastery</div>
+          <h4>Avoid as shipping default</h4>
+          <p>Full AI delegation · progressive reliance → handoff · iterative AI debugging without understanding.</p>
+        </div>
+        <div class="card">
+          <div class="tag ok">High mastery</div>
+          <h4>Encourage</h4>
+          <p>Conceptual inquiry · hybrid code + explanation · generate, then force comprehension.</p>
+        </div>
+      </div>
+      <p>If juniors only <em>delegate</em>, you grow a workforce that cannot run the oversight function the enterprise still needs. Agentic products (Claude Code, Codex, etc.) likely amplify this more than a sidebar chat—Anthropic notes that explicitly.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Role of AI</th><th>Effect on skill</th><th>When to encourage</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>“Write it all; I’ll click merge”</td><td>Skill atrophy</td><td>Almost never for shared core</td></tr>
+            <tr><td>“Explain this library, then I’ll implement”</td><td>Skill preserved</td><td>Onboarding, new domains</td></tr>
+            <tr><td>“Generate, then quiz me / walk risks”</td><td>Skill + speed</td><td>Default for M-band work</td></tr>
+            <tr><td>“Implement against <em>my</em> contract; I own acceptance”</td><td>Oversight capacity</td><td>Commercial shipping</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>2.2 Cognitive offloading and engagement</h3>
+      <p>Broader psychology literature (e.g. Scientific Reports 2025 on GenAI collaboration; surveys linking frequent AI use to offloading) points the same direction:</p>
+      <ul>
+        <li>Unguided GenAI use improves <strong>immediate task output</strong>.</li>
+        <li>It often reduces <strong>felt ownership, effort, and later solo transfer</strong>.</li>
+        <li>Structured prompting / forced engagement reduces offloading vs free-form “just do it.”</li>
+      </ul>
+      <div class="callout tip">
+        <div class="label">Engineering translation</div>
+        <p>“Agent, fix everything” is unguided offloading. “Agent, implement stories S-12..S-14 against this contract; do not invent domain rules” is structured engagement.</p>
+      </div>
+
+      <h3>2.3 Frontier labs still need humans—as routers and verifiers</h3>
+      <p>Anthropic’s <em>When AI builds itself</em> reports extreme internal AI authorship rates and rising LOC per engineer, framed as humans <strong>directing and reviewing</strong> rather than typing. That is not “humans left the loop.” It is <strong>humans moved up the stack</strong>—exactly what commercial teams must design for on purpose.</p>
+      <p>OpenAI-adjacent “extreme harness engineering” discourse (Lopopolo / Latent Space) pushes the same structural point: at high token volume, <strong>the harness</strong> (tests, graders, environments, policies) becomes the product more than individual keystrokes.</p>
+    </section>
+
+    <!-- 3 Z/L -->
+    <section class="section" id="zl">
+      <h2>3. The Z/L Continuum as an operating system</h2>
+      <p class="lede">You are not a pole. You place this PR, this story, this decision.</p>
+
+      <h3>3.1 Definitions</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Pole</th><th>Stance</th><th>Failure mode</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>L — Lopopolo</strong></td>
+              <td>Code is cheap; agents generate; verification is the product</td>
+              <td><em>Agent psychosis</em>: unread diffs, illegible repos, Christmas-tree uptime, silent domain lies</td>
+            </tr>
+            <tr>
+              <td><strong>Z — Zechner</strong></td>
+              <td>Read critical lines; slow down where wrongness is expensive</td>
+              <td><em>Artisanal drag</em>: seniors retype leaf work agents + tests already prove</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>3.2 Sixty-second placement</h3>
+      <p>Score each axis <strong>0 (L-friendly) → 2 (Z-required)</strong>. Sum places the band.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Axis</th><th>0</th><th>1</th><th>2</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Blast radius</strong></td><td>Leaf, internal, reversible</td><td>Cross-module, easy rollback</td><td>Auth, money, PII, migrations, public API</td></tr>
+            <tr><td><strong>Observability of done</strong></td><td>Tests/evals catch failure</td><td>Partial tests</td><td>Silent wrongness possible</td></tr>
+            <tr><td><strong>Longevity</strong></td><td>Spike / throwaway</td><td>Multi-sprint product</td><td>Multi-year shared core</td></tr>
+            <tr><td><strong>Coverage of symbols</strong></td><td>Covered / new tested unit</td><td>Mixed / pinnable</td><td>Uncovered god-file</td></tr>
+            <tr><td><strong>Ownership</strong></td><td>Solo + you own pager</td><td>Clear owner</td><td>Multi-team shared surface</td></tr>
+            <tr><td><strong>Domain novelty</strong></td><td>Generic tech, model-fluent</td><td>Partial vertical glossary</td><td>PE/BFS/insurance rules not frozen by SMEs</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="zl-bar">
+        <div class="zl-band l">
+          <strong>L · 0–2</strong>
+          <span>Walkthrough skim · high agent autonomy · micro-contract + targeted tests</span>
+        </div>
+        <div class="zl-band m">
+          <strong>M · 3–5</strong>
+          <span>Contracts + high-churn hunks · story + gate</span>
+        </div>
+        <div class="zl-band z">
+          <strong>Z · 6–12</strong>
+          <span>Risk surface line-read · independent review · humans own truth</span>
+        </div>
+      </div>
+
+      <div class="callout danger">
+        <div class="label">Hard overrides → at least M, usually Z</div>
+        <p>Auth/secrets/payments · schema migrations · new public API · uncovered production edit · ambiguous requirements after short clarify · <strong>any unfrozen domain rule that can cost money or license</strong>.</p>
+      </div>
+      <p>Full team checklist: <a href="./zl-continuum-rubric.md"><code>docs/zl-continuum-rubric.md</code></a>.</p>
+
+      <h3>3.3 The one-line doctrine</h3>
+      <blockquote class="doctrine">
+        <p>Place the task. Match the loop. Read what the loop cannot prove.</p>
+      </blockquote>
+    </section>
+
+    <!-- 4 DOMAIN -->
+    <section class="section" id="domain">
+      <h2>4. Domain-heavy work: where agents fail “politely”</h2>
+      <p class="lede">Models are fluent. Fluency is the hazard.</p>
+
+      <h3>4.1 Plausible wrongness</h3>
+      <div class="two-col">
+        <div class="card">
+          <div class="tag warn">Private equity</div>
+          <h4>What models invent</h4>
+          <p>Waterfall tiers that match no LPA · IC processes from blog posts · KPI taxonomies that ignore how ops closes books.</p>
+        </div>
+        <div class="card">
+          <div class="tag warn">BFS / insurance</div>
+          <h4>What models invent</h4>
+          <p>Ledger postings that violate product accounting · claims states that skip notice periods · KYC that sounds complete and isn’t.</p>
+        </div>
+      </div>
+      <p><strong>Green tests on the wrong product</strong> = faster path to production liability.</p>
+
+      <h3>4.2 Separate three kinds of knowledge</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Knowledge</th><th>Who owns it</th><th>Agent role</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Domain policy</strong> (what the business <em>is</em>)</td><td>SME / product / legal</td><td>Draft only after human freeze; never invent</td></tr>
+            <tr><td><strong>Ubiquitous language</strong> (what words mean here)</td><td>SME + engineering</td><td>Seed glossary; enforce vocabulary checks</td></tr>
+            <tr><td><strong>Technical realization</strong> (how we build it)</td><td>Engineering + agents</td><td>Primary generation under contracts</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>If you skip the first two, BRD → epic → story generation becomes <strong>fiction generation</strong>.</p>
+
+      <h3>4.3 Practical mitigations</h3>
+      <ol class="steps">
+        <li><strong>Human-owned BRD gate</strong> for vertical products. Agents interview and draft; humans accept or reject. Do not auto-accept.</li>
+        <li><strong>Frozen glossary / CONTEXT.md</strong> before <code>/spec</code>. Terms like <em>MOIC</em>, <em>NAV</em>, <em>cedant</em>, <em>IBNR</em> mean <em>your</em> definitions.</li>
+        <li><strong>Vertical packs</strong> (skills + glossary seeders) when available—then project-specific overlays.</li>
+        <li><strong>Acceptance tests in business language</strong> against ports/adapters <em>before</em> implementation.</li>
+        <li><strong>Domain reviewer on planning artifacts</strong>, not only on code PR. Wrong epic is 50× cheaper than wrong ledger.</li>
+        <li><strong>Prefer pure-tech autonomy</strong> for document intelligence, parsers, UI chrome, infra, tests; keep domain rules on Z until fixtures and golden cases exist.</li>
+      </ol>
+
+      <h3>4.4 When pure technical is the sweet spot</h3>
+      <p>Document intelligence, OCR/classification, RAG over <em>your</em> corpus with eval sets, internal tools without regulatory semantics, greenfield CRUD with clear schemas—these are <strong>high agent leverage</strong> because “done” is observable, wrongness is less likely business-law wrong, and models have dense pretraining on similar code.</p>
+      <div class="callout tip">
+        <div class="label">Asymmetry</div>
+        <p>Spend human domain time where models are weak; spend agent tokens where models are strong.</p>
+      </div>
+    </section>
+
+    <!-- 5 HARNESS -->
+    <section class="section" id="harness">
+      <h2>5. Harness engineering: the missing middle</h2>
+      <p class="lede">When generation is cheap, verification and routing become the product.</p>
+
+      <h3>5.1 What a harness is</h3>
+      <p>A harness is not “more prompts.” It is the <strong>control plane</strong> around agents:</p>
+      <ul>
+        <li><strong>Lanes</strong> that match risk (<code>/vibe</code> vs <code>/change</code> vs <code>/feature</code> vs <code>/build</code> → <code>/auto</code>)</li>
+        <li><strong>Contracts</strong> (sprint contracts, API schemas, acceptance criteria)</li>
+        <li><strong>Generator ≠ evaluator</strong> (reduce self-grading bias)</li>
+        <li><strong>Ratchets</strong> (quality does not go backwards without explicit waiver)</li>
+        <li><strong>Deterministic sensors</strong> (lint, tests, vocabulary checks, security path triggers)</li>
+        <li><strong>Human gates</strong> on planning where ceremony is load-bearing</li>
+        <li><strong>State + session chaining</strong> so long work survives context windows</li>
+      </ul>
+      <p>See <a href="https://www.latent.space/p/harness-eng">Latent Space · Harness Engineering</a> and this repo’s <a href="./harness-guide.html">field guide</a>.</p>
+
+      <h3>5.2 Why harnesses still get abused</h3>
+      <p>A harness makes agents <em>more</em> capable. Without norms, engineers route non-coding work into the coding agent because the chat window is sticky. Fix with <strong>explicit scope policy</strong> (Section 7), not by removing the harness.</p>
+
+      <h3>5.3 Map Z/L bands to harness lanes</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Band</th><th>Typical lane</th><th>Human must</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>L</strong></td><td><code>/vibe</code> or disposable artifact lanes</td><td>Confirm scope + green targeted proof</td></tr>
+            <tr><td><strong>M</strong></td><td><code>/change</code>, <code>/refactor</code>, single-story <code>/feature</code></td><td>Own AC; read walkthrough + critical hunks</td></tr>
+            <tr><td><strong>Z</strong></td><td><code>/spec</code>→<code>/design</code>→<code>/auto</code> or full <code>/build</code> + <code>/gate</code></td><td>Own BRD/design; line-read risk surface; whole-branch review</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout danger">
+        <div class="label">Never</div>
+        <p>“Models got better, so we skip the gate.” Ceremony may trim; <strong>evaluator + deterministic gates must not.</strong></p>
+      </div>
+    </section>
+
+    <!-- 6 SWEET SPOT -->
+    <section class="section" id="sweet-spot">
+      <h2>6. The productive sweet spot</h2>
+      <p class="lede">Requirements review · design involvement · band-depth review of generated code—not blank on the codebase.</p>
+
+      <div class="diagram">
+        <div class="flow">
+          <div class="flow-node human">1. Requirements<small>HUMAN-OWNED · freeze domain truth</small></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node human">2. Design<small>HUMAN-LED · architecture, seams, APIs</small></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node gen">3. Generation<small>AGENT-LED · contracts + ratchets</small></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node eval">4. Verification<small>MACHINE + HUMAN · band-depth review</small></div>
+        </div>
+        <div class="cap">Economical human involvement: own truth early; generate under proof; review what the loop cannot prove.</div>
+      </div>
+
+      <h3>6.1 What “high-level review” means</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Band</th><th>Review depth</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>L</strong></td><td>Skim agent walkthrough; confirm verification commands green</td></tr>
+            <tr><td><strong>M</strong></td><td>Read public contracts, migrations, auth edges, high-churn hunks; sample implementation</td></tr>
+            <tr><td><strong>Z</strong></td><td>Line-read production risk surface; challenge architecture; independent whole-branch review; domain SME on behavior</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h4>Anti-patterns</h4>
+      <ul>
+        <li>Approve 2k-line agent PR on green CI only (<strong>rubber stamp</strong>).</li>
+        <li>Senior retypes leaf copy the agent already proved (<strong>identity Z</strong>).</li>
+        <li>“We’re a vibe team” for auth + money (<strong>identity L</strong>).</li>
+        <li>Discover mid-PR that domain rules were invented → keep shipping (<strong>no backpaddle</strong>).</li>
+      </ul>
+
+      <h3>6.2 Backpaddle rule</h3>
+      <p>Mis-placing <strong>too far Z</strong> wastes calendar time (recoverable). Mis-placing <strong>too far L</strong> wrecks the codebase or the business (slippery).</p>
+      <ol class="steps">
+        <li><strong>Freeze</strong> merges on the branch.</li>
+        <li><strong>Re-score</strong> Z/L.</li>
+        <li><strong>Escalate</strong> lane and verification.</li>
+        <li><strong>Do not</strong> “finish the vibe.”</li>
+      </ol>
+    </section>
+
+    <!-- 7 PLAYBOOK -->
+    <section class="section" id="playbook">
+      <h2>7. Organizational playbook</h2>
+      <p class="lede">Publish norms. Redesign roles. Measure control, not token velocity.</p>
+
+      <h3>7.1 Scope policy: what agents are for</h3>
+      <div class="split-list">
+        <div class="col yes">
+          <h4>Agents are for</h4>
+          <ul>
+            <li>Implementing stories against written acceptance criteria</li>
+            <li>Generating tests, fixtures, adapters, pure-structure refactors</li>
+            <li>Debugging with reproduce → isolate → fix under repo tools</li>
+            <li>Brownfield mapping, context packs, mechanical migrations with gates</li>
+          </ul>
+        </div>
+        <div class="col no">
+          <h4>Agents are not for (by default)</h4>
+          <ul>
+            <li>System of record for ADO/Jira/Linear boards</li>
+            <li>Inventing regulatory or fund-document truth</li>
+            <li>Approving their own production readiness</li>
+            <li>Replacing on-call judgment without human ownership</li>
+            <li>Endless chat about dashboards you can open in 3 seconds</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout info">
+        <div class="label">Rule of thumb</div>
+        <p>If the task is <em>navigation of a human UI you already have</em>, do it yourself. If the task is <em>synthesis across many files under a contract</em>, use the agent.</p>
+      </div>
+
+      <h3>7.2 Role redesign</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Old emphasis</th><th>New emphasis</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Typing implementation</td><td><strong>Spec quality, design, placement, review</strong></td></tr>
+            <tr><td>Knowing every API by heart</td><td>Knowing <strong>where wrongness is expensive</strong></td></tr>
+            <tr><td>Hero debugging</td><td>Building <strong>evals, fixtures, sensors</strong></td></tr>
+            <tr><td>“I merged 10k LOC”</td><td>“I routed 10k LOC through the right band and verified the risk surface”</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Juniors need <strong>protected learning reps</strong> so the org does not burn future oversight capacity for a quarter of velocity.</p>
+
+      <h3>7.3 Metrics that do not lie</h3>
+      <div class="two-col">
+        <div class="card">
+          <div class="tag ok">Prefer</div>
+          <h4>Control metrics</h4>
+          <p>Escape defects · Z/L score on PRs · time-to-green after AC freeze · glossary coverage · Z-band review compliance · unread-agent incidents.</p>
+        </div>
+        <div class="card">
+          <div class="tag danger">Avoid as north stars</div>
+          <h4>Generation vanity</h4>
+          <p>LOC generated · % AI-authored lines · tokens burned. Those measure generation, not value under control.</p>
+        </div>
+      </div>
+
+      <h3>7.4 Tool-agnostic habits</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Habit</th><th>Why</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Start from a written micro-contract or story</td><td>Prevents free-form invention</td></tr>
+            <tr><td>Prefer repo-native tools over chat claims</td><td>Claims are free; green is evidence</td></tr>
+            <tr><td>Separate explore (read-only) from write agents</td><td>Stops drive-by rewrites</td></tr>
+            <tr><td>Keep CLAUDE.md / AGENTS.md stable mid-run</td><td>Prompt-cache + consistent policy</td></tr>
+            <tr><td>Worktrees / branches per agent stream</td><td>Parallelism without thrash</td></tr>
+            <tr><td>Demand a walkthrough artifact for M/Z</td><td>Makes human review 5 minutes, not 50</td></tr>
+            <tr><td>Stuck twice on same error → root-cause</td><td>Avoids flailing token loops</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>7.5 Training curriculum (half-day)</h3>
+      <ol class="steps">
+        <li><strong>Z/L placement drill</strong> — 10 real past PRs.</li>
+        <li><strong>Live bad BRD</strong> from a model → human rewrite.</li>
+        <li><strong>Skill-formation patterns</strong> — one conceptual-inquiry task without code gen.</li>
+        <li><strong>Harness lane picker</strong> using the field guide.</li>
+        <li><strong>Poisoned agent PR</strong> — subtle domain bug + green tests; catch it in review.</li>
+      </ol>
+    </section>
+
+    <!-- 8 PATTERNS -->
+    <section class="section" id="patterns">
+      <h2>8. End-to-end patterns by product type</h2>
+      <div class="cards">
+        <div class="card">
+          <div class="tag ok">Pure technical</div>
+          <h4>Doc intelligence · platform</h4>
+          <p>Lean L/M. Heavy agent generation. Invest in evals, golden files, SLOs. Human gates on architecture and data boundaries. High autonomy often justified once contracts exist.</p>
+        </div>
+        <div class="card">
+          <div class="tag danger">Domain-heavy</div>
+          <h4>PE · BFS · insurance</h4>
+          <p>Lean Z until language and policy freeze. BRD + glossary are human gates. Stories cite domain sources, not model memory. Business-language AC first. SMEs co-review behavior.</p>
+        </div>
+        <div class="card">
+          <div class="tag warn">Mixed</div>
+          <h4>Common commercial reality</h4>
+          <p>Split workstreams: domain kernel (Z) vs tech shell (L/M). Separate contracts. Example: extract PDF fields (L) vs map to statutory report lines (Z).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 FAILURES -->
+    <section class="section" id="failures">
+      <h2>9. Failure gallery</h2>
+      <p class="lede">Name them in retros.</p>
+      <div class="fail-grid">
+        <div class="fail-card">
+          <h4>Agent psychosis</h4>
+          <p>Trust the model’s confidence over evidence.</p>
+          <div class="fix">Fix: band + gate + require proof</div>
+        </div>
+        <div class="fail-card">
+          <h4>Dashboard cosplay</h4>
+          <p>Agent used as remote control for ADO/Jira/email.</p>
+          <div class="fix">Fix: scope policy; use native UIs</div>
+        </div>
+        <div class="fail-card">
+          <h4>Fiction BRD</h4>
+          <p>Domain product defined by LLM autocomplete.</p>
+          <div class="fix">Fix: SME freeze + glossary</div>
+        </div>
+        <div class="fail-card">
+          <h4>Green wrong</h4>
+          <p>Tests encode the wrong product.</p>
+          <div class="fix">Fix: real validators; business AC</div>
+        </div>
+        <div class="fail-card">
+          <h4>Rubber stamp</h4>
+          <p>LGTM on CI only for M/Z work.</p>
+          <div class="fix">Fix: walkthrough + risk read</div>
+        </div>
+        <div class="fail-card">
+          <h4>Identity L/Z</h4>
+          <p>Personality instead of placement.</p>
+          <div class="fix">Fix: re-score every task</div>
+        </div>
+        <div class="fail-card">
+          <h4>Skill bankruptcy</h4>
+          <p>Juniors only delegate.</p>
+          <div class="fix">Fix: protected learning modes</div>
+        </div>
+        <div class="fail-card">
+          <h4>FOMAT</h4>
+          <p>Ship unread because “OpenAI did 1M LOC.”</p>
+          <div class="fix">Fix: their harness ≠ yours</div>
+        </div>
+        <div class="fail-card">
+          <h4>No backpaddle</h4>
+          <p>Mid-flight risk discovered; process unchanged.</p>
+          <div class="fix">Fix: freeze, re-band, escalate</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 RECS -->
+    <section class="section" id="recommendations">
+      <h2>10. Recommendations</h2>
+      <p class="lede">Executive summary for teams shipping with coding agents.</p>
+      <ol class="rec-list">
+        <li><strong>Adopt Z/L placement as team policy</strong>, not vibes. Paste the score on every PR.</li>
+        <li><strong>Keep humans on requirements and design</strong> for domain systems; freeze vocabulary before stories.</li>
+        <li><strong>Let agents own generation under contracts</strong> with generator/evaluator separation and non-optional machine gates.</li>
+        <li><strong>Review at the band depth</strong>—never blank, rarely every leaf line. Independent whole-branch review remains load-bearing for non-trivial work.</li>
+        <li><strong>Ban agent-as-default for pure UI navigation</strong> (ADO boards, email, wiki) unless integration is deliberate and cheaper.</li>
+        <li><strong>Protect skill formation</strong>: comprehension modes for juniors on new subsystems; measure debugging competence, not just ship rate.</li>
+        <li><strong>Invest in harness quality</strong> proportional to token spend—the bottleneck is verification, not typing.</li>
+        <li><strong>Treat pure-tech and domain-heavy portfolios differently</strong>; do not copy-paste “full auto” from doc-intel into an insurance core system.</li>
+      </ol>
+    </section>
+
+    <!-- 11 CLOSING -->
+    <section class="section" id="closing">
+      <h2>11. Closing</h2>
+      <p class="lede">The question “How much better do models have to get before you’ll stop reading code?” is the wrong unit of analysis. The right unit is <strong>the task</strong>.</p>
+      <ul>
+        <li>Some tasks already deserve near-Lopopolo autonomy <strong>if</strong> your harness can prove them.</li>
+        <li>Some tasks will deserve Zechner-grade reading <strong>even after</strong> models improve—because wrongness is legal, financial, or existential, and “proof” is incomplete.</li>
+        <li>Domain-heavy commercial software sits systematically further Z on <strong>planning</strong> than pure technical software, even when implementation is agent-led.</li>
+      </ul>
+      <blockquote class="doctrine">
+        <p>The actual skill of agentic engineering is routing: place the work, attach the right loop, spend scarce human attention where silent failure is expensive, and refuse the comfort of fluent lies.</p>
+      </blockquote>
+      <p>That is how teams stay productive with Claude Code, Codex, Grok CLI, and whatever comes next—without confusing <strong>velocity of tokens</strong> for <strong>control of the product</strong>.</p>
+    </section>
+
+    <!-- REFERENCES -->
+    <section class="section" id="references">
+      <h2>References &amp; further reading</h2>
+
+      <h3>Continuum &amp; industry discourse</h3>
+      <ul>
+        <li>Alex Volkov, <em>The Zechner–Lopopolo Continuum</em> — <a href="https://thursdai.news/zl">essay</a> · <a href="https://www.youtube.com/watch?v=ZpK5PWX2YRM">talk</a></li>
+        <li>Ryan Lopopolo / extreme harness engineering — <a href="https://www.latent.space/p/harness-eng">Latent Space · Harness Engineering</a></li>
+        <li>Anthropic Institute, <em>When AI builds itself</em> — <a href="https://www.anthropic.com/institute/recursive-self-improvement">anthropic.com/institute/recursive-self-improvement</a></li>
+      </ul>
+
+      <h3>Empirical research</h3>
+      <ul>
+        <li>Shen &amp; Tamkin, <em>How AI Impacts Skill Formation</em> — <a href="https://arxiv.org/abs/2601.20245">arXiv:2601.20245</a> · <a href="https://www.anthropic.com/research/AI-assistance-coding-skills">Anthropic summary</a></li>
+        <li>Liu et al., human–GenAI collaboration performance vs motivation — <a href="https://www.nature.com/articles/s41598-025-98385-2">Scientific Reports 2025 (doi:10.1038/s41598-025-98385-2)</a></li>
+        <li>Related: cognitive offloading surveys (e.g. Gerlich 2025; Microsoft Research critical thinking 2025) — supporting context</li>
+      </ul>
+
+      <h3>In this repository</h3>
+      <ul>
+        <li>Field guide: <a href="./harness-guide.html"><code>docs/harness-guide.html</code></a></li>
+        <li>One-page routing rubric: <a href="./zl-continuum-rubric.md"><code>docs/zl-continuum-rubric.md</code></a></li>
+        <li>Markdown source of this paper: <a href="./agentic-engineering-whitepaper.md"><code>docs/agentic-engineering-whitepaper.md</code></a></li>
+        <li>Vertical glossary direction: <a href="./architecture/vertical-glossary-seeding-generalization.md"><code>docs/architecture/vertical-glossary-seeding-generalization.md</code></a></li>
+      </ul>
+    </section>
+
+    <!-- APPENDICES -->
+    <section class="section" id="appendix-a">
+      <h2>Appendix A — PR description template</h2>
+      <pre><code>### Z/L placement
+- Score: __ / 12  → band: L / M / Z
+- Axes at 2: (list or "none")
+- Domain frozen? yes/no (glossary + SME owner)
+- Lane: /vibe | /change | /refactor | /feature | /auto | other
+- Verification: (commands + pass/fail)
+- Human read plan: walkthrough only | contracts+hunks | every risk line + SME
+- Backpaddle triggers: (what would force re-band?)</code></pre>
+    </section>
+
+    <section class="section" id="appendix-b">
+      <h2>Appendix B — “Should I open the agent?”</h2>
+      <div class="diagram">
+        <div class="lane-tree">Is this primarily navigating a human UI I already have (ADO, email, wiki)?
+  YES → Do it yourself (or dedicated integration). Don't cosplay.
+  NO  ↓
+
+Is the truth of the answer domain policy not yet frozen by an SME?
+  YES → Human/SME first; agent may draft under "DRAFT-NOT-POLICY" only.
+  NO  ↓
+
+Can "done" be proved by tests, evals, or schemas you trust?
+  YES → Agent-led generation OK; place L/M/Z for review depth.
+  NO  → Human-led design/exploration; agent assists research, not silent merge.
+
+Blast radius auth/money/PII/migration/public API?
+  YES → Band Z minimum; full gate; no vibe.
+  NO  → Score remaining axes; match harness lane.</div>
+        <div class="cap">Decision tree for Claude Code, Codex, Grok CLI, and similar tools.</div>
+      </div>
+    </section>
+
+    <section class="section" id="appendix-c">
+      <h2>Appendix C — Interaction modes that preserve skill</h2>
+      <p>From Shen &amp; Tamkin — use these names in mentoring.</p>
+      <div class="two-col">
+        <div class="card">
+          <div class="tag ok">Encourage</div>
+          <h4>Skill-preserving</h4>
+          <p><strong>1. Conceptual inquiry</strong> — ask why/how; write code yourself.<br>
+          <strong>2. Hybrid code-explanation</strong> — generate with required explanation; read it.<br>
+          <strong>3. Generation-then-comprehension</strong> — generate, then Q&amp;A until you can debug without the model.</p>
+        </div>
+        <div class="card">
+          <div class="tag danger">Discourage as default shipping</div>
+          <h4>Skill-eroding</h4>
+          <p><strong>4. AI delegation</strong><br>
+          <strong>5. Progressive reliance</strong><br>
+          <strong>6. Iterative AI debugging</strong> without understanding</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="page-foot">
+      <p>Disposable research / operating narrative for engineering leadership. Not a product runtime artifact; does not go through the generator/evaluator shipping loop. Update when placement policy or research baselines change.</p>
+      <p><a href="#top">↑ Back to top</a> · <a href="./harness-guide.html">Harness field guide</a> · <a href="./agentic-engineering-whitepaper.md">Markdown source</a></p>
+    </footer>
+  </div>
+</div>
+
+<script>
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+  const nav = document.getElementById('nav');
+  const search = document.getElementById('nav-search');
+
+  function openSidebar() {
+    sidebar.classList.add('open');
+    overlay.classList.add('show');
+  }
+  function closeSidebar() {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('show');
+  }
+
+  // Filter nav
+  search.addEventListener('input', () => {
+    const q = search.value.trim().toLowerCase();
+    nav.querySelectorAll('a').forEach(a => {
+      const match = !q || a.textContent.toLowerCase().includes(q);
+      a.classList.toggle('hidden', !match);
+    });
+    nav.querySelectorAll('.nav-group').forEach(g => {
+      const any = [...g.querySelectorAll('a')].some(a => !a.classList.contains('hidden'));
+      g.style.display = any ? '' : 'none';
+    });
+  });
+
+  // Active section highlight
+  const links = [...nav.querySelectorAll('a[href^="#"]')];
+  const sections = links
+    .map(a => document.querySelector(a.getAttribute('href')))
+    .filter(Boolean);
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const id = entry.target.id;
+      links.forEach(a => {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+      });
+    });
+  }, { rootMargin: '-20% 0px -70% 0px', threshold: 0 });
+
+  sections.forEach(s => observer.observe(s));
+
+  // Close mobile nav on link click
+  links.forEach(a => a.addEventListener('click', () => {
+    if (window.innerWidth <= 860) closeSidebar();
+  }));
+</script>
+</body>
+</html>
