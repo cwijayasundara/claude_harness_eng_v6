@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Productive Agentic Engineering — LinkedIn Deck</title>
+<meta name="description" content="Print-to-PDF slide deck for LinkedIn document posts: Z/L continuum, domain gravity, sweet spot, recommendations." />
+<style>
+  :root {
+    --bg: #0b0f14;
+    --card: #121a24;
+    --border: #243041;
+    --text: #e7eef8;
+    --dim: #9aabbf;
+    --mute: #6b7c91;
+    --accent: #5b9dff;
+    --accent2: #7c5cff;
+    --ok: #34d399;
+    --warn: #f5a524;
+    --danger: #f87171;
+    --human: #fbbf24;
+    --gen: #60a5fa;
+    --font: "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    background: #1a1f26;
+    color: var(--text);
+    line-height: 1.45;
+  }
+
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .6rem;
+    align-items: center;
+    justify-content: space-between;
+    padding: .75rem 1rem;
+    background: rgba(11,15,20,.92);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+  }
+  .toolbar p { color: var(--dim); font-size: .85rem; max-width: 52ch; }
+  .toolbar button, .toolbar a.btn {
+    font: inherit;
+    font-size: .85rem;
+    font-weight: 650;
+    border: 1px solid rgba(91,157,255,.4);
+    background: rgba(91,157,255,.15);
+    color: #d6e8ff;
+    border-radius: 10px;
+    padding: .5rem .9rem;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .toolbar button:hover, .toolbar a.btn:hover { background: rgba(91,157,255,.25); }
+
+  .deck {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: 1.25rem;
+    align-items: center;
+  }
+
+  /* LinkedIn document / landscape slide size ~ 11.5" x 6.5" or 16:9 */
+  .slide {
+    width: min(1100px, 100%);
+    aspect-ratio: 16 / 9;
+    background:
+      radial-gradient(700px 280px at 8% -10%, rgba(91,157,255,.16), transparent 55%),
+      radial-gradient(600px 240px at 95% 110%, rgba(124,92,255,.12), transparent 50%),
+      linear-gradient(165deg, #121a24 0%, #0b0f14 100%);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 2.1rem 2.4rem;
+    box-shadow: 0 16px 48px rgba(0,0,0,.35);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+    break-after: page;
+  }
+  .slide::after {
+    content: attr(data-num);
+    position: absolute;
+    right: 1.4rem;
+    bottom: 1rem;
+    font-size: .75rem;
+    color: var(--mute);
+    font-weight: 600;
+  }
+
+  .eyebrow {
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: .55rem;
+  }
+  h1 {
+    font-size: 2.35rem;
+    letter-spacing: -0.04em;
+    line-height: 1.12;
+    font-weight: 750;
+    max-width: 18ch;
+  }
+  h2 {
+    font-size: 1.75rem;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin-bottom: .85rem;
+  }
+  .lede {
+    color: var(--dim);
+    font-size: 1.05rem;
+    max-width: 48ch;
+    margin-top: .75rem;
+  }
+  .doctrine {
+    margin-top: auto;
+    padding: 1rem 1.15rem;
+    border-left: 3px solid var(--accent2);
+    background: linear-gradient(90deg, rgba(124,92,255,.14), transparent);
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    max-width: 36ch;
+  }
+  .meta {
+    margin-top: auto;
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+  }
+  .pill {
+    font-size: .72rem;
+    font-weight: 650;
+    padding: .28rem .6rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    background: rgba(255,255,255,.03);
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    flex: 1;
+    min-height: 0;
+  }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: .85rem;
+    flex: 1;
+  }
+  .card {
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.1rem;
+  }
+  .card h3 {
+    font-size: .95rem;
+    margin-bottom: .4rem;
+  }
+  .card p, .card li {
+    font-size: .88rem;
+    color: var(--dim);
+  }
+  .card ul { padding-left: 1.1rem; margin-top: .35rem; }
+  .card li { margin: .25rem 0; }
+  .tag {
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin-bottom: .35rem;
+  }
+  .tag.ok { color: var(--ok); }
+  .tag.warn { color: var(--warn); }
+  .tag.danger { color: var(--danger); }
+  .tag.human { color: var(--human); }
+  .tag.gen { color: var(--gen); }
+
+  .spectrum {
+    margin: 1rem 0 1.25rem;
+    padding: .85rem 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: linear-gradient(90deg, rgba(52,211,153,.1), rgba(91,157,255,.08), rgba(248,113,113,.1));
+  }
+  .spectrum .labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: .8rem;
+    font-weight: 700;
+    margin-bottom: .45rem;
+  }
+  .spectrum .labels .l { color: var(--ok); }
+  .spectrum .labels .z { color: var(--danger); }
+  .spectrum .track {
+    height: 10px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--ok), var(--accent), var(--danger));
+  }
+  .spectrum .note {
+    margin-top: .55rem;
+    font-size: .85rem;
+    color: var(--dim);
+    text-align: center;
+  }
+
+  .bands {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: .75rem;
+    margin-top: .5rem;
+  }
+  .band {
+    border-radius: 12px;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    text-align: left;
+  }
+  .band.l { background: rgba(52,211,153,.08); border-color: rgba(52,211,153,.35); }
+  .band.m { background: rgba(91,157,255,.08); border-color: rgba(91,157,255,.35); }
+  .band.z { background: rgba(248,113,113,.08); border-color: rgba(248,113,113,.35); }
+  .band strong { display: block; font-size: 1.15rem; margin-bottom: .3rem; }
+  .band span { font-size: .82rem; color: var(--dim); display: block; line-height: 1.4; }
+
+  .flow {
+    display: flex;
+    align-items: stretch;
+    gap: .45rem;
+    flex: 1;
+    align-content: center;
+    flex-wrap: wrap;
+  }
+  .node {
+    flex: 1;
+    min-width: 140px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    padding: .9rem .85rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: .92rem;
+  }
+  .node small {
+    display: block;
+    font-weight: 500;
+    font-size: .75rem;
+    color: var(--dim);
+    margin-top: .3rem;
+  }
+  .node.human { border-color: rgba(251,191,36,.4); background: rgba(251,191,36,.08); color: #ffe4a3; }
+  .node.gen { border-color: rgba(96,165,250,.4); background: rgba(96,165,250,.08); color: #b8d7ff; }
+  .node.eval { border-color: rgba(192,132,252,.4); background: rgba(192,132,252,.08); color: #e4c9ff; }
+  .arrow {
+    align-self: center;
+    color: var(--mute);
+    font-size: 1.3rem;
+    font-weight: 700;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .82rem;
+    margin-top: .25rem;
+  }
+  th, td {
+    text-align: left;
+    padding: .55rem .65rem;
+    border-bottom: 1px solid rgba(36,48,65,.9);
+    vertical-align: top;
+  }
+  th {
+    color: var(--mute);
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    font-weight: 700;
+  }
+  td { color: var(--dim); }
+  td strong { color: var(--text); font-weight: 650; }
+
+  .recs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .55rem .85rem;
+    flex: 1;
+  }
+  .rec {
+    display: grid;
+    grid-template-columns: 1.8rem 1fr;
+    gap: .55rem;
+    align-items: start;
+    font-size: .88rem;
+    color: var(--dim);
+  }
+  .rec .n {
+    width: 1.7rem;
+    height: 1.7rem;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    font-size: .75rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+  }
+  .rec strong { color: var(--text); }
+
+  .fails {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: .55rem;
+    flex: 1;
+  }
+  .fail {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: .7rem .8rem;
+    background: rgba(248,113,113,.05);
+  }
+  .fail h3 { font-size: .88rem; color: #ffc9c9; margin-bottom: .2rem; }
+  .fail p { font-size: .78rem; color: var(--dim); }
+
+  .center-close {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width: 36ch;
+  }
+  .center-close h2 { font-size: 1.9rem; }
+  .center-close p { color: var(--dim); font-size: 1.05rem; margin-top: .75rem; }
+
+  .footer-line {
+    margin-top: auto;
+    font-size: .78rem;
+    color: var(--mute);
+  }
+
+  @media print {
+    body { background: white; }
+    .toolbar { display: none !important; }
+    .deck { padding: 0; gap: 0; }
+    .slide {
+      width: 100%;
+      max-width: none;
+      aspect-ratio: auto;
+      height: 100vh;
+      height: 100dvh;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      page-break-after: always;
+      break-after: page;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .slide:last-child { page-break-after: auto; }
+  }
+
+  @page {
+    size: landscape;
+    margin: 0;
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <p><strong>LinkedIn document deck</strong> — open in Chrome → Print → Save as PDF (Landscape, Background graphics ON). Then LinkedIn → Start a post → Add a document.</p>
+    <div style="display:flex;gap:.5rem;">
+      <button type="button" onclick="window.print()">Print / Save PDF</button>
+      <a class="btn" href="../agentic-engineering-whitepaper.html">Full white paper</a>
+    </div>
+  </div>
+
+  <div class="deck">
+    <!-- 1 TITLE -->
+    <section class="slide" data-num="1 / 10">
+      <div class="eyebrow">White paper brief · agentic software engineering</div>
+      <h1>Productive Agentic Engineering</h1>
+      <p class="lede">Human judgment, machine loops, and commercial software that ships without “agent psychosis.”</p>
+      <div class="doctrine">Place the task. Match the loop. Read what the loop cannot prove.</div>
+      <div class="meta" style="margin-top:1.25rem;">
+        <span class="pill">Claude Code · Codex · Grok CLI</span>
+        <span class="pill">Z/L continuum</span>
+        <span class="pill">PE · BFS · Insurance · Pure tech</span>
+      </div>
+    </section>
+
+    <!-- 2 PROBLEM -->
+    <section class="slide" data-num="2 / 10">
+      <div class="eyebrow">The real failure mode</div>
+      <h2>Overuse — not underuse</h2>
+      <div class="grid-2">
+        <div class="card">
+          <div class="tag danger">What happens</div>
+          <h3>Agent becomes the default UI</h3>
+          <ul>
+            <li>“Check ADO and tell me if we’re green”</li>
+            <li>“Invent the PE waterfall from memory”</li>
+            <li>Same ceremony for leaf copy and multi-epic domain work</li>
+            <li>Ship unread diffs because CI is green</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="tag warn">What it is</div>
+          <h3>Attention &amp; policy — not model failure</h3>
+          <p style="margin-top:.5rem;">A strong coding agent is a powerful hammer. Without explicit norms, everything becomes a nail—including work that is faster in a human UI or unsafe without SME truth.</p>
+          <p style="margin-top:.65rem;"><strong style="color:var(--text)">Thesis:</strong> productivity is <em>routing</em>, not “use the agent more.”</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 Z/L -->
+    <section class="slide" data-num="3 / 10">
+      <div class="eyebrow">Alex Volkov · Zechner ↔ Lopopolo</div>
+      <h2>You’re not a team. You’re a continuum.</h2>
+      <div class="spectrum">
+        <div class="labels">
+          <span class="l">L — code is cheap · verify hard</span>
+          <span class="z">Z — read critical lines</span>
+        </div>
+        <div class="track"></div>
+        <div class="note">Place <strong style="color:var(--text)">each task</strong>. Mis-placement is the failure mode.</div>
+      </div>
+      <div class="bands">
+        <div class="band l">
+          <strong>L · low risk</strong>
+          <span>Leaf / reversible / tests prove done. Skim walkthrough. High agent autonomy under micro-contracts.</span>
+        </div>
+        <div class="band m">
+          <strong>M · mixed</strong>
+          <span>Cross-module product work. Own AC. Read contracts + high-churn hunks. Story + gate.</span>
+        </div>
+        <div class="band z">
+          <strong>Z · high risk</strong>
+          <span>Auth, money, PII, migrations, domain policy. Line-read risk surface. SME + independent review.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 DOMAIN -->
+    <section class="slide" data-num="4 / 10">
+      <div class="eyebrow">Domain gravity</div>
+      <h2>Pure tech ≠ PE / BFS / insurance</h2>
+      <table>
+        <thead>
+          <tr><th>Layer</th><th>Pure technical</th><th>Domain-heavy</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Vocabulary</strong></td><td>Shared / Stack Overflow</td><td>House style + regulation</td></tr>
+          <tr><td><strong>“Correct”</strong></td><td>Tests &amp; schemas</td><td>Policy, LPA, actuarial intent</td></tr>
+          <tr><td><strong>BRD / stories</strong></td><td>Plausible structure often OK</td><td>Plausible but wrong process</td></tr>
+          <tr><td><strong>Silent failure</strong></td><td>Often fails demos</td><td>Passes demos, wrong business law</td></tr>
+          <tr><td><strong>Truth owner</strong></td><td>Eng + QA</td><td>SME + compliance + eng</td></tr>
+        </tbody>
+      </table>
+      <p class="footer-line" style="margin-top:auto;padding-top:1rem;">Agents thrive when specs are technical &amp; verifiable. They get expensive when the model is treated as junior product owner.</p>
+    </section>
+
+    <!-- 5 THREE KNOWLEDGES -->
+    <section class="slide" data-num="5 / 10">
+      <div class="eyebrow">Before you generate stories</div>
+      <h2>Three kinds of knowledge</h2>
+      <div class="grid-3">
+        <div class="card">
+          <div class="tag human">1 · Policy</div>
+          <h3>What the business is</h3>
+          <p>SME / product / legal freeze. Agents draft only after freeze—never invent fund, claims, or KYC truth.</p>
+        </div>
+        <div class="card">
+          <div class="tag warn">2 · Language</div>
+          <h3>What words mean here</h3>
+          <p>Glossary first (MOIC, NAV, IBNR, cedant…). Vocabulary checks beat fluent wrong names in code.</p>
+        </div>
+        <div class="card">
+          <div class="tag gen">3 · Build</div>
+          <h3>How we implement</h3>
+          <p>Engineering + agents under contracts. Primary generation zone once 1 and 2 are frozen.</p>
+        </div>
+      </div>
+      <p class="footer-line">Skip 1–2 → BRD / epic / story generation is fiction generation.</p>
+    </section>
+
+    <!-- 6 RESEARCH -->
+    <section class="slide" data-num="6 / 10">
+      <div class="eyebrow">Shen &amp; Tamkin · Anthropic RCT · arXiv:2601.20245</div>
+      <h2>AI can speed tasks and erode mastery</h2>
+      <div class="grid-3">
+        <div class="card">
+          <div class="tag danger">Quiz</div>
+          <h3>~17 points lower</h3>
+          <p>AI group ~50% vs control ~67% after learning a new library.</p>
+        </div>
+        <div class="card">
+          <div class="tag warn">Worst gap</div>
+          <h3>Debugging</h3>
+          <p>Exactly the skill needed to supervise AI-written production code.</p>
+        </div>
+        <div class="card">
+          <div class="tag ok">What works</div>
+          <h3>Engaged modes</h3>
+          <p>Conceptual inquiry · hybrid explain · generate then force comprehension.</p>
+        </div>
+      </div>
+      <p class="footer-line">If juniors only delegate, you buy velocity with future oversight capacity. Structure agent use—don’t ban it blindly.</p>
+    </section>
+
+    <!-- 7 SWEET SPOT -->
+    <section class="slide" data-num="7 / 10">
+      <div class="eyebrow">The economical human loop</div>
+      <h2>Sweet spot for commercial software</h2>
+      <div class="flow">
+        <div class="node human">1. Requirements<small>HUMAN-OWNED · freeze domain truth</small></div>
+        <div class="arrow">→</div>
+        <div class="node human">2. Design<small>HUMAN-LED · seams, APIs, architecture</small></div>
+        <div class="arrow">→</div>
+        <div class="node gen">3. Generation<small>AGENT-LED · contracts + ratchets</small></div>
+        <div class="arrow">→</div>
+        <div class="node eval">4. Verify<small>MACHINE + band-depth review</small></div>
+      </div>
+      <div class="bands" style="margin-top:1rem;">
+        <div class="band l"><strong>L review</strong><span>Walkthrough skim · green targeted proof</span></div>
+        <div class="band m"><strong>M review</strong><span>Contracts · auth/migration · high-churn hunks</span></div>
+        <div class="band z"><strong>Z review</strong><span>Risk surface · whole-branch · SME behavior</span></div>
+      </div>
+    </section>
+
+    <!-- 8 SCOPE -->
+    <section class="slide" data-num="8 / 10">
+      <div class="eyebrow">Publish this as team policy</div>
+      <h2>What agents are (and aren’t) for</h2>
+      <div class="grid-2">
+        <div class="card" style="border-color: rgba(52,211,153,.3);">
+          <div class="tag ok">For</div>
+          <ul>
+            <li>Stories against written acceptance criteria</li>
+            <li>Tests, fixtures, pure-structure refactors</li>
+            <li>Reproduce → isolate → fix under repo tools</li>
+            <li>Brownfield maps, mechanical migrations + gates</li>
+          </ul>
+        </div>
+        <div class="card" style="border-color: rgba(248,113,113,.3);">
+          <div class="tag danger">Not by default</div>
+          <ul>
+            <li>System of record for ADO / Jira / Linear</li>
+            <li>Inventing regulatory or fund-document truth</li>
+            <li>Self-approving production readiness</li>
+            <li>Dashboard cosplay (UI you can open in 3s)</li>
+          </ul>
+        </div>
+      </div>
+      <p class="footer-line">UI navigation you already have → human. Synthesis across many files under a contract → agent.</p>
+    </section>
+
+    <!-- 9 RECS -->
+    <section class="slide" data-num="9 / 10">
+      <div class="eyebrow">Operating practices</div>
+      <h2>Eight things that work</h2>
+      <div class="recs">
+        <div class="rec"><span class="n">1</span><span><strong>Z/L on every PR</strong> — policy, not personality</span></div>
+        <div class="rec"><span class="n">2</span><span><strong>Humans own BRD + design</strong> for vertical systems</span></div>
+        <div class="rec"><span class="n">3</span><span><strong>Generate under contracts</strong> — gates non-optional</span></div>
+        <div class="rec"><span class="n">4</span><span><strong>Band-depth review</strong> — never rubber-stamp M/Z</span></div>
+        <div class="rec"><span class="n">5</span><span><strong>No agent-default</strong> for pure UI navigation</span></div>
+        <div class="rec"><span class="n">6</span><span><strong>Protect skill formation</strong> for juniors</span></div>
+        <div class="rec"><span class="n">7</span><span><strong>Invest in harness quality</strong> ∝ token spend</span></div>
+        <div class="rec"><span class="n">8</span><span><strong>Don’t copy full-auto</strong> from doc-intel → insurance core</span></div>
+      </div>
+    </section>
+
+    <!-- 10 CLOSE + FAILS -->
+    <section class="slide" data-num="10 / 10">
+      <div class="eyebrow">Name them in retros</div>
+      <h2>Failure gallery · then ship with control</h2>
+      <div class="fails">
+        <div class="fail"><h3>Agent psychosis</h3><p>Trust confidence over evidence</p></div>
+        <div class="fail"><h3>Dashboard cosplay</h3><p>Agent as remote for ADO</p></div>
+        <div class="fail"><h3>Fiction BRD</h3><p>LLM as product owner</p></div>
+        <div class="fail"><h3>Green wrong</h3><p>Tests encode wrong product</p></div>
+        <div class="fail"><h3>Rubber stamp</h3><p>LGTM on CI only</p></div>
+        <div class="fail"><h3>Skill bankruptcy</h3><p>Juniors only delegate</p></div>
+      </div>
+      <div class="doctrine" style="margin-top:1rem;max-width:42ch;">Don’t confuse velocity of tokens with control of the product.</div>
+      <p class="footer-line">Full white paper + Z/L rubric in the harness repo · views of the author · cite Volkov Z/L · Shen &amp; Tamkin skill formation</p>
+    </section>
+  </div>
+</body>
+</html>
