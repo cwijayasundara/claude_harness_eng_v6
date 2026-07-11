@@ -6,44 +6,68 @@
 //
 // The harness runs a GAN: generation is the high-volume output bucket, judgment
 // is lower-volume but quality-sensitive. Judgment (evaluator + reviewers +
-// planner) is pinned to Opus 4.8 across every posture. Opus 4.7 is retired
-// (superseded by Opus 4.8) and Sonnet 4.6 is retired (superseded by Sonnet 5,
-// which now reaches near-Opus quality on coding/agentic work at Sonnet
-// pricing) — so the old three-step generation ladder (Sonnet 4.6 -> Opus 4.7
-// -> Opus 4.8) collapses to two steps: Sonnet 5 -> Opus 4.8.
+// planner + advisor) is pinned to Opus 4.8 across every posture.
 //
-//   cost        (Profile A) — Sonnet 5 generation, Opus 4.8 judgment. Lowest bill.
-//   balanced    (Profile B) — the shipped default. Same generator as cost
-//               (Sonnet 5) now that it covers what Opus 4.7 used to.
-//   max-quality              — Opus 4.8 generation; codebase-explorer stays Sonnet 5.
+//   cost / enterprise — Sonnet 5 generation, Haiku exploration, Opus judgment.
+//                       Enterprise product default (Coinbase: defaults > caps).
+//   balanced          — Sonnet 5 generation + exploration, Opus judgment.
+//   max-quality       — Opus 4.8 generation; explorer stays Sonnet 5.
+//
+// `enterprise` is an alias of `cost` (same pin table; docs-facing name).
 
 const fs = require('fs');
 const path = require('path');
 
 // Exact model IDs (not bare aliases) — version-pinned and unambiguous.
-const OPUS = 'claude-opus-4-8';     // judgment: evaluator + reviewers + planner
-const SONNET5 = 'claude-sonnet-5';  // generation + read-only exploration
+const OPUS = 'claude-opus-4-8';     // judgment: evaluator + reviewers + planner + advisor
+const SONNET5 = 'claude-sonnet-5';  // generation (cost/balanced) + exploration (balanced+)
+const HAIKU = 'claude-haiku-4-5';   // cheap exploration on enterprise/cost
+
+const JUDGMENT = {
+  planner: OPUS,
+  evaluator: OPUS,
+  'design-critic': OPUS,
+  'security-reviewer': OPUS,
+  'code-reviewer': OPUS,
+  'modularity-reviewer': OPUS,
+  advisor: OPUS,
+};
 
 const PRESETS = {
   cost: {
-    planner: OPUS, generator: SONNET5, evaluator: OPUS,
-    'design-critic': OPUS, 'security-reviewer': OPUS, 'code-reviewer': OPUS,
-    'codebase-explorer': SONNET5,
+    ...JUDGMENT,
+    generator: SONNET5,
+    'codebase-explorer': HAIKU,
   },
   balanced: {
-    planner: OPUS, generator: SONNET5, evaluator: OPUS,
-    'design-critic': OPUS, 'security-reviewer': OPUS, 'code-reviewer': OPUS,
+    ...JUDGMENT,
+    generator: SONNET5,
     'codebase-explorer': SONNET5,
   },
   'max-quality': {
-    planner: OPUS, generator: OPUS, evaluator: OPUS,
-    'design-critic': OPUS, 'security-reviewer': OPUS, 'code-reviewer': OPUS,
+    ...JUDGMENT,
+    generator: OPUS,
     'codebase-explorer': SONNET5,
   },
 };
 
+// enterprise → same pins as cost (product SKU name).
+PRESETS.enterprise = PRESETS.cost;
+
 // Recommended session/orchestrator model per tier (guidance, not an agent pin).
-const SESSION = { cost: OPUS, balanced: OPUS, 'max-quality': OPUS };
+// Keep Opus on /auto conductor for reliability even on cost tier (Haiku only
+// on volume explorer).
+const SESSION = {
+  cost: OPUS,
+  enterprise: OPUS,
+  balanced: OPUS,
+  'max-quality': OPUS,
+};
+
+function normalizePreset(preset) {
+  if (preset === 'enterprise') return 'cost';
+  return preset;
+}
 
 function modelsForTier(preset) {
   const pins = PRESETS[preset];
@@ -78,7 +102,7 @@ function printTable(preset) {
   const pins = modelsForTier(preset);
   process.stdout.write(`model tier: ${preset}  (session/orchestrator: ${sessionFor(preset)})\n`);
   for (const [role, model] of Object.entries(pins)) {
-    process.stdout.write(`  ${role.padEnd(20)} ${model}\n`);
+    process.stdout.write(`  ${role.padEnd(22)} ${model}\n`);
   }
 }
 
@@ -100,6 +124,15 @@ function main() {
   }
 }
 
-module.exports = { modelsForTier, sessionFor, applyTier, PRESETS };
+module.exports = {
+  modelsForTier,
+  sessionFor,
+  applyTier,
+  PRESETS,
+  normalizePreset,
+  OPUS,
+  SONNET5,
+  HAIKU,
+};
 
 if (require.main === module) main();

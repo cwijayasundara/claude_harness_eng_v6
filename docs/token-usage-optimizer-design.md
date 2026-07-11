@@ -166,6 +166,14 @@ Retrieval strategy:
 The result must be citation-first. It should return path and line ranges, not
 large source bodies, unless explicitly requested with a small token budget.
 
+**Implementation status (2026-07-11 P0):** `context-pack.js` ships schema v2 with
+BM25-ish lexical + wiki scoring, depth-2 graph expansion, `--diff` dirty boost,
+`task_map` + `confidence`, and `.claude/state/context-pack-last.json` receipts.
+`token-advisor.js` honors `context_search_required`. Change-family skills document
+the Context-first Iron Law. Remaining from this design: embedding index (P1),
+MCP/`nav-query` facade, co-change edges — see
+`docs/proposals/context-first-navigation.md`.
+
 ### 3. Tool Output Optimizer
 
 Tool Output Optimizer compacts verbose command output before it becomes repeated

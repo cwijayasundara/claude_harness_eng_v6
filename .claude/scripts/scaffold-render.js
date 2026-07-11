@@ -269,15 +269,18 @@ function isLiteShaped(profile) {
 function projectReadmeValues(profile) {
   const name = profile.name || 'untitled-project';
   const lite = isLiteShaped(profile);
-  const tier = profile.modelTier || (lite ? 'cost' : 'balanced');
+  // Product default is cost tier (enterprise Token Saver); profile may override.
+  const tier = profile.modelTier || 'cost';
   const start = lite
     ? `/build --lite "${name}: ${profile.description || stackSummary(profile)}"   # interactive\n`
       + '/build --lite --auto docs/prd.md                # headless: small PRD -> PR'
     : '/build docs/prd.md            # gated: approve BRD, stories, design, then build\n'
       + '/build docs/prd.md --auto     # headless: PRD -> PR, zero approval gates';
+  // Generation is Sonnet on cost/balanced; only max-quality bumps generator to Opus.
+  const genLabel = tier === 'max-quality' ? 'Opus generation' : 'Sonnet generation';
   const posture = lite
-    ? `${tier} (Sonnet generation) · trimmed ceremony · local verification`
-    : `${tier} (Opus generation) · full ceremony · docker verification`;
+    ? `${tier} (${genLabel}) · trimmed ceremony · local verification`
+    : `${tier} (${genLabel}) · full ceremony · docker verification`;
   return {
     PROJECT_NAME: name,
     STACK_SUMMARY: stackSummary(profile),

@@ -22,13 +22,14 @@ This skill does not change production code.
 /brownfield
 /brownfield backend/src
 /brownfield "map auth and billing before adding team invites"
+/brownfield --for "add team invites"          # lean maps scoped to a change goal
 /brownfield --seams "add team invites"        # map, then rank the safest cut-points for this goal
-/brownfield --full                            # add CI/flag/perf inventory + evaluator scoring
+/brownfield --full                            # LLM essays + CI/flag/perf + evaluator scoring
 ```
 
 `--seams "<goal>"` is the single entry point for seam analysis: it runs the normal discovery, then runs the `/seam-finder` stage for `<goal>` and writes `specs/brownfield/seams-<goal>.md`. (`/seam-finder` remains directly invokable as a power-user stage, but you don't need to call it separately.)
 
-Default `/brownfield` is intentionally lean and DeepWiki-first: build the deterministic graph/wiki, write the short maps needed for future code changes, and stop. Use `--full` for migration audits, CI/flag/perf inventory, or formal discovery scoring.
+Default `/brownfield` is intentionally lean and DeepWiki-first: build the deterministic graph/wiki, write **deterministic** short maps (no LLM essays), refresh nav indexes, and stop. Use `--full` for LLM-enriched essays, migration audits, CI/flag/perf inventory, or formal discovery scoring. Use `--for "<goal>"` to goal-scope the lean maps + optional seam ranking.
 
 ---
 
@@ -42,13 +43,13 @@ Write these files:
 | `specs/brownfield/code-graph.meta.json` | Producer, language counts, scan warnings, timestamp |
 | `specs/brownfield/wiki/WIKI.md` + `wiki/pages/*.md` | Committed DeepWiki-style repo guide: module pages, Mermaid diagrams, source citations, and page index. Future code changes read this first. |
 | `specs/brownfield/symbol-map.md` | Agent navigation map with symbols and line ranges for precise `Read(offset, limit)` slicing |
-| `specs/brownfield/codebase-map.md` | Short repo inventory: languages, frameworks, entry points, services, commands. Keep it brief; the wiki is the main orientation artifact. |
+| `specs/brownfield/codebase-map.md` | **Lean (default):** deterministic inventory from `nav-brownfield-maps.js`. **`--full`:** optional LLM enrichment. Wiki is the main orientation artifact. |
 | `specs/brownfield/dependency-graph.md` | Mermaid render of file/module-level edges |
 | `specs/brownfield/coupling-report.md` | Fan-in, fan-out, cycles, hubs, unstable modules |
-| `specs/brownfield/architecture-map.md` | Modules, layers, data flow, public interfaces, external dependencies — cites graph evidence |
-| `specs/brownfield/test-map.md` | Test commands, coverage signals, public interfaces covered/missing, slow/flaky tests |
-| `specs/brownfield/risk-map.md` | Sensitive areas, fragile zones, structural risks, auth/security/billing/data risks |
-| `specs/brownfield/change-strategy.md` | Recommended lane for future work: `/vibe`, `/change`, `/refactor`, `/spec`, `/auto` |
+| `specs/brownfield/architecture-map.md` | **Lean:** deterministic hubs/layers/edges stub. **`--full`:** LLM narrative citing graph evidence |
+| `specs/brownfield/test-map.md` | **Lean:** test paths from graph. **`--full`:** commands, coverage, flake notes |
+| `specs/brownfield/risk-map.md` | **Lean:** keyword + coupling risks. **`--full`:** domain/security narrative |
+| `specs/brownfield/change-strategy.md` | **Lean:** lane table + context-first steps. **`--full`:** richer strategy |
 | `specs/brownfield/ci-map.md`, `flag-inventory.md`, `perf-baseline.json` | `--full` only: CI alignment, feature flags, and latency baseline |
 | `specs/brownfield/seams-<goal>.md` | Optional ranked seam candidates produced by `/seam-finder "<goal>"` |
 | `specs/brownfield/naming-clusters.md` | Deterministic root-noun clusters from `code-graph.json` symbols — candidate domain terms for Step 6 |
@@ -83,11 +84,33 @@ Expected artifacts under `specs/brownfield/` when it completes: `code-graph.json
 
 If the graph is empty or has only warnings, stop and report. Do not invent architecture from filenames. When the AST producer ran, treat `symbol-map.md` and `skeletons/` as the navigation layer: read a single symbol with `Read(offset=START, limit=END-START+1)` instead of reading god files whole.
 
+### Step 1.6 — Deterministic lean maps + nav refresh (default)
+
+Always run after a successful code-map (seconds, no LLM):
+
+```bash
+# Optional goal from --for "..." or the brownfield argument when it is a phrase
+node .claude/scripts/nav-brownfield-maps.js --root . --goal "<goal-or-empty>"
+node .claude/scripts/nav-query.js refresh
+```
+
+This writes/refreshes: lean `codebase-map.md`, `architecture-map.md`, `test-map.md`, `risk-map.md`, `change-strategy.md`, TF-IDF index, graph inverted index, co-change, concept pages.
+
+**Lean mode stops after Step 1.6 + Step 6 (glossary) + Gate** — skip LLM Steps 2–5 unless `--full` or the user explicitly asked for narrative maps.
+
+When a goal is present, also run:
+```bash
+node .claude/scripts/nav-query.js pack --diff --budget 1600 "<goal>"
+```
+and attach the pack summary to the human gate.
+
 ---
 
-## Step 2 — Map Architecture
+## Step 2 — Map Architecture (`--full` only for LLM narrative)
 
-Write `architecture-map.md` as a short companion to the wiki:
+In **lean** mode, keep the deterministic `architecture-map.md` from Step 1.6. Do not regenerate with an LLM.
+
+In **`--full`**, expand `architecture-map.md` as a short companion to the wiki:
 
 - Major modules and their responsibilities — cite specific edges from `code-graph.json`
 - Public interfaces for each major module — use the graph symbols list where available
@@ -103,9 +126,11 @@ Every "module X depends on Y" claim must reference graph evidence, preferably an
 
 ---
 
-## Step 3 — Map Tests
+## Step 3 — Map Tests (`--full` only for deep inventory)
 
-Write `test-map.md` with:
+In **lean** mode, keep the deterministic `test-map.md` from Step 1.6.
+
+In **`--full`**, expand `test-map.md` with:
 
 - Test frameworks and commands
 - Unit/integration/e2e locations
@@ -159,9 +184,11 @@ This writes/updates `.claude/state/modularity-review-marker.json` with `{timesta
 
 ---
 
-## Step 4 — Map Risks
+## Step 4 — Map Risks (`--full` only for deep narrative)
 
-Write `risk-map.md` with:
+In **lean** mode, keep the deterministic `risk-map.md` from Step 1.6.
+
+In **`--full`**, expand `risk-map.md` with:
 
 ### Domain risks
 
@@ -185,9 +212,11 @@ For each risk, include the evidence path or graph node id.
 
 ---
 
-## Step 5 — Recommend Change Strategy
+## Step 5 — Recommend Change Strategy (`--full` only for deep narrative)
 
-Write `change-strategy.md` with:
+In **lean** mode, keep the deterministic `change-strategy.md` from Step 1.6 (already includes context-first steps).
+
+In **`--full`**, expand `change-strategy.md` with:
 
 - What qualifies for `/vibe`
 - What should use `/change` (behavior change; `--issue N` for a tracked bug)

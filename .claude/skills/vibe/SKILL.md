@@ -94,7 +94,13 @@ Append it to `.claude/state/vibe-log.md`. Create the file if missing.
 
 ### Step 3 — Inspect Before Editing
 
-Read only the relevant files and nearby tests. Prefer existing project patterns over new abstractions.
+**Context-first (Iron Law) — when `specs/brownfield/code-graph.json` exists and is not a placeholder**, run a micro pack before production source reads:
+
+```bash
+node .claude/scripts/context-pack.js --diff --budget 800 "<micro-contract change sentence>"
+```
+
+Read only `read_next` ranges (not whole god files). If `confidence` is low, one narrow search then re-pack or escalate. Prefer existing project patterns over new abstractions.
 
 If `specs/brownfield/change-strategy.md` exists, read it before editing. If it marks the affected area as high-risk, stop and escalate out of `/vibe`.
 

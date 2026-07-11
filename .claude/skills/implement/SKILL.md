@@ -42,14 +42,22 @@ If any prerequisite is missing, stop and report what is absent. Do not proceed w
 
 ## Execution Steps
 
-### Step -1 — Load Brownfield Constraints
+### Step -1 — Load Brownfield Constraints + Context-First
 
-If `specs/brownfield/` exists, read `architecture-map.md`, `test-map.md`, `risk-map.md`, and `change-strategy.md` before planning. Treat these as implementation constraints:
+**Context-first (Iron Law).** When `specs/brownfield/code-graph.json` is real, for each story (or the group goal) run before broad source exploration:
+
+```bash
+node .claude/scripts/context-pack.js --diff --budget 1600 "<story problem / AC summary>"
+```
+
+Inject pack `read_next` + `task_map` into every teammate spawn prompt. Low confidence → clarify or one narrow `rg` then re-pack.
+
+If `specs/brownfield/` exists, prefer the pack + `symbol-map.md` over front-loading every essay. Read `risk-map.md` / `change-strategy.md` when pack hits risk paths or confidence is low. Treat maps as implementation constraints:
 
 - Preserve existing public interfaces unless the story explicitly changes them.
 - Reuse established modules, framework patterns, and test entry points.
 - Escalate if the target path is marked high-risk or requires human approval.
-- Navigate via `symbol-map.md` and, for files flagged in `skeletons/`, read only the relevant symbol slice with `Read(offset, limit)` — never whole-file-read a skeleton-flagged file. Pass this instruction into teammate spawn prompts.
+- Navigate via pack ranges and `symbol-map.md`; for files flagged in `skeletons/`, read only the relevant symbol slice with `Read(offset, limit)` — never whole-file-read a skeleton-flagged file. Pass this instruction into teammate spawn prompts.
 - For stories that edit pre-existing symbols: run `checking-coverage-before-change` first; UNCOVERED routes through `pinning-down-behavior` / `sprouting-instead-of-editing`. Pass this into teammate spawn prompts too.
 - For stories that touch persisted data shape (models, migrations, message contracts): run `checking-migration-safety` and carry its expand-contract plan into the teammate spawn prompts.
 

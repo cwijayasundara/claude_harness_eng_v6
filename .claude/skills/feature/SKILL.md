@@ -238,6 +238,18 @@ wiki; the post-change re-render is part of the implementation output.
 
 ## Token discipline
 
+**Context-first (Iron Law).** After DeepWiki/code-map is fresh (step 1) and before
+decomposition or any broad source exploration of the request, run:
+
+```bash
+node .claude/scripts/context-pack.js --diff --budget 1600 "<feature request>"
+```
+
+(or `/context "..."`). Use `read_next` + `task_map` to orient. If `confidence` is
+`low` or clusters disagree, resolve ambiguity at GATE 1 rather than multi-file
+explore. Downstream `/change` / `/refactor` / `/vibe` re-run the pack for their
+scoped goal — the conductor pack is for routing, not a substitute for the lane pack.
+
 `/feature` should not spawn the full reviewer set by default. Build one compact
 `specs/reviews/review-context-pack.md` per change and pass that pack, the final
 diff, test output, and directly touched files to reviewers. The default review is

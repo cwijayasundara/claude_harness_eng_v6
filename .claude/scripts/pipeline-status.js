@@ -9,7 +9,7 @@
 
 const { buildSnapshot } = require('./pipeline-snapshot');
 const { readRunReceipts, findProjectDir } = require('./pipeline-state-readers');
-const { fmtBudget } = require('./budget-state');
+const { fmtBudget, fmtCost } = require('./budget-state');
 
 // ---------- presenters ----------
 
@@ -49,6 +49,11 @@ function fmtTokenAdvisor(a) {
   return `Token Advisor: warnings=${a.warnings}${kinds ? ` · ${kinds}` : ''}`;
 }
 
+function fmtNavTelemetry(t) {
+  if (!t) return null;
+  return `Nav Telemetry: packs=${t.pack_requests || 0} · ok=${t.pack_ok || 0} · no_match=${t.pack_no_match || 0} · low_conf=${t.pack_low_confidence || 0} · semantic_hits=${t.semantic_hits || 0} · cochange=${t.cochange_hits || 0} · ctx_skip=${t.advisor_context_search_skipped || 0}`;
+}
+
 function renderStatus(s) {
   const lines = [
     `Pipeline status — ${s.phase}  [${s.health}]`,
@@ -57,9 +62,17 @@ function renderStatus(s) {
   if (s.sprint) lines.push(`Sprint:    ${s.sprint.number} (${s.sprint.phase})`);
   if (s.confidence) lines.push(fmtConfidence(s.confidence));
   if (s.budget) lines.push(fmtBudget(s.budget));
+  if (s.cost) {
+    const costLine = fmtCost(s.cost);
+    if (costLine) lines.push(costLine);
+  }
   if (s.navigation) lines.push(fmtNavigation(s.navigation));
   if (s.context_cache) lines.push(fmtContextCache(s.context_cache));
   if (s.token_advisor) lines.push(fmtTokenAdvisor(s.token_advisor));
+  if (s.nav_telemetry) {
+    const line = fmtNavTelemetry(s.nav_telemetry);
+    if (line) lines.push(line);
+  }
   lines.push(
     `Groups:    ${s.wave.current}/${s.wave.total}  done=[${s.groups.completed.join(', ')}]  current=${s.groups.current || 'none'}  remaining=[${s.groups.remaining.join(', ')}]`,
     `Features:  ${s.features.passing} / ${s.features.total} passing`,

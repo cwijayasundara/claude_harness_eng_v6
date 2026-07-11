@@ -51,7 +51,7 @@ test('buildManifest: web-app profile gets the server preset + topology label', (
   assert.strictEqual(m.topology, 'web-app');
   assert.strictEqual(m.observability.enabled, true);
   assert.strictEqual(m.verification.mode, 'docker');
-  assert.strictEqual(m.execution.model_tier, 'balanced');
+  assert.strictEqual(m.execution.model_tier, 'cost');
   assert.strictEqual(m.execution.ceremony, 'full');
   assert.strictEqual(m.architecture, undefined); // not-lite: layers.js defaults apply, no key
 });

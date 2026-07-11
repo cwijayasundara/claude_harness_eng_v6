@@ -68,3 +68,22 @@ test('a healthy mid-run budget renders an ok band', () => {
   assert.strictEqual(snap.budget.band, 'ok');
   assert.match(renderStatus(snap), /Budget:\s+10m\/90m wall \(11%\) · 12\/200 agents/);
 });
+
+test('cost line shows model mix when budget-start is set', () => {
+  const startMs = Date.parse(NOW) - 5 * 60000;
+  const dir = makeProject({
+    'project-manifest.json': JSON.stringify({ execution: { model_tier: 'cost' } }),
+    '.claude/state/budget-start': String(startMs),
+    '.claude/runs/2026-06-21.jsonl': [
+      { kind: 'subagent', agent: 'generator', model: 'claude-sonnet-5', ts: startMs + 1 },
+      { kind: 'subagent', agent: 'evaluator', model: 'claude-opus-4-8', ts: startMs + 2 },
+    ].map((r) => JSON.stringify(r)).join('\n') + '\n',
+  });
+  const snap = buildSnapshot(dir, { now: NOW });
+  assert.ok(snap.cost);
+  assert.strictEqual(snap.cost.source, 'estimate');
+  assert.strictEqual(snap.cost.agents, 2);
+  assert.match(renderStatus(snap), /Cost:\s+~\$/);
+  assert.match(renderStatus(snap), /source=estimate/);
+  assert.match(renderStatus(snap), /sonnet-5=1/);
+});

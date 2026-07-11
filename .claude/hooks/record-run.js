@@ -10,6 +10,7 @@ const { appendLedger, pushSnapshot, readSkillCatalog, seedLedgerFromRuns } = req
 const { parseBuildInvocation } = require('../scripts/build-lane');
 const { readHookInput, reportFailure } = require('./lib/common');
 const { inferSkills } = require('./lib/record-skills');
+const { resolveAgentModel, extractUsageFields } = require('./lib/agent-model');
 
 function resolveUser() {
   if (process.env.HARNESS_USER) return process.env.HARNESS_USER;
@@ -142,6 +143,9 @@ function shouldSkipCommandTelemetry(command) {
       const ti = input.tool_input || {};
       const tr = input.tool_response || {};
       const skills = inferSkills({ input, command: null, lane, catalog: skillInventory });
+      const agent = stableLabelValue(ti.subagent_type, 'unknown');
+      const usage = extractUsageFields(input);
+      const model = usage.model || resolveAgentModel(projectDir, agent) || null;
       const subagentRecord = {
         kind: 'subagent',
         ts: Date.now(),
@@ -153,13 +157,18 @@ function shouldSkipCommandTelemetry(command) {
         iteration: stableLabelValue(iteration, '0'),
         group_id: stableLabelValue(groupId, 'none'),
         story_id: stableLabelValue(storyId, 'none'),
-        agent: stableLabelValue(ti.subagent_type, 'unknown'),
+        agent,
+        model,
         skill_names: skills.map((skill) => skill.name),
         skills,
         skill_inventory: skillInventory,
         host: os.hostname(),
         exit: tr.is_error ? 'error' : 'ok',
       };
+      if (usage.input_tokens != null) subagentRecord.input_tokens = usage.input_tokens;
+      if (usage.output_tokens != null) subagentRecord.output_tokens = usage.output_tokens;
+      if (usage.cache_read_tokens != null) subagentRecord.cache_read_tokens = usage.cache_read_tokens;
+      if (usage.cache_creation_tokens != null) subagentRecord.cache_creation_tokens = usage.cache_creation_tokens;
       await persistAndPush(receiptPath, stateDir, projectDir, subagentRecord);
 
       const reviewsDir = path.join(projectDir, 'specs', 'reviews');
@@ -226,6 +235,12 @@ function shouldSkipCommandTelemetry(command) {
 
     if (eventKind === 'Stop' || eventKind === 'SubagentStop') {
       const skills = inferSkills({ input, command: null, lane, catalog: skillInventory });
+      const agent = stableLabelValue(
+        input.subagent_type || input.subagent || (input.tool_input && input.tool_input.subagent_type),
+        'unknown',
+      );
+      const usage = extractUsageFields(input);
+      const model = usage.model || resolveAgentModel(projectDir, agent) || null;
       const turnRecord = {
         kind: eventKind === 'Stop' ? 'turn' : 'subagent_stop',
         ts: Date.now(),
@@ -237,13 +252,18 @@ function shouldSkipCommandTelemetry(command) {
         iteration: stableLabelValue(iteration, '0'),
         group_id: stableLabelValue(groupId, 'none'),
         story_id: stableLabelValue(storyId, 'none'),
-        agent: stableLabelValue(input.subagent_type || input.subagent || (input.tool_input && input.tool_input.subagent_type), 'unknown'),
+        agent,
+        model,
         exit: input.is_error ? 'error' : 'ok',
         skill_names: skills.map((skill) => skill.name),
         skills,
         skill_inventory: skillInventory,
         host: os.hostname(),
       };
+      if (usage.input_tokens != null) turnRecord.input_tokens = usage.input_tokens;
+      if (usage.output_tokens != null) turnRecord.output_tokens = usage.output_tokens;
+      if (usage.cache_read_tokens != null) turnRecord.cache_read_tokens = usage.cache_read_tokens;
+      if (usage.cache_creation_tokens != null) turnRecord.cache_creation_tokens = usage.cache_creation_tokens;
       await persistAndPush(receiptPath, stateDir, projectDir, turnRecord);
       process.exit(0);
     }

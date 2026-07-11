@@ -59,7 +59,17 @@ Read `.claude/skills/code-gen/SKILL.md` in full. Its core quality principles are
 
 ### Step 2 — Analyze Current State
 
-If `specs/brownfield/` exists, read `architecture-map.md`, `test-map.md`, `risk-map.md`, and `change-strategy.md` before analyzing the target. If this is a non-trivial existing codebase and those maps do not exist, recommend `/brownfield` before broad refactoring. Locate target symbols via `symbol-map.md` (`Lstart-Lend` anchors); for files flagged in `skeletons/`, read the `.skel.md` and then only the relevant symbol slice with `Read(offset, limit)` instead of the whole file.
+**Context-first (Iron Law) — REQUIRED when `specs/brownfield/code-graph.json` exists and is not a placeholder.** Before broad source reads or unconstrained search over the target:
+
+```bash
+node .claude/scripts/context-pack.js --diff --budget 1600 "<refactor goal or target path>"
+# blast radius for renames/moves (when you have a node id or path):
+node .claude/skills/code-map/scripts/code_wiki.js query --graph specs/brownfield/code-graph.json --callers <id>
+```
+
+Read only pack `read_next` ranges (and skeletons + `Read(offset, limit)` for god files). Use `task_map` and caller results as the impact seed. If `confidence` is low / `no_match`, one narrow `rg` then re-pack — do not multi-file explore. If the graph is missing on a non-trivial codebase, recommend `/brownfield` before broad refactoring.
+
+If maps exist and pack confidence is low, optionally read `architecture-map.md`, `risk-map.md`, or `change-strategy.md` — do not front-load every essay when the pack is high-confidence. Locate symbols via pack ranges first, then `symbol-map.md` (`Lstart-Lend`); for files flagged in `skeletons/`, read the `.skel.md` and then only the relevant symbol slice with `Read(offset, limit)` instead of the whole file.
 
 **Coverage preflight — REQUIRED SUB-SKILL: `checking-coverage-before-change`** for every symbol in the target path before the first edit. COVERED symbols give you the regression oracle to run after each step; UNCOVERED symbols route to `pinning-down-behavior` (or `sprouting-instead-of-editing`) before any in-place edit.
 

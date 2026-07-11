@@ -44,8 +44,8 @@ function maxPagesOf(args) {
 
 function cmdRender(args) {
   const m = loadModel(args.graph);
-  const wiki = render.renderWiki(m, { maxPages: maxPagesOf(args) });
   const outDir = args.out || path.join(path.dirname(args.graph), 'wiki');
+  const wiki = render.renderWiki(m, { maxPages: maxPagesOf(args), outDir });
   const pagesDir = path.join(outDir, 'pages');
   fs.rmSync(pagesDir, { recursive: true, force: true }); // drop stale pages so the wiki stays current
   fs.mkdirSync(pagesDir, { recursive: true });

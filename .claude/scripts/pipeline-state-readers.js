@@ -5,7 +5,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { gatherSpend, computeBudget, defaultBudget } = require('./budget-state');
+const { gatherSpend, computeBudget, defaultBudget, costSummary } = require('./budget-state');
 
 function readText(file) {
   try {
@@ -143,20 +143,34 @@ function readPlanConfidence(projectDir) {
 // Live per-run budget, or null when no run is being metered (no budget-start
 // marker) or the budget is disabled. Wall-clock needs an origin, so absence of
 // the marker means "not metering" → /status omits the line (backward compatible).
-function readBudget(projectDir, nowMs) {
-  const started = parseInt(readMarker(path.join(projectDir, '.claude', 'state'), 'budget-start') || '', 10);
-  if (!Number.isFinite(started)) return null;
+function readManifestExec(projectDir) {
   let manifest = {};
   try {
     manifest = JSON.parse(readText(path.join(projectDir, 'project-manifest.json')));
   } catch (_) {
     manifest = {};
   }
-  const exec = (manifest && manifest.execution) || {};
+  return (manifest && manifest.execution) || {};
+}
+
+function readBudget(projectDir, nowMs) {
+  const started = parseInt(readMarker(path.join(projectDir, '.claude', 'state'), 'budget-start') || '', 10);
+  if (!Number.isFinite(started)) return null;
+  const exec = readManifestExec(projectDir);
   const tier = exec.model_tier || 'balanced';
   const config = exec.budget || defaultBudget(tier);
   const spent = gatherSpend(readRunReceipts(projectDir), started, nowMs || Date.now(), tier);
   return computeBudget(spent, config);
+}
+
+// Cost visibility for /status. Shown when metering (budget-start) exists, even
+// if budget caps are off — operators still need the model-mix line.
+function readCostSummary(projectDir, nowMs) {
+  const started = parseInt(readMarker(path.join(projectDir, '.claude', 'state'), 'budget-start') || '', 10);
+  if (!Number.isFinite(started)) return null;
+  const exec = readManifestExec(projectDir);
+  const tier = exec.model_tier || 'balanced';
+  return costSummary(readRunReceipts(projectDir), started, nowMs || Date.now(), tier);
 }
 
 function readNavigation(projectDir) {
@@ -239,6 +253,19 @@ function readTokenAdvisor(projectDir) {
   };
 }
 
+function readNavTelemetry(projectDir) {
+  try {
+    const { readNavTelemetrySummary } = require('./nav-telemetry');
+    return readNavTelemetrySummary(projectDir);
+  } catch (_) {
+    try {
+      return JSON.parse(readText(path.join(projectDir, '.claude', 'state', 'nav-telemetry-summary.json')));
+    } catch (__) {
+      return null;
+    }
+  }
+}
+
 // Latest iteration-log entry → coverage/baseline, blocked groups, attempt count,
 // and whether the group exhausted its retries (FAIL attempt N of N).
 function parseIterationLog(stateDir) {
@@ -274,8 +301,10 @@ module.exports = {
   countGroupsFromGraph,
   readPlanConfidence,
   readBudget,
+  readCostSummary,
   readNavigation,
   readContextCache,
   readTokenAdvisor,
+  readNavTelemetry,
   parseIterationLog,
 };

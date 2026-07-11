@@ -25,17 +25,22 @@ const RATE_USD = Object.freeze({
 });
 
 // Approximate USD per token [input, output] when a receipt carries real counts.
+// Cache read ≈ 10% of input rate; cache creation ≈ full input rate (Anthropic).
 // claude-opus-4-7 and claude-sonnet-4-6 are retired model pins (superseded by
 // claude-opus-4-8 and claude-sonnet-5) — kept here so historical receipts
 // still price correctly, not because agents emit them anymore.
+// claude-fable-5 is reserved for a future advisor pin if product re-enables it.
 const MODEL_PRICE = Object.freeze({
   'claude-opus-4-8': [15e-6, 75e-6],
   'claude-opus-4-7': [15e-6, 75e-6],
   'claude-sonnet-5': [3e-6, 15e-6],
   'claude-sonnet-4-6': [3e-6, 15e-6],
   'claude-haiku-4-5': [1e-6, 5e-6],
+  'claude-fable-5': [15e-6, 75e-6],
   default: [15e-6, 75e-6],
 });
+
+const CACHE_READ_FRACTION = 0.1;
 
 // Default caps per model tier (burn rate scales with tier).
 const TIER_DEFAULTS = Object.freeze({
@@ -44,14 +49,27 @@ const TIER_DEFAULTS = Object.freeze({
   'max-quality': { wall_clock_ms: 180 * 60000, agents: 400, est_cost_usd: 60 },
 });
 
+// Roles treated as high-volume workers for model-mix "worker %" reporting.
+const WORKER_AGENTS = new Set(['generator', 'codebase-explorer']);
+
 const round2 = (n) => Math.round(n * 100) / 100;
+const round4 = (n) => Math.round(n * 10000) / 10000;
 const toMs = (n, unit) => n * (MS[unit] || 1);
 const agentBucket = (agent) => (agent === 'generator' ? 'gen' : 'judge');
 
+function hasTokenFields(r) {
+  return r && (r.output_tokens != null || r.input_tokens != null
+    || r.cache_read_tokens != null || r.cache_creation_tokens != null);
+}
+
 function receiptCost(r, tier) {
-  if (r.output_tokens != null || r.input_tokens != null) {
+  if (hasTokenFields(r)) {
     const price = MODEL_PRICE[r.model] || MODEL_PRICE.default;
-    return (r.input_tokens || 0) * price[0] + (r.output_tokens || 0) * price[1];
+    const input = (r.input_tokens || 0) * price[0];
+    const output = (r.output_tokens || 0) * price[1];
+    const cacheRead = (r.cache_read_tokens || 0) * price[0] * CACHE_READ_FRACTION;
+    const cacheCreate = (r.cache_creation_tokens || 0) * price[0];
+    return input + output + cacheRead + cacheCreate;
   }
   const rates = RATE_USD[tier] || RATE_USD.default;
   const r2 = rates[agentBucket(r.agent)];
@@ -73,6 +91,106 @@ function gatherSpend(receipts, startedAtMs, nowMs, tier) {
     agents: since.filter((r) => r.kind === 'subagent').length,
     est_cost_usd: round2(estimateCost(since, tier)),
   };
+}
+
+// Per-model breakdown for /status and cost-report.
+function modelMix(receipts, tier) {
+  const out = {};
+  for (const r of receipts || []) {
+    if (r.kind !== 'subagent') continue;
+    const model = r.model || 'unknown';
+    if (!out[model]) {
+      out[model] = {
+        agents: 0,
+        est_cost_usd: 0,
+        input_tokens: 0,
+        output_tokens: 0,
+        cache_read_tokens: 0,
+        cache_creation_tokens: 0,
+      };
+    }
+    const row = out[model];
+    row.agents += 1;
+    row.est_cost_usd = round4(row.est_cost_usd + receiptCost(r, tier));
+    row.input_tokens += r.input_tokens || 0;
+    row.output_tokens += r.output_tokens || 0;
+    row.cache_read_tokens += r.cache_read_tokens || 0;
+    row.cache_creation_tokens += r.cache_creation_tokens || 0;
+  }
+  for (const row of Object.values(out)) {
+    row.est_cost_usd = round2(row.est_cost_usd);
+  }
+  return out;
+}
+
+// How est_cost was derived across subagent receipts in the window.
+function costSource(receipts) {
+  const subs = (receipts || []).filter((r) => r.kind === 'subagent');
+  if (!subs.length) return 'estimate';
+  let withTok = 0;
+  for (const r of subs) if (hasTokenFields(r)) withTok += 1;
+  if (withTok === 0) return 'estimate';
+  if (withTok === subs.length) return 'receipts';
+  return 'mixed';
+}
+
+function workerShare(receipts, tier) {
+  const subs = (receipts || []).filter((r) => r.kind === 'subagent');
+  if (!subs.length) return null;
+  let total = 0;
+  let worker = 0;
+  for (const r of subs) {
+    const c = receiptCost(r, tier);
+    total += c;
+    if (WORKER_AGENTS.has(r.agent)) worker += c;
+  }
+  if (!(total > 0)) return null;
+  return Math.round((worker / total) * 100);
+}
+
+// Compact summary for /status (since budget-start when provided).
+function costSummary(receipts, startedAtMs, nowMs, tier) {
+  const since = (receipts || []).filter((r) => !startedAtMs || (r.ts || 0) >= startedAtMs);
+  const spent = gatherSpend(since, startedAtMs, nowMs, tier);
+  const mix = modelMix(since, tier);
+  let input = 0;
+  let output = 0;
+  let cacheRead = 0;
+  for (const r of since.filter((x) => x.kind === 'subagent')) {
+    input += r.input_tokens || 0;
+    output += r.output_tokens || 0;
+    cacheRead += r.cache_read_tokens || 0;
+  }
+  const tokenTotal = input + output + cacheRead;
+  return {
+    est_cost_usd: spent.est_cost_usd,
+    agents: spent.agents,
+    source: costSource(since),
+    worker_pct: workerShare(since, tier),
+    model_mix: mix,
+    input_tokens: input || null,
+    output_tokens: output || null,
+    cache_read_tokens: cacheRead || null,
+    cache_read_share_pct: tokenTotal > 0 ? Math.round((cacheRead / tokenTotal) * 100) : null,
+  };
+}
+
+function fmtCost(summary) {
+  if (!summary) return null;
+  const parts = [`~$${summary.est_cost_usd}`, `source=${summary.source}`];
+  if (summary.worker_pct != null) parts.push(`worker ${summary.worker_pct}%`);
+  const mix = summary.model_mix || {};
+  const models = Object.keys(mix).sort();
+  if (models.length) {
+    parts.push(`models: ${models.map((m) => {
+      const short = m.replace(/^claude-/, '');
+      return `${short}=${mix[m].agents}`;
+    }).join(' ')}`);
+  }
+  if (summary.cache_read_share_pct != null) {
+    parts.push(`cache-read ${summary.cache_read_share_pct}%`);
+  }
+  return `Cost:      ${parts.join(' · ')}`;
 }
 
 function dimensionStatus(dim, spent, warnPct) {
@@ -144,12 +262,21 @@ module.exports = {
   RATE_USD,
   MODEL_PRICE,
   TIER_DEFAULTS,
+  WORKER_AGENTS,
+  CACHE_READ_FRACTION,
   estimateCost,
   gatherSpend,
   computeBudget,
   parseBudgetSpec,
   defaultBudget,
   fmtBudget,
+  receiptCost,
+  hasTokenFields,
+  modelMix,
+  costSource,
+  workerShare,
+  costSummary,
+  fmtCost,
 };
 
 // ---- CLI ----------------------------------------------------------------

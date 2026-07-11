@@ -12,19 +12,21 @@
 //   - observability_enabled   (gates the observability guide + runtime-SLO sensor)
 //   - architecture            (undefined -> layers.js defaults apply; {enabled:false} -> off)
 
+// Product apps default to cost tier (enterprise Token Saver posture). Monorepo
+// dogfood may keep project-manifest.json#execution.model_tier=balanced.
 const SERVER = {
-  lite: false, model_tier: 'balanced', ceremony: 'full',
+  lite: false, model_tier: 'cost', ceremony: 'full',
   verification_mode: undefined, observability_enabled: true, architecture: undefined,
 };
 
 const TOPOLOGIES = {
   'web-app': {
     ...SERVER,
-    summary: 'layered architecture · observability · docker verify · full ceremony · balanced model tier',
+    summary: 'layered architecture · observability · docker verify · full ceremony · cost model tier',
   },
   'api-service': {
     ...SERVER,
-    summary: 'layered architecture · observability · docker verify · full ceremony · balanced model tier (no UI)',
+    summary: 'layered architecture · observability · docker verify · full ceremony · cost model tier (no UI)',
   },
   'cli-or-library': {
     lite: true, model_tier: 'cost', ceremony: 'trimmed',

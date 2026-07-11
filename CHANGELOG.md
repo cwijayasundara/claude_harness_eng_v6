@@ -6,6 +6,8 @@ All notable changes to the Claude Harness Engine are documented here.
 
 ### Unreleased follow-ups (same minor line until next tag)
 
+- **Context-first navigation:** living DeepWiki/code-map retrieval stack — `context-pack` v2 (lexical+wiki+TF-IDF semantic+co-change+depth-2), Iron Law in change/feature/refactor/vibe/implement/generator, `nav-query` facade, lean deterministic brownfield maps, concept pages, MCP (`nav-mcp-server`), nav-bench golden queries, token-advisor (`context_search_required`, unconstrained search); see [docs/proposals/context-first-navigation.md](docs/proposals/context-first-navigation.md) and [docs/token-governor.md](docs/token-governor.md)
+- **Token cost control (enterprise):** receipt model stamps, cache-aware pricing, `cost-report.js`, `/status` Cost line; product scaffold default `model_tier=cost` (Haiku explorer); `token_governor.mode=enforced` optional; `team-policy` solo_sequential; frontier `advisor` agent + `/advise`; [docs/token-cost-playbook.md](docs/token-cost-playbook.md)
 - Progressive `/auto` `/design` `/build` + `/scaffold-upgrade`
 - CI gitleaks; Project Zero readiness **8/8** (observability convention enabled)
 - All pre-commit gates use `failBlock` / `formatBlock` (Fix / Waive / Tier)

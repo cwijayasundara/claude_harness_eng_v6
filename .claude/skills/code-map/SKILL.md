@@ -169,7 +169,7 @@ The report lists:
 - Files with `instability = fan_out / (fan_in + fan_out) > 0.8` and `fan_in > 5` (unstable hubs — refactor candidates)
 - Files with no inbound edges and no test coverage (dead code candidates)
 
-### Step 3.5 — Render the Wiki + Query the Graph
+### Step 3.5 — Render the Wiki + Query the Graph + Secondary Nav
 
 Render the deterministic, always-current wiki (no LLM, instant — re-render any time the graph changes):
 
@@ -177,6 +177,12 @@ Render the deterministic, always-current wiki (no LLM, instant — re-render any
 node .claude/skills/code-map/scripts/code_wiki.js render \
   --graph specs/brownfield/code-graph.json \
   --out specs/brownfield/wiki
+```
+
+Refresh secondary navigation (TF-IDF, inverted graph index, co-change, concepts, lean maps):
+
+```bash
+node .claude/scripts/nav-query.js refresh
 ```
 
 Writes `wiki/WIKI.md` (overview + page index) and `wiki/pages/*.md` (one bounded page per directory cluster, each with `file:line` symbol citations and a per-cluster Mermaid). Pages cap at `--max-pages` (default 20); the overview notes any overflow. The `graph-refresh` hook re-renders this automatically after AST-graph patches, so it tracks `main` per-turn rather than lagging.

@@ -87,6 +87,7 @@ The harness follows [Anthropic's guidance for large codebases](https://claude.co
 - **Session learnings** — Stop hook (`review-on-stop.js`) reviews accumulated rules and suggests CLAUDE.md updates
 - **State archival** — Run `node .claude/scripts/archive-state.js` to archive oversized state files to `.claude/state/archive/`
 - **Codebase map** — `CODEBASE_MAP.md` documents top-level directory structure for navigation
+- **Context-first navigation** — when `specs/brownfield/code-graph.json` is real, run `node .claude/scripts/nav-query.js pack --diff --budget 1600 "<question>"` (or `/context`) before broad source reads; use `read_next` line ranges, not whole files. Refresh secondary indexes with `nav-query.js refresh`.
 - **LSP integration** — `/scaffold` auto-detects LSP servers from the stack (pyright, typescript-language-server, gopls, etc.), writes them to `project-manifest.json`, and checks availability in `init.sh`
 - **MCP servers** — `.mcp.json` template for connecting to internal tools, databases, and documentation
 - **Subdirectory commands** — Scope test/lint commands per module to avoid running full suites on minor changes

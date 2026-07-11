@@ -89,8 +89,11 @@ function depLabel(d) {
   return typeof d === 'string' ? d : (d.name || d.id || d.module || JSON.stringify(d));
 }
 
-function overviewPage(model, pages) {
+function overviewPage(model, pages, extras = {}) {
   const idx = pages.map((p) => `- [${p.title}](pages/${p.name}) — ${p.ids.length} module(s)`).join('\n');
+  const conceptBlock = extras.conceptIndex
+    ? ['## Concept pages', '', extras.conceptIndex, '']
+    : [];
   return [
     '# Codebase Wiki', '',
     '> Deterministic, always-current map rendered from `code-graph.json`. No LLM — re-rendered on graph change.', '',
@@ -100,15 +103,39 @@ function overviewPage(model, pages) {
     listSection('Entry points (no inbound deps)', model.entrypoints, (id) => `- \`${escMd(id)}\``), '',
     listSection('Cycles', model.cycles, (c) => `- ${(Array.isArray(c) ? c : [c]).map(escMd).join(' → ')}`), '',
     listSection('External dependencies', model.externalDeps, (d) => `- \`${escMd(depLabel(d))}\``), '',
+    ...conceptBlock,
     '## Pages', '', idx || '_(none)_', '',
+    '## Agent navigation', '',
+    '- Context pack: `node .claude/scripts/nav-query.js pack --budget 1600 "<question>"`',
+    '- Refresh secondary indexes: `node .claude/scripts/nav-query.js refresh`',
+    '',
   ].join('\n');
 }
 
-function renderWiki(model, { maxPages = 20 } = {}) {
+function loadConceptIndexMd(wikiOutDir) {
+  // Prefer concepts/INDEX.md if present beside the wiki out dir
+  try {
+    const fs = require('fs');
+    const idx = path.join(wikiOutDir || '', 'concepts', 'INDEX.md');
+    if (fs.existsSync(idx)) {
+      const text = fs.readFileSync(idx, 'utf8');
+      const links = [...text.matchAll(/\[([^\]]+)\]\(([^)]+)\)/g)]
+        .slice(0, 30)
+        .map((m) => `- [${m[1]}](concepts/${path.basename(m[2])})`);
+      if (links.length) return links.join('\n') + '\n\n_(Hash-cached concept pages from `nav-concepts.js`.)_';
+      return 'See [concepts/INDEX.md](concepts/INDEX.md).';
+    }
+  } catch (_) { /* optional */ }
+  return null;
+}
+
+function renderWiki(model, { maxPages = 20, outDir = null } = {}) {
   const capped = model.clusters.slice(0, maxPages);
   const pages = capped.map((c, i) => ({ name: pageName(c.key, i), ids: c.ids, title: `\`${escMd(c.key)}/\` — ${c.ids.length} module(s)` }));
   const overflow = model.clusters.length - capped.length;
-  const index = overviewPage(model, pages) + (overflow > 0 ? `\n_+ ${overflow} smaller cluster(s) not paged (raise --max-pages)._\n` : '');
+  const conceptIndex = loadConceptIndexMd(outDir);
+  const index = overviewPage(model, pages, { conceptIndex })
+    + (overflow > 0 ? `\n_+ ${overflow} smaller cluster(s) not paged (raise --max-pages)._\n` : '');
   return {
     index: { name: 'WIKI.md', md: index },
     pages: pages.map((p) => ({ name: p.name, md: clusterPage(model, p.ids, p.title) })),

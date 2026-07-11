@@ -1,0 +1,14 @@
+{
+  "repo_notes": [
+    {
+      "content": "Primary harness control plane lives under .claude/ (hooks, scripts, skills). Brownfield navigation artifacts live under specs/brownfield/. Prefer /context or nav-query pack before broad source reads.",
+      "author": "harness"
+    }
+  ],
+  "max_concept_pages": 20,
+  "priority_paths": [
+    ".claude/scripts",
+    ".claude/hooks",
+    ".claude/skills"
+  ]
+}

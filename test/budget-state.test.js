@@ -133,3 +133,54 @@ test('gatherSpend output feeds computeBudget to a verdict', () => {
   assert.strictEqual(r.exhausted, true, 'both wall-clock and agent caps reached');
   assert.strictEqual(r.band, 'exhausted');
 });
+
+// ---- receiptCost / modelMix / costSource / fmtCost -------------------------
+
+test('receiptCost prices cache read at 10% of input rate', () => {
+  // sonnet input 3e-6: 1000 cache_read * 0.1 * 3e-6 = 0.0003
+  const c = B.receiptCost({
+    kind: 'subagent', agent: 'generator', model: 'claude-sonnet-5',
+    cache_read_tokens: 1000,
+  }, 'cost');
+  assert.strictEqual(Math.round(c * 1e6) / 1e6, 0.0003);
+});
+
+test('modelMix groups subagents by model', () => {
+  const receipts = [
+    { kind: 'subagent', agent: 'generator', model: 'claude-sonnet-5' },
+    { kind: 'subagent', agent: 'evaluator', model: 'claude-opus-4-8' },
+    { kind: 'subagent', agent: 'generator', model: 'claude-sonnet-5' },
+    { kind: 'prompt' },
+  ];
+  const mix = B.modelMix(receipts, 'cost');
+  assert.strictEqual(mix['claude-sonnet-5'].agents, 2);
+  assert.strictEqual(mix['claude-opus-4-8'].agents, 1);
+});
+
+test('costSource is estimate | receipts | mixed', () => {
+  assert.strictEqual(B.costSource([{ kind: 'subagent', agent: 'generator' }]), 'estimate');
+  assert.strictEqual(B.costSource([{
+    kind: 'subagent', agent: 'generator', model: 'claude-sonnet-5',
+    input_tokens: 10, output_tokens: 5,
+  }]), 'receipts');
+  assert.strictEqual(B.costSource([
+    { kind: 'subagent', agent: 'generator' },
+    { kind: 'subagent', agent: 'generator', model: 'claude-sonnet-5', input_tokens: 1 },
+  ]), 'mixed');
+});
+
+test('fmtCost renders source and model mix', () => {
+  const line = B.fmtCost({
+    est_cost_usd: 0.14,
+    source: 'estimate',
+    worker_pct: 29,
+    model_mix: {
+      'claude-sonnet-5': { agents: 1, est_cost_usd: 0.04 },
+      'claude-opus-4-8': { agents: 1, est_cost_usd: 0.1 },
+    },
+  });
+  assert.match(line, /Cost:/);
+  assert.match(line, /source=estimate/);
+  assert.match(line, /worker 29%/);
+  assert.match(line, /sonnet-5=1/);
+});

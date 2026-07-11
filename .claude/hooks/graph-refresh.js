@@ -69,6 +69,24 @@ function refresh(projectDir, rels) {
     'render', '--graph', graph, '--out', path.join(projectDir, 'specs', 'brownfield', 'wiki'),
   ], { encoding: 'utf8', timeout: 25000 });
   if (wiki.status !== 0) process.stderr.write(`graph-refresh: wiki render failed: ${(wiki.stderr || '').trim()}\n`);
+  // Fail-open secondary nav artifacts: TF-IDF index, co-change, concept pages
+  const navScripts = [
+    path.join(projectDir, '.claude', 'scripts', 'nav-index.js'),
+    path.join(projectDir, '.claude', 'scripts', 'nav-graph-index.js'),
+    path.join(projectDir, '.claude', 'scripts', 'nav-cochange.js'),
+    path.join(projectDir, '.claude', 'scripts', 'nav-concepts.js'),
+    path.join(projectDir, '.claude', 'scripts', 'nav-brownfield-maps.js'),
+  ];
+  for (const script of navScripts) {
+    if (!fs.existsSync(script)) continue;
+    const r = spawnSync('node', [script, '--root', projectDir], {
+      encoding: 'utf8',
+      timeout: 45000,
+    });
+    if (r.status !== 0) {
+      process.stderr.write(`graph-refresh: ${path.basename(script)} failed: ${(r.stderr || '').trim()}\n`);
+    }
+  }
   return true;
 }
 

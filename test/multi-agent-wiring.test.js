@@ -26,12 +26,13 @@ test('generator can spawn teammates: it declares the Agent tool', () => {
   assert.match(frontmatter, /^\s*-\s*Agent\s*$/m, 'generator must have the Agent tool to delegate');
 });
 
-test('generator mandates one teammate per story for multi-story groups, with spawn evidence', () => {
+test('generator follows team-policy for multi-story groups (team vs solo_sequential)', () => {
   const g = read('.claude/agents/generator.md');
-  assert.match(g, /2 or more stories/i, 'declares the multi-story threshold');
-  assert.match(g, /one teammate per story/i, 'mandates a teammate per story');
+  assert.match(g, /team-policy/i, 'references team-policy');
+  assert.match(g, /solo_sequential/i, 'allows solo sequential for tiny groups');
+  assert.match(g, /one teammate per story/i, 'still teams when policy says team');
   assert.match(g, /subagent_type:\s*`?generator`?/i, 'teammates are generator subagents');
-  assert.match(g, /iteration-log\.md/, 'logs each spawn as execution evidence');
+  assert.match(g, /iteration-log\.md/, 'logs team_mode as execution evidence');
 });
 
 test('review handoff: the generator never self-evaluates', () => {

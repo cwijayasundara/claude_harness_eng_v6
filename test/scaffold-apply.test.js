@@ -384,16 +384,16 @@ test('the project README is tailored per shape (lite CLI vs full-stack)', () => 
   });
   assert.match(app, /Consumer-facing app/);
   assert.match(app, /\/build docs\/prd\.md --auto/);
-  assert.match(app, /balanced \(Opus generation\)/);
+  assert.match(app, /cost \(Sonnet generation\)/);
   assert.doesNotMatch(app, /\{\{[A-Z_]+\}\}/);
 });
 
-test('full-stack projects keep balanced + full + docker', () => {
+test('full-stack projects default to cost + full + docker (enterprise Token Saver)', () => {
   const m = buildManifest({
     name: 'app', projectType: 'A',
     stack: { backend: { language: 'python' }, frontend: { language: 'react' } },
   });
-  assert.strictEqual(m.execution.model_tier, 'balanced');
+  assert.strictEqual(m.execution.model_tier, 'cost');
   assert.strictEqual(m.execution.ceremony, 'full');
   assert.strictEqual(m.verification.mode, 'docker');
   assert.strictEqual(m.architecture, undefined);

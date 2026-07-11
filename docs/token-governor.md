@@ -29,13 +29,50 @@ are stamped stale after incremental graph patches and refreshed by a full
 
 Agents should navigate in this order:
 
-1. Read `specs/brownfield/wiki/WIKI.md` or use a graph/wiki query.
-2. Read `specs/brownfield/symbol-map.md` for exact line ranges.
-3. Read only the cited source range.
-4. Avoid whole-file reads when the symbol map has a smaller range.
+1. Run a **context pack** (preferred) or read `specs/brownfield/wiki/WIKI.md` /
+   use a graph/wiki query.
+2. Read `specs/brownfield/symbol-map.md` for exact line ranges when needed.
+3. Read only the cited source range from `read_next`.
+4. Avoid whole-file reads when the symbol map or pack has a smaller range.
 
-`project-manifest.json#token_governor` controls the default policy. The shipped
-default is advisory: it reports status and savings, but does not block work.
+### Context-first Iron Law
+
+When `specs/brownfield/code-graph.json` is a real (non-placeholder) graph,
+change-family skills (`/feature`, `/change`, `/refactor`, `/vibe`) must run:
+
+```bash
+node .claude/scripts/context-pack.js --diff --budget 1600 "<request>"
+```
+
+before broad production source reads or unconstrained repo-wide search. The pack
+returns schema v2 JSON: citations, `task_map`, `confidence`, and writes a session
+receipt to `.claude/state/context-pack-last.json`.
+
+Low confidence / multi-cluster packs should clarify or re-pack after one narrow
+`rg` — not open a multi-file exploration loop. See
+[proposals/context-first-navigation.md](proposals/context-first-navigation.md).
+
+`project-manifest.json#token_governor` controls the default policy:
+
+| `mode` | Behavior |
+|--------|----------|
+| `off` | no-op |
+| `advisory` (default) | warn + jsonl; never blocks |
+| `enforced` | same predicates → block + exit 2 when a deterministic alternative exists |
+
+| Key | Behavior |
+|-----|----------|
+| `context_search_required` | When true (scaffold default), warn/block production source `Read`s that lack a fresh context-pack receipt |
+| `context_pack_receipt_max_age_ms` | Receipt freshness window (default 4h) |
+| `max_source_read_lines` | Broad whole-file read threshold when symbol ranges exist |
+
+**Fail open** when the code-graph lacks symbol ranges, the graph is missing/
+placeholder, or paths are outside the project. Escape hatches:
+`token_governor.enabled: false`, `mode: off`, or env `HARNESS_TOKEN_GOVERNOR=off`.
+
+Enterprise org policy may set `enforced`; product scaffolds still ship
+`advisory` so greenfield installs are not surprise-blocked. See
+[token-cost-playbook.md](token-cost-playbook.md).
 
 `/status` reports navigation freshness and an estimated token saving per
 orientation:
@@ -47,22 +84,64 @@ Navigation: fresh · graph=fresh · wiki=fresh · indexed=42/42 · dirty=0 · ~4
 The estimate is intentionally conservative. It compares an approximate source
 corpus read with a bounded navigation query, not with the full generated wiki.
 
-`token-advisor.js` also runs as a non-blocking `Read|Bash` hook. It warns when a
-large source read has symbol-map ranges available, and when likely verbose test,
-lint, typecheck, or build commands could use `run-compact.js`.
+`token-advisor.js` runs as a `Read|Bash` PreToolUse hook. In advisory mode it
+warns when:
+
+- `context_search_required` and a production source `Read` has no fresh
+  context-pack receipt (`kind: context_search_skipped`)
+- a large source read has symbol-map ranges available (`kind: broad_source_read`)
+- likely verbose test/lint/build commands could use `run-compact.js`
+  (`kind: verbose_command`)
+
+In enforced mode those cases block with a remediation command (never silent
+rewrite).
 
 ## Commands
 
 Build a bounded source context pack:
 
 ```bash
-node .claude/scripts/context-pack.js "where is session validation handled?"
+node .claude/scripts/context-pack.js --diff --budget 1600 "where is session validation handled?"
+# unified facade:
+node .claude/scripts/nav-query.js pack --budget 1600 "where is session validation handled?"
 ```
 
 or in Claude Code:
 
 ```text
 /context "where is session validation handled?"
+```
+
+Refresh secondary navigation (semantic TF-IDF index, co-change edges, concept pages):
+
+```bash
+node .claude/scripts/nav-query.js refresh
+```
+
+Optional MCP (same tools as nav-query) — merge `.claude/templates/mcp-nav.snippet.json`
+into project `.mcp.json` **before** long agent runs (do not churn MCP mid-session).
+
+Wiki steering (DeepWiki-style): `.harness/wiki.json` (`repo_notes`, `priority_paths`,
+`max_concept_pages`) shapes concept pages under `specs/brownfield/wiki/concepts/`.
+
+Lean brownfield maps (no LLM):
+
+```bash
+node .claude/scripts/nav-brownfield-maps.js --goal "add invites"
+node .claude/scripts/nav-query.js lean-maps --goal "add invites"
+```
+
+Golden navigation benchmark:
+
+```bash
+node .claude/scripts/nav-query.js bench
+# or: node .claude/scripts/nav-bench.js --golden test/fixtures/nav-bench/golden-queries.json
+```
+
+Ambiguity clarify helper:
+
+```bash
+node .claude/scripts/nav-query.js clarify "fix token handling"
 ```
 
 Compact a verbose command log while preserving the raw output:

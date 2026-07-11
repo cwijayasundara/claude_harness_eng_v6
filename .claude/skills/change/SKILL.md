@@ -57,8 +57,18 @@ Do not proceed until acceptance criteria are written and confirmed.
 Read the current codebase to understand what is affected:
 
 - **Learned rules:** read `.claude/state/learned-rules.md`. If it exists and is non-empty, inject its contents verbatim into your working context before making any edits — the same convention `/auto` already uses for every spawned agent.
-- **Brownfield map:** if `specs/brownfield/` exists, read `codebase-map.md`, `architecture-map.md`, `test-map.md`, `risk-map.md`, and `change-strategy.md` before assessing impact. If this is a non-trivial existing codebase and the brownfield map is missing, recommend `/brownfield` first.
-- **Symbol navigation:** use `specs/brownfield/symbol-map.md` to locate the affected symbols (signatures with `Lstart-Lend` anchors). For files flagged in `skeletons/`, read the `.skel.md` first and then only the relevant symbol slice via `Read(offset, limit)` — never whole-file-read a skeleton-flagged file.
+- **Context-first (Iron Law) — REQUIRED when `specs/brownfield/code-graph.json` exists and is not a placeholder.** Before any production source `Read` of a large file, or any unconstrained repo-wide search, run:
+  ```bash
+  node .claude/scripts/context-pack.js --diff --budget 1600 "<story problem / user request>"
+  ```
+  (or `/context "..."`). Then:
+  - Read **only** the `read_next` line ranges (and `skeletons/` + `Read(offset, limit)` for god files).
+  - Use `task_map.edit_candidates` / `must_not_break` / `tests_to_run` as the impact seed.
+  - If `status` is `missing`/`placeholder` → run `/code-map` or `/brownfield` first.
+  - If `confidence` is `low` or `status` is `low_confidence`/`no_match` → ask a clarifying question using `task_map.clarify_options` / clusters, **or** run **one** narrow `rg` and re-pack. Do **not** open a multi-file exploration loop.
+  - Do **not** front-load all brownfield essays. Prefer the pack. Read `risk-map.md` only if pack hits auth/billing/persistence/security paths or the user asked for risk. Read `architecture-map.md` / `test-map.md` / `change-strategy.md` only when pack confidence is low or scope is still ambiguous after one re-pack.
+- **Brownfield map (fallback):** if the graph is missing on a non-trivial existing codebase, recommend `/brownfield` first. If maps exist and the pack is low-confidence, use them as orientation — not as a substitute for the pack when the graph is real.
+- **Symbol navigation:** use pack `read_next` first; fall back to `specs/brownfield/symbol-map.md` (`Lstart-Lend` anchors). For files flagged in `skeletons/`, read the `.skel.md` first and then only the relevant symbol slice via `Read(offset, limit)` — never whole-file-read a skeleton-flagged file.
 - **Seam plan:** if `specs/brownfield/seams-<goal-slug>.md` exists for this change's goal (or the user named a seam), read it and prefer its top-ranked seam (`extend`/`wrap`/`introduce-adapter` action) as the cut-point for the change. Note in the impact assessment which seam you adopted or why you rejected it.
 - **Coverage preflight — REQUIRED SUB-SKILL: `checking-coverage-before-change`** for every symbol in the planned diff. COVERED → run the listed oracle tests before and after each edit. UNCOVERED → `pinning-down-behavior` (or `sprouting-instead-of-editing`) before touching the symbol. If structural cleanup is needed alongside the behavior change, split commits per `keeping-refactors-pure`.
 - **Migration preflight — REQUIRED SUB-SKILL: `checking-migration-safety`** when the planned diff touches ORM models, `migrations/`, schema files, serializers/DTOs, or message shapes. Destructive/transform schema changes go expand-contract; the contract step never ships in this change.

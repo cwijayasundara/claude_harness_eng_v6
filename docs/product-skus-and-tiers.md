@@ -32,6 +32,20 @@ The monorepo is the source of truth. **Packaging emit is live** (`npm run packag
 
 SKUs are **install boundaries**. Sensor tiers are **runtime dials** inside a product install.
 
+### Token Saver posture (cost control)
+
+Product scaffolds (`web-app` / `api-service` / `cli-or-library`) default to
+`execution.model_tier: "cost"` (Sonnet generation, Haiku exploration, Opus judgment).
+Optional org policy: `token_governor.mode: "enforced"`. Measure with:
+
+```bash
+node .claude/scripts/cost-report.js
+node .claude/scripts/pipeline-status.js   # Cost: line when metering
+```
+
+Full operator guide: [token-cost-playbook.md](token-cost-playbook.md). This monorepo
+may keep `balanced` for dogfood; product installs should prefer `cost`.
+
 ## Sensor tiers (complexity dial)
 
 Configured at `project-manifest.json#quality.sensor_tier`:

@@ -1,35 +1,37 @@
 ## SECTION 4: Agent Team Execution (Step 4)
 
-Spawn the generator agent to create and manage a Claude Code agent team for the current group.
+Spawn the generator agent for the current group. Multi-story groups follow **generator.md Rule 2 + `team-policy.js`** (team vs `solo_sequential` vs solo) — do not force multi-agent boundary tax on tiny independent stories.
 
 ### Orchestrator Spawn Prompt (Mandatory Template)
 
-When invoking the generator from `/auto`, you (the orchestrator) **MUST** use a prompt that carries the team mandate inline — a terse one-liner like `"Implement group A"` leaves too much latitude and the generator will sometimes implement solo. Use this template verbatim, substituting `{GROUP_ID}` and the story count:
+When invoking the generator from `/auto`, you (the orchestrator) **MUST** use a prompt that carries the team-policy mandate inline — a terse one-liner like `"Implement group A"` leaves too much latitude. Use this template, substituting `{GROUP_ID}` and the story count:
 
 ```
-Implement group {GROUP_ID} ({N_STORIES} stories) using the mandatory parallel-team protocol from generator.md Rule 2.
+Implement group {GROUP_ID} ({N_STORIES} stories) using generator.md Rule 2 and .claude/scripts/team-policy.js.
 
-You are dispatching, not implementing. Concretely:
+Concretely:
 1. Read specs/stories/ for every story in this group.
 2. Read specs/design/component-map.md and build the micro-DAG (Step 2.5).
-3. Spawn one Agent(subagent_type=generator) per story — in parallel for Phase 1, then Phase 2 after Phase 1 commits.
-4. Do NOT call Write or Edit on production files yourself unless you are the designated integrator for a shared file in Phase 3.
-5. Log every teammate spawn to .claude/state/iteration-log.md with the story ID, owned files, and phase.
-6. After all teammates complete, run the validation gate (pytest, ruff, mypy/tsc, coverage) and hand off to the evaluator.
-
-This applies for any group with N_STORIES >= 2 regardless of how small the stories look. There is no bypass — every multi-story group spawns a team.
+3. Decide team_mode via team-policy (solo | solo_sequential | team). Log the decision + reason to .claude/state/iteration-log.md.
+4. If team: spawn one Agent(subagent_type=generator) per story — parallel Phase 1, then Phase 2 after Phase 1 commits. You are dispatching, not implementing (except designated Phase 3 integrator).
+5. If solo_sequential: implement stories one-by-one in this context — do NOT spawn per-story teammates.
+6. If solo (N=1): implement yourself.
+7. After implementation, run the validation gate (pytest, ruff, mypy/tsc, coverage) and hand off to the evaluator.
+8. Structural advisor: after 2 consecutive evaluator FAILs on this group, spawn Agent(subagent_type=advisor) with a compact fail brief (cap: execution.advisor_max_per_run, default 3) before the next generator attempt.
 ```
 
-If the group has only **1 story**, use the legacy single-generator prompt instead — no team needed.
+If the group has only **1 story**, use the single-generator prompt — no team needed.
 
 ### Verification After Generator Returns
 
-After the generator subagent returns, verify the team actually executed before trusting the result:
+After the generator subagent returns:
 
-1. Read `.claude/state/iteration-log.md` — there must be one teammate-spawn entry per story in the group (minus integrators for Phase 3-only files).
-2. If the log shows zero teammate spawns for a multi-story group, the generator violated Rule 2. Surface this as a ratchet failure, record it in `.claude/state/learned-rules.md` (under "Process rules"), and re-dispatch with an even stricter prompt that names the violation.
+1. Read `.claude/state/iteration-log.md` — there must be a `team_mode` decision for multi-story groups.
+2. If `team_mode: team`, there must be one teammate-spawn entry per story (minus Phase-3-only integrators).
+3. If `team_mode: solo_sequential`, zero teammate spawns is correct — do not re-dispatch for "missing team."
+4. If multi-story and no team_mode logged, treat as Rule 2 violation: surface as ratchet failure, record in learned-rules, re-dispatch with stricter prompt.
 
-This verification is non-optional: the user has explicitly requested parallel agent teams for independent story clusters and silent fallback to solo execution defeats the purpose.
+Silent *unauthorized* solo on a large multi-story group still defeats the purpose — only policy-approved `solo_sequential` is allowed.
 
 ### Dependency Handshake
 

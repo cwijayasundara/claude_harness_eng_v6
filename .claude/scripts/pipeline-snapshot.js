@@ -15,9 +15,11 @@ const {
   countGroupsFromGraph,
   readPlanConfidence,
   readBudget,
+  readCostSummary,
   readNavigation,
   readContextCache,
   readTokenAdvisor,
+  readNavTelemetry,
   parseIterationLog,
 } = require('./pipeline-state-readers');
 
@@ -113,9 +115,11 @@ function composeValues(stateDir, projectDir, progress, last, iter, groups, stori
     run: buildRun(stateDir, progress, last),
     confidence: readPlanConfidence(projectDir),
     budget: readBudget(projectDir, atMs),
+    cost: readCostSummary(projectDir, atMs),
     navigation: readNavigation(projectDir),
     context_cache: readContextCache(projectDir),
     token_advisor: readTokenAdvisor(projectDir),
+    nav_telemetry: readNavTelemetry(projectDir),
     phase: derivePhase(readMarker(stateDir, 'current-lane') || (last && last.lane), progress),
     wave: buildWave(groups, countGroupsFromGraph(projectDir)),
     groups,
