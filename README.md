@@ -98,6 +98,8 @@ Are you building something NEW?
 
 Not sure? Describe the request plainly. The harness should classify the lane before it edits.
 
+**Z/L continuum (team PR placement):** you are not “Team vibe” or “Team read every line” as a permanent identity — **each task** gets a score and a band (L / M / Z), then a harness lane and a human read plan. One-page rubric: [docs/zl-continuum-rubric.md](docs/zl-continuum-rubric.md).
+
 ## Command Cards
 
 The public surface is intentionally small:

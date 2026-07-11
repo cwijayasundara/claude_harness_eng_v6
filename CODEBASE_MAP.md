@@ -16,6 +16,7 @@ Top-level navigation for the Claude Harness Engine repository.
 | `.github/workflows/` | GitHub Actions for fast CI and upstream Claude Code drift watch |
 | `.github/upstream/` | Checked-in upstream snapshots consumed by `.claude/scripts/upstream-watch.js` |
 | `docs/` | Authoring standards, telemetry/testing guides, design proposals |
+| `docs/zl-continuum-rubric.md` | One-page Z/L task-placement rubric (L/M/Z bands → harness lanes + human review) |
 | `telemetry/` | Prometheus/Grafana/OTEL configs for opt-in cache + harness metrics |
 | `test/` | Harness unit tests; `test/e2e/` runs live Claude pipeline checks; `test/evals/` holds golden assertion fixtures |
 | `symphony_clone/` | Sibling Docker service: Linear/Jira-driven autonomous dispatch orchestrator |
