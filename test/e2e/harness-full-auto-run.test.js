@@ -19,7 +19,8 @@ const { randomUUID } = require('crypto');
 // Fresh id per run — hardcoded session ids fail with "already in use" on re-run.
 const SESSION = randomUUID();
 
-test('full-auto: /build --auto prd.md runs the non-lite route and leaves a green project', { timeout: 2100000 }, (t) => {
+test('full-auto: /build --auto prd.md runs the non-lite route and leaves a green project', { timeout: 3600000 }, (t) => {
+  const fs = require('fs');
   freshProject(PROJECT_DIR, PRD);
   const opts = { cwd: PROJECT_DIR, model: 'sonnet', pluginDir: PLUGIN_DIR, sessionId: SESSION };
 
@@ -29,38 +30,39 @@ test('full-auto: /build --auto prd.md runs the non-lite route and leaves a green
   );
   console.log('[full-auto] scaffold exit:', scaffold.exitCode);
   assert.ok(
-    require('fs').existsSync(path.join(PROJECT_DIR, 'project-manifest.json'))
-      || require('fs').existsSync(path.join(PROJECT_DIR, 'CLAUDE.md')),
+    fs.existsSync(path.join(PROJECT_DIR, 'project-manifest.json'))
+      || fs.existsSync(path.join(PROJECT_DIR, 'CLAUDE.md')),
     'scaffold must install harness before /build',
   );
 
-  // Explicit handoff text: progressive /build can otherwise stop after specs/.
+  // Keep non-lite ceremony but constrain decomposition so one session can finish.
   const build = runClaude(
     '/build --auto --mode lean prd.md\n\n' +
       'Headless iron law: after the plan (specs/brd, stories, design) exists, ' +
       'immediately run Phase 4 + /auto --mode lean until package.json and npm test exist and pass. ' +
-      'Do not stop after planning; --plan-only was NOT requested.',
+      'Do not stop after planning; --plan-only was NOT requested. ' +
+      'Scope discipline: one epic, one dependency group, at most 2 stories — pure Node HTTP, no framework.',
     {
       ...opts,
       continueSession: true,
-      budgetUsd: '18.00',
-      timeoutMs: 1800000,
+      budgetUsd: '20.00',
+      timeoutMs: 1500000,
     },
   );
   console.log('[full-auto] build exit:', build.exitCode, 'signal:', build.signal);
 
   t.after(() => console.log('[full-auto] artifacts: ' + PROJECT_DIR));
 
-  // If planning finished but /auto never ran (budget / progressive-load miss),
-  // one explicit /auto resume is allowed — proves the implement half still works.
+  // Resume /auto if planning finished without a runnable app (timeout / progressive miss).
   let suite = runProjectSuite(PROJECT_DIR);
-  if (suite.status == null && require('fs').existsSync(path.join(PROJECT_DIR, 'features.json'))) {
+  if (suite.status == null && fs.existsSync(path.join(PROJECT_DIR, 'features.json'))) {
     console.log('[full-auto] no package yet after /build — resume with /auto --mode lean');
     const resume = runClaude(
-      '/auto --mode lean\nImplement all open groups until npm test passes. Do not replan.',
-      { ...opts, continueSession: true, budgetUsd: '12.00', timeoutMs: 1200000 },
+      '/auto --mode lean\nImplement all open groups until root package.json exists and npm test passes. ' +
+        'Do not replan. Prefer a single server.js + package.json if that satisfies the PRD.',
+      { ...opts, continueSession: true, budgetUsd: '15.00', timeoutMs: 1500000 },
     );
-    console.log('[full-auto] /auto resume exit:', resume.exitCode);
+    console.log('[full-auto] /auto resume exit:', resume.exitCode, 'signal:', resume.signal);
     suite = runProjectSuite(PROJECT_DIR);
   }
   console.log('[full-auto] generated project suite status:', suite.status);

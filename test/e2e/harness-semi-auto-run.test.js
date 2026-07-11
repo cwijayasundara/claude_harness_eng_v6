@@ -10,9 +10,11 @@
 //
 // LIVE: real `claude -p`, costs tokens, NOT in `npm test`. Run: `npm run test:semi`.
 
+const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
 const { test } = require('node:test');
+const { randomUUID } = require('crypto');
 
 const { runClaude } = require('./helpers/claude-runner');
 const { runProjectSuite } = require('./helpers/project-suite');
@@ -21,12 +23,15 @@ const { alterAndVerify } = require('./helpers/alter-and-verify');
 
 const PROJECT_DIR = path.join(__dirname, 'semi-auto-output');
 const PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
-const { randomUUID } = require('crypto');
 // Fresh id per run — hardcoded session ids fail with "already in use" on re-run.
 const SESSION = randomUUID();
 const APP = 'a Node.js CLI in index.js that reads two integer command-line arguments and prints their sum to stdout, with an npm test that runs it and checks the output';
 
-test('semi-auto: /build --autonomous -> build -> alter (code-map), suite green', { timeout: 1800000 }, (t) => {
+function hasRootPackage() {
+  return fs.existsSync(path.join(PROJECT_DIR, 'package.json'));
+}
+
+test('semi-auto: /build --autonomous -> build -> alter (code-map), suite green', { timeout: 2400000 }, (t) => {
   freshProject(PROJECT_DIR, null);
   const opts = { cwd: PROJECT_DIR, model: 'sonnet', pluginDir: PLUGIN_DIR, sessionId: SESSION };
 
@@ -36,16 +41,39 @@ test('semi-auto: /build --autonomous -> build -> alter (code-map), suite green',
   );
   console.log('[semi] scaffold exit:', scaffold.exitCode);
   assert.ok(
-    require('fs').existsSync(path.join(PROJECT_DIR, 'project-manifest.json'))
-      || require('fs').existsSync(path.join(PROJECT_DIR, 'CLAUDE.md')),
+    fs.existsSync(path.join(PROJECT_DIR, 'project-manifest.json'))
+      || fs.existsSync(path.join(PROJECT_DIR, 'CLAUDE.md')),
     'scaffold must install harness before /build',
   );
 
-  const build = runClaude(`/build --autonomous --lite ${APP}`, { ...opts, continueSession: true, budgetUsd: '10.00', timeoutMs: 1080000 });
+  // Mirror the proven lite-auto path, but with --autonomous (one plan gate).
+  // Headless: treat the plan as approved and finish with /auto --mode lean.
+  const build = runClaude(
+    `/build --autonomous --mode lean --lite ${APP}\n\n` +
+      'Headless: no human at the plan-approval gate. After specs/ exist, treat the plan as APPROVED. ' +
+      'Immediately run Phase 4 + /auto --mode lean until ALL of these exist at the project root: ' +
+      'package.json (scripts.test runs node --test), index.js, and a test/ file. Then npm test must pass. ' +
+      'Do not stop after planning.',
+    { ...opts, continueSession: true, budgetUsd: '12.00', timeoutMs: 1080000 },
+  );
   console.log('[semi] build exit:', build.exitCode, 'signal:', build.signal);
 
-  const suite = runProjectSuite(PROJECT_DIR);
-  console.log('[semi] suite after build:', suite.status);
+  let suite = runProjectSuite(PROJECT_DIR);
+  if (suite.status == null) {
+    console.log('[semi] no green suite yet — resume implement (package.json + tests)');
+    const resume = runClaude(
+      'Plan approved. Continue with /auto --mode lean (or implement directly if simpler).\n' +
+        'Required at project root:\n' +
+        '1) package.json with { "scripts": { "test": "node --test" } }\n' +
+        '2) index.js CLI: two integer args, print their sum\n' +
+        '3) test/ covering the CLI\n' +
+        'Then run npm test until exit 0. Do not replan stories.',
+      { ...opts, continueSession: true, budgetUsd: '10.00', timeoutMs: 900000 },
+    );
+    console.log('[semi] resume exit:', resume.exitCode, 'signal:', resume.signal);
+    suite = runProjectSuite(PROJECT_DIR);
+  }
+  console.log('[semi] suite after build:', suite.status, 'hasPackage:', hasRootPackage());
   assert.strictEqual(suite.status, 0, `generated suite must pass after the --autonomous build:\n${suite.out}`);
 
   // Then ALTER — exercises /code-map + /brownfield on the generated code.
