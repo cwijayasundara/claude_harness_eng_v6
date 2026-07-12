@@ -20,6 +20,7 @@ const { isHarnessRepo, machineryViolation } = require('./lib/trust-boundary');
 const { prefixCacheViolation, prefixCacheBlockMessage } = require('./lib/prefix-cache');
 const { isProtectedEnvFile } = require('./lib/secrets');
 const { extractWriteTargets } = require('./lib/bash-targets');
+const { checkGitSafety } = require('./lib/git-safety');
 
 function block(message) {
   process.stdout.write(message);
@@ -75,6 +76,13 @@ try {
   if (typeof command !== 'string' || !command) process.exit(0);
 
   const projectDir = resolveProjectDir(path.dirname(path.resolve(__filename)));
+
+  // Bun Phase A: deny destructive git while parallel agents are active.
+  const gitSafety = checkGitSafety(command, { projectDir, env: process.env });
+  if (gitSafety.block) {
+    block(gitSafety.reason);
+  }
+
   const opts = {
     protect: (process.env.HARNESS_PROTECT || '').toLowerCase() !== 'off',
     harness: isHarnessRepo(projectDir),

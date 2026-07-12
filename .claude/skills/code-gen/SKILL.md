@@ -55,6 +55,8 @@ Reference skill for generator teammates. Read this before writing any code.
 - Types act as documentation — a well-typed function signature is its own doc.
 - Use comments only for non-obvious decisions (algorithm choice, regulatory constraints).
 - Avoid `// TODO` in submitted code — file a story instead.
+- **No stub-to-green.** Do not clear compile/lint by shipping `todo!()`, `unimplemented!()`, `NotImplementedError`, empty `pass`/`...` bodies, or `throw new Error("TODO")` on production paths. Implement the behaviour, or defer with an explicit story and `// harness:stub-ok story=E#-S#` on the same line (the `stub-smell-gate` enforces markers at commit on standard+ tiers).
+- **Paragraph rule (Bun).** If you need a paragraph-long comment to justify a workaround, the code is wrong — fix the code; do not document the hack.
 
 ### 8. Deep Modules — Simple Interface, Useful Behavior
 - Prefer modules with small, stable interfaces that hide meaningful complexity.

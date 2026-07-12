@@ -16,9 +16,10 @@ context: fork
 /refactor src/repository/
 /refactor --sweep            # whole-repo entropy scan (formerly /lint-drift)
 /refactor --sweep --auto-fix # sweep + auto-commit CLEANUP-class items
+/refactor --mechanical       # bulk mechanical transform via specs/migrate/ (Bun Phase B)
 ```
 
-Provide a file path or directory for a **targeted** refactor. Use `--sweep` for a **whole-repo entropy scan** that reports accumulated drift and routes findings back into the per-principle fix flow. The skill analyzes the target against core quality principles, plans the changes, and executes them one principle at a time.
+Provide a file path or directory for a **targeted** refactor. Use `--sweep` for a **whole-repo entropy scan** that reports accumulated drift and routes findings back into the per-principle fix flow. Use **`--mechanical`** for a large pattern→pattern transform (port, framework swap, monorepo split) driven by `specs/migrate/` mapping artifacts — not for principle-by-principle cleanup. The skill analyzes the target against core quality principles, plans the changes, and executes them one principle at a time (except `--mechanical`, which follows the migrate flow below).
 
 ---
 
@@ -27,6 +28,26 @@ Provide a file path or directory for a **targeted** refactor. Use `--sweep` for 
 Refactoring improves the internal structure of existing code without changing its observable behavior. No new features. No behavior changes. Every change must trace to a violation of the core quality principles.
 
 For tiny cleanup that is obviously safe and local (for example one unused import, one typo in a comment, one lint-only change), use `/vibe` instead. Use `/refactor` when the change affects structure, module boundaries, tests, or multiple files.
+
+---
+
+## Mechanical Migrate Mode (`/refactor --mechanical`)
+
+For **bulk faithful transforms** (language port, framework upgrade call-sites, monorepo split) where the behaviour oracle is the existing suite — not a new product feature.
+
+1. **Ensure `specs/migrate/` exists.** If missing, copy templates from `.claude/templates/migrate/` (`README.md`, `MAPPING.md`, `CONSTRAINTS.tsv`, `CANARY.md`) into `specs/migrate/`.
+2. **Draft or load `MAPPING.md`** (and optional `CONSTRAINTS.tsv`). Do not fan out code until the mapping is specific enough that two independent readers would make the same mechanical choice.
+3. **Adversarially review the mapping** (not the whole tree): spawn two independent `code-reviewer` instances on `specs/migrate/MAPPING.md` (+ `CONSTRAINTS.tsv` if present) with fresh context; merge with `merge-review-verdicts.js --policy union` if both produce verdict JSON, or require a human ack for high-risk ports. Fix mapping conflicts before any production edit.
+4. **Canary always:** apply the transform to **3 files** (or the smallest representative sample), run tests/lint/types, record results in `specs/migrate/CANARY.md`. A canary failure revises the mapping — do not extend a broken pattern.
+5. **Fan-out** only after canary pass, under file ownership / ownership map when present. Prefer `fix-from-diagnostics` when the fan-out produces a large type/lint wall.
+6. **Oracle:** G31 still applies — do not delete or skip tests to green the suite. Prefer dual adversarial review on large diffs (`review-tier.js`).
+7. **Semantic divergence:** instruct every `code-reviewer` spawn to apply `.claude/skills/code-gen/references/semantic-divergence.md` (assert side effects, rounding, bounds, Drop/defer, placeholder constants). Record open hazards in `MAPPING.md` → Semantic divergence watchlist.
+8. **Commits:** keep mapping/canary commits separate from bulk code when practical (`keeping-refactors-pure` when behaviour is unchanged). Prefer review-attributed subjects after dual review:
+   ```bash
+   git commit -m "$(node .claude/scripts/review-commit-msg.js --subject 'port: canary batch' --from-audit specs/reviews/adversarial-review-audit.json)"
+   ```
+
+This mode is **not** `/build` or `/sprint`. If the work needs new product behaviour, use `/change` or `/feature` instead.
 
 ---
 

@@ -48,10 +48,11 @@ test('withoutSourceOnly returns only docs-safe gates', () => {
     'secret-scan',
     'amendment-provenance',
     'test-deletion-guard',
+    'stub-smell-gate',
   ]);
 });
 
-test('minimal withoutSourceOnly drops test-deletion', () => {
+test('minimal withoutSourceOnly drops test-deletion and stub-smell', () => {
   const ids = selectGates('minimal', { withoutSourceOnly: true }).map((g) => g.id);
   assert.deepStrictEqual(ids, ['secret-scan', 'amendment-provenance']);
 });

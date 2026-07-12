@@ -37,6 +37,12 @@
       "forbid_regression": true
     }
   },
+  "review": {
+    "adversarial": "auto",
+    "adversarial_min_files": 8,
+    "adversarial_min_lines": 200,
+    "block_merge_policy": "union"
+  },
   "token_governor": {
     "enabled": true,
     "mode": "advisory",

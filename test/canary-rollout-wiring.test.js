@@ -25,3 +25,17 @@ test('upgrading-dependencies canaries a large mechanical call-site rewrite befor
   assert.match(skill, /[Cc]anary/, 'must describe a canary/trial step');
   assert.match(skill, /more than ~?10 files/, 'must state a concrete file-count trigger threshold');
 });
+
+// Phase B generalization (Bun): implement + feature also canary.
+
+test('/implement canaries large or mechanical groups (Phase B)', () => {
+  const skill = read('.claude/skills/implement/SKILL.md');
+  assert.match(skill, /[Cc]anary/);
+  assert.match(skill, /more than ~?10 files/);
+});
+
+test('/feature canaries the first ready story on epic routes (Phase B)', () => {
+  const skill = read('.claude/skills/feature/SKILL.md');
+  assert.match(skill, /[Cc]anary story/);
+  assert.match(skill, /first ready story/i);
+});

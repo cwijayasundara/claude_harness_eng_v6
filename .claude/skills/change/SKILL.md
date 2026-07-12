@@ -57,6 +57,7 @@ Do not proceed until acceptance criteria are written and confirmed.
 Read the current codebase to understand what is affected:
 
 - **Learned rules:** read `.claude/state/learned-rules.md`. If it exists and is non-empty, inject its contents verbatim into your working context before making any edits — the same convention `/auto` already uses for every spawned agent.
+- **Process rules:** read `.claude/state/process-rules.md` if it exists and is non-empty; inject workflow constraints (e.g. no destructive git during parallel work, no stub-to-green) before editing.
 - **Context-first (Iron Law) — REQUIRED when `specs/brownfield/code-graph.json` exists and is not a placeholder.** Before any production source `Read` of a large file, or any unconstrained repo-wide search, run:
   ```bash
   node .claude/scripts/context-pack.js --diff --budget 1600 "<story problem / user request>"
@@ -117,7 +118,23 @@ If `specs/test_artefacts/` exists, update `test-cases.md` and `test-data/` to re
 
 Write or refresh `specs/reviews/review-context-pack.md` with the story, acceptance criteria, changed files, relevant DeepWiki/code-map links, and the exact test/lint/typecheck commands that passed.
 
-Spawn the `code-reviewer` agent (harness-provided: `.claude/agents/code-reviewer.md`) on the full diff. **Spawn `security-reviewer` only if the diff touches authentication, authorization, secrets, user input handling, uploads/downloads, network fetch/redirect/proxy code, payments/billing, persistence/schema/migrations, API routes/controllers/middleware, or configured security patterns**. Run selected reviewers in parallel in a single message.
+Resolve code-review mode (same auto thresholds as `/implement` / Gate 8):
+
+```bash
+node .claude/scripts/review-tier.js --files <n> --lines <n> [--security-boundary]
+```
+
+- **standard:** spawn one `code-reviewer` on the full diff → `specs/reviews/code-review-verdict.json`.
+- **adversarial:** spawn **two independent** `code-reviewer` instances (fresh context each; diff + AC + context pack only — no builder reasoning). Write `code-review-verdict-a.json` / `code-review-verdict-b.json`, then:
+  ```bash
+  node .claude/scripts/merge-review-verdicts.js \
+    --a specs/reviews/code-review-verdict-a.json \
+    --b specs/reviews/code-review-verdict-b.json \
+    --policy union
+  ```
+  Canonical verdict stays `code-review-verdict.json`; audit at `adversarial-review-audit.json`. Fail safe to stricter on instance error/timeout.
+
+**Spawn `security-reviewer` only if the diff touches authentication, authorization, secrets, user input handling, uploads/downloads, network fetch/redirect/proxy code, payments/billing, persistence/schema/migrations, API routes/controllers/middleware, or configured security patterns**. Run selected reviewers in parallel in a single message.
 
 If the diff includes a new or changed acceptance-test file (typically under `specs/test_artefacts/acceptance/`), instruct `code-reviewer` to specifically judge that file's **readability**: could a non-technical stakeholder follow the Given/When/Then narrative and understand the requirement it verifies? Note this instruction in the context pack — per Vaccari, readability is itself the correctness signal for whether the story was understood.
 
@@ -185,7 +202,7 @@ Run the project's lint and type checks (`npm run lint`, `mypy`, `tsc --noEmit`, 
 
 Write or refresh `specs/reviews/review-context-pack.md` with the issue, reproduction, root cause, changed files, test proof, and risk triggers.
 
-Spawn the `code-reviewer` agent on the diff. **Spawn `security-reviewer` only if the fix touches authentication, authorization, secrets, user input handling, uploads/downloads, network fetch/redirect/proxy code, payments/billing, persistence/schema/migrations, API routes/controllers/middleware, or configured security patterns**. Run selected reviewers in parallel in a single message. Resolve BLOCK findings (max 3 cycles).
+Resolve code-review mode via `node .claude/scripts/review-tier.js --files <n> --lines <n> [--security-boundary]` (same as Step S6): standard = one `code-reviewer`; adversarial = two independent instances + `merge-review-verdicts.js --policy union`. **Spawn `security-reviewer` only if the fix touches authentication, authorization, secrets, user input handling, uploads/downloads, network fetch/redirect/proxy code, payments/billing, persistence/schema/migrations, API routes/controllers/middleware, or configured security patterns**. Run selected reviewers in parallel in a single message. Resolve BLOCK findings (max 3 cycles).
 
 ### Step I9 — Commit and Open a PR
 

@@ -1,0 +1,4 @@
+# symbol_or_field	constraint	rationale
+# Example:
+# TcpSocket.buffer	owned_by_caller	must not free after handoff to async close
+# Parser.arena	scope_function	AST nodes do not escape parse()

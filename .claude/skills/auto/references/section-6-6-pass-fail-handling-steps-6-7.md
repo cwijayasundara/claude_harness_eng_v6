@@ -38,8 +38,8 @@ Do not immediately revert. Attempt targeted self-healing first.
 
 | Category | Signal | Auto-Fix Strategy |
 |----------|--------|-------------------|
-| Lint/format | ruff/eslint error output | `ruff check --fix && ruff format` |
-| Type error | mypy/tsc error with file:line | Fix the type annotation at the specified location |
+| Lint/format | ruff/eslint error output | If **≤ ~15** findings: `ruff check --fix` / `eslint --fix` or targeted fix. If **≥ ~15** findings or multi-package: **REQUIRED SUB-SKILL `fix-from-diagnostics`** (diagnostics work queue; no full-suite thrash mid-shard) |
+| Type error | mypy/tsc error with file:line | If **≤ ~15** findings: fix annotations at file:line. If **≥ ~15** or multi-package: **REQUIRED SUB-SKILL `fix-from-diagnostics`** with `--tool tsc` or `--tool mypy` |
 | Test failure | pytest/vitest assertion error | Fix the production code, NOT the test |
 | Import error | ImportError / ModuleNotFoundError | Fix the import path or `__init__.py` |
 | Coverage drop | Coverage % below baseline | Add tests for the specific uncovered lines |

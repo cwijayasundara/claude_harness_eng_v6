@@ -4,6 +4,28 @@ All notable changes to the Claude Harness Engine are documented here.
 
 ## Unreleased
 
+### 2.4.0 — Bun Phase C (optional polish) (2026-07-12)
+
+- **Semantic-divergence checklist:** `.claude/skills/code-gen/references/semantic-divergence.md`; `code-reviewer` lens for mechanical ports; wired into `/refactor --mechanical` + migrate `MAPPING.md`.
+- **Review commit attribution:** `review-commit-msg.js` formats subjects from dual-review audit JSON (optional; audit remains source of truth).
+- **Dynamic workflow exemplar:** `.claude/workflows/fix-diagnostics.js` (`/fix-diagnostics`) — multi-phase fan-out over the diagnostics queue; documents “edit the workflow / process-rules, not only the tree.” Skill form still primary.
+- **Out of core (documented):** fuzz→auto-PR and cgroup isolation — see `docs/proposals/bun-phase-c-out-of-core.md`.
+
+### 2.3.0 — Bun mechanical loops Phase B (2026-07-12)
+
+- **Diagnostics work queue:** `hooks/lib/diagnostics-parse.js` + `diagnostics-shard.js` → `.claude/state/diagnostics/{errors.jsonl,shards.json}`; skill `fix-from-diagnostics` (no full-suite mid-shard). Wired into `/implement` Step 6 and `/auto` SECTION 6 self-heal for high-volume lint/type walls (≥~15 findings).
+- **Canary generalization:** `/implement` Step 0.5 (group owns >~10 files or mechanical plan); `/feature` first ready story as canary for epics; G32 still on refactor/deps.
+- **Mechanical migrate:** `/refactor --mechanical` + templates under `.claude/templates/migrate/` (`MAPPING.md`, `CONSTRAINTS.tsv`, `CANARY.md`).
+
+### 2.2.0 — Bun adversarial Phase A (2026-07-12)
+
+Backward-compatible minor under product line **v5** (not a v6 reboot). See [docs/proposals/bun-adversarial-mechanical-loops.md](docs/proposals/bun-adversarial-mechanical-loops.md).
+
+- **Tiered dual adversarial code review:** `review-tier.js` + `merge-review-verdicts.js` (default policy **union**). Auto when file/line thresholds, security-boundary, or `sensor_tier=strict`; single reviewer otherwise. Wired into `/implement` Step 7, `/auto` Gate 8, `/change` S6/I8.
+- **Anti stub-to-green:** code-gen + `code-reviewer` Iron Laws; commit-time `stub-smell-gate` (standard+); allow `harness:stub-ok story=…`.
+- **Multi-agent git safety:** `hooks/lib/git-safety.js` + pre-bash deny for stash / reset --hard / clean -fd / force-push when `HARNESS_PARALLEL_AGENTS=1` or `parallel-implement.lock` present.
+- **Process rules:** `.claude/state/process-rules.md` injected on implement/auto/change (workflow constraints, separate from learned-rules).
+
 ### Human trust + production-quality surfaces (P0–P3)
 
 World-class human review and codebase understanding (Devin DeepWiki/Review + OpenAI harness patterns):

@@ -116,6 +116,22 @@ Classify scope automatically (reuse the single-vs-epic size thresholds + the
 (`/auto`) lane — it carries more verification. The human no longer confirms this
 classification in autonomous lanes.
 
+### Canary story for epic / multi-group work (Bun Phase B)
+
+When the decomposition is an **epic or multi-story dependency graph** (not a
+single invisible `/change`), treat the **first ready story** in dependency order
+as a **canary story** before full `/auto` fan-out across remaining groups:
+
+1. Implement and gate that one story (via `/change` or a one-group `/implement`)
+   through tests + `/gate` (or the lane's usual verify path).
+2. Only if the canary story is green, proceed with the remaining groups via
+   `/auto` / agent teams.
+3. A canary failure revises the plan or seam — do not burn a full epic on a
+   broken pattern.
+
+Skip canary when the epic is already proven (resume) or the human explicitly
+waives it at GATE 2.
+
 Every lane stops at the open PR(s); the human owns merge.
 
 ### Sub-skill gate collapse in autonomous lanes

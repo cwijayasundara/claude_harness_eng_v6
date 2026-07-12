@@ -137,7 +137,26 @@ If no trigger fires, do not spawn `security-reviewer`; record `security_review: 
 
 ### Gate 8 — Fresh-Context Code Review (Full + Lean)
 
-Spawn the `code-reviewer` agent on the group's diff (give it the commit range or branch, acceptance criteria, and `specs/reviews/review-context-pack.md` — nothing else from this session). It reads the diff cold, hunting both structure violations (SOLID breaks, duplication, god functions) and correctness defects (logic errors, missing edge cases, contract breaks against existing callers), and writes `specs/reviews/code-review-verdict.json`. The gate **FAILs** on any BLOCK finding or a missing verdict file. Route BLOCK findings to the generator like any other gate failure (max 3 fix cycles). Runs concurrently with Gates 5 and any selected Gate 7 security review — it needs only the repo, not the running app. The reviewer's value comes from its empty context: do not paste progress logs or builder reasoning into its spawn prompt.
+Resolve review mode first:
+
+```bash
+node .claude/scripts/review-tier.js --files <n> --lines <n> [--security-boundary]
+```
+
+**Standard mode:** spawn one `code-reviewer` on the group's diff (commit range or branch, acceptance criteria, and `specs/reviews/review-context-pack.md` — **nothing else from this session**). It reads the diff cold, hunting structure and correctness defects, and writes `specs/reviews/code-review-verdict.json`.
+
+**Adversarial mode** (auto when `sensor_tier=strict`, security-boundary, or file/line thresholds from `project-manifest.json#review`; or `review.adversarial=always`): spawn **two independent** `code-reviewer` instances (fresh context per instance; no shared conversation). Each writes `code-review-verdict-a.json` / `code-review-verdict-b.json`. Merge with default **union** policy (any BLOCK fails):
+
+```bash
+node .claude/scripts/merge-review-verdicts.js \
+  --a specs/reviews/code-review-verdict-a.json \
+  --b specs/reviews/code-review-verdict-b.json \
+  --policy union
+```
+
+Canonical outputs remain `code-review-verdict.json` + `code-review.md`; audit trail at `specs/reviews/adversarial-review-audit.json`. If an instance errors/times out, fail safe to the stricter outcome.
+
+The gate **FAILs** on any BLOCK finding or a missing verdict file. Route BLOCK findings to the generator (max 3 fix cycles). Runs concurrently with Gates 5 and any selected Gate 7 security review — it needs only the repo, not the running app. Do not paste progress logs or builder reasoning into reviewer spawn prompts.
 
 ### Gate 9 — Executed Matrix Gate
 

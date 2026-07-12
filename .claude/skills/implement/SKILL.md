@@ -71,6 +71,18 @@ If story metadata, component ownership, or API/data contracts conflict, invoke `
 - Continue to 15 only if the user explicitly asks.
 - If the uncertainty means a story is not implementable, mark it `needs_breakdown` and stop instead of guessing.
 
+### Step 0.5 — Canary for large or mechanical groups (Bun Phase B / G32 generalized)
+
+After the plan is approved and the component map is loaded (Step 3), decide whether to **canary** before full fan-out:
+
+| Trigger (any) | Canary action |
+|---------------|---------------|
+| Group owns **more than ~10 files** in `component-map.md` | Implement **one story** first (or 3 files if single-story), run tests/lint/types, then proceed to remaining stories |
+| Plan is a **mechanical transform** (same edit pattern across many files) | Apply to **3 files** first; green → rest. If the work is a true port/migrate, prefer `/refactor --mechanical` + `specs/migrate/` instead |
+| Group is tiny (≤10 files, non-mechanical) | Skip canary |
+
+A canary failure means fix the pattern (or escalate) before spawning the full team. Do not discover a bad mechanical pattern only after all stories land.
+
 ### Step 1 — Load Quality Principles
 
 Read `.claude/skills/code-gen/SKILL.md` in full. Its core quality principles apply to every line of code produced. Inject the full text into every teammate prompt.
@@ -104,9 +116,11 @@ Read `specs/design/component-map.md`. For each story in the group, extract:
 
 This ownership map is the single source of truth for file assignments during parallel execution.
 
-### Step 4 — Load Learned Rules
+### Step 4 — Load Learned Rules + Process Rules
 
 Read `.claude/state/learned-rules.md`. Inject ALL rules verbatim into every teammate spawn prompt. Learned rules include anti-pattern code examples and better approach code — teammates must study these before writing code, not just read the rule text. Rules represent project-specific decisions made during previous sprints (naming conventions, library choices, API patterns). Skipping this step causes regressions.
+
+Also read `.claude/state/process-rules.md` if it exists and is non-empty. Inject its contents into every teammate spawn prompt. Process rules are **workflow** constraints (destructive git bans, no stub-to-green, canary requirements) — distinct from code-style learned rules. When the same agent-behaviour failure class appears 2+ times, append a process rule here rather than only fixing the tree (Bun: fix the process that generates the code).
 
 Also read `CONTEXT.md` when present and inject it into every teammate spawn prompt alongside learned rules. Schema field names are already authoritative for API/data fields; `CONTEXT.md` is authoritative for naming everything else — services, aggregates, business rules. If a teammate's story requires a domain concept not yet in `CONTEXT.md`, add a `### <term>` entry there before Step 6's validation gate.
 
@@ -126,17 +140,47 @@ After all teammates (or the generator) complete:
 2. Run the linter: `npm run lint` or `ruff check .`.
 3. Run the type checker: `tsc --noEmit` or `mypy .`.
 
-All three must pass with zero errors before proceeding. If any fails, return the failure output to the responsible teammate for a fix, then re-run the validation gate.
+All three must pass with zero errors before proceeding. If any fails:
 
-### Step 7 — Code Review
+- **Few errors (≤ ~15, mostly one package):** return the failure output to the responsible teammate for a fix, then re-run the validation gate.
+- **Many lint/type errors (≥ ~15 findings or ≥ 3 packages):** invoke **REQUIRED SUB-SKILL: `fix-from-diagnostics`** — capture tool output, run `diagnostics-shard.js`, fix by shard, then re-run this gate. Do not thrash the full suite between shards.
 
-Spawn the `code-reviewer` agent (harness-provided: `.claude/agents/code-reviewer.md`) on the set of changed files:
+### Step 7 — Code Review (tiered adversarial)
+
+Resolve review mode before spawning reviewers:
+
+```bash
+node .claude/scripts/review-tier.js --files <changed_production_file_count> --lines <changed_line_count> [--security-boundary]
+```
+
+- **`mode: standard`** (default under auto thresholds): spawn **one** `code-reviewer` on the changed files; it writes `specs/reviews/code-review-verdict.json` as today.
+- **`mode: adversarial`**: spawn **two independent** `code-reviewer` instances in parallel (fresh context per instance via the Agent tool — no shared conversation). Each receives only the diff/changed-file list, acceptance criteria, and `specs/reviews/review-context-pack.md` when present — **nothing** from the builder's reasoning, progress logs, or teammate chat. Write:
+  - instance A → `specs/reviews/code-review-verdict-a.json` (+ optional `code-review-a.md`)
+  - instance B → `specs/reviews/code-review-verdict-b.json` (+ optional `code-review-b.md`)
+  Then merge with the policy from `review-tier.js` (default **union** — any BLOCK fails):
+
+```bash
+node .claude/scripts/merge-review-verdicts.js \
+  --a specs/reviews/code-review-verdict-a.json \
+  --b specs/reviews/code-review-verdict-b.json \
+  --policy union
+```
+
+  That writes the canonical `specs/reviews/code-review-verdict.json`, `code-review.md`, and `specs/reviews/adversarial-review-audit.json`. Existing consumers keep reading only `code-review-verdict.json`. If either instance errors or times out, fail safe to the stricter outcome (treat as BLOCK / keep surviving BLOCKs) — do not drop findings.
 
 - Pass the list of modified files and the story acceptance criteria.
 - The reviewer emits findings at three severity levels: **BLOCK**, **WARN**, **INFO**.
-- **BLOCK** findings must be fixed. Spawn the responsible teammate to address the finding, re-run tests, re-run the reviewer. Maximum **3 retry cycles**.
+- **BLOCK** findings must be fixed. Spawn the responsible teammate to address the finding, re-run tests, re-run the reviewer path (same mode). Maximum **3 retry cycles**.
 - **WARN** findings are logged but do not block merge.
 - **INFO** findings are optional improvements.
+
+When committing dual-review or post-review fixes, prefer an attributed subject (Bun Phase C; audit JSON remains the source of truth):
+
+```bash
+git commit -m "$(node .claude/scripts/review-commit-msg.js \
+  --subject 'fix: address code-review BLOCKs' \
+  --from-audit specs/reviews/adversarial-review-audit.json)"
+```
 
 If the reviewer still emits BLOCK findings after 3 retries, escalate to the user with a summary of the unresolved issues.
 

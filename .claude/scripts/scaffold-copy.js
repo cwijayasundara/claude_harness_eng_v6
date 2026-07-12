@@ -43,6 +43,7 @@ const CORE_SKILLS = [
   'sprouting-instead-of-editing',
   'upgrading-dependencies',
   'writing-acceptance-tests-first',
+  'fix-from-diagnostics',
   'scaffold-upgrade',
 ];
 const BROWNFIELD_SKILLS = [
@@ -131,6 +132,12 @@ const CORE_SCRIPTS = [
   'feature-lane.js',
   'modularity-pack.js',
   'mutation-gate.js',
+  'test-deletion-gate.js',
+  'stub-smell-gate.js',
+  'merge-review-verdicts.js',
+  'review-tier.js',
+  'diagnostics-shard.js',
+  'review-commit-msg.js',
   'naming-clusters.js',
   'seam-confidence.js',
   'security-scan.js',
@@ -225,6 +232,8 @@ function copyScaffoldTree(src, target, profileName) {
     copyTree(path.join(src, 'hooks'), path.join(dotClaude, 'hooks'));
     copyTree(path.join(src, 'templates'), path.join(dotClaude, 'templates'));
     copyTree(path.join(src, 'git-hooks'), path.join(dotClaude, 'git-hooks'));
+    // Bun Phase C: ship fix-diagnostics workflow exemplar (not a skill clone of /gate)
+    copyTree(path.join(src, 'workflows'), path.join(dotClaude, 'workflows'));
   }
   for (const file of ['architecture.md', 'program.md', 'settings.json', 'settings.auto.json', 'package.json']) {
     copyTree(path.join(src, file), path.join(dotClaude, file));

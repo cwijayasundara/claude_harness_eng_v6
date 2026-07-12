@@ -88,6 +88,34 @@ function checkTestDeletionGate(ctx) {
   }
 }
 
+function checkStubSmellGate(ctx) {
+  const { projectDir } = ctx;
+  if (process.env.HARNESS_STUB_SMELL_GATE === 'off') {
+    noteSkip('stub-smell-gate', 'HARNESS_STUB_SMELL_GATE=off');
+    return;
+  }
+  let gate;
+  try {
+    gate = requireScript('stub-smell-gate');
+  } catch (_) {
+    noteSkip('stub-smell-gate', 'sensor script missing or unloadable from .claude/scripts');
+    return;
+  }
+  const exec = (cmd, args) => execFileSync(cmd, args, { cwd: projectDir, encoding: 'utf8' });
+  const verdict = gate.checkStaged(exec);
+  if (!verdict.pass) {
+    failBlock({
+      id: 'stub-smell-gate',
+      title: 'stub-smell-gate — staged production code contains stub-to-green markers',
+      detail: `${verdict.findings.map(gate.findingLine).join('\n')}\n`,
+      fix: 'implement the real behaviour, or mark an explicit story-backed deferral with `// harness:stub-ok story=E#-S#` on the same line. Do not stub functions solely to clear compile/lint.',
+      waive: 'genuine temporary stub in specs/reviews/sensor-waivers.json (sensor_id: stub-smell-gate)',
+      envOff: 'HARNESS_STUB_SMELL_GATE',
+      minTier: 'standard',
+    });
+  }
+}
+
 function checkRefactorPurity(ctx) {
   const { staged } = ctx;
   if (process.env.HARNESS_COMMIT_KIND !== 'refactor') return;
@@ -197,6 +225,7 @@ module.exports = {
   checkSecrets,
   checkAmendmentProvenance,
   checkTestDeletionGate,
+  checkStubSmellGate,
   checkRefactorPurity,
   checkLayers,
   checkContexts,

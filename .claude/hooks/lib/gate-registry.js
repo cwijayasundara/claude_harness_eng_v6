@@ -22,6 +22,7 @@ const GATE_CATALOG = Object.freeze([
   { id: 'secret-scan', order: 10, runsWithoutSource: true, run: early.checkSecrets },
   { id: 'amendment-provenance', order: 20, runsWithoutSource: true, run: early.checkAmendmentProvenance },
   { id: 'test-deletion-guard', order: 30, runsWithoutSource: true, run: early.checkTestDeletionGate },
+  { id: 'stub-smell-gate', order: 35, runsWithoutSource: true, run: early.checkStubSmellGate },
   // source-only exit sits here in the runner
   { id: 'refactor-purity', order: 40, runsWithoutSource: false, run: early.checkRefactorPurity },
   { id: 'layer-imports', order: 50, runsWithoutSource: false, run: early.checkLayers },

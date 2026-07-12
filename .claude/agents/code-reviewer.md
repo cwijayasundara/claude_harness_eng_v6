@@ -44,6 +44,21 @@ Do not hunt vulnerabilities; the security-reviewer owns that.
 - **Contract breaks:** does the change alter a return shape, status code, event payload, or ordering that an existing caller depends on? Grep for callers of every changed public symbol and check each one.
 - **State and lifecycle:** resources opened but not closed on the new path, cache/memo invalidation the change forgot, persisted-data shape changes without migration.
 - **Test honesty:** do the new/changed tests actually exercise the new behavior, or do they restate the implementation? Would the test fail if the bug you suspect were present? Run the suite when a runnable test command exists; an assertion you can execute beats one you infer.
+- **Stub-to-green:** production paths that only exist to clear compile/lint — `todo!()`, `unimplemented!()`, `NotImplementedError`, bare `pass`/`...` bodies, `throw new Error("TODO")`, or "until Phase B" magic constants that change behaviour vs the intended design — are **BLOCK** unless the story explicitly defers with a tracked stub (`harness:stub-ok` + story id). Compiling is not correctness.
+- **Paragraph-workaround rule:** if a comment longer than ~3 lines (or a block-comment paragraph) is required to justify a workaround, the code is wrong — **BLOCK**; require fixing the code and deleting the apology comment (Bun adversarial-review rule).
+
+### Semantic-divergence lens (mechanical ports / language swaps only)
+
+When the spawn prompt or change set indicates a **mechanical migrate** (`specs/migrate/` present, `/refactor --mechanical`, or an explicit language/runtime port), also apply `.claude/skills/code-gen/references/semantic-divergence.md`:
+
+- Assert/debug macros with side effects erased in release  
+- Truncation/rounding (especially negative values)  
+- Slice bounds / odd-length buffers  
+- Eager vs lazy defaults; comptime/format preprocessing  
+- Drop vs defer / async close ownership  
+- Placeholder capacities and “Phase B” stand-ins  
+
+Treat reachable semantic divergences as **BLOCK**. Skip this lens for ordinary product features and tiny `/vibe` edits.
 
 ### Brownfield design-adherence lens
 

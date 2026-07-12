@@ -1,6 +1,6 @@
 {
   "name": "claude-harness-eng-v5",
-  "version": "2.1.0",
+  "version": "2.4.0",
   "private": true,
   "description": "Claude Code plugin scaffold for autonomous long-running application development.",
   "scripts": {
@@ -34,6 +34,11 @@
     "deep-mutation": "node .claude/scripts/deep-mutation.js",
     "mutation": "node .claude/scripts/mutation-gate.js --staged",
     "test-deletion-gate": "node .claude/scripts/test-deletion-gate.js --staged",
+    "stub-smell-gate": "node .claude/scripts/stub-smell-gate.js --staged",
+    "merge-review-verdicts": "node .claude/scripts/merge-review-verdicts.js",
+    "review-tier": "node .claude/scripts/review-tier.js",
+    "diagnostics-shard": "node .claude/scripts/diagnostics-shard.js",
+    "review-commit-msg": "node .claude/scripts/review-commit-msg.js",
     "cycles": "node .claude/scripts/cycle-gate.js",
     "coupling-gate": "node .claude/scripts/coupling-gate.js",
     "approved-fixtures": "node .claude/scripts/approved-fixtures-gate.js",

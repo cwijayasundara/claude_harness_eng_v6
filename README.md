@@ -2,7 +2,7 @@
 
 A Claude Code plugin for building and changing software with a generator/evaluator loop, ratcheting quality gates, and explicit human review before merge.
 
-Current version: `2.1.0`
+Current version: `2.4.0`
 
 **Field guide (navigable HTML):** open [docs/harness-guide.html](docs/harness-guide.html) in a browser — architecture diagrams, lane picker, GAN/ratchet under the covers, multi-dimension **vs Devin** comparison, playbooks, and glossary. Offline; no build step.
 

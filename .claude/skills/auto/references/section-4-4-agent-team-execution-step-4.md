@@ -13,7 +13,7 @@ Concretely:
 1. Read specs/stories/ for every story in this group.
 2. Read specs/design/component-map.md and build the micro-DAG (Step 2.5).
 3. Decide team_mode via team-policy (solo | solo_sequential | team). Log the decision + reason to .claude/state/iteration-log.md.
-4. If team: spawn one Agent(subagent_type=generator) per story — parallel Phase 1, then Phase 2 after Phase 1 commits. You are dispatching, not implementing (except designated Phase 3 integrator).
+4. If team: create `.claude/state/parallel-implement.lock` (empty file) and set env `HARNESS_PARALLEL_AGENTS=1` for the team window so pre-bash git-safety is active; spawn one Agent(subagent_type=generator) per story — parallel Phase 1, then Phase 2 after Phase 1 commits. You are dispatching, not implementing (except designated Phase 3 integrator). Remove the lock when the team finishes.
 5. If solo_sequential: implement stories one-by-one in this context — do NOT spawn per-story teammates.
 6. If solo (N=1): implement yourself.
 7. After implementation, run the validation gate (pytest, ruff, mypy/tsc, coverage) and hand off to the evaluator.
@@ -62,7 +62,9 @@ Every teammate receives:
 - Story readiness metadata (must be `ready`; otherwise do not spawn)
 - File ownership (from `specs/design/component-map.md`)
 - Learned rules (from `.claude/state/learned-rules.md` — inject verbatim)
+- Process rules (from `.claude/state/process-rules.md` when non-empty — inject verbatim; workflow constraints, not code style)
 - Quality principles (from `.claude/skills/code-gen/SKILL.md`)
+- **Git safety (parallel team):** MUST NOT run `git stash`, `git stash pop`, `git reset --hard`, `git clean -fd`, or `git push --force`. MAY `git add <owned paths>` and `git commit`. Pre-bash-gate enforces this while `parallel-implement.lock` exists or `HARNESS_PARALLEL_AGENTS=1` (escape: `HARNESS_GIT_SAFETY=off`, human only).
 - Interface contracts from upstream teammates (Phase 2+ only)
 - If story involves external API: `.claude/skills/code-gen/references/api-integration-patterns.md`
 - If the story edits pre-existing (non-sprint-new) symbols and `specs/brownfield/code-graph.json` exists: run `checking-coverage-before-change` on those symbols before the first edit; UNCOVERED routes through `pinning-down-behavior` / `sprouting-instead-of-editing`

@@ -7,14 +7,21 @@ subagents, verifies their work, and synthesizes a result. They are shared via
 git, so everyone on the project inherits them, exactly like the bundled
 `/deep-research`.
 
-The harness ships **no** built-in workflows: earlier versions bundled
-`/harness-eval`, `/harness-review`, `/harness-brownfield-map`, and
-`/harness-implement-group`, but each merely duplicated an existing skill
-(`/evaluate`, `/gate`, `/brownfield`, `/implement`) — and the weaker
-duplicate at that (no security gate, no `security-verdict.json`, no quality
-gate). They were removed to avoid two confusing lanes for the same task. Use
-the skill forms; author your own workflow below when you have a genuinely new
-fan-out to orchestrate.
+### What the harness ships
+
+| Workflow | Role |
+|----------|------|
+| **`fix-diagnostics.js`** → `/fix-diagnostics` | **Exemplar only** (Bun Phase C): multi-phase fan-out over the Phase B diagnostics work queue. Does **not** replace `/gate` or `/implement`. Skill form remains primary: `fix-from-diagnostics`. |
+
+Earlier versions also bundled `/harness-eval`, `/harness-review`, `/harness-brownfield-map`, and `/harness-implement-group`, but each merely duplicated an existing skill (`/evaluate`, `/gate`, `/brownfield`, `/implement`) — and the weaker duplicate at that. Those were removed. **Do not** re-add skill clones. Author a workflow only when you have a genuinely new fan-out to orchestrate (the diagnostics queue is the pattern to copy).
+
+### Monitor the loop; edit the workflow
+
+Bun’s rewrite succeeded partly because false starts (`git stash` races, stub-to-green, suite thrash) led to **process edits**, not only code patches. When this workflow misbehaves:
+
+1. Fix the tree for the immediate breakage.  
+2. Append a **process rule** to `.claude/state/process-rules.md`.  
+3. Patch `.claude/workflows/fix-diagnostics.js` (or the skill) so the next run cannot repeat the failure.
 
 ## Enablement (not a project setting)
 
