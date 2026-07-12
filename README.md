@@ -128,8 +128,9 @@ The other commands below are still available, but the harness should usually rou
 | `/code-map` | Agent needs deterministic repo map only | Produces `code-graph.json`, `symbol-map.md`, and `wiki/WIKI.md` |
 | `/vibe` | Very small safe edit | Controlled fast lane for tiny changes |
 | `/change` | Behavior change in existing code | Test-first change route; use `--issue N` for a GitHub bug |
-| `/refactor` | No behavior change | Behavior-preserving cleanup with coverage and refactor-purity gates |
-| `/gate` | Before merge or after manual edits | Evaluator + diff review + observability/perf-smell ratchets; security review when the diff crosses a security/data/API boundary (3-instance majority vote when triggered); always ends with **quality-card** + logical **walkthrough** + `docs/CODEBASE.md` refresh. Renamed from old harness `/review` to avoid native `/review` collision |
+| `/refactor` | No behavior change | Behavior-preserving cleanup with coverage and refactor-purity gates; use **`/refactor --mechanical`** for bulk pattern→pattern ports (`specs/migrate/` mapping + 3-file canary) |
+| `/gate` | Before merge or after manual edits | Evaluator + **tiered dual** fresh-context code review (auto on large/security/`strict` diffs) + observability/perf-smell ratchets; security review when the diff crosses a security/data/API boundary (3-instance majority vote when triggered); always ends with **quality-card** + logical **walkthrough** + `docs/CODEBASE.md` refresh. Renamed from old harness `/review` to avoid native `/review` collision |
+| `/fix-diagnostics` | Large lint/type walls | Dynamic workflow over the diagnostics work queue (tsc/eslint/ruff/mypy → shards → fix); skill form: `fix-from-diagnostics`. Not a substitute for `/gate` |
 | `/pr-respond <pr#>` | A harness PR has red CI or review comments | Polls checks + comments, classifies via the self-healing table, fixes, pushes, replies with evidence; bounded and budget-metered; never merges |
 | `/status` | See progress | Reads current pipeline state; also available as `npm run status` |
 | `/agent-readiness` | Is this codebase ready for heavy AI-agent use? | 8-pillar synthesis dashboard over signals the harness already collects; also available as `npm run agent-readiness` |
@@ -144,7 +145,9 @@ The other commands below are still available, but the harness should usually rou
 | Sprint (gated) | `/sprint <prd-file>` | Approve requirement delta + decomposition, approve design amendment |
 | Sprint (semi-auto) | `/sprint <prd-file> --autonomous` | One consolidated gate before the design amendment; the amendment approval itself is never skipped |
 
-Machine gates always stay on: tests, lint/types, coverage, architecture, evaluator, design critic when enabled, adaptive review, and diff review. The generator does not grade itself, and the harness does not merge for you.
+Machine gates always stay on: tests, lint/types, coverage, architecture, evaluator, design critic when enabled, adaptive/dual review, and diff review. The generator does not grade itself, and the harness does not merge for you.
+
+**Review cost dial:** `project-manifest.json#review` — `adversarial: auto|always|never`, file/line thresholds (defaults 8 files / 200 lines), `block_merge_policy: union`. Small `/vibe` edits stay single-reviewer under `auto`.
 
 For long unattended PRD-to-PR runs, prefer the resilient chain launcher — see the recovery section below.
 
@@ -195,10 +198,17 @@ Rule: native commands own atomic actions; the harness owns orchestration, ratche
 - Coverage ratchet and per-diff coverage checks
 - Lint/type/layer gates
 - Security review before PR when the diff touches security/data/API boundaries
-- Fresh-context diff review
+- Fresh-context diff review (**tiered dual adversarial** `code-reviewer` instances on large/security/`strict` diffs; implementer never self-reviews)
+- **No stub-to-green** (code-gen + reviewer Iron Laws + commit-time `stub-smell-gate`)
+- **No deleted/skipped tests** to green a suite (G31) and **canary-first** mechanical rollouts (G32 + implement/feature)
+- **Multi-agent git safety** (no stash / reset --hard / force-push while parallel implement is active)
+- **Process rules** (`.claude/state/process-rules.md`) — fix the workflow when agents misbehave, not only the tree
+- **Diagnostics work queue** for large type/lint walls (`diagnostics-shard.js` + `fix-from-diagnostics` / `/fix-diagnostics`)
 - Brownfield discipline: architecture claims cite `code-graph.json`
 - Token waste discipline: living DeepWiki/code-map navigation, compact command/search output, and advisory warnings for broad reads or noisy raw commands
 - Human review before merge
+
+Design notes: [docs/proposals/bun-adversarial-mechanical-loops.md](docs/proposals/bun-adversarial-mechanical-loops.md) (inspired by [Bun’s Claude-assisted Rust rewrite](https://bun.com/blog/bun-in-rust)).
 
 ### Complexity dial
 
@@ -316,6 +326,10 @@ E2E logs land in `test/e2e/results/logs/`; summary JSON lands at `test/e2e/resul
 | Topic | Where |
 |---|---|
 | **Comprehensive field guide (HTML)** | [docs/harness-guide.html](docs/harness-guide.html) |
+| **Agentic engineering white paper** | [docs/agentic-engineering-whitepaper.html](docs/agentic-engineering-whitepaper.html) · [`.md`](docs/agentic-engineering-whitepaper.md) |
+| Bun-inspired adversarial / mechanical loops | [docs/proposals/bun-adversarial-mechanical-loops.md](docs/proposals/bun-adversarial-mechanical-loops.md) |
+| Phase C out of core (fuzz, cgroups) | [docs/proposals/bun-phase-c-out-of-core.md](docs/proposals/bun-phase-c-out-of-core.md) |
+| Control-system registry | [HARNESS.md](HARNESS.md) · [harness-manifest.json](harness-manifest.json) |
 | PRD format | [docs/prd-format.md](docs/prd-format.md) |
 | Model/cost posture | [docs/model-allocation.md](docs/model-allocation.md) |
 | Enterprise token cost | [docs/token-cost-playbook.md](docs/token-cost-playbook.md) |

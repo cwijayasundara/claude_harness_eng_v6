@@ -712,7 +712,7 @@
       <div class="brand-mark">AE</div>
       <div>
         <h1>Agentic Engineering</h1>
-        <p>white paper · v1.0</p>
+        <p>white paper · v1.1</p>
       </div>
     </div>
     <div class="search-wrap">
@@ -731,6 +731,7 @@
       <div class="nav-group-title">Practice</div>
       <a href="#domain">4. Domain-heavy work</a>
       <a href="#harness">5. Harness engineering</a>
+      <a href="#bun-loops">5.4 Large agentic loops</a>
       <a href="#sweet-spot">6. Productive sweet spot</a>
       <a href="#playbook">7. Org playbook</a>
       <a href="#patterns">8. Product patterns</a>
@@ -752,6 +753,7 @@
       <div class="nav-group-title">Companions</div>
       <a href="./harness-guide.html">Harness field guide</a>
       <a href="./zl-continuum-rubric.md">Z/L one-pager</a>
+      <a href="./proposals/bun-adversarial-mechanical-loops.md">Bun-inspired loops</a>
     </div>
   </nav>
 </aside>
@@ -763,8 +765,8 @@
       <div class="crumbs"><strong>White paper</strong> · productive agentic engineering</div>
     </div>
     <div class="pill-row">
-      <span class="pill accent">v1.0</span>
-      <span class="pill">2026-07-11</span>
+      <span class="pill accent">v1.1</span>
+      <span class="pill">2026-07-12</span>
       <span class="pill warn">leadership + eng</span>
       <span class="pill ok">offline</span>
     </div>
@@ -778,7 +780,7 @@
       <p>Human judgment, machine loops, and commercial software that ships without “agent psychosis.” How to use Claude Code, Codex, Grok CLI, and harnesses without treating every click as an agent task—or every model draft as domain truth.</p>
       <div class="hero-meta">
         <span><strong>Audience:</strong> eng leaders, staff/principal, teams rolling out coding agents</span>
-        <span><strong>Companions:</strong> <a href="./harness-guide.html">harness-guide.html</a> · <a href="./zl-continuum-rubric.md">zl-continuum-rubric.md</a></span>
+        <span><strong>Companions:</strong> <a href="./harness-guide.html">harness-guide.html</a> · <a href="./zl-continuum-rubric.md">zl-continuum-rubric.md</a> · <a href="./proposals/bun-adversarial-mechanical-loops.md">bun loops (2.4.0)</a></span>
       </div>
       <div class="hero-grid">
         <div class="hero-stat">
@@ -798,6 +800,8 @@
         <a href="#abstract">Abstract</a>
         <a href="#zl">Z/L continuum</a>
         <a href="#domain">Domain gravity</a>
+        <a href="#harness">Harness</a>
+        <a href="#bun-loops">Bun loops</a>
         <a href="#sweet-spot">Sweet spot</a>
         <a href="#playbook">Playbook</a>
         <a href="#recommendations">Recommendations</a>
@@ -815,11 +819,12 @@
         <li>Empirical evidence that AI assistance can <strong>impair skill formation</strong> (especially debugging and code reading) when used as pure delegation.</li>
         <li>Evidence of <strong>cognitive offloading</strong> and reduced engagement under unguided GenAI use.</li>
         <li>Field patterns from <strong>harness engineering</strong>: contracts, generators vs evaluators, ratchets, and human gates where silent wrongness is expensive.</li>
+        <li>Lessons from <strong>large multi-agent mechanical work</strong> (e.g. Bun’s Claude-assisted Zig→Rust port): prep maps, canaries, dual adversarial review, tool-error work queues, and <strong>process edits</strong> when agents misbehave.</li>
         <li>A practical operating model for <strong>commercial / production software</strong>: keep humans on requirements and design; let agents generate under verification; always do <em>band-appropriate</em> review (never blank-on-the-diff).</li>
       </ol>
       <div class="callout info">
         <div class="label">Thesis</div>
-        <p>Productivity in agentic engineering is not “use the agent more.” It is <strong>routing</strong>—which work goes to agents, which stays human, how hard verification must be, and where domain experts must veto plausible-sounding fiction.</p>
+        <p>Productivity in agentic engineering is not “use the agent more.” It is <strong>routing</strong>—which work goes to agents, which stays human, how hard verification must be, and where domain experts must veto plausible-sounding fiction. When agents scale, the product is the <strong>loop</strong>, not the prompt.</p>
       </div>
     </section>
 
@@ -1127,6 +1132,30 @@
         <div class="label">Never</div>
         <p>“Models got better, so we skip the gate.” Ceremony may trim; <strong>evaluator + deterministic gates must not.</strong></p>
       </div>
+
+      <h3 id="bun-loops">5.4 Large agentic loops: what Bun taught the field (2026)</h3>
+      <p class="lede">A control-plane case study—not “prompt harder.”</p>
+      <p>Jarred Sumner’s write-up of <a href="https://bun.com/blog/bun-in-rust">rewriting Bun in Rust with Claude Code</a> shows durable multi-agent practices. The Claude Harness Engine v5 (minors <strong>2.2–2.4</strong>) productizes the ones that fit SDLC scaffolds:</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Practice</th><th>Why it matters</th><th>Product translation</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Prep map</strong></td><td>Shared pattern→pattern map</td><td><code>/refactor --mechanical</code> + <code>specs/migrate/</code></td></tr>
+            <tr><td><strong>Canary first</strong></td><td>3 files fail cheaply</td><td>G32 + implement/feature canary</td></tr>
+            <tr><td><strong>Dual adversarial review</strong></td><td>Writer bias; “compiles clean” ≠ correct</td><td>Tiered dual <code>code-reviewer</code> (union merge)</td></tr>
+            <tr><td><strong>Errors as work queue</strong></td><td>No suite thrash mid-shard</td><td><code>diagnostics-shard</code> + <code>/fix-diagnostics</code></td></tr>
+            <tr><td><strong>Fix the process</strong></td><td>Stash races, stubs, thrash → rule edits</td><td><code>process-rules.md</code> + workflow exemplar</td></tr>
+            <tr><td><strong>Language-independent oracle</strong></td><td>Port cannot redefine green</td><td>Contracts, AT-first, no test deletion (G31)</td></tr>
+            <tr><td><strong>Semantic divergence</strong></td><td>Same shape ≠ same semantics</td><td><code>semantic-divergence.md</code> on mechanical ports</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout warn">
+        <div class="label">Do not copy as product default</div>
+        <p>64 concurrent agents for days, always-on dual review for one-line fixes, core fuzz farms, or cgroup isolation. Keep dual review <strong>tiered</strong>; merge stays <strong>human-owned</strong>. Detail: <a href="./proposals/bun-adversarial-mechanical-loops.md">bun-adversarial-mechanical-loops.md</a>.</p>
+      </div>
     </section>
 
     <!-- 6 SWEET SPOT -->
@@ -1340,6 +1369,21 @@
           <p>Mid-flight risk discovered; process unchanged.</p>
           <div class="fix">Fix: freeze, re-band, escalate</div>
         </div>
+        <div class="fail-card">
+          <h4>Stub-to-green</h4>
+          <p>Compiles via <code>todo!</code> / empty bodies; suite “passes.”</p>
+          <div class="fix">Fix: stub-smell + dual review; real code</div>
+        </div>
+        <div class="fail-card">
+          <h4>Suite thrash mid-shard</h4>
+          <p>Full monorepo tests between every type-error fix.</p>
+          <div class="fix">Fix: diagnostics work queue; suite when tool-clean</div>
+        </div>
+        <div class="fail-card">
+          <h4>Identity concurrency</h4>
+          <p>64 agents because Bun did.</p>
+          <div class="fix">Fix: budget caps + tiered review + oracles</div>
+        </div>
       </div>
     </section>
 
@@ -1351,11 +1395,12 @@
         <li><strong>Adopt Z/L placement as team policy</strong>, not vibes. Paste the score on every PR.</li>
         <li><strong>Keep humans on requirements and design</strong> for domain systems; freeze vocabulary before stories.</li>
         <li><strong>Let agents own generation under contracts</strong> with generator/evaluator separation and non-optional machine gates.</li>
-        <li><strong>Review at the band depth</strong>—never blank, rarely every leaf line. Independent whole-branch review remains load-bearing for non-trivial work.</li>
+        <li><strong>Review at the band depth</strong>—never blank, rarely every leaf line. Independent whole-branch review remains load-bearing; use <strong>dual adversarial review</strong> when diffs are large or security-sensitive.</li>
         <li><strong>Ban agent-as-default for pure UI navigation</strong> (ADO boards, email, wiki) unless integration is deliberate and cheaper.</li>
         <li><strong>Protect skill formation</strong>: comprehension modes for juniors on new subsystems; measure debugging competence, not just ship rate.</li>
         <li><strong>Invest in harness quality</strong> proportional to token spend—the bottleneck is verification, not typing.</li>
         <li><strong>Treat pure-tech and domain-heavy portfolios differently</strong>; do not copy-paste “full auto” from doc-intel into an insurance core system.</li>
+        <li><strong>For bulk mechanical agent work:</strong> prep map → canary → dual review → diagnostics queue; when agents misbehave, <strong>edit process rules and workflows</strong>, not only product code.</li>
       </ol>
     </section>
 
@@ -1385,6 +1430,11 @@
         <li>Anthropic Institute, <em>When AI builds itself</em> — <a href="https://www.anthropic.com/institute/recursive-self-improvement">anthropic.com/institute/recursive-self-improvement</a></li>
       </ul>
 
+      <h3>Large multi-agent case studies</h3>
+      <ul>
+        <li>Jarred Sumner / Bun, <em>Rewriting Bun in Rust</em> (Claude Code multi-agent port) — <a href="https://bun.com/blog/bun-in-rust">bun.com/blog/bun-in-rust</a></li>
+      </ul>
+
       <h3>Empirical research</h3>
       <ul>
         <li>Shen &amp; Tamkin, <em>How AI Impacts Skill Formation</em> — <a href="https://arxiv.org/abs/2601.20245">arXiv:2601.20245</a> · <a href="https://www.anthropic.com/research/AI-assistance-coding-skills">Anthropic summary</a></li>
@@ -1396,6 +1446,9 @@
       <ul>
         <li>Field guide: <a href="./harness-guide.html"><code>docs/harness-guide.html</code></a></li>
         <li>One-page routing rubric: <a href="./zl-continuum-rubric.md"><code>docs/zl-continuum-rubric.md</code></a></li>
+        <li>Bun-inspired dual review &amp; mechanical loops: <a href="./proposals/bun-adversarial-mechanical-loops.md"><code>docs/proposals/bun-adversarial-mechanical-loops.md</code></a></li>
+        <li>Out-of-core (fuzz, cgroups): <a href="./proposals/bun-phase-c-out-of-core.md"><code>docs/proposals/bun-phase-c-out-of-core.md</code></a></li>
+        <li>Control-system registry: <a href="../HARNESS.md"><code>HARNESS.md</code></a></li>
         <li>Markdown source of this paper: <a href="./agentic-engineering-whitepaper.md"><code>docs/agentic-engineering-whitepaper.md</code></a></li>
         <li>Vertical glossary direction: <a href="./architecture/vertical-glossary-seeding-generalization.md"><code>docs/architecture/vertical-glossary-seeding-generalization.md</code></a></li>
       </ul>
@@ -1430,8 +1483,12 @@ Can "done" be proved by tests, evals, or schemas you trust?
   NO  → Human-led design/exploration; agent assists research, not silent merge.
 
 Blast radius auth/money/PII/migration/public API?
-  YES → Band Z minimum; full gate; no vibe.
-  NO  → Score remaining axes; match harness lane.</div>
+  YES → Band Z minimum; full gate; dual review; no vibe.
+  NO  → Score remaining axes; match harness lane.
+
+Is this a bulk mechanical transform (port / mass rewrite)?
+  YES → Mapping + canary + dual review + diagnostics queue; oracle suite required.
+  NO  → Continue with band lane above.</div>
         <div class="cap">Decision tree for Claude Code, Codex, Grok CLI, and similar tools.</div>
       </div>
     </section>
@@ -1458,7 +1515,7 @@ Blast radius auth/money/PII/migration/public API?
     </section>
 
     <footer class="page-foot">
-      <p>Disposable research / operating narrative for engineering leadership. Not a product runtime artifact; does not go through the generator/evaluator shipping loop. Update when placement policy or research baselines change.</p>
+      <p>Disposable research / operating narrative for engineering leadership (v1.1 · 2026-07-12 · harness companion 2.4.0). Not a product runtime artifact; does not go through the generator/evaluator shipping loop. Update when placement policy, research baselines, or harness control practices change.</p>
       <p><a href="#top">↑ Back to top</a> · <a href="./harness-guide.html">Harness field guide</a> · <a href="./agentic-engineering-whitepaper.md">Markdown source</a></p>
     </footer>
   </div>
