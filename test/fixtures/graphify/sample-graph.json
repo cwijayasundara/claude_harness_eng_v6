@@ -1,0 +1,27 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {},
+  "nodes": [
+    { "id": "routes", "label": "routes.py", "file_type": "code", "source_file": "src/api/routes.py", "source_location": "L1", "community": 0 },
+    { "id": "routes_list_users", "label": ".list_users()", "file_type": "code", "source_file": "src/api/routes.py", "source_location": "L12", "community": 0 },
+    { "id": "user_service", "label": "user_service.py", "file_type": "code", "source_file": "src/service/user_service.py", "source_location": "L1", "community": 1 },
+    { "id": "user_service_UserService", "label": "UserService", "file_type": "code", "source_file": "src/service/user_service.py", "source_location": "L8", "community": 1 },
+    { "id": "user_service_get_user", "label": ".get_user()", "file_type": "code", "source_file": "src/service/user_service.py", "source_location": "L15", "community": 1 },
+    { "id": "base_service", "label": "base.py", "file_type": "code", "source_file": "src/service/base.py", "source_location": "L1", "community": 1 },
+    { "id": "base_service_BaseService", "label": "BaseService", "file_type": "code", "source_file": "src/service/base.py", "source_location": "L4", "community": 1 },
+    { "id": "user_service_rationale_1", "label": "Rationale: extracted from commit message", "file_type": "rationale", "source_file": "src/service/user_service.py", "source_location": "L1" },
+    { "id": "typing", "community": 0 }
+  ],
+  "links": [
+    { "relation": "imports_from", "confidence": "EXTRACTED", "source_file": "src/api/routes.py", "source_location": "L3", "weight": 1.0, "source": "routes", "target": "user_service" },
+    { "relation": "calls", "confidence": "EXTRACTED", "source_file": "src/api/routes.py", "source_location": "L13", "weight": 1.0, "source": "routes_list_users", "target": "user_service_get_user" },
+    { "relation": "calls", "confidence": "EXTRACTED", "source_file": "src/api/routes.py", "source_location": "L5", "weight": 1.0, "source": "routes", "target": "user_service_UserService" },
+    { "relation": "uses", "confidence": "INFERRED", "source_file": "src/service/user_service.py", "source_location": "L16", "weight": 0.8, "source": "user_service_get_user", "target": "base_service_BaseService" },
+    { "relation": "inherits", "confidence": "EXTRACTED", "source_file": "src/service/user_service.py", "source_location": "L8", "weight": 1.0, "source": "user_service_UserService", "target": "base_service_BaseService" },
+    { "relation": "contains", "confidence": "EXTRACTED", "source_file": "src/service/user_service.py", "source_location": "L8", "weight": 1.0, "source": "user_service", "target": "user_service_UserService" },
+    { "relation": "method", "confidence": "EXTRACTED", "source_file": "src/service/user_service.py", "source_location": "L15", "weight": 1.0, "source": "user_service_UserService", "target": "user_service_get_user" },
+    { "relation": "rationale_for", "confidence": "EXTRACTED", "source_file": "src/service/user_service.py", "source_location": "L1", "weight": 1.0, "confidence_score": 1.0, "source": "user_service_rationale_1", "target": "user_service" },
+    { "relation": "imports", "confidence": "EXTRACTED", "source_file": "src/api/routes.py", "source_location": "L1", "weight": 1.0, "source": "routes", "target": "typing" }
+  ]
+}

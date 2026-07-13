@@ -30,9 +30,10 @@ The skill picks the strongest available producer in this order. Stop at the firs
 1. **Vendored AST indexer** (preferred for Python / React / JS / TS / Java / C# / Go repos) — `scripts/code_index/code_index.py`. Python parses with stdlib `ast` (zero deps); JS/JSX/TS/TSX parse with the `tree-sitter` + `tree-sitter-typescript` + `tree-sitter-javascript` pip wheels (prebuilt, no compiler). Emits per-file symbol records with exact line ranges and signatures, FastAPI/Flask + React Router routes, React components and their hooks, confidence-tagged cross-file call edges, `renders` edges, tsconfig-alias-resolved imports with `import type` flagged, god-file skeletons, and supports `--files` incremental patching. If the wheels are missing, install them (`pip3 install tree-sitter tree-sitter-typescript tree-sitter-javascript`); Python-only repos index with no third-party packages at all.
 2. **SCIP index** — preferred for **large or polyglot repos** where the vendored AST is weak, *if* the team already produces a SCIP index with the sourcegraph `scip-*` indexers (scip-python / scip-typescript / scip-java / scip-go / …). Convert it to JSON once (`scip print --json index.scip > index.scip.json`) and import with `scripts/import_scip_graph.js --in index.scip.json`. This consumes the JSON, **not** the protobuf or a live sourcegraph backend, so the producer stays deterministic and offline. Precise cross-file import/call/inherit edges; external (other-package) and function-local symbols are intentionally dropped to keep the internal graph clean.
 3. **Understand-Anything knowledge graph** — only if `.understand-anything/knowledge-graph.json` already exists, import it with `scripts/import_understand_graph.js` (preserves call/inheritance/read-write edges that plugin emitted).
-4. **Vendored regex script** — `scripts/build_graph.js`, zero npm dependencies. Use it only when no `python3` is available (the AST indexer covers C#, Java, and Go via tree-sitter wheels). Fidelity: imports + top-level symbols only (regex), no call graph, no JSX semantics.
+4. **Graphify knowledge graph** — only if `graphify-out/graph.json` already exists, i.e. a team already runs [Graphify](https://github.com/Graphify-Labs/graphify) (a third-party, MIT-licensed, tree-sitter-based knowledge-graph tool) themselves. This harness never installs, invokes, or depends on Graphify — no client machine needs it, `init.sh` never mentions it, and it is picked up only as a BYO import, exactly like SCIP and Understand-Anything above. Import with `scripts/import_graphify_graph.js --in graphify-out/graph.json`. Graphify's `graph.json` is NetworkX `node_link_data` (`{nodes, links}`, not `{documents}`/`{nodes, edges}`); the adapter converts only its `imports` / `imports_from` / `calls` / `inherits` relations into harness edges — `contains` and `method` (intra-file structure), `rationale_for` (LLM-derived commit narrative), and `uses` (100%-INFERRED fuzzy reference) are dropped rather than guessed at, and nodes with no `source_file` (external/stdlib symbols) never become graph nodes. Confidence (`EXTRACTED`/`INFERRED`) is preserved in each edge's evidence string. Graphify is pre-1.0 with frequent schema changes (see its release notes) — if `import_graphify_graph.js`'s tests start failing after a Graphify upgrade, the fix is isolated to that one file.
+5. **Vendored regex script** — `scripts/build_graph.js`, zero npm dependencies. Use it only when no `python3` is available (the AST indexer covers C#, Java, and Go via tree-sitter wheels). Fidelity: imports + top-level symbols only (regex), no call graph, no JSX semantics.
 
-Report which producer ran in `code-graph.meta.json` (`vendored-ast`, `scip`, `understand-anything`, or `vendored`).
+Report which producer ran in `code-graph.meta.json` (`vendored-ast`, `scip`, `understand-anything`, `graphify`, or `vendored`).
 
 ---
 
@@ -48,7 +49,8 @@ All artifacts go under `specs/brownfield/`. Create the directory if missing.
 | `skeletons/<path>.skel.md` | Signature-only views of god files (≥ 1500 LOC by default) — navigate huge files without reading them whole |
 | `dependency-graph.md` | Mermaid `flowchart LR` rendering of file/module-level edges |
 | `coupling-report.md` | Per-file fan-in, fan-out, instability, cycles, hubs without tests |
-| `wiki/WIKI.md` + `wiki/pages/*.md` | Navigable, always-current wiki rendered deterministically from `code-graph.json` (no LLM): overview (hubs, entry points, cycles, external deps) linking to bounded per-directory pages with per-symbol `file:line` citations and per-cluster Mermaid. The DeepWiki-grade narrative layer, minus the regeneration cost. |
+| `wiki/WIKI.md` + `wiki/pages/*.md` | Navigable, always-current wiki rendered deterministically from `code-graph.json` (no LLM): overview (hubs, entry points, cycles, external deps) linking to bounded per-directory pages with per-symbol `file:line` citations and per-cluster Mermaid. The DeepWiki-grade narrative layer, minus the regeneration cost. This is the harness's default, zero-dependency human-browsing surface — every repo gets it, regardless of which producer ran. |
+| `graphify-out/graph.html` (bonus, not generated by this skill) | Graphify's own interactive force-directed graph view. Only exists if a team already runs Graphify themselves (see producer 4 above); this harness never generates it. Point humans at it alongside the wiki when present — it is not a replacement for the committed Markdown wiki, which is what every non-Graphify repo still gets. |
 
 ---
 
@@ -104,6 +106,8 @@ if python3 -c "import ast" 2>/dev/null; then
   PRODUCER=vendored-ast        # tree-sitter wheels needed for non-Python files
 elif test -f .understand-anything/knowledge-graph.json; then
   PRODUCER=understand-anything
+elif test -f graphify-out/graph.json; then
+  PRODUCER=graphify            # only if the team already runs Graphify themselves
 else
   PRODUCER=vendored            # regex fallback (no python3 at all)
 fi
@@ -125,6 +129,14 @@ To import an existing Understand-Anything graph instead:
 ```bash
 node .claude/skills/code-map/scripts/import_understand_graph.js \
   --in .understand-anything/knowledge-graph.json \
+  --out specs/brownfield/code-graph.json
+```
+
+To import an existing Graphify graph instead (only if `graphify-out/graph.json` already exists — never install or run Graphify to produce it):
+
+```bash
+node .claude/skills/code-map/scripts/import_graphify_graph.js \
+  --in graphify-out/graph.json \
   --out specs/brownfield/code-graph.json
 ```
 
@@ -248,6 +260,7 @@ Downstream skills should treat `code-graph.json` as the source of truth for stru
 - **Do not call this skill on greenfield projects.** It is for existing codebases. On an empty repo it produces a useless empty graph.
 - **Do not edit the JSON by hand.** Re-run the skill to refresh.
 - **Understand-Anything imports are source-of-truth preserving.** If its graph omits calls or symbol references, fix or re-run that producer instead of filling gaps manually.
+- **Never install Graphify.** It is a bring-your-own producer, not a harness dependency: do not add it to `init.sh`, do not suggest `pip install`/`uv tool install graphifyy` as part of any harness flow, and do not run the `graphify` CLI or its MCP server on the user's behalf. Only import `graphify-out/graph.json` if it already exists in the repo.
 - **Stale graphs lie.** Re-run after large refactors. The skill is fast (under 30s for most repos under 5k files).
 - **Hook refresh scope.** The `graph-refresh.js` Stop/SubagentStop hook patches `code-graph.json` and re-renders `symbol-map.md` only — `dependency-graph.md` and `coupling-report.md` are **not** refreshed incrementally. The hook stamps both with a `> STALE since <timestamp>` banner the moment the graph is patched; if a file you are about to use for planning starts with that banner, re-run `/code-map` (Steps 2–3) first instead of trusting it.
 - **Vendor directories.** Skip `node_modules`, `.venv`, `venv`, `dist`, `build`, `target`, `vendor`, `.git`. The script does this by default but custom layouts may need `--exclude`.
