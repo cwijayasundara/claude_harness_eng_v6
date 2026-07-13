@@ -1,0 +1,12 @@
+{
+  "cluster_id": "test/approve-fixtures.test.js",
+  "member_paths": [
+    "test/approve-fixtures.test.js"
+  ],
+  "content_hashes": {
+    "test/approve-fixtures.test.js": "d7dc7d2cea30637f"
+  },
+  "content_hash": "30c90aab0546ca61",
+  "generated_at": "2026-07-13T11:25:01.063Z",
+  "stale": false
+}

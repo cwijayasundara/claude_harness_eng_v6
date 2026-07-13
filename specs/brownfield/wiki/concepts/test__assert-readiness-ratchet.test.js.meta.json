@@ -1,0 +1,12 @@
+{
+  "cluster_id": "test/assert-readiness-ratchet.test.js",
+  "member_paths": [
+    "test/assert-readiness-ratchet.test.js"
+  ],
+  "content_hashes": {
+    "test/assert-readiness-ratchet.test.js": "148be2f075e52310"
+  },
+  "content_hash": "6e27f26a753a310e",
+  "generated_at": "2026-07-13T11:25:01.066Z",
+  "stale": false
+}

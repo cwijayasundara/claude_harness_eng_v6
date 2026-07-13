@@ -1,0 +1,36 @@
+{
+  "cluster_id": "symphony_clone/test",
+  "member_paths": [
+    "symphony_clone/test/config.test.js",
+    "symphony_clone/test/feature-routing-docs.test.js",
+    "symphony_clone/test/linear-state.test.js",
+    "symphony_clone/test/prompt-builder.test.js",
+    "symphony_clone/test/result-reader.test.js",
+    "symphony_clone/test/scheduler-resume.test.js",
+    "symphony_clone/test/scheduler-routing.test.js",
+    "symphony_clone/test/scheduler.test.js",
+    "symphony_clone/test/state-store.test.js",
+    "symphony_clone/test/status-server.test.js",
+    "symphony_clone/test/workspace-manager-recovery.test.js",
+    "symphony_clone/test/workspace-manager-security.test.js",
+    "symphony_clone/test/workspace-manager.test.js"
+  ],
+  "content_hashes": {
+    "symphony_clone/test/config.test.js": "515224119357c6b9",
+    "symphony_clone/test/feature-routing-docs.test.js": "514116df4eecfab0",
+    "symphony_clone/test/linear-state.test.js": "1ec38b9bd6867a86",
+    "symphony_clone/test/prompt-builder.test.js": "dae1c92cebb5005a",
+    "symphony_clone/test/result-reader.test.js": "1c10dd14b5408504",
+    "symphony_clone/test/scheduler-resume.test.js": "6fb4ce87fd6f91ec",
+    "symphony_clone/test/scheduler-routing.test.js": "e167592464347385",
+    "symphony_clone/test/scheduler.test.js": "44d2db01fbc64e14",
+    "symphony_clone/test/state-store.test.js": "fb962a9f33d6952d",
+    "symphony_clone/test/status-server.test.js": "650ed7d2896da7e7",
+    "symphony_clone/test/workspace-manager-recovery.test.js": "9366ca18b111c3af",
+    "symphony_clone/test/workspace-manager-security.test.js": "1828241a9eaeeedb",
+    "symphony_clone/test/workspace-manager.test.js": "d71704a1f6e7ecdd"
+  },
+  "content_hash": "fefb5e74b640a44b",
+  "generated_at": "2026-07-13T11:25:01.051Z",
+  "stale": false
+}

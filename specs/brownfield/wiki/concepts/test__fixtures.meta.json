@@ -1,0 +1,40 @@
+{
+  "cluster_id": "test/fixtures",
+  "member_paths": [
+    "test/fixtures/code-index/enterprise/core/Service.cs",
+    "test/fixtures/code-index/enterprise/internal/auth/auth.go",
+    "test/fixtures/code-index/enterprise/main.go",
+    "test/fixtures/code-index/enterprise/src/main/java/com/acme/App.java",
+    "test/fixtures/code-index/enterprise/src/main/java/com/acme/util/Helper.java",
+    "test/fixtures/code-index/enterprise/web/App.cs",
+    "test/fixtures/code-index/sample/api/users.py",
+    "test/fixtures/code-index/sample/big_service.py",
+    "test/fixtures/code-index/sample/db/session.py",
+    "test/fixtures/code-index/sample/src/App.jsx",
+    "test/fixtures/code-index/sample/src/Users.jsx",
+    "test/fixtures/code-index/sample/src/components/Button.tsx",
+    "test/fixtures/code-index/sample/src/lib/utils.ts",
+    "test/fixtures/mutation/calc-multi.js",
+    "test/fixtures/mutation/calc.js"
+  ],
+  "content_hashes": {
+    "test/fixtures/code-index/enterprise/core/Service.cs": "ced59ecb6aff7db9",
+    "test/fixtures/code-index/enterprise/internal/auth/auth.go": "d9fc956583af8925",
+    "test/fixtures/code-index/enterprise/main.go": "7edaec963456303e",
+    "test/fixtures/code-index/enterprise/src/main/java/com/acme/App.java": "c2f82fcea35b7244",
+    "test/fixtures/code-index/enterprise/src/main/java/com/acme/util/Helper.java": "f320f1411e939a78",
+    "test/fixtures/code-index/enterprise/web/App.cs": "6e9909c9bc2edeae",
+    "test/fixtures/code-index/sample/api/users.py": "8802970e7446f201",
+    "test/fixtures/code-index/sample/big_service.py": "2dd99c0073fba3a5",
+    "test/fixtures/code-index/sample/db/session.py": "17e16092d3427acd",
+    "test/fixtures/code-index/sample/src/App.jsx": "65f3a26e7283c613",
+    "test/fixtures/code-index/sample/src/Users.jsx": "ba962bc229b6b7c1",
+    "test/fixtures/code-index/sample/src/components/Button.tsx": "91b0e7c5f23285e1",
+    "test/fixtures/code-index/sample/src/lib/utils.ts": "c71fd683f81c03eb",
+    "test/fixtures/mutation/calc-multi.js": "35d73a2c57044ec4",
+    "test/fixtures/mutation/calc.js": "8e1ec912fa839ab3"
+  },
+  "content_hash": "aa43b66701daa432",
+  "generated_at": "2026-07-13T11:25:01.048Z",
+  "stale": false
+}

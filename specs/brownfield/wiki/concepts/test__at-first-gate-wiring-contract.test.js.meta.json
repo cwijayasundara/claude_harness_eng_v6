@@ -1,0 +1,12 @@
+{
+  "cluster_id": "test/at-first-gate-wiring-contract.test.js",
+  "member_paths": [
+    "test/at-first-gate-wiring-contract.test.js"
+  ],
+  "content_hashes": {
+    "test/at-first-gate-wiring-contract.test.js": "25dc7cdd37ef606e"
+  },
+  "content_hash": "b73fb3fc180d0310",
+  "generated_at": "2026-07-13T11:25:01.067Z",
+  "stale": false
+}

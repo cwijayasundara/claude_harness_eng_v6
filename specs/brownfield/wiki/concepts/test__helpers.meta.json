@@ -1,0 +1,20 @@
+{
+  "cluster_id": "test/helpers",
+  "member_paths": [
+    "test/helpers/hook-fixture.js",
+    "test/helpers/pipeline-status-fixtures.js",
+    "test/helpers/pre-commit-fixtures.js",
+    "test/helpers/record-run-fixture.js",
+    "test/helpers/skill-corpus.js"
+  ],
+  "content_hashes": {
+    "test/helpers/hook-fixture.js": "d2bff8c6a7516435",
+    "test/helpers/pipeline-status-fixtures.js": "aef89497cb41d312",
+    "test/helpers/pre-commit-fixtures.js": "a5714f16842662e2",
+    "test/helpers/record-run-fixture.js": "9850d21b55708771",
+    "test/helpers/skill-corpus.js": "3610a6955dc068ab"
+  },
+  "content_hash": "4a24af779d478115",
+  "generated_at": "2026-07-13T11:25:00.986Z",
+  "stale": false
+}

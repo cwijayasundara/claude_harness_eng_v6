@@ -1,0 +1,28 @@
+{
+  "cluster_id": "test/evals",
+  "member_paths": [
+    "test/evals/fixtures/calc-app/calc.js",
+    "test/evals/fixtures/calc-app/calc.test.js",
+    "test/evals/fixtures/calc-app/dead-code.js",
+    "test/evals/fixtures/clean-app/app.js",
+    "test/evals/fixtures/clean-app/test/app.test.js",
+    "test/evals/fixtures/vuln-app/db.js",
+    "test/evals/helpers/assertions.js",
+    "test/evals/helpers/transcript.js",
+    "test/evals/run-evals.js"
+  ],
+  "content_hashes": {
+    "test/evals/fixtures/calc-app/calc.js": "8116991fce40e1c1",
+    "test/evals/fixtures/calc-app/calc.test.js": "bc0b500f8fe42854",
+    "test/evals/fixtures/calc-app/dead-code.js": "9cc1348a21df755a",
+    "test/evals/fixtures/clean-app/app.js": "9a33d33ed3e5f3d8",
+    "test/evals/fixtures/clean-app/test/app.test.js": "e705f2ca378ff546",
+    "test/evals/fixtures/vuln-app/db.js": "d3fac512c3d2f25f",
+    "test/evals/helpers/assertions.js": "fc8c607baf239a59",
+    "test/evals/helpers/transcript.js": "f9fb300a06242dab",
+    "test/evals/run-evals.js": "7e021f5e7d79ff7b"
+  },
+  "content_hash": "018a2bbb5ef84dd0",
+  "generated_at": "2026-07-13T11:25:01.053Z",
+  "stale": false
+}

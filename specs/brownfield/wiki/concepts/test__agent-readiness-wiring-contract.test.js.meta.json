@@ -1,0 +1,12 @@
+{
+  "cluster_id": "test/agent-readiness-wiring-contract.test.js",
+  "member_paths": [
+    "test/agent-readiness-wiring-contract.test.js"
+  ],
+  "content_hashes": {
+    "test/agent-readiness-wiring-contract.test.js": "ec59d1ded90c8e6a"
+  },
+  "content_hash": "ff57cef3355b986e",
+  "generated_at": "2026-07-13T11:25:01.060Z",
+  "stale": false
+}

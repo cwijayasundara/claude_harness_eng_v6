@@ -1,0 +1,12 @@
+{
+  "cluster_id": "test/adversarial-fixtures-contract.test.js",
+  "member_paths": [
+    "test/adversarial-fixtures-contract.test.js"
+  ],
+  "content_hashes": {
+    "test/adversarial-fixtures-contract.test.js": "a601b0a81f4ef0c5"
+  },
+  "content_hash": "b207165e45b94a9a",
+  "generated_at": "2026-07-13T11:25:01.058Z",
+  "stale": false
+}

@@ -4,8 +4,16 @@ node_modules/
 dist/
 # Generated SKU trees (npm run package:skus); source of truth remains .claude/ + harness-lite/
 dist/skus/
-# code-index sidecar (regenerated with code-graph; not load-bearing for readiness)
-specs/brownfield/code-graph.meta.json
+# specs/ is pipeline runtime output, not part of the base scaffold — /scaffold only
+# creates empty subfolders; content is produced by running the pipeline against a
+# project. This repo dogfoods /code-map + /brownfield against itself (Project Zero)
+# but that output is local/regenerable, not shipped scaffold content. Exception: the
+# committed DeepWiki under specs/brownfield (its wiki subdirectory) ships in the same
+# PR as the code it documents — see code-map/SKILL.md and feature-wiki-committed-contract.test.js.
+/specs/*
+!/specs/brownfield/
+/specs/brownfield/*
+!/specs/brownfield/wiki/
 # Local toolchain installs (gitleaks etc.) — CI installs its own copies
 .tools/
 build/
