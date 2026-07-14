@@ -50,19 +50,19 @@ flowchart LR
 
 ## `js:test/e2e/harness-auto-run.test.js`
 
-- fan-in: 0, fan-out: 7
+- fan-in: 0, fan-out: 10
 
 ### Symbols
   _(no extracted symbols)_
 
 ## `js:test/e2e/harness-brownfield-run.test.js`
 
-- fan-in: 0, fan-out: 6
+- fan-in: 0, fan-out: 7
 
 ### Symbols
-  - `seedExistingProject` (function) → js:test/e2e/harness-brownfield-run.test.js:59 — `function seedExistingProject(resolved)`
-  - `resetExistingProject` (function) → js:test/e2e/harness-brownfield-run.test.js:69 — `function resetExistingProject()`
-  - `hasSeamsFile` (function) → js:test/e2e/harness-brownfield-run.test.js:80 — `function hasSeamsFile(bfDir)`
+  - `seedExistingProject` (function) → js:test/e2e/harness-brownfield-run.test.js:61 — `function seedExistingProject(resolved)`
+  - `resetExistingProject` (function) → js:test/e2e/harness-brownfield-run.test.js:71 — `function resetExistingProject()`
+  - `hasSeamsFile` (function) → js:test/e2e/harness-brownfield-run.test.js:82 — `function hasSeamsFile(bfDir)`
 
 ## `js:test/e2e/harness-brownfield.test.js`
 
@@ -76,32 +76,32 @@ flowchart LR
 
 ## `js:test/e2e/harness-feature-route.test.js`
 
-- fan-in: 0, fan-out: 7
-
-### Symbols
-  - `resetExistingProject` (function) → js:test/e2e/harness-feature-route.test.js:20 — `function resetExistingProject()`
-
-## `js:test/e2e/harness-framework.test.js`
-
 - fan-in: 0, fan-out: 8
 
 ### Symbols
-  - `logResult` (function) → js:test/e2e/harness-framework.test.js:17 — `function logResult(stage, data)`
-  - `runHook` (function) → js:test/e2e/harness-framework.test.js:22 — `function runHook(hookName, stdinData, cwd)`
+  - `resetExistingProject` (function) → js:test/e2e/harness-feature-route.test.js:22 — `function resetExistingProject()`
+
+## `js:test/e2e/harness-framework.test.js`
+
+- fan-in: 0, fan-out: 9
+
+### Symbols
+  - `logResult` (function) → js:test/e2e/harness-framework.test.js:18 — `function logResult(stage, data)`
+  - `runHook` (function) → js:test/e2e/harness-framework.test.js:23 — `function runHook(hookName, stdinData, cwd)`
 
 ## `js:test/e2e/harness-full-auto-run.test.js`
 
-- fan-in: 0, fan-out: 6
+- fan-in: 0, fan-out: 8
 
 ### Symbols
   _(no extracted symbols)_
 
 ## `js:test/e2e/harness-gated-build.test.js`
 
-- fan-in: 0, fan-out: 6
+- fan-in: 0, fan-out: 7
 
 ### Symbols
-  - `exists` (function) → js:test/e2e/harness-gated-build.test.js:20 — `function exists(rel)`
+  - `exists` (function) → js:test/e2e/harness-gated-build.test.js:22 — `function exists(rel)`
 
 ## `js:test/e2e/harness-native-commands.test.js`
 
@@ -136,10 +136,10 @@ flowchart LR
 
 ## `js:test/e2e/harness-plan-only.test.js`
 
-- fan-in: 0, fan-out: 7
+- fan-in: 0, fan-out: 8
 
 ### Symbols
-  - `resetProject` (function) → js:test/e2e/harness-plan-only.test.js:26 — `function resetProject()`
+  - `resetProject` (function) → js:test/e2e/harness-plan-only.test.js:28 — `function resetProject()`
 
 ## `js:test/e2e/harness-real-workflow.test.js`
 
@@ -170,18 +170,18 @@ flowchart LR
 
 ## `js:test/e2e/harness-semi-auto-run.test.js`
 
-- fan-in: 0, fan-out: 7
+- fan-in: 0, fan-out: 9
 
 ### Symbols
-  _(no extracted symbols)_
+  - `hasRootPackage` (function) → js:test/e2e/harness-semi-auto-run.test.js:30 — `function hasRootPackage()`
 
 ## `js:test/e2e/harness-vibe-run.test.js`
 
-- fan-in: 0, fan-out: 7
+- fan-in: 0, fan-out: 8
 
 ### Symbols
-  - `seedExistingProject` (function) → js:test/e2e/harness-vibe-run.test.js:57 — `function seedExistingProject(resolved)`
-  - `resetExistingProject` (function) → js:test/e2e/harness-vibe-run.test.js:68 — `function resetExistingProject()`
+  - `seedExistingProject` (function) → js:test/e2e/harness-vibe-run.test.js:59 — `function seedExistingProject(resolved)`
+  - `resetExistingProject` (function) → js:test/e2e/harness-vibe-run.test.js:70 — `function resetExistingProject()`
 
 ## `js:test/e2e/run-pack.js`
 

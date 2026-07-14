@@ -15,7 +15,7 @@ flowchart LR
 
 ## `js:test/helpers/hook-fixture.js`
 
-- fan-in: 23, fan-out: 5
+- fan-in: 24, fan-out: 5
 
 ### Symbols
   - `makeHookProject` (function) → js:test/helpers/hook-fixture.js:25 — `function makeHookProject(hookNames)`
@@ -42,21 +42,22 @@ flowchart LR
 
 ## `js:test/helpers/record-run-fixture.js`
 
-- fan-in: 3, fan-out: 5
+- fan-in: 4, fan-out: 5
 
 ### Symbols
   - `withGateway` (function) → js:test/helpers/record-run-fixture.js:41 — `function withGateway(handler)`
   - `withGatewayStatus` (function) → js:test/helpers/record-run-fixture.js:65 — `function withGatewayStatus(statusCode, handler)`
   - `withGatewayRequests` (function) → js:test/helpers/record-run-fixture.js:85 — `function withGatewayRequests(count, handler)`
   - `runHook` (function) → js:test/helpers/record-run-fixture.js:111 — `function runHook(projectDir, input, env)`
-  - `copyHarnessFiles` (function) → js:test/helpers/record-run-fixture.js:130 — `function copyHarnessFiles(dir)`
-  - `writeState` (function) → js:test/helpers/record-run-fixture.js:158 — `function writeState(dir)`
-  - `writeSkills` (function) → js:test/helpers/record-run-fixture.js:166 — `function writeSkills(dir)`
-  - `makeProject` (function) → js:test/helpers/record-run-fixture.js:178 — `function makeProject()`
+  - `copyHookLibFiles` (function) → js:test/helpers/record-run-fixture.js:135 — `function copyHookLibFiles(hooksDir)`
+  - `copyHarnessFiles` (function) → js:test/helpers/record-run-fixture.js:144 — `function copyHarnessFiles(dir)`
+  - `writeState` (function) → js:test/helpers/record-run-fixture.js:163 — `function writeState(dir)`
+  - `writeSkills` (function) → js:test/helpers/record-run-fixture.js:171 — `function writeSkills(dir)`
+  - `makeProject` (function) → js:test/helpers/record-run-fixture.js:183 — `function makeProject()`
 
 ## `js:test/helpers/skill-corpus.js`
 
-- fan-in: 13, fan-out: 2
+- fan-in: 31, fan-out: 2
 
 ### Symbols
   - `readSkillCorpus` (function) → js:test/helpers/skill-corpus.js:12 — `function readSkillCorpus(skillName, root = REPO_ROOT)`

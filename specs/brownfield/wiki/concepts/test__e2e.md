@@ -4,10 +4,12 @@
 
 ## Summary
 
-Cluster `test/e2e` groups **43** file(s) (hub fan-in hint 17).
+Cluster `test/e2e` groups **54** file(s) (hub fan-in hint 17).
 
 ## Files
 
+- `test/e2e/auto-output/index.js` (hash 114b69a6f61e36f6)
+- `test/e2e/auto-output/test/index.test.js` (hash f6b9a26333aa43c7)
 - `test/e2e/brownfield-run-output/calc.js` (hash f11e571db3e0039a)
 - `test/e2e/brownfield-run-output/main.js` (hash 21667b18f095526f)
 - `test/e2e/feature-output/calc.js` (hash 28bda2e5df3eada9)
@@ -17,6 +19,13 @@ Cluster `test/e2e` groups **43** file(s) (hub fan-in hint 17).
 - `test/e2e/fixtures/adversarial/brownfield/legacy-expressish/src/public-api.js` (hash b877233a1bebab03)
 - `test/e2e/fixtures/adversarial/brownfield/legacy-expressish/src/router.js` (hash cf1fef18b03cbbb2)
 - `test/e2e/fixtures/adversarial/brownfield/legacy-expressish/test/public-api.test.js` (hash 88a574cd04003f09)
+- `test/e2e/full-auto-output/specs/test_artefacts/acceptance/E1-S1.test.js` (hash 3b4e580906b7ae07)
+- `test/e2e/full-auto-output/specs/test_artefacts/acceptance/E1-S2.test.js` (hash 0cbcecbf0a8fd90d)
+- `test/e2e/full-auto-output/specs/test_artefacts/acceptance/E1-S3.test.js` (hash 082a83c4373330af)
+- `test/e2e/full-auto-output/src/config/port.js` (hash c339d8b425b1676d)
+- `test/e2e/full-auto-output/src/repository/count-store.js` (hash a06b8903ffb89045)
+- `test/e2e/full-auto-output/tests/count-store.test.js` (hash d8078f6267d74f35)
+- `test/e2e/full-auto-output/tests/port.test.js` (hash 8da7852cba900984)
 - `test/e2e/harness-adversarial-fixtures.test.js` (hash cd641cd127b8641b)
 - `test/e2e/harness-adversarial-live.test.js` (hash cca0795a44067809)
 - `test/e2e/harness-auto-run.test.js` (hash 28e42e4b65fadf10)
@@ -39,26 +48,22 @@ Cluster `test/e2e` groups **43** file(s) (hub fan-in hint 17).
 - `test/e2e/helpers/app-runtime.js` (hash 9eb7dc6f53bbba2c)
 - `test/e2e/helpers/app-runtime.test.js` (hash 3d66ead5dc224dbd)
 - `test/e2e/helpers/claude-runner.js` (hash 74c90dbeb61c9cdc)
-- `test/e2e/helpers/claude-runner.test.js` (hash bd5d326d2bebf246)
-- `test/e2e/helpers/fresh-project.js` (hash 3ef62deb0cf369fd)
-- `test/e2e/helpers/fresh-project.test.js` (hash e9a35880abe786d0)
-- `test/e2e/helpers/grafana-checker.js` (hash 498114588cebc6f5)
-- `test/e2e/helpers/llm-validator.js` (hash 9b8d585c4a93e9fa)
-- `test/e2e/helpers/project-suite.js` (hash 5afef25db086de07)
-- `test/e2e/helpers/prometheus-checker.js` (hash 10e41a3760169d5b)
-- `test/e2e/helpers/specs-summary.js` (hash c24a4ad7e88d1599)
-- `test/e2e/helpers/specs-summary.test.js` (hash c98815a76bfa0741)
 
 ## Symbols
 
+- `runCli`
 - `add`
 - `main`
+- `multiply`
 - `parseLine`
 - `loadLedger`
 - `appendEntry`
 - `handle`
 - `json`
 - `route`
+- `resolvePort`
+- `getCount`
+- `increment`
 - `loadManifest`
 - `copyFixture`
 - `readContract`
@@ -70,11 +75,6 @@ Cluster `test/e2e` groups **43** file(s) (hub fan-in hint 17).
 - `buildMutationPrompt`
 - `seedExistingProject`
 - `resetExistingProject`
-- `hasSeamsFile`
-- `fileExists`
-- `readArtifact`
-- `findFiles`
-- `runHook`
 
 ## Repo notes (steering)
 

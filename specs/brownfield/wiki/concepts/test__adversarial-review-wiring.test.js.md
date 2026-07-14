@@ -1,21 +1,18 @@
-# Concept: test/archive-state.test.js
+# Concept: test/adversarial-review-wiring.test.js
 
 > Deterministic concept page (hash-cached). Not LLM prose.
 
 ## Summary
 
-Cluster `test/archive-state.test.js` groups **1** file(s).
+Cluster `test/adversarial-review-wiring.test.js` groups **1** file(s).
 
 ## Files
 
-- `test/archive-state.test.js` (hash dac55a4b3017a95c)
+- `test/adversarial-review-wiring.test.js` (hash fe5bb3c2fe2a7bf3)
 
 ## Symbols
 
-- `makeProject`
-- `run`
-- `recJsonl`
-- `rec`
+- `read`
 
 ## Repo notes (steering)
 

@@ -1,0 +1,12 @@
+{
+  "cluster_id": "test/ask-codebase-readiness-digest.test.js",
+  "member_paths": [
+    "test/ask-codebase-readiness-digest.test.js"
+  ],
+  "content_hashes": {
+    "test/ask-codebase-readiness-digest.test.js": "1cb0f02fb1ca1da4"
+  },
+  "content_hash": "82c1b74257dc92e5",
+  "generated_at": "2026-07-13T21:28:28.723Z",
+  "stale": false
+}

@@ -1,21 +1,18 @@
-# Concept: test/archive-state.test.js
+# Concept: test/ask-codebase-readiness-digest.test.js
 
 > Deterministic concept page (hash-cached). Not LLM prose.
 
 ## Summary
 
-Cluster `test/archive-state.test.js` groups **1** file(s).
+Cluster `test/ask-codebase-readiness-digest.test.js` groups **1** file(s).
 
 ## Files
 
-- `test/archive-state.test.js` (hash dac55a4b3017a95c)
+- `test/ask-codebase-readiness-digest.test.js` (hash 1cb0f02fb1ca1da4)
 
 ## Symbols
 
-- `makeProject`
-- `run`
-- `recJsonl`
-- `rec`
+- `tmp`
 
 ## Repo notes (steering)
 

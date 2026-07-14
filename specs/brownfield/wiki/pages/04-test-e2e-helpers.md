@@ -69,8 +69,8 @@ flowchart LR
   - `buildClaudeArgs` (function) → js:test/e2e/helpers/claude-runner.js:11 — `function buildClaudeArgs(model, budgetUsd, continueSession, pluginDir, sessionId, outputFormat)`
   - `buildClaudeEnv` (function) → js:test/e2e/helpers/claude-runner.js:36 — `function buildClaudeEnv()`
   - `runClaude` (function) → js:test/e2e/helpers/claude-runner.js:53 — `function runClaude(prompt, options = {})`
-  - `readTextOr` (function) → js:test/e2e/helpers/claude-runner.js:72 — `function readTextOr(p, fallback)`
-  - `spawnCapturedGroup` (function) → js:test/e2e/helpers/claude-runner.js:84 — `function spawnCapturedGroup(command, args, { input, cwd, timeoutMs, env })`
+  - `readTextOr` (function) → js:test/e2e/helpers/claude-runner.js:86 — `function readTextOr(p, fallback)`
+  - `spawnCapturedGroup` (function) → js:test/e2e/helpers/claude-runner.js:98 — `function spawnCapturedGroup(command, args, { input, cwd, timeoutMs, env })`
 
 ## `js:test/e2e/helpers/claude-runner.test.js`
 
