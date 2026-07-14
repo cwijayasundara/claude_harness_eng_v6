@@ -21,12 +21,19 @@ const DEFAULT_PATH = path.join(REPO_ROOT, 'specs', 'retro', 'recommendations.jso
 
 const CLASSES = new Set(['docs', 'sensor-tune', 'gate-tighten', 'rule-add', 'prompt-edit', 'gate-loosen', 'security']);
 const LEVELS = new Set(['low', 'med', 'high']);
-const STATUSES = new Set(['proposed', 'approved', 'deferred', 'rejected']);
+const STATUSES = new Set(['proposed', 'approved', 'deferred', 'rejected', 'promoted']);
 const GATED_CLASSES = new Set(['gate-loosen', 'security']);
+
+// The id ends up in a git branch name (retro/<id>) when /promote acts on an approved
+// recommendation — validating the format here, at drafting time, is the root-cause fix
+// (security-review PROMOTE-003) so a malformed id never reaches the tracked file at all.
+// Kept in sync with promote-recommendation.js's own copy (defense in depth at promotion time).
+const VALID_ID_RE = /^REC-\d{8}-\d{3}$/;
 
 function validate(e) {
   const errors = [];
   if (!e.id) errors.push('missing id');
+  else if (!VALID_ID_RE.test(e.id)) errors.push(`id "${e.id}" does not match the required REC-YYYYMMDD-NNN format`);
   if (!e.target) errors.push('missing target');
   if (!e.change) errors.push('missing change');
   if (!CLASSES.has(e.class)) errors.push(`invalid class "${e.class}" (must be one of ${[...CLASSES].join(', ')})`);

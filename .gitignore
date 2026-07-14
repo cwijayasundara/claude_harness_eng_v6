@@ -42,6 +42,7 @@ symphony_clone/logs/
 .claude/state/archive/
 .claude/state/*.log
 .claude/state/*.offset
+.claude/state/*.lock
 .claude/state/review-block-count
 .claude/state/auto-continue-count
 .claude/state/auto-continue-progress

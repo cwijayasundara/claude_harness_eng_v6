@@ -34,7 +34,7 @@ const CORE_SKILLS = [
   'auto', 'brd', 'build', 'clarify', 'code-gen', 'deploy', 'design',
   'context', 'evaluate', 'gate', 'implement', 'spec', 'status', 'test',
   'feature', 'brownfield', 'change', 'code-map', 'pr-respond', 'refactor',
-  'seam-finder', 'sprint', 'tracker-publish', 'vibe', 'agent-readiness', 'retro',
+  'seam-finder', 'sprint', 'tracker-publish', 'vibe', 'agent-readiness', 'retro', 'promote',
   // --- discipline ---
   'checking-coverage-before-change',
   'checking-migration-safety',
@@ -74,6 +74,7 @@ const CORE_SCRIPTS = [
   'build-lane.js',
   'loop-health.js',
   'validate-recommendations.js',
+  'promote-recommendation.js',
   'ci-ingest.js',
   'constraints-extract.js',
   'coverage-diff.js',
