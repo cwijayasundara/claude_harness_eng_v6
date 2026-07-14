@@ -1,13 +1,18 @@
 'use strict';
 
-// PreToolUse(Task) + SubagentStop concurrency gate. Enforces a global ceiling on
-// concurrent Task subagents: deny (exit 2) a spawn that would exceed the cap;
+// PreToolUse(Task/Agent) + SubagentStop concurrency gate. Enforces a global ceiling on
+// concurrent subagents: deny (exit 2) a spawn that would exceed the cap;
 // decrement on SubagentStop. Fail-open on any error; TTL-pruning self-heals a
 // leaked count (a subagent that never fired SubagentStop). Pure decideSpawn/
 // decideStop are unit-tested.
 
 const fs = require('fs');
 const path = require('path');
+
+// The real subagent-dispatch tool's tool_name is "Agent" in this environment (confirmed
+// by direct hook-payload capture); "Task" is the name this gate originally shipped
+// against and is kept for forward/backward compatibility across Claude Code versions.
+const SUBAGENT_TOOL_NAMES = new Set(['Task', 'Agent']);
 
 const TTL_MS = 30 * 60 * 1000;
 // DEFAULT_CAP = 18: the documented /auto peak is 3 group-orchestrators + 3×5 teammates = 18
@@ -76,7 +81,7 @@ function main() {
     const sp = statePath(projectDir);
     const now = Date.now();
 
-    if (event === 'PreToolUse' && (input.tool_name || '') === 'Task') {
+    if (event === 'PreToolUse' && SUBAGENT_TOOL_NAMES.has(input.tool_name || '')) {
       const cap = resolveCap(readJsonSafe(path.join(projectDir, 'project-manifest.json')), process.env);
       const r = decideSpawn(readJsonSafe(sp), { cap, now, ttlMs: TTL_MS });
       writeState(sp, r.state);

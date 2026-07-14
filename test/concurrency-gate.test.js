@@ -88,6 +88,31 @@ test('hook ignores non-Task PreToolUse (exit 0, no state)', () => {
   assert.strictEqual(fs.existsSync(path.join(dir, '.claude', 'state', 'inflight-agents.json')), false);
 });
 
+// The real subagent-dispatch tool's tool_name is "Agent" in this environment, not the
+// legacy "Task" name this gate originally shipped against (confirmed by direct hook-payload
+// capture) — "Task" is kept too for forward/backward compatibility across environments.
+
+test('hook denies (exit 2) an Agent spawn when state is at cap', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-gate-'));
+  fs.mkdirSync(path.join(dir, '.claude', 'state'), { recursive: true });
+  const now = Date.now();
+  fs.writeFileSync(path.join(dir, '.claude', 'state', 'inflight-agents.json'),
+    JSON.stringify({ active: [now, now, now] }));
+  const r = runGate({ hook_event_name: 'PreToolUse', tool_name: 'Agent' },
+    { CLAUDE_PROJECT_DIR: dir, CLAUDE_MAX_CONCURRENT_AGENTS: '3' });
+  assert.strictEqual(r.status, 2);
+  assert.match(r.stderr, /cap reached/i);
+});
+
+test('hook allows (exit 0) an Agent spawn under cap and records it', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-gate-'));
+  const r = runGate({ hook_event_name: 'PreToolUse', tool_name: 'Agent' },
+    { CLAUDE_PROJECT_DIR: dir, CLAUDE_MAX_CONCURRENT_AGENTS: '3' });
+  assert.strictEqual(r.status, 0);
+  const state = JSON.parse(fs.readFileSync(path.join(dir, '.claude', 'state', 'inflight-agents.json'), 'utf8'));
+  assert.strictEqual(state.active.length, 1);
+});
+
 test('hook fails open (exit 0) on malformed stdin', () => {
   const r = spawnSync('node', [GATE], { input: 'not json', encoding: 'utf8', env: { ...process.env } });
   assert.strictEqual(r.status, 0);

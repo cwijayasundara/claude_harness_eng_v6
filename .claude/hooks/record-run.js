@@ -12,6 +12,11 @@ const { readHookInput, reportFailure } = require('./lib/common');
 const { inferSkills } = require('./lib/record-skills');
 const { resolveAgentModel, extractUsageFields } = require('./lib/agent-model');
 
+// The real subagent-dispatch tool's tool_name is "Agent" in this environment (confirmed
+// by direct hook-payload capture); "Task" is the name this harness originally shipped
+// against and is kept for forward/backward compatibility across Claude Code versions.
+const SUBAGENT_TOOL_NAMES = new Set(['Task', 'Agent']);
+
 function resolveUser() {
   if (process.env.HARNESS_USER) return process.env.HARNESS_USER;
   try {
@@ -139,11 +144,14 @@ function shouldSkipCommandTelemetry(command) {
       process.exit(0);
     }
 
-    if (eventKind === 'PostToolUse' && toolName === 'Task') {
+    if (eventKind === 'PostToolUse' && SUBAGENT_TOOL_NAMES.has(toolName)) {
       const ti = input.tool_input || {};
       const tr = input.tool_response || {};
       const skills = inferSkills({ input, command: null, lane, catalog: skillInventory });
-      const agent = stableLabelValue(ti.subagent_type, 'unknown');
+      // ti.subagent_type is the confirmed-real field (it's the Agent tool's own parameter
+      // name, unchanged across the Task->Agent rename); ti.agent_type is a defensive
+      // fallback only, not a confirmed field on this event.
+      const agent = stableLabelValue(ti.subagent_type || ti.agent_type, 'unknown');
       const usage = extractUsageFields(input);
       const model = usage.model || resolveAgentModel(projectDir, agent) || null;
       const subagentRecord = {
@@ -235,8 +243,11 @@ function shouldSkipCommandTelemetry(command) {
 
     if (eventKind === 'Stop' || eventKind === 'SubagentStop') {
       const skills = inferSkills({ input, command: null, lane, catalog: skillInventory });
+      // agent_type is the real SubagentStop field; the rest are kept for
+      // forward/backward compatibility (confirmed by direct hook-payload capture).
       const agent = stableLabelValue(
-        input.subagent_type || input.subagent || (input.tool_input && input.tool_input.subagent_type),
+        input.agent_type || input.subagent_type || input.subagent
+          || (input.tool_input && input.tool_input.subagent_type),
         'unknown',
       );
       const usage = extractUsageFields(input);
