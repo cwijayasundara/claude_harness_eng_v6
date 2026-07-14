@@ -50,13 +50,44 @@ test('rotates oldest rows to an archive once over the byte cap, keeping the rece
   assert.strictEqual(JSON.parse(archived[0]).i, 0, 'archive starts at the oldest row');
 });
 
-test('does not churn when rows are huge but few', () => {
+test('trims to the byte budget even when rows are few but huge (byte cap is authoritative)', () => {
   const dir = tmpState();
   const file = path.join(dir, 'telemetry-ledger.jsonl');
-  // 3 rows, each > cap fraction, but fewer than keepLines.
+  // 3 rows, each ~50KB, fewer than keepLines but together well over the byte cap.
   for (let i = 0; i < 3; i++) fs.appendFileSync(file, JSON.stringify({ i, big: 'z'.repeat(50000) }) + '\n');
-  assert.strictEqual(rotateLedgerIfNeeded(file, { maxBytes: 100 * 1024, keepLines: 500 }), false);
-  assert.strictEqual(fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).length, 3);
+  const rotated = rotateLedgerIfNeeded(file, { maxBytes: 100 * 1024, keepLines: 500 });
+  assert.strictEqual(rotated, true, 'few-but-huge rows must still rotate once over the byte cap');
+
+  const kept = fs.readFileSync(file, 'utf8').split('\n').filter(Boolean);
+  assert.ok(kept.length < 3, 'trimmed below the original line count');
+  assert.ok(kept.length >= 1, 'at least the newest row is kept');
+  assert.strictEqual(JSON.parse(kept[kept.length - 1]).i, 2, 'newest row retained');
+
+  const archiveDir = path.join(dir, 'archive');
+  const archives = fs.readdirSync(archiveDir).filter((f) => f.startsWith('telemetry-ledger-'));
+  assert.strictEqual(archives.length, 1, 'one archive file written');
+  const archived = fs.readFileSync(path.join(archiveDir, archives[0]), 'utf8').split('\n').filter(Boolean);
+  assert.strictEqual(archived.length + kept.length, 3, 'archive + kept accounts for every original row');
+  assert.strictEqual(JSON.parse(archived[0]).i, 0, 'archive starts at the oldest row');
+});
+
+test('rotates when line count equals keepLines but bytes are far over the cap (the steady-state bug)', () => {
+  // Reproduces REC-20260713-003: the real ledger sat at exactly LEDGER_KEEP_LINES
+  // (10000) lines forever because the old bailout fired on line count alone,
+  // even though bytes were 18x over MAX_LEDGER_BYTES. Scaled down here for speed.
+  const dir = tmpState();
+  const file = path.join(dir, 'telemetry-ledger.jsonl');
+  const keepLines = 50;
+  for (let i = 0; i < keepLines; i++) {
+    fs.appendFileSync(file, JSON.stringify({ i, pad: 'p'.repeat(2000) }) + '\n');
+  }
+  const maxBytes = 10 * 1024; // total bytes (~100KB) is far over this cap
+  const rotated = rotateLedgerIfNeeded(file, { maxBytes, keepLines });
+  assert.strictEqual(rotated, true, 'byte cap must be authoritative even when lines.length === keepLines');
+
+  const kept = fs.readFileSync(file, 'utf8').split('\n').filter(Boolean);
+  assert.ok(kept.length < keepLines, 'trimmed below keepLines to respect the byte cap');
+  assert.strictEqual(JSON.parse(kept[kept.length - 1]).i, keepLines - 1, 'newest row retained');
 });
 
 test('appendLedger triggers rotation automatically (integration)', () => {

@@ -127,6 +127,20 @@ function runHook(projectDir, input, env) {
   });
 }
 
+// record-run.js shares these hooks/lib helpers (readHookInput, skill
+// inference, model-pin resolution) with the rest of the hook suite —
+// /scaffold copies the whole hooks/ dir, so production always has them.
+const HOOK_LIB_SCRIPTS = ['common.js', 'record-skills.js', 'agent-model.js'];
+
+function copyHookLibFiles(hooksDir) {
+  for (const libName of HOOK_LIB_SCRIPTS) {
+    fs.copyFileSync(
+      path.join(REPO_ROOT, '.claude', 'hooks', 'lib', libName),
+      path.join(hooksDir, 'lib', libName)
+    );
+  }
+}
+
 function copyHarnessFiles(dir) {
   const hooksDir = path.join(dir, '.claude', 'hooks');
   const scriptsDir = path.join(dir, '.claude', 'scripts');
@@ -137,16 +151,7 @@ function copyHarnessFiles(dir) {
     path.join(REPO_ROOT, '.claude', 'hooks', 'record-run.js'),
     path.join(hooksDir, 'record-run.js')
   );
-  // record-run.js shares readHookInput with the other hooks via lib/common —
-  // /scaffold copies the whole hooks/ dir, so production always has it.
-  fs.copyFileSync(
-    path.join(REPO_ROOT, '.claude', 'hooks', 'lib', 'common.js'),
-    path.join(hooksDir, 'lib', 'common.js')
-  );
-  fs.copyFileSync(
-    path.join(REPO_ROOT, '.claude', 'hooks', 'lib', 'record-skills.js'),
-    path.join(hooksDir, 'lib', 'record-skills.js')
-  );
+  copyHookLibFiles(hooksDir);
   for (const scriptName of HOOK_DEP_SCRIPTS) {
     const source = path.join(REPO_ROOT, '.claude', 'scripts', scriptName);
     if (fs.existsSync(source)) {

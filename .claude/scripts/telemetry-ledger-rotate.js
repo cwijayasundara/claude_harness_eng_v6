@@ -28,6 +28,23 @@ function writeRotation(ledgerFile, keep, archived) {
   }
 }
 
+// Walk from the tail, keeping the most recent lines that fit under maxBytes,
+// but never more than keepLines. The byte cap is authoritative: even when
+// lines.length <= keepLines (e.g. a steady-state of keepLines oversized
+// records), bytes over the cap must still trim — that combination used to
+// slip past the old "few lines, don't churn" bailout and rotation never fired.
+function tailWithinBudget(lines, maxBytes, keepLines) {
+  let keepCount = 0;
+  let accBytes = 0;
+  for (let i = lines.length - 1; i >= 0 && keepCount < keepLines; i--) {
+    const lineBytes = Buffer.byteLength(lines[i], 'utf8') + 1; // +1 for the newline
+    if (accBytes + lineBytes > maxBytes && keepCount > 0) break;
+    accBytes += lineBytes;
+    keepCount += 1;
+  }
+  return keepCount;
+}
+
 // Best-effort: any failure leaves the ledger as-is rather than breaking the
 // calling hook. Returns true when a rotation happened (for tests/visibility).
 function rotateLedgerIfNeeded(ledgerFile, opts = {}) {
@@ -46,8 +63,10 @@ function rotateLedgerIfNeeded(ledgerFile, opts = {}) {
   } catch (_) {
     return false;
   }
-  if (lines.length <= keepLines) return false; // few but huge rows — don't churn
-  return writeRotation(ledgerFile, lines.slice(lines.length - keepLines), lines.slice(0, lines.length - keepLines));
+  if (!lines.length) return false;
+  const keepCount = tailWithinBudget(lines, maxBytes, keepLines);
+  if (keepCount >= lines.length) return false; // whole file already fits
+  return writeRotation(ledgerFile, lines.slice(lines.length - keepCount), lines.slice(0, lines.length - keepCount));
 }
 
 module.exports = { rotateLedgerIfNeeded, MAX_LEDGER_BYTES, LEDGER_KEEP_LINES };

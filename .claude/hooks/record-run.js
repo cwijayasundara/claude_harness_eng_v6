@@ -132,7 +132,7 @@ function shouldSkipCommandTelemetry(command) {
         command: stableLabelValue(command, 'freeform'),
         skill_names: skills.map((skill) => skill.name),
         skills,
-        skill_inventory: skillInventory,
+        skill_count: skillInventory.length,
         host: os.hostname(),
       };
       await persistAndPush(receiptPath, stateDir, projectDir, promptRecord);
@@ -161,7 +161,7 @@ function shouldSkipCommandTelemetry(command) {
         model,
         skill_names: skills.map((skill) => skill.name),
         skills,
-        skill_inventory: skillInventory,
+        skill_count: skillInventory.length,
         host: os.hostname(),
         exit: tr.is_error ? 'error' : 'ok',
       };
@@ -224,7 +224,7 @@ function shouldSkipCommandTelemetry(command) {
         exit: tr.is_error ? 'error' : 'ok',
         skill_names: skills.map((skill) => skill.name),
         skills,
-        skill_inventory: skillInventory,
+        skill_count: skillInventory.length,
         host: os.hostname(),
       };
       seedLedgerFromRuns(projectDir, stateDir);
@@ -257,7 +257,7 @@ function shouldSkipCommandTelemetry(command) {
         exit: input.is_error ? 'error' : 'ok',
         skill_names: skills.map((skill) => skill.name),
         skills,
-        skill_inventory: skillInventory,
+        skill_count: skillInventory.length,
         host: os.hostname(),
       };
       if (usage.input_tokens != null) turnRecord.input_tokens = usage.input_tokens;
