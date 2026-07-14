@@ -4,6 +4,7 @@
 
 const { isGateEnabled, loadSensorTier } = require('./sensor-tier');
 const { buildContext, setFailContext } = require('./pre-commit-util');
+const { recordOutcome } = require('./sensor-outcomes');
 const early = require('./gates-early');
 const legacy = require('./gates-legacy');
 const quality = require('./gates-quality');
@@ -57,12 +58,13 @@ function runPreCommit(projectDir, opts = {}) {
   const tier = opts.tier || loadSensorTier(projectDir, env);
   const ctx = buildContext(projectDir);
   ctx.tier = tier;
-  setFailContext({ tier });
   process.stdout.write(`pre-commit: sensor_tier=${tier}\n`);
 
   // Phase A: gates that run even for docs-only / delete-only commits
   for (const g of selectGates(tier, { withoutSourceOnly: true })) {
+    setFailContext({ tier, currentSensor: g.id, projectDir });
     g.run(ctx);
+    recordOutcome(projectDir, { sensor: g.id, ran: true, blocked: false });
   }
 
   // Historical source-only exit (after secrets / amendment / test-deletion)
@@ -71,7 +73,9 @@ function runPreCommit(projectDir, opts = {}) {
   // Phase B: remaining gates enabled for this tier (includes withoutSource ones already run — skip them)
   for (const g of selectGates(tier)) {
     if (g.runsWithoutSource) continue;
+    setFailContext({ tier, currentSensor: g.id, projectDir });
     g.run(ctx);
+    recordOutcome(projectDir, { sensor: g.id, ran: true, blocked: false });
   }
 
   return { tier, ranSourceGates: true };

@@ -6,15 +6,16 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { ensureTierFooter, formatSkip, formatBlock } = require('./gate-result');
+const { recordOutcome } = require('./sensor-outcomes');
 
 const SOURCE_EXTS = new Set(['.py', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
 const FLOOR = 80;
 
-/** Optional context set by gate-registry so fail()/noteSkip can print Tier: */
-let failContext = { tier: null };
+/** Optional context set by gate-registry so fail()/noteSkip can print Tier: and log outcomes */
+let failContext = { tier: null, currentSensor: null, projectDir: null };
 
 function setFailContext(ctx) {
-  failContext = { tier: null, ...ctx };
+  failContext = { tier: null, currentSensor: null, projectDir: null, ...ctx };
 }
 
 function getFailContext() {
@@ -22,6 +23,9 @@ function getFailContext() {
 }
 
 function fail(message) {
+  if (failContext.currentSensor && failContext.projectDir) {
+    recordOutcome(failContext.projectDir, { sensor: failContext.currentSensor, ran: true, blocked: true });
+  }
   const msg = ensureTierFooter(message, failContext.tier);
   process.stdout.write(msg);
   process.stderr.write(msg);
