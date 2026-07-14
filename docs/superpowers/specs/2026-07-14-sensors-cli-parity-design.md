@@ -44,7 +44,7 @@ New module `.claude/hooks/lib/sensor-schema.js`:
 }
 ```
 
-Field defaults (mirroring sensors-cli's `default` parser): absent `findings/metrics/guidance` → `[]`; absent `extra` → `{}`; absent `success` → `findings.length === 0`; absent `summary` → `"N issue(s)"` / `"No issues"`; absent `score.value` → `findings.length`; `score.direction` default `"less"`.
+Field defaults (mirroring sensors-cli's `default` parser): absent `findings/metrics/guidance` → `[]`; absent `extra` → `{}`; absent `success` → `findings.length === 0`; absent `summary` → `"N issue(s)"` / `"No issues"`; absent `score.value` → `findings.length`; `score.direction` default `"less"`. Every result additionally carries a `schema` version stamp (`SCHEMA_VERSION`) for forward-compat — additive to the shape above; consumers read the named fields, never assert `additionalProperties:false`.
 
 ### Exports
 
