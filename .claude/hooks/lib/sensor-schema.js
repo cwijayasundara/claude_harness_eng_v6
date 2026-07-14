@@ -52,4 +52,43 @@ function parseDefault(stdout) {
   return applyDefaults(parsed);
 }
 
-module.exports = { SCHEMA_VERSION, applyDefaults, parseDefault, summaryFor };
+const BENIGN_VERDICTS = new Set(['pass', 'ok', 'no-baseline', 'no-snapshots', 'no-spec', 'unprovisioned', 'skipped', 'no-map']);
+const FAIL_VERDICTS = new Set(['blocked', 'fail', 'breaking']);
+
+function interpret(raw, kind) {
+  if (raw == null) return { present: false, pass: null, detail: null };
+  if (kind === 'md_verdict') {
+    const upper = String(raw).toUpperCase();
+    if (/\bVERDICT\s*:\s*PASS\b/.test(upper) || (/\bPASS\b/.test(upper) && !/\bFAIL\b/.test(upper))) {
+      return { present: true, pass: true, detail: null };
+    }
+    if (/\bVERDICT\s*:\s*FAIL\b/.test(upper) || /\bFAIL\b/.test(upper) || /\bBLOCK\b/.test(upper)) {
+      return { present: true, pass: false, detail: null };
+    }
+    return { present: true, pass: null, detail: null };
+  }
+  if (kind === 'json_verdict') {
+    const v = String(raw.verdict || raw.status || '').toLowerCase();
+    if (BENIGN_VERDICTS.has(v)) return { present: true, pass: true, detail: v };
+    if (FAIL_VERDICTS.has(v) || raw.pass === false) return { present: true, pass: false, detail: v || 'fail' };
+    if (typeof raw.pass === 'boolean') return { present: true, pass: raw.pass, detail: v || null };
+    return { present: true, pass: null, detail: v || null };
+  }
+  // json_pass
+  if (typeof raw.pass === 'boolean') return { present: true, pass: raw.pass, detail: raw.summary || raw.note || null };
+  if (raw.verdict) return interpret(raw, 'json_verdict');
+  return { present: true, pass: null, detail: null };
+}
+
+function normalize(raw, kind) {
+  const i = interpret(raw, kind);
+  const base = applyDefaults({
+    success: i.pass === true,
+    summary: i.detail || (i.present ? '' : 'absent'),
+    findings: i.pass === false ? [{ message: i.detail || 'fail', severity: 'error' }] : [],
+  });
+  base.extra = { present: i.present, detail: i.detail, pass: i.pass };
+  return base;
+}
+
+module.exports = { SCHEMA_VERSION, applyDefaults, parseDefault, summaryFor, normalize };
