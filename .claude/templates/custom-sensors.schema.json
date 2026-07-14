@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "custom_sensors entry",
+  "type": "object",
+  "required": ["id", "command"],
+  "properties": {
+    "id": { "type": "string" },
+    "command": { "type": "string" },
+    "parser": { "type": "string", "enum": ["default"], "default": "default" },
+    "cadence": { "type": "string", "enum": ["commit", "on-demand"], "default": "on-demand" },
+    "blocking": { "type": "boolean", "default": false },
+    "enabled": { "type": "boolean", "default": true }
+  }
+}

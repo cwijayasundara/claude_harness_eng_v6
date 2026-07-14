@@ -119,7 +119,14 @@ function requireTemplate(src, rel) {
 
 function writeManifest(target, profile) {
   const file = path.join(target, 'project-manifest.json');
-  fs.writeFileSync(file, `${JSON.stringify(render.buildManifest(profile), null, 2)}\n`);
+  const manifest = render.buildManifest(profile);
+  // custom-sensor-runner (sensors-cli parity): opt-in slot for project-declared
+  // sensor commands, alongside quality. Added here rather than in buildManifest
+  // itself (scaffold-render.js) because that file is already at the pre-write-gate
+  // file-length hard limit (300 lines) and cannot accept new lines. The runner
+  // tolerates the key's absence, so this is a convenience default only.
+  manifest.custom_sensors = [];
+  fs.writeFileSync(file, `${JSON.stringify(manifest, null, 2)}\n`);
   return file;
 }
 

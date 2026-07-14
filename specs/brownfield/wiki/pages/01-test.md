@@ -1,6 +1,6 @@
-# `test/` — 252 module(s)
+# `test/` — 258 module(s)
 
-252 module(s).
+258 module(s).
 
 ## Dependencies
 
@@ -69,6 +69,7 @@ flowchart LR
   n_js_test_coverage_map_test_js["coverage-map.test.js"]
   n_js_test_coverage_preflight_test_js["coverage-preflight.test.js"]
   n_js_test_cr_index_test_js["cr-index.test.js"]
+  n_js_test_custom_sensor_commit_test_js["custom-sensor-commit.test.js"]
   n_js_test_cycle_gate_wiring_contract_test_js["cycle-gate-wiring-contract.test.js"]
   n_js_test_cycle_gate_test_js["cycle-gate.test.js"]
   n_js_test_cyclic_prepass_wiring_test_js["cyclic-prepass-wiring.test.js"]
@@ -85,7 +86,6 @@ flowchart LR
   n_js_test_evals_runner_test_js["evals-runner.test.js"]
   n_js_test_evals_tasks_test_js["evals-tasks.test.js"]
   n_js_test_feature_autonomous_contract_test_js["feature-autonomous-contract.test.js"]
-  n_js_test_feature_lane_test_js["feature-lane.test.js"]
 ```
 
 ## `js:test/accessibility-contract.test.js`
@@ -581,6 +581,13 @@ flowchart LR
 ### Symbols
   - `run` (function) → js:test/cr-index.test.js:63 — `function run(args)`
 
+## `js:test/custom-sensor-commit.test.js`
+
+- fan-in: 0, fan-out: 6
+
+### Symbols
+  - `proj` (function) → js:test/custom-sensor-commit.test.js:7 — `function proj(cs)`
+
 ## `js:test/cycle-gate-wiring-contract.test.js`
 
 - fan-in: 0, fan-out: 5
@@ -694,11 +701,4 @@ flowchart LR
 ### Symbols
   _(no extracted symbols)_
 
-## `js:test/feature-lane.test.js`
-
-- fan-in: 0, fan-out: 3
-
-### Symbols
-  _(no extracted symbols)_
-
-_+ 172 more module(s) not shown (page capped at 80)._
+_+ 178 more module(s) not shown (page capped at 80)._

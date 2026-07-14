@@ -1,0 +1,136 @@
+{
+  "gate": "quality-card",
+  "pass": false,
+  "range": null,
+  "checks": [
+    {
+      "key": "evaluator",
+      "file": "evaluator-report.md",
+      "status": "pass",
+      "pass": true,
+      "optional": false,
+      "detail": null,
+      "summary": null
+    },
+    {
+      "key": "code_review",
+      "file": "code-review-verdict.json",
+      "status": "pass",
+      "pass": true,
+      "optional": false,
+      "detail": {
+        "block": 0,
+        "warn": 2
+      },
+      "summary": {
+        "block": 0,
+        "warn": 2
+      }
+    },
+    {
+      "key": "security",
+      "file": "security-verdict.json",
+      "status": "fail",
+      "pass": false,
+      "optional": true,
+      "detail": "1 high",
+      "summary": null
+    },
+    {
+      "key": "security_scan",
+      "file": "security-scan.json",
+      "status": "skipped",
+      "pass": true,
+      "optional": true,
+      "detail": "not present"
+    },
+    {
+      "key": "ownership",
+      "file": "ownership-check.json",
+      "status": "skipped",
+      "pass": true,
+      "optional": true,
+      "detail": "not present"
+    },
+    {
+      "key": "regression",
+      "file": "regression-gate-verdict.json",
+      "status": "pass",
+      "pass": true,
+      "optional": true,
+      "detail": "no-baseline",
+      "summary": null
+    },
+    {
+      "key": "contract_drift",
+      "file": "contract-drift-verdict.json",
+      "status": "skipped",
+      "pass": true,
+      "optional": true,
+      "detail": "not present"
+    },
+    {
+      "key": "approved_fixtures",
+      "file": "approved-fixtures-verdict.json",
+      "status": "skipped",
+      "pass": true,
+      "optional": true,
+      "detail": "not present"
+    },
+    {
+      "key": "verification_matrix",
+      "file": "verification-matrix-verdict.json",
+      "status": "skipped",
+      "pass": true,
+      "optional": true,
+      "detail": "not present"
+    },
+    {
+      "key": "observability",
+      "file": "observability-verdict.json",
+      "status": "skipped",
+      "pass": true,
+      "optional": true,
+      "detail": "not present"
+    },
+    {
+      "key": "perf_smell",
+      "file": "perf-smell-verdict.json",
+      "status": "skipped",
+      "pass": true,
+      "optional": true,
+      "detail": "not present"
+    },
+    {
+      "key": "slo",
+      "file": "slo-verdict.json",
+      "status": "skipped",
+      "pass": true,
+      "optional": true,
+      "detail": "not present"
+    },
+    {
+      "key": "mutation",
+      "file": "mutation-gate-verdict.json",
+      "status": "skipped",
+      "pass": true,
+      "optional": true,
+      "detail": "not present"
+    },
+    {
+      "key": "deep_mutation",
+      "file": "deep-mutation-verdict.json",
+      "status": "skipped",
+      "pass": true,
+      "optional": true,
+      "detail": "not present"
+    }
+  ],
+  "wiki": [],
+  "summary": {
+    "pass": 3,
+    "fail": 1,
+    "missing": 0,
+    "skipped": 10
+  }
+}
