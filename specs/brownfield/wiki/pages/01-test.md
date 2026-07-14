@@ -1,6 +1,6 @@
-# `test/` — 251 module(s)
+# `test/` — 252 module(s)
 
-251 module(s).
+252 module(s).
 
 ## Dependencies
 
@@ -701,4 +701,4 @@ flowchart LR
 ### Symbols
   _(no extracted symbols)_
 
-_+ 171 more module(s) not shown (page capped at 80)._
+_+ 172 more module(s) not shown (page capped at 80)._

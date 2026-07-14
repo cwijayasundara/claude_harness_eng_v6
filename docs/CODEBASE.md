@@ -1,6 +1,6 @@
 # Codebase map (human homepage)
 
-> Living orientation document. Generated 2026-07-14T05:46:08.500Z from the code-graph + CONTEXT.
+> Living orientation document. Generated 2026-07-14T09:13:26.966Z from the code-graph + CONTEXT.
 > Prefer this page + concept wiki over opening the whole tree.
 
 ## What this system is
@@ -13,8 +13,8 @@ _Source: `README.md`_
 
 | Metric | Value |
 |---|---|
-| Indexed files | 380 |
-| Graph edges | 1708 |
+| Indexed files | 381 |
+| Graph edges | 1714 |
 | Concept pages | 20 |
 | Wiki cluster pages | 20 |
 
@@ -39,10 +39,10 @@ npm run ask -- "..."     # ask the codebase
 | `test/e2e/helpers/project-suite.js` | 9 | 0 |
 | `test/helpers/pre-commit-fixtures.js` | 8 | 0 |
 | `symphony_clone/src/orchestrator/scheduler.js` | 7 | 6 |
-| `test/helpers/record-run-fixture.js` | 5 | 0 |
 | `symphony_clone/src/config.js` | 5 | 0 |
-| `symphony_clone/src/orchestrator/workspace-manager.js` | 5 | 0 |
 | `test/e2e/helpers/fresh-project.js` | 5 | 0 |
+| `test/helpers/record-run-fixture.js` | 5 | 0 |
+| `symphony_clone/src/orchestrator/workspace-manager.js` | 5 | 0 |
 | `symphony_clone/src/tracker/http.js` | 4 | 0 |
 | `test/e2e/helpers/prometheus-checker.js` | 4 | 0 |
 
