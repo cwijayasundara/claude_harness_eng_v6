@@ -42,7 +42,7 @@ flowchart LR
 
 ## `js:test/helpers/record-run-fixture.js`
 
-- fan-in: 4, fan-out: 5
+- fan-in: 5, fan-out: 5
 
 ### Symbols
   - `withGateway` (function) → js:test/helpers/record-run-fixture.js:41 — `function withGateway(handler)`

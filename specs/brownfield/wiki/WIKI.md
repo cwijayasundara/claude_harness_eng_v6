@@ -3,7 +3,7 @@
 > Deterministic, always-current map rendered from `code-graph.json`. No LLM — re-rendered on graph change.
 
 - Producer: `vendored-ast`  ·  Language: `mixed`
-- Modules: 379  ·  Edges: 1703  ·  Clusters: 47
+- Modules: 380  ·  Edges: 1708  ·  Clusters: 47
 
 ## Hubs (most-depended-on)
 
@@ -15,10 +15,10 @@
 | `js:test/e2e/helpers/project-suite.js` | 9 | 3 |
 | `js:test/helpers/pre-commit-fixtures.js` | 8 | 3 |
 | `js:symphony_clone/src/orchestrator/scheduler.js` | 7 | 6 |
+| `js:test/helpers/record-run-fixture.js` | 5 | 5 |
 | `js:symphony_clone/src/orchestrator/workspace-manager.js` | 5 | 4 |
 | `js:test/e2e/helpers/fresh-project.js` | 5 | 3 |
 | `js:symphony_clone/src/config.js` | 5 | 2 |
-| `js:test/helpers/record-run-fixture.js` | 4 | 5 |
 
 ### Entry points (no inbound deps)
 
@@ -61,9 +61,9 @@ _(none)_
 - [test/helpers](concepts/test__helpers.md)
 - [test/e2e](concepts/test__e2e.md)
 - [symphony_clone/src](concepts/symphony_clone__src.md)
-- [test/evals](concepts/test__evals.md)
 - [test/fixtures](concepts/test__fixtures.md)
 - [symphony_clone/test](concepts/symphony_clone__test.md)
+- [test/evals](concepts/test__evals.md)
 - [symphony_clone/scripts](concepts/symphony_clone__scripts.md)
 - [eslint.config.js](concepts/eslint.config.js.md)
 - [test/accessibility-contract.test.js](concepts/test__accessibility-contract.test.js.md)
@@ -83,7 +83,7 @@ _(Hash-cached concept pages from `nav-concepts.js`.)_
 
 ## Pages
 
-- [`test/` — 250 module(s)](pages/01-test.md) — 250 module(s)
+- [`test/` — 251 module(s)](pages/01-test.md) — 251 module(s)
 - [`test/e2e/` — 18 module(s)](pages/02-test-e2e.md) — 18 module(s)
 - [`symphony_clone/src/orchestrator/` — 16 module(s)](pages/03-symphony_clone-src-orchestrator.md) — 16 module(s)
 - [`test/e2e/helpers/` — 14 module(s)](pages/04-test-e2e-helpers.md) — 14 module(s)
