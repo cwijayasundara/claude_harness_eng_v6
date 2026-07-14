@@ -11,6 +11,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { readOutcomes } = require('./sensor-outcomes');
 
 function stripComments(md) {
   return String(md || '').replace(/<!--[\s\S]*?-->/g, '');
@@ -80,6 +81,32 @@ function readBaselineNum(root, rel) {
   return Number.isFinite(n) ? n : null;
 }
 
+const MIN_RUNS = 5;
+
+function commitGateIds() {
+  try { return require('./gate-registry').GATE_CATALOG.map((g) => g.id); }
+  catch (_) { return []; }
+}
+
+// "Runs" = distinct commit timestamps clustered per gate is overkill; use the
+// count of the most-frequently-seen gate as a proxy for how many commits ran.
+function analyzeBiting(root) {
+  const ids = commitGateIds();
+  const outcomes = readOutcomes(root);
+  const seen = new Map(); // id -> { fired, blocked }
+  for (const o of outcomes) {
+    const s = seen.get(o.sensor) || { fired: 0, blocked: 0 };
+    if (o.ran) s.fired += 1;
+    if (o.blocked) s.blocked += 1;
+    seen.set(o.sensor, s);
+  }
+  const runs = ids.reduce((max, id) => Math.max(max, (seen.get(id) || { fired: 0 }).fired), 0);
+  const accruing = runs < MIN_RUNS;
+  const neverFired = ids.filter((id) => !(seen.get(id) && seen.get(id).fired > 0));
+  const neverBlocked = ids.filter((id) => seen.get(id) && seen.get(id).fired > 0 && seen.get(id).blocked === 0);
+  return { runs, accruing, neverFired: accruing ? [] : neverFired, neverBlocked: accruing ? [] : neverBlocked, unwired: [] };
+}
+
 // A single lane dominating the ledger means turns/prompts/subagent counts in
 // the scorecard mostly reflect that one lane, not overall SDLC activity.
 function laneSkewNote(telemetry) {
@@ -118,6 +145,24 @@ function deriveNotes(signals) {
   }
   const laneNote = laneSkewNote(telemetry);
   if (laneNote) notes.push(laneNote);
+  notes.push(...bitingNotes(signals.biting));
+  return notes;
+}
+
+// Facts about whether commit gates actually fire/block, derived from
+// analyzeBiting — split out of deriveNotes to keep it under the length gate.
+function bitingNotes(biting) {
+  if (!biting) return [];
+  if (biting.accruing) {
+    return [`Sensor-biting history accruing (${biting.runs}/${MIN_RUNS} commit runs) — biting analysis deferred.`];
+  }
+  const notes = [];
+  if (biting.neverBlocked.length) {
+    notes.push(`${biting.neverBlocked.length} commit gate(s) fired but never blocked over ${biting.runs} runs (${biting.neverBlocked.join(', ')}) — possible miscalibration.`);
+  }
+  if (biting.neverFired.length) {
+    notes.push(`${biting.neverFired.length} commit gate(s) never fired (${biting.neverFired.join(', ')}) — dead or unreached.`);
+  }
   return notes;
 }
 
@@ -128,6 +173,7 @@ function buildScorecard(root) {
     learnedRules: countRules(readText(root, '.claude/state/learned-rules.md')),
     processRules: countRules(readText(root, '.claude/state/process-rules.md')),
     flakeEvents: readFlakeCount(root),
+    biting: analyzeBiting(root),
     baselines: {
       cycle: readBaselineNum(root, '.claude/state/cycle-baseline.txt'),
       coupling: readBaselineNum(root, '.claude/state/coupling-baseline.txt'),
@@ -177,4 +223,5 @@ function renderMd(scorecard, generatedAt) {
 module.exports = {
   stripComments, parseFailures, countRules, summarizeTelemetry,
   readFlakeCount, readBaselineNum, deriveNotes, buildScorecard, renderMd,
+  analyzeBiting,
 };
