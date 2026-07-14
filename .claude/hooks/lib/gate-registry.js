@@ -95,9 +95,12 @@ function runCommitCustomSensors(projectDir) {
   const { sensors } = runAll(projectDir, { cadence: 'commit' });
   for (const s of sensors) {
     setFailContext({ currentSensor: `custom:${s.id}`, projectDir });
-    recordOutcome(projectDir, { sensor: `custom:${s.id}`, ran: true, blocked: s.blocking && !s.result.success });
     if (s.blocking && !s.result.success) {
+      // fail() self-records the blocked outcome for currentSensor before exiting,
+      // so it is the sole recorder on the block path (no double-write).
       fail(`\nBLOCKED: custom sensor "${s.id}" — ${s.result.summary}\n`);
+    } else {
+      recordOutcome(projectDir, { sensor: `custom:${s.id}`, ran: true, blocked: false });
     }
   }
 }
