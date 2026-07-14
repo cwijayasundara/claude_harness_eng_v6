@@ -2,9 +2,10 @@
 
 'use strict';
 
-// Git pre-commit hook — thin dispatcher over the gate registry (PR3).
-// Gate implementations live in .claude/hooks/lib/gates-*.js; membership is
-// filtered by project-manifest.json#quality.sensor_tier (or HARNESS_SENSOR_TIER).
+// Git pre-commit hook — this IS the harness's commit-time quality gate,
+// as a thin dispatcher over the gate registry (PR3). Gate implementations
+// live in .claude/hooks/lib/gates-*.js; membership is filtered by
+// project-manifest.json#quality.sensor_tier (or HARNESS_SENSOR_TIER).
 // Default tier "standard" preserves the historical pre-commit set.
 
 const fs = require('fs');

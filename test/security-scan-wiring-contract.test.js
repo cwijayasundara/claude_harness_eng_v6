@@ -13,14 +13,19 @@ const ROOT = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 test('pre-commit hook wires the baseline secrets sensor', () => {
-  const src = read('.claude/git-hooks/pre-commit');
+  // PR3 moved dispatch from the pre-commit script itself into gate-registry.js's
+  // declarative GATE_CATALOG — assert against the real catalog, not prose.
+  // "Must run before the docs-only early exit" is now expressed as runsWithoutSource: true
+  // (Phase A of runPreCommit runs these gates unconditionally, before the source-only exit).
+  const { GATE_CATALOG } = require('../.claude/hooks/lib/gate-registry.js');
+  const early = require('../.claude/hooks/lib/gates-early.js');
+  const entry = GATE_CATALOG.find((g) => g.id === 'secret-scan');
+  assert.ok(entry, 'GATE_CATALOG must register secret-scan');
+  assert.strictEqual(entry.run, early.checkSecrets, 'must dispatch to the real gate function, not a copy');
+  assert.strictEqual(entry.runsWithoutSource, true, 'must run before the docs-only early exit (secrets hide in config/yaml)');
+
+  const src = read('.claude/hooks/lib/gates-early.js');
   assert.match(src, /baselineSecretFindings/, 'must import the baseline secrets scanner');
-  assert.match(src, /checkSecrets\(projectDir, staged\)/, 'must call checkSecrets on staged files');
-  // It must run before the source-only early exit (secrets hide in config/yaml).
-  assert.ok(
-    src.indexOf('checkSecrets(projectDir, staged)') < src.indexOf("docs-only commit"),
-    'checkSecrets must run before the docs-only early exit'
-  );
 });
 
 test('/gate invokes the computational security scan under the boundary trigger', () => {
@@ -37,17 +42,17 @@ test('security-scan CLI and lib are present and required correctly', () => {
 });
 
 test('pre-commit hook wires the amendment-provenance gate before the source-only early exit', () => {
-  const src = read('.claude/git-hooks/pre-commit');
-  assert.match(src, /checkAmendmentProvenance\(projectDir, staged\)/, 'must call checkAmendmentProvenance on all staged files');
-  // It must run before the source-only early exit (design docs are markdown/json, not SOURCE_EXTS).
-  // Search from checkSecrets (which is the call site context) to avoid matching the function definition.
-  const checkSecretsCall = src.indexOf('checkSecrets(projectDir, staged)');
-  const mainTryStart = src.indexOf('const staged = stagedFiles();');
-  const callSiteStart = Math.max(mainTryStart, checkSecretsCall);
-  const checkAmendmentInCallSite = src.indexOf('checkAmendmentProvenance(projectDir, staged)', callSiteStart);
-  const stagedSourceCheck = src.indexOf('stagedSource.length === 0', callSiteStart);
-  assert.ok(
-    checkAmendmentInCallSite > callSiteStart && checkAmendmentInCallSite < stagedSourceCheck,
-    'checkAmendmentProvenance must run before the source-only early exit (before stagedSource.length === 0)'
-  );
+  // PR3 moved dispatch from the pre-commit script itself into gate-registry.js's
+  // declarative GATE_CATALOG — assert against the real catalog, not prose.
+  // "Before the source-only early exit" is now runsWithoutSource: true; "after checkSecrets"
+  // (design docs are markdown/json, not SOURCE_EXTS, but secrets must be scanned first) is
+  // now the relative `order` of the two catalog entries.
+  const { GATE_CATALOG } = require('../.claude/hooks/lib/gate-registry.js');
+  const early = require('../.claude/hooks/lib/gates-early.js');
+  const secretEntry = GATE_CATALOG.find((g) => g.id === 'secret-scan');
+  const amendEntry = GATE_CATALOG.find((g) => g.id === 'amendment-provenance');
+  assert.ok(amendEntry, 'GATE_CATALOG must register amendment-provenance');
+  assert.strictEqual(amendEntry.run, early.checkAmendmentProvenance, 'must dispatch to the real gate function, not a copy');
+  assert.strictEqual(amendEntry.runsWithoutSource, true, 'must run before the source-only early exit');
+  assert.ok(amendEntry.order > secretEntry.order, 'must run after the secret scan (relative order preserved)');
 });

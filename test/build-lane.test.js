@@ -1,16 +1,14 @@
 'use strict';
 
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
 const { test } = require('node:test');
 
 const { parseBuildInvocation } = require('../.claude/scripts/build-lane.js');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
-const BUILD_SKILL = fs.readFileSync(
-  path.join(__dirname, '..', '.claude', 'skills', 'build', 'SKILL.md'),
-  'utf8',
-);
+// Phase 4 progressive loading moved Step 0's procedure into references/ —
+// read the corpus (SKILL.md + references/*.md) so this contract survives that split.
+const BUILD_SKILL = readSkillCorpus('build');
 
 test('full auto and lite flags are order-independent', () => {
   const a = parseBuildInvocation('/build --auto --lite docs/prd.md');

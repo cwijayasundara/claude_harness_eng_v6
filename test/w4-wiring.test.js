@@ -4,6 +4,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { test } = require('node:test');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const ROOT = path.join(__dirname, '..');
 const read = (...p) => fs.readFileSync(path.join(ROOT, ...p), 'utf8');
@@ -13,7 +14,8 @@ const read = (...p) => fs.readFileSync(path.join(ROOT, ...p), 'utf8');
 // accessibility gate in the evaluator's Playwright layer.
 
 test('/auto Gate 3 runs the per-diff coverage gate and records history', () => {
-  const auto = read('.claude', 'skills', 'auto', 'SKILL.md');
+  // Phase 4 progressive loading moved Gate 3's procedure into references/.
+  const auto = readSkillCorpus('auto');
   assert.match(auto, /coverage-diff\.js/, 'invokes the per-diff script');
   assert.match(auto, /coverage-history\.jsonl/, 'records the trend');
   assert.match(auto, /[Pp]er-diff coverage/, 'documents the per-diff gate');

@@ -4,6 +4,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { test } = require('node:test');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const ROOT = path.join(__dirname, '..');
 const TEMPLATE = path.join(ROOT, '.claude', 'templates', 'github-workflows', 'e2e.yml');
@@ -25,6 +26,7 @@ test('/test copies the e2e workflow into target projects alongside the playwrigh
 });
 
 test('/build Phase 9.5 re-installs the Playwright browser before the suite (chained sessions)', () => {
-  const skill = fs.readFileSync(path.join(ROOT, '.claude', 'skills', 'build', 'SKILL.md'), 'utf8');
+  // Phase 4 progressive loading moved Phase 9.5's procedure into references/.
+  const skill = readSkillCorpus('build');
   assert.match(skill, /npx playwright install --with-deps chromium/);
 });

@@ -23,14 +23,24 @@ test('legacy-discipline-gate.js and record-coverage-verdict.js exist and reuse e
   assert.match(gate, /hooks.*lib.*tdd/, 'gate must reuse hooks/lib/tdd.js\'s isTestFile, not reinvent it');
 });
 
-test('pre-commit hard-wires the legacy-discipline gate as a default-on block', () => {
-  const hook = read('.claude/git-hooks/pre-commit');
-  assert.match(hook, /checkLegacyDisciplineGate\(projectDir, staged\)/, 'the gate must be invoked in the main flow');
-  assert.match(hook, /HARNESS_LEGACY_DISCIPLINE_GATE/, 'must expose the documented escape hatch');
+test('pre-commit hard-wires the legacy-discipline gate into the registry as a default-on block', () => {
+  // PR3 moved dispatch from the pre-commit script itself into gate-registry.js's
+  // declarative GATE_CATALOG — assert against the real catalog, not prose.
+  const { GATE_CATALOG } = require('../.claude/hooks/lib/gate-registry.js');
+  const { GATE_TIERS } = require('../.claude/hooks/lib/sensor-tier.js');
+  const legacy = require('../.claude/hooks/lib/gates-legacy.js');
+
+  const entry = GATE_CATALOG.find((g) => g.id === 'legacy-discipline-proof');
+  assert.ok(entry, 'GATE_CATALOG must register legacy-discipline-proof');
+  assert.strictEqual(entry.run, legacy.checkLegacyDisciplineGate, 'must dispatch to the real gate function, not a copy');
+  assert.ok(GATE_TIERS['legacy-discipline-proof'] && GATE_TIERS['legacy-discipline-proof'].has('standard'), 'must be enabled in the default "standard" tier');
+
+  const gates = read('.claude/hooks/lib/gates-legacy.js');
+  assert.match(gates, /HARNESS_LEGACY_DISCIPLINE_GATE/, 'must expose the documented escape hatch');
   assert.doesNotMatch(
-    hook.slice(0, hook.indexOf('function checkLegacyDisciplineGate')),
+    gates.slice(0, gates.indexOf('function checkLegacyDisciplineGate')),
     /legacy-discipline-gate/,
-    'must NOT eagerly require the sensor script at module load (would crash the hook if the script is absent, unlike the lazy checkOwnership pattern)'
+    'must NOT eagerly require the sensor script at module load (would crash the hook if the script is absent, unlike the lazy requireScript pattern)'
   );
 });
 

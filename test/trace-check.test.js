@@ -6,6 +6,7 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { test } = require('node:test');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const SCRIPT = path.join(__dirname, '..', '.claude', 'scripts', 'trace-check.js');
 const { checkTraces } = require(SCRIPT);
@@ -154,7 +155,8 @@ test('evaluator treats a {phase}-grounding.json verdict as a hard gate', () => {
 });
 
 test('/design and /test thread their trace spine + grounding gate', () => {
-  const design = fsw.readFileSync(pathw.join(ROOTW, '.claude', 'skills', 'design', 'SKILL.md'), 'utf8');
+  // Phase 4 progressive loading moved design's trace-spine procedure into references/.
+  const design = readSkillCorpus('design');
   assert.match(design, /design-traces\.json/);
   assert.match(design, /trace-check\.js/);
   assert.match(design, /design-grounding\.json/);
@@ -176,7 +178,8 @@ test('rubric now has a test phase, and design/test phases hard-gate on grounding
 test('verification matrix gate is wired through test, auto, generator, evaluator, and evaluate prompts', () => {
   const files = {
     testSkill: fsw.readFileSync(pathw.join(ROOTW, '.claude', 'skills', 'test', 'SKILL.md'), 'utf8'),
-    autoSkill: fsw.readFileSync(pathw.join(ROOTW, '.claude', 'skills', 'auto', 'SKILL.md'), 'utf8'),
+    // Phase 4 progressive loading moved auto's verification-matrix wiring into references/.
+    autoSkill: readSkillCorpus('auto'),
     generator: fsw.readFileSync(pathw.join(ROOTW, '.claude', 'agents', 'generator.md'), 'utf8'),
     evaluator: fsw.readFileSync(pathw.join(ROOTW, '.claude', 'agents', 'evaluator.md'), 'utf8'),
     evaluateSkill: fsw.readFileSync(pathw.join(ROOTW, '.claude', 'skills', 'evaluate', 'SKILL.md'), 'utf8'),

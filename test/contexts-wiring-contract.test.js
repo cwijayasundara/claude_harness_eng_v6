@@ -19,9 +19,16 @@ test('verify-on-save runs the bounded-context check', () => {
 });
 
 test('pre-commit runs the bounded-context check', () => {
-  const src = read('.claude/git-hooks/pre-commit');
-  assert.match(src, /lib', 'contexts'\)|hooks', 'lib', 'contexts'/, 'must require the contexts lib');
-  assert.match(src, /checkContexts\(projectDir, stagedSource\)/, 'must call checkContexts');
+  // PR3 moved dispatch from the pre-commit script itself into gate-registry.js's
+  // declarative GATE_CATALOG — assert against the real catalog, not prose.
+  const { GATE_CATALOG } = require('../.claude/hooks/lib/gate-registry.js');
+  const early = require('../.claude/hooks/lib/gates-early.js');
+  const entry = GATE_CATALOG.find((g) => g.id === 'bounded-context-rules');
+  assert.ok(entry, 'GATE_CATALOG must register bounded-context-rules');
+  assert.strictEqual(entry.run, early.checkContexts, 'must dispatch to the real gate function, not a copy');
+
+  const src = read('.claude/hooks/lib/gates-early.js');
+  assert.match(src, /require\('\.\/contexts'\)/, 'must require the contexts lib');
 });
 
 test('the contexts check is opt-in (off unless architecture.contexts is set)', () => {
