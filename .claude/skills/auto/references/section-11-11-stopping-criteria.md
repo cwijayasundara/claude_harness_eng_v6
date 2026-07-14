@@ -2,7 +2,7 @@
 
 OR logic with priority (check in order):
 
-1. **Hard stop:** Any of — an architecture violation that self-healing cannot fix; the total iteration count exceeds 50; **or the per-task budget is exhausted** (the wall-clock / agent-spawn / est-cost cap, read at the top of each iteration via `node .claude/scripts/budget-state.js`). Stop the entire `/auto` run **cleanly at this iteration boundary** (never mid-step — committed work is always preserved). For a budget stop, set `next_action: "BUDGET — {dimension} cap reached; raise --budget or merge what's done"` in `claude-progress.txt`; raising the cap (or `--budget off`) resumes the run. Report status and hand off to the user.
+1. **Hard stop:** Any of — an architecture violation that self-healing cannot fix; the total iteration count exceeds 50; **or the per-task budget is exhausted** (the wall-clock / agent-spawn / est-cost cap, read at the top of each iteration via `node .claude/scripts/budget-state.js`). Stop the entire `/auto` run **cleanly at this iteration boundary** (never mid-step — committed work is always preserved). For a budget stop, set `next_action: "BUDGET — {dimension} cap reached; raise --budget or merge what's done"` in `claude-progress.txt`; raising the cap (or `--budget off`) resumes the run. Report status, then invoke `/retro` once (unless `--no-retro`; see below) — a hard stop is exactly when harness-improvement signal is richest (budget-exhaustion patterns, a self-heal ceiling repeatedly hit). Then hand off to the user.
 
 2. **Escalate (per-story):** A story fails 3 consecutive self-heal iterations. Mark it BLOCKED. Log to `failures.md`. Extract learned rule. Skip to the next group. Do NOT stop the entire run.
 
@@ -22,7 +22,16 @@ OR logic with priority (check in order):
    1. Run `docker compose down -v`
    2. Generate `README.md` for the built application (see below)
    3. Commit: `git add README.md && git commit -m "docs: add README with architecture, setup, and API reference"`
-   4. Exit
+   4. Invoke `/retro` once (unless `--no-retro`; see Usage) — reviews this session's loop-health scorecard and drafts any evidence-backed harness-improvement recommendations. Report-only and interactive (agentic-flywheel §4.2); never blocks completion, and stays silent if there is nothing new to recommend.
+   5. Exit
+
+### `--no-retro` and `--once`
+
+`--once` (SECTION 10.1) exits after a single wave via a separate path and never
+reaches this section's branches — so intermediate links in a chained build never
+auto-invoke `/retro`. Only a `/auto` invocation that itself reaches Hard stop or
+Success does. `--no-retro` suppresses that invocation for callers (e.g. a
+`Workflow` script) that want to invoke `/retro` themselves at their own boundary.
 
 ### README Generation (on completion)
 

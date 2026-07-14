@@ -58,6 +58,85 @@ test('archives an oversized telemetry ledger by size and truncates in place', ()
   assert.strictEqual(archived.length, 1);
 });
 
+function recJsonl(entries) {
+  return entries.map((e) => JSON.stringify(e)).join('\n') + '\n';
+}
+
+function rec(id, status) {
+  return {
+    id, target: 't', change: 'c', class: 'docs', risk: 'low', cost: 'low', benefit: 'low',
+    confidence: 0.5, evidence: ['e'], status,
+  };
+}
+
+test('leaves specs/retro/recommendations.jsonl untouched when resolved entries are within the cap', () => {
+  const dir = makeProject();
+  const retroDir = path.join(dir, 'specs', 'retro');
+  fs.mkdirSync(retroDir, { recursive: true });
+  const file = path.join(retroDir, 'recommendations.jsonl');
+  fs.writeFileSync(file, recJsonl([rec('r1', 'approved'), rec('r2', 'proposed')]));
+  const out = run(dir);
+  assert.match(out, /within limits/);
+  assert.strictEqual(fs.readFileSync(file, 'utf8'), recJsonl([rec('r1', 'approved'), rec('r2', 'proposed')]));
+});
+
+test('archives the oldest resolved recommendations over the cap, keeping every proposed entry regardless of age', () => {
+  const dir = makeProject();
+  const retroDir = path.join(dir, 'specs', 'retro');
+  fs.mkdirSync(retroDir, { recursive: true });
+  const file = path.join(retroDir, 'recommendations.jsonl');
+  // 150 resolved entries (cap is 100) interleaved with 5 proposed entries that must never be archived.
+  const entries = [];
+  for (let i = 0; i < 150; i++) entries.push(rec(`resolved-${i}`, i % 2 === 0 ? 'approved' : 'rejected'));
+  for (let i = 0; i < 5; i++) entries.push(rec(`proposed-${i}`, 'proposed'));
+  fs.writeFileSync(file, recJsonl(entries));
+
+  const out = run(dir);
+  assert.match(out, /recommendations\.jsonl: archived 50 resolved entrie/);
+
+  const kept = fs.readFileSync(file, 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+  assert.strictEqual(kept.length, 105, 'keeps the 100 most recent resolved + all 5 proposed');
+  assert.strictEqual(kept.filter((e) => e.status === 'proposed').length, 5, 'no proposed entry is ever archived');
+  assert.ok(kept.some((e) => e.id === 'resolved-149'), 'newest resolved entries survive');
+  assert.ok(!kept.some((e) => e.id === 'resolved-0'), 'oldest resolved entries are archived away');
+
+  const archiveFiles = fs.readdirSync(path.join(dir, '.claude', 'state', 'archive'))
+    .filter((f) => f.startsWith('recommendations-'));
+  assert.strictEqual(archiveFiles.length, 1);
+  const archived = fs.readFileSync(path.join(dir, '.claude', 'state', 'archive', archiveFiles[0]), 'utf8')
+    .trim().split('\n').map((l) => JSON.parse(l));
+  assert.strictEqual(archived.length, 50);
+  assert.ok(archived.every((e) => e.status !== 'proposed'), 'archive never contains a proposed entry');
+});
+
+test('leaves a malformed recommendations.jsonl untouched (validate-recommendations.js owns that failure)', () => {
+  const dir = makeProject();
+  const retroDir = path.join(dir, 'specs', 'retro');
+  fs.mkdirSync(retroDir, { recursive: true });
+  const file = path.join(retroDir, 'recommendations.jsonl');
+  fs.writeFileSync(file, 'not valid json\n');
+  run(dir);
+  assert.strictEqual(fs.readFileSync(file, 'utf8'), 'not valid json\n');
+});
+
+test('leaves recommendations.jsonl untouched when any entry is missing an id, even if the resolved count is over the cap', () => {
+  // An id-less entry would make every id-less row collide on `archiveIds.has(undefined)`,
+  // risking a proposed (pending human decision) entry being swept into the archive.
+  // Bail entirely, same as fully-malformed JSON, rather than risk that.
+  const dir = makeProject();
+  const retroDir = path.join(dir, 'specs', 'retro');
+  fs.mkdirSync(retroDir, { recursive: true });
+  const file = path.join(retroDir, 'recommendations.jsonl');
+  const entries = [];
+  for (let i = 0; i < 150; i++) entries.push(rec(`resolved-${i}`, 'approved'));
+  entries.push({ target: 't', change: 'c', class: 'docs', risk: 'low', cost: 'low', benefit: 'low', confidence: 0.5, evidence: ['e'], status: 'proposed' }); // no id
+  const original = recJsonl(entries);
+  fs.writeFileSync(file, original);
+  run(dir);
+  assert.strictEqual(fs.readFileSync(file, 'utf8'), original, 'file must be untouched when any entry lacks a stable id');
+  assert.ok(!fs.existsSync(path.join(dir, '.claude', 'state', 'archive')), 'no archive dir should be created');
+});
+
 test('exits 1 outside a project (no .claude directory found)', () => {
   const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'no-claude-'));
   const res = spawnSync('node', [script], { encoding: 'utf8', cwd: bare });

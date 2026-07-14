@@ -10,6 +10,8 @@
     "flakes": "node .claude/scripts/flake-detector.js",
     "flakes:e2e": "node .claude/scripts/flake-detector.js --e2e",
     "harness-coverage": "node .claude/scripts/harness-coverage.js",
+    "loop-health": "node .claude/scripts/loop-health.js",
+    "validate-recommendations": "node .claude/scripts/validate-recommendations.js",
     "agent-readiness": "node .claude/scripts/agent-readiness.js",
     "agent-readiness:assert": "node .claude/scripts/assert-readiness-ratchet.js",
     "agent-readiness:baseline": "node .claude/scripts/update-readiness-baseline.js",

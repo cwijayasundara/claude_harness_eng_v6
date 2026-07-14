@@ -7,6 +7,7 @@ const path = require('path');
 const MAX_LINES_ITERATION_LOG = 500;
 const MAX_LINES_LEARNED_RULES = 200;
 const MAX_SIZE_TELEMETRY_MB = 10;
+const MAX_RESOLVED_RECOMMENDATIONS = 100;
 
 function findProjectDir(startDir) {
   let cur = startDir;
@@ -57,6 +58,48 @@ function archiveBySize(filePath, maxSizeMB, archiveDir) {
   return { archivedSizeMB: sizeMB.toFixed(1), archivePath };
 }
 
+// recommendations.jsonl (agentic-flywheel §4.2) is monotonic like learned-rules.md,
+// but unlike it a `proposed` entry is a pending human decision, not settled memory —
+// archiving it away by raw line position could silently drop something awaiting
+// review. Cap only the resolved tail (approved/deferred/rejected); keep every
+// proposed entry regardless of age or count.
+// null return means "leave the file untouched" — either genuinely malformed JSON,
+// or an entry missing a stable id, which would collide with every other id-less
+// entry on `archiveIds.has(undefined)` in the caller, risking a pending `proposed`
+// entry being swept into the archive. Treat both the same: bail, don't guess.
+function readRecommendationEntries(filePath) {
+  const lines = fs.readFileSync(filePath, 'utf8').split('\n').filter(Boolean);
+  try {
+    const entries = lines.map((l) => JSON.parse(l));
+    return entries.some((e) => !e.id) ? null : entries;
+  } catch (_) {
+    return null;
+  }
+}
+
+function archiveResolvedRecommendations(filePath, maxResolved, archiveDir) {
+  if (!fs.existsSync(filePath)) return null;
+  const entries = readRecommendationEntries(filePath);
+  if (!entries) return null;
+  const resolved = entries.filter((e) => e.status !== 'proposed');
+  if (resolved.length <= maxResolved) return null;
+
+  const archiveIds = new Set(resolved.slice(0, resolved.length - maxResolved).map((e) => e.id));
+  const archived = entries.filter((e) => archiveIds.has(e.id));
+  const kept = entries.filter((e) => !archiveIds.has(e.id));
+
+  const basename = path.basename(filePath, path.extname(filePath));
+  const ext = path.extname(filePath);
+  const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const archivePath = path.join(archiveDir, `${basename}-${ts}${ext}`);
+
+  fs.mkdirSync(archiveDir, { recursive: true });
+  fs.writeFileSync(archivePath, archived.map((e) => JSON.stringify(e)).join('\n') + '\n');
+  fs.writeFileSync(filePath, kept.map((e) => JSON.stringify(e)).join('\n') + '\n');
+
+  return { archived: archived.length, kept: kept.length, archivePath };
+}
+
 const projectDir = findProjectDir(process.cwd());
 if (!projectDir) {
   console.log('No .claude/ directory found.');
@@ -92,6 +135,15 @@ const telResult = archiveBySize(
 );
 if (telResult) {
   results.push(`telemetry-ledger.jsonl: archived ${telResult.archivedSizeMB}MB -> ${telResult.archivePath}`);
+}
+
+const recResult = archiveResolvedRecommendations(
+  path.join(projectDir, 'specs', 'retro', 'recommendations.jsonl'),
+  MAX_RESOLVED_RECOMMENDATIONS,
+  archiveDir
+);
+if (recResult) {
+  results.push(`recommendations.jsonl: archived ${recResult.archived} resolved entries -> ${recResult.archivePath}`);
 }
 
 if (results.length === 0) {
