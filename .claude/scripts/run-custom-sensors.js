@@ -21,6 +21,7 @@ function loadCustomSensors(projectDir) {
 function runOne(entry, projectDir) {
   let stdout = '';
   try {
+    // entry.command is trusted project-manifest configuration, never untrusted/user-derived input.
     stdout = execSync(entry.command, { cwd: projectDir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
   } catch (e) {
     stdout = (e.stdout || '') + (e.stderr || e.message || '');

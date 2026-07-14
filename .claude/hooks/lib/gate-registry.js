@@ -3,7 +3,7 @@
 // Ordered pre-commit gate catalog + tier-filtered runner (PR3).
 
 const { isGateEnabled, loadSensorTier } = require('./sensor-tier');
-const { buildContext, setFailContext } = require('./pre-commit-util');
+const { buildContext, setFailContext, fail } = require('./pre-commit-util');
 const { recordOutcome } = require('./sensor-outcomes');
 const early = require('./gates-early');
 const legacy = require('./gates-legacy');
@@ -78,11 +78,33 @@ function runPreCommit(projectDir, opts = {}) {
     recordOutcome(projectDir, { sensor: g.id, ran: true, blocked: false });
   }
 
+  runCommitCustomSensors(projectDir);
   return { tier, ranSourceGates: true };
+}
+
+/**
+ * Run project-manifest.json#custom_sensors[] entries with cadence:'commit'.
+ * Report-only entries (blocking:false) log and continue; blocking entries
+ * call fail() (process.exit(1)) on failure. Skips silently if the runner
+ * script is absent (e.g. hook fixtures without .claude/scripts/).
+ */
+function runCommitCustomSensors(projectDir) {
+  let runAll;
+  try { ({ runAll } = require('../../scripts/run-custom-sensors')); }
+  catch (_) { return; } // runner absent (e.g. hook fixture) → skip silently
+  const { sensors } = runAll(projectDir, { cadence: 'commit' });
+  for (const s of sensors) {
+    setFailContext({ currentSensor: `custom:${s.id}`, projectDir });
+    recordOutcome(projectDir, { sensor: `custom:${s.id}`, ran: true, blocked: s.blocking && !s.result.success });
+    if (s.blocking && !s.result.success) {
+      fail(`\nBLOCKED: custom sensor "${s.id}" — ${s.result.summary}\n`);
+    }
+  }
 }
 
 module.exports = {
   GATE_CATALOG,
   selectGates,
   runPreCommit,
+  runCommitCustomSensors,
 };
