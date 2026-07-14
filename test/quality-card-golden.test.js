@@ -23,3 +23,12 @@ test('quality-card output is byte-stable after refactor', () => {
   assert.deepStrictEqual(card, goldJson);
   assert.strictEqual(md.replace(/^Generated: .*$/m, 'Generated: FIXED'), goldMd);
 });
+
+test('empty evaluator-report.md is treated as missing, failing the card', () => {
+  const dir = fixtureRoot();
+  fs.writeFileSync(path.join(dir, 'specs/reviews/evaluator-report.md'), '');
+  const { card } = qc.buildCard({ root: dir });
+  const evaluatorCheck = card.checks.find((c) => c.key === 'evaluator');
+  assert.strictEqual(evaluatorCheck.status, 'missing');
+  assert.strictEqual(card.pass, false);
+});

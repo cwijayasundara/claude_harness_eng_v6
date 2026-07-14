@@ -56,7 +56,7 @@ const BENIGN_VERDICTS = new Set(['pass', 'ok', 'no-baseline', 'no-snapshots', 'n
 const FAIL_VERDICTS = new Set(['blocked', 'fail', 'breaking']);
 
 function interpret(raw, kind) {
-  if (raw == null) return { present: false, pass: null, detail: null };
+  if (!raw) return { present: false, pass: null, detail: null };
   if (kind === 'md_verdict') {
     const upper = String(raw).toUpperCase();
     if (/\bVERDICT\s*:\s*PASS\b/.test(upper) || (/\bPASS\b/.test(upper) && !/\bFAIL\b/.test(upper))) {
