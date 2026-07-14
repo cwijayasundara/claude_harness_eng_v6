@@ -14,6 +14,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { normalize } = require('../hooks/lib/sensor-schema');
 
 const REVIEWS = path.join('specs', 'reviews');
 
@@ -58,73 +59,50 @@ function statusFromPass(pass, present) {
 }
 
 function interpretMdVerdict(text) {
-  if (!text) return { present: false, pass: null };
-  const upper = text.toUpperCase();
-  if (/\bVERDICT\s*:\s*PASS\b/.test(upper) || /\bPASS\b/.test(upper) && !/\bFAIL\b/.test(upper)) {
-    return { present: true, pass: true };
-  }
-  if (/\bVERDICT\s*:\s*FAIL\b/.test(upper) || /\bFAIL\b/.test(upper) || /\bBLOCK\b/.test(upper)) {
-    return { present: true, pass: false };
-  }
-  return { present: true, pass: null };
+  const r = normalize(text == null ? null : text, 'md_verdict');
+  return { present: r.extra.present, pass: r.extra.pass };
 }
 
 function interpretJson(obj, kind) {
-  if (!obj) return { present: false, pass: null, detail: null };
-  if (kind === 'json_verdict') {
-    const v = String(obj.verdict || obj.status || '').toLowerCase();
-    if (['pass', 'ok', 'no-baseline', 'no-snapshots', 'no-spec', 'unprovisioned', 'skipped', 'no-map'].includes(v)) {
-      return { present: true, pass: true, detail: v };
-    }
-    if (['blocked', 'fail', 'breaking', 'fail'].includes(v) || obj.pass === false) {
-      return { present: true, pass: false, detail: v || 'fail' };
-    }
-    if (typeof obj.pass === 'boolean') {
-      return { present: true, pass: obj.pass, detail: v || null };
-    }
-    return { present: true, pass: null, detail: v || null };
+  const r = normalize(obj, kind);
+  return { present: r.extra.present, pass: r.extra.pass, detail: r.extra.detail };
+}
+
+function interpretSource(abs, src) {
+  return src.kind === 'md_verdict'
+    ? interpretMdVerdict(readText(abs))
+    : interpretJson(readJson(abs), src.kind);
+}
+
+function buildCheckEntry(root, src, interp) {
+  const status = statusFromPass(interp.pass, interp.present);
+  if (!interp.present && src.optional) {
+    return {
+      key: src.key,
+      file: src.file,
+      status: 'skipped',
+      pass: true,
+      optional: true,
+      detail: 'not present',
+    };
   }
-  // json_pass
-  if (typeof obj.pass === 'boolean') {
-    return { present: true, pass: obj.pass, detail: obj.summary || obj.note || null };
-  }
-  if (obj.verdict) {
-    return interpretJson(obj, 'json_verdict');
-  }
-  return { present: true, pass: null, detail: null };
+  return {
+    key: src.key,
+    file: src.file,
+    status,
+    pass: status === 'pass' || status === 'skipped',
+    optional: Boolean(src.optional),
+    detail: interp.detail || null,
+    summary: loadFindingSummary(root, src),
+  };
 }
 
 function loadChecks(root) {
   const checks = [];
   for (const src of SOURCES) {
     const abs = path.join(root, REVIEWS, src.file);
-    let interp;
-    if (src.kind === 'md_verdict') {
-      interp = interpretMdVerdict(readText(abs));
-    } else {
-      interp = interpretJson(readJson(abs), src.kind);
-    }
-    const status = statusFromPass(interp.pass, interp.present);
-    if (!interp.present && src.optional) {
-      checks.push({
-        key: src.key,
-        file: src.file,
-        status: 'skipped',
-        pass: true,
-        optional: true,
-        detail: 'not present',
-      });
-      continue;
-    }
-    checks.push({
-      key: src.key,
-      file: src.file,
-      status,
-      pass: status === 'pass' || status === 'skipped',
-      optional: Boolean(src.optional),
-      detail: interp.detail || null,
-      summary: loadFindingSummary(root, src),
-    });
+    const interp = interpretSource(abs, src);
+    checks.push(buildCheckEntry(root, src, interp));
   }
   return checks;
 }
@@ -189,8 +167,8 @@ function icon(status) {
   return '❓';
 }
 
-function renderMd(card) {
-  const lines = [
+function renderHeader(card) {
+  return [
     '# Quality card',
     '',
     `Generated: ${card.generated_at}`,
@@ -201,20 +179,33 @@ function renderMd(card) {
     '| Check | Status | Detail |',
     '|---|---|---|',
   ].filter((x) => x !== null);
+}
 
-  for (const c of card.checks) {
+function renderCheckRows(checks) {
+  const rows = [];
+  for (const c of checks) {
     if (c.status === 'skipped') continue;
     const detail = c.detail
       || (c.summary ? `block=${c.summary.block || 0} warn=${c.summary.warn || 0}` : '—');
-    lines.push(`| ${c.key} | ${icon(c.status)} ${c.status} | ${String(detail).replace(/\|/g, '\\|')} |`);
+    rows.push(`| ${c.key} | ${icon(c.status)} ${c.status} | ${String(detail).replace(/\|/g, '\\|')} |`);
   }
+  return rows;
+}
 
-  lines.push('', '## Human navigation', '');
-  if (card.wiki.length) {
-    for (const w of card.wiki) lines.push(`- [\`${w}\`](../../${w})`);
+function renderWikiSection(wiki) {
+  const lines = ['', '## Human navigation', ''];
+  if (wiki.length) {
+    for (const w of wiki) lines.push(`- [\`${w}\`](../../${w})`);
   } else {
     lines.push('_No wiki/homepage artifacts yet. Run `npm run human-codebase` and `/code-map`._');
   }
+  return lines;
+}
+
+function renderMd(card) {
+  const lines = renderHeader(card)
+    .concat(renderCheckRows(card.checks))
+    .concat(renderWikiSection(card.wiki));
 
   lines.push(
     '',
