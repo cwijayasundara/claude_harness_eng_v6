@@ -9,6 +9,7 @@ const path = require('path');
 const {
   parseFailures, countRules, summarizeTelemetry, readFlakeCount,
   readBaselineNum, deriveNotes, buildScorecard, renderMd,
+  leadTurnNotes, leadTurnRatioCell,
 } = require(path.resolve(__dirname, '..', '.claude', 'hooks', 'lib', 'loop-health.js'));
 
 function tmpRoot() {
@@ -212,6 +213,72 @@ test('deriveNotes: no lane-skew note when share is under 90%', () => {
     failures: { total: 0, byCategory: {} }, learnedRules: 0, telemetry, flakeEvents: 0,
   });
   assert.ok(!notes.some((n) => /skewed/.test(n)));
+});
+
+// --- lead-turn efficiency (Cognition "Making Fable Cheaper Than Opus") -------
+
+function telemetryWith(turns, subagents) {
+  return summarizeTelemetry([
+    ...Array(turns).fill(JSON.stringify({ kind: 'turn', lane: 'auto' })),
+    ...Array(subagents).fill(JSON.stringify({ kind: 'subagent_stop', lane: 'auto' })),
+  ]);
+}
+
+test('leadTurnNotes: flags a high turns-per-dispatch ratio above the attention line', () => {
+  const notes = leadTurnNotes(telemetryWith(20, 2)); // 10:1, deeply lead-heavy
+  assert.strictEqual(notes.length, 1);
+  assert.match(notes[0], /turns\/dispatch/);
+  assert.match(notes[0], /attention line/);
+  assert.match(notes[0], /lead/i);
+  // 20 turns, 20 dispatches -> 1:1, well-delegated, not accruing -> no note.
+  assert.deepStrictEqual(leadTurnNotes(telemetryWith(20, 20)), []);
+  // Pin the attention line at exactly 4:1 (>= inclusive): 20/6=3.33 -> [],
+  // 20/5=4.0 -> fires. Guards the constant + operator against silent regression.
+  assert.deepStrictEqual(leadTurnNotes(telemetryWith(20, 6)), []);
+  assert.strictEqual(leadTurnNotes(telemetryWith(20, 5)).length, 1);
+});
+
+test('leadTurnNotes: defers below the min-turns floor, never fires on empty', () => {
+  const accruing = leadTurnNotes(telemetryWith(3, 0));
+  assert.strictEqual(accruing.length, 1);
+  assert.match(accruing[0], /accruing/i);
+  assert.match(accruing[0], /deferred/i);
+  assert.deepStrictEqual(leadTurnNotes(telemetryWith(0, 0)), []); // never vacuous
+});
+
+test('leadTurnNotes: zero dispatches with enough turns flags lead-loop concentration', () => {
+  const notes = leadTurnNotes(telemetryWith(15, 0));
+  assert.strictEqual(notes.length, 1);
+  assert.match(notes[0], /0 subagent dispatches/);
+  assert.match(notes[0], /lead/i);
+});
+
+test('deriveNotes: wires the lead-turn note through the scorecard signals', () => {
+  const notes = deriveNotes({
+    failures: { total: 0, byCategory: {} }, learnedRules: 0,
+    telemetry: telemetryWith(20, 2), flakeEvents: 0,
+  });
+  assert.ok(notes.some((n) => /turns\/dispatch/.test(n)));
+});
+
+test('leadTurnRatioCell: renders a ratio, n/a for empty, and the zero-dispatch shape', () => {
+  assert.match(leadTurnRatioCell(telemetryWith(20, 2)), /10\.0/);
+  assert.match(leadTurnRatioCell(telemetryWith(0, 0)), /n\/a/i);
+  assert.match(leadTurnRatioCell(telemetryWith(15, 0)), /0 dispatch/);
+  // Below the floor: raw counts, not a ratio (matches the deferred note).
+  assert.strictEqual(leadTurnRatioCell(telemetryWith(5, 2)), '5 turns / 2 dispatches');
+});
+
+test('renderMd: shows the lead-turn ratio row and the not-in-loop-observable caveat', () => {
+  const root = tmpRoot();
+  writeFile(root, '.claude/state/telemetry-ledger.jsonl', [
+    ...Array(20).fill(JSON.stringify({ kind: 'turn', lane: 'auto' })),
+    ...Array(2).fill(JSON.stringify({ kind: 'subagent_stop', lane: 'auto' })),
+  ].join('\n'));
+  const md = renderMd(buildScorecard(root), '2026-07-15T00:00:00.000Z');
+  assert.match(md, /Lead-turn ratio/);
+  assert.match(md, /not in-loop-observable/i);
+  assert.match(md, /cost-report/);
 });
 
 test('renderMd: surfaces the byLane breakdown sorted by count desc', () => {

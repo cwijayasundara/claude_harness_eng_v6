@@ -82,6 +82,14 @@ function readBaselineNum(root, rel) {
 }
 
 const MIN_RUNS = 5;
+const MIN_LEAD_TURNS = 10;      // data floor before turns-per-dispatch is meaningful
+const LEAD_TURN_ATTENTION = 4;  // turns-per-dispatch attention line
+
+// The one honest caveat: the ratio counts turns, not tokens. Lead-token cost is
+// not in-loop-observable; worker-token cost lives in the cost-report.
+const LEAD_TURN_CAVEAT = '> Lead-turn efficiency counts orchestrator turns, not tokens — exact '
+  + 'lead-token cost is not in-loop-observable (budget-state.js:10-13). For measured worker-token '
+  + 'cost, run `node .claude/scripts/cost-report.js`.';
 
 function commitGateIds() {
   try { return require('./gate-registry').GATE_CATALOG.map((g) => g.id); }
@@ -119,6 +127,44 @@ function laneSkewNote(telemetry) {
     + 'scorecard signals may be skewed toward this lane.';
 }
 
+// Cognition "Making Fable Cheaper Than Opus": run cost is dominated by lead
+// (orchestrator) turns, not worker turns. turns-per-dispatch (orchestrator
+// kind:"turn" events / subagent dispatches) is the in-loop proxy for how
+// lead-heavy a run is — a high ratio means the lead loop does the work instead
+// of offloading it to (cheaper) delegated workers. It counts turns, NOT tokens:
+// exact lead-token cost is not in-loop-observable (see budget-state.js:10-13).
+// A MIN-turns floor + accruing/defer note (mirrors analyzeBiting) keeps it from
+// firing on an empty ledger.
+function leadTurnNotes(telemetry) {
+  const turns = telemetry.turns || 0;
+  if (turns === 0) return []; // no lead-turn data — never fire vacuously
+  const dispatches = telemetry.subagents || 0;
+  if (turns < MIN_LEAD_TURNS) {
+    return [`Lead-turn efficiency accruing (${turns}/${MIN_LEAD_TURNS} orchestrator turns) — turns-per-dispatch analysis deferred.`];
+  }
+  if (dispatches === 0) {
+    return [`All ${turns} orchestrator turns ran with 0 subagent dispatches — run cost concentrated in lead (orchestrator) turns.`];
+  }
+  const ratio = turns / dispatches;
+  if (ratio >= LEAD_TURN_ATTENTION) {
+    return [`Lead-turn ratio ${ratio.toFixed(1)} turns/dispatch over ${turns} turns — above the ${LEAD_TURN_ATTENTION}:1 attention line; run cost is dominated by lead (orchestrator) turns.`];
+  }
+  return [];
+}
+
+// Display cell for the Signals table: "n/a" on empty, "N turns / 0 dispatches"
+// when nothing was delegated, else "R (turns/dispatches)".
+function leadTurnRatioCell(telemetry) {
+  const turns = telemetry.turns || 0;
+  const dispatches = telemetry.subagents || 0;
+  if (turns === 0) return 'n/a';
+  // Below the data floor (or with nothing delegated) show raw counts, not a
+  // ratio — matching the deferred/accruing observation note so the table never
+  // implies a verdict the note says is still accruing.
+  if (turns < MIN_LEAD_TURNS || dispatches === 0) return `${turns} turns / ${dispatches} dispatches`;
+  return `${(turns / dispatches).toFixed(1)} (${turns}/${dispatches})`;
+}
+
 // Deterministic, evidence-backed observations only. These are facts the /retro
 // agent should not have to re-derive — not scored health verdicts.
 function deriveNotes(signals) {
@@ -145,6 +191,7 @@ function deriveNotes(signals) {
   }
   const laneNote = laneSkewNote(telemetry);
   if (laneNote) notes.push(laneNote);
+  notes.push(...leadTurnNotes(telemetry));
   notes.push(...bitingNotes(signals.biting));
   return notes;
 }
@@ -204,10 +251,13 @@ function renderMd(scorecard, generatedAt) {
     `| Telemetry events | ${t.events} |`,
     `| Tool calls (errors) | ${t.tools} (${t.toolErrors}, ${(t.toolErrorRate * 100).toFixed(1)}%) |`,
     `| Turns / prompts / subagents | ${t.turns} / ${t.prompts} / ${t.subagents} |`,
+    `| Lead-turn ratio (turns/dispatch) | ${leadTurnRatioCell(t)} |`,
     `| Failures logged | ${signals.failures.total} |`,
     `| Learned / process rules | ${signals.learnedRules} / ${signals.processRules} |`,
     `| Flake events | ${signals.flakeEvents} |`,
     `| Baselines (cycle / coupling / cov / covJs) | ${b.cycle} / ${b.coupling} / ${b.coverage} / ${b.coverageJs} |`,
+    '',
+    LEAD_TURN_CAVEAT,
     '',
     '## Lane activity', '',
     ...laneActivityLines(t.byLane),
@@ -223,5 +273,5 @@ function renderMd(scorecard, generatedAt) {
 module.exports = {
   stripComments, parseFailures, countRules, summarizeTelemetry,
   readFlakeCount, readBaselineNum, deriveNotes, buildScorecard, renderMd,
-  analyzeBiting,
+  analyzeBiting, leadTurnNotes, leadTurnRatioCell,
 };

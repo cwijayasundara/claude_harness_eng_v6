@@ -45,3 +45,11 @@ Append one micro-contract per `/vibe` change. Keep entries short and factual.
 - Out of scope: Vulnerability categories, severity table, adversarial verification, report format, `security-verdict.json` schema, output paths — all downstream-consumed, left byte-identical. No other files (gate SKILL already builds the pack).
 - Verification: `git diff --check`; confirm verdict JSON block + output paths unchanged; run skills/agents consistency + prompting-standards tests if present.
 - Rollback: `git checkout .claude/agents/security-reviewer.md` (single-file edit).
+
+### 2026-07-15 — Lead-turn efficiency signal on the loop-health scorecard
+- Class: CV2
+- Change: Add a "lead-turn efficiency" signal to `.claude/hooks/lib/loop-health.js`, operationalizing the Cognition "Making Fable Cheaper Than Opus" finding (run cost is dominated by lead/orchestrator turns). Reuses `summarizeTelemetry`'s existing `turns` (orchestrator `kind:"turn"`) and `subagents` (`subagent_stop`) counts to compute a turns-per-dispatch ratio, adds it to the Signals table, and emits a deterministic observation note when the ratio crosses an attention line — with a MIN-turns data floor + accruing/defer note (mirrors analyzeBiting) so it never fires on empty data. Adds ONE honest caveat footnote that lead-token cost is not in-loop-observable (budget-state.js:10-13), pointing to `cost-report.js` for measured worker tokens.
+- In scope: `.claude/hooks/lib/loop-health.js` (new pure helpers `leadTurnNotes` + `leadTurnRatioCell` + two constants, one call added to `deriveNotes`, one Signals row + one footnote in `renderMd`, exports); `test/loop-health.test.js` (new lead-turn test block, TDD-first).
+- Out of scope: `.claude/scripts/loop-health.js` orchestrator (unchanged — still report-only, exit 0), `budget-state.js`/`cost-report.js` (only referenced), any threshold on the ratio beyond the documented attention line (interpretation stays the /retro recommender's job), no new telemetry fields.
+- Verification: `node --test test/loop-health.test.js` (RED first, then GREEN); `git diff --check`; `node .claude/scripts/local-regression-gate.js`.
+- Rollback: `git checkout -- .claude/hooks/lib/loop-health.js test/loop-health.test.js`
