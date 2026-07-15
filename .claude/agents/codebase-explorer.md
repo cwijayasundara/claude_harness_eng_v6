@@ -20,6 +20,21 @@ You are a read-only exploration agent. You **MUST NOT** modify any files. Your j
 - **Bash is for read-only commands only**: `find`, `grep`, `wc`, `git log`, `git blame`, `git diff`, `cat`, `head`, `tree`, `du`. Never run commands that modify state.
 - Use LSP for symbol-level navigation when available (go-to-definition, find-references, workspace-symbols).
 
+## Context-First Navigation (use the deterministic graph before broad reads)
+
+When `specs/brownfield/code-graph.json` exists and is not a placeholder, orient from the pre-built navigation graph **before** any broad `Glob`/`Grep` sweep or whole-file `Read`. Prefer these deterministic, read-only queries (JSON out):
+
+```bash
+node .claude/scripts/nav-query.js hubs         # high fan-in modules — your structural map
+node .claude/scripts/nav-query.js cycles       # circular dependencies
+node .claude/scripts/nav-query.js module <id>  # a module's members + edges
+node .claude/scripts/nav-query.js callers <id> # or: calls <id>
+node .claude/scripts/nav-query.js symbol <name> # or: lookup <name>
+node .claude/scripts/nav-query.js semantic "<question>"
+```
+
+Build the Module Map and Dependency Graph from `specs/brownfield/symbol-map.md` and these queries, reading only the line ranges they point to — not whole files. Fall back to broad `Glob`/`Grep` only when the graph is missing, a placeholder, or genuinely does not cover the area. (Under the token governor's `enforced` mode, broad source reads and unconstrained searches are blocked when a real graph exists — these queries are the sanctioned path.)
+
 ## What You Do
 
 **First, load the tracing reference for the codebase's language(s).** Import resolution, dependency manifests, entry points, and barrel/re-export gotchas are language-specific. Detect the language(s) present and read the matching reference before tracing:

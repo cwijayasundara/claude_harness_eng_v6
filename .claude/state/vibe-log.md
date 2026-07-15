@@ -38,3 +38,10 @@ Append one micro-contract per `/vibe` change. Keep entries short and factual.
 - Out of scope: `diagnostics-shard.js` or any other runtime script (no computational sensor is being added — this is prompt-text only, matching the source gap's own recommendation); `/refactor`/`upgrading-dependencies`/`/implement`/`/feature` canary text (G32, unrelated); the "gaps G1-G30 closed" summary line in HARNESS.md (already stale for G31/G32 too — not this task's scope to fix).
 - Verification: `node --test test/cyclic-prepass-wiring.test.js`; `node .claude/scripts/validate-harness-manifest.js`; `git diff --check`; `node .claude/scripts/local-regression-gate.js`.
 - Rollback: `git checkout -- .claude/skills/fix-from-diagnostics/SKILL.md HARNESS.md harness-manifest.json`; `rm test/cyclic-prepass-wiring.test.js`
+
+## Micro-Contract — diff-scope security-reviewer (2026-07-15)
+- Change: Rewrite `.claude/agents/security-reviewer.md` so it reviews the changed-file context pack (diff + touched files + immediate data-flow neighbors), like code-reviewer, instead of Grepping across ALL source files on every change.
+- In scope: Intro paragraph, new `## Inputs` section mirroring code-reviewer, and the `## Scan Process` steps (Grep/auth/config/deps) rescoped to the change set. Light frontmatter `description` update to note changed-file scope.
+- Out of scope: Vulnerability categories, severity table, adversarial verification, report format, `security-verdict.json` schema, output paths — all downstream-consumed, left byte-identical. No other files (gate SKILL already builds the pack).
+- Verification: `git diff --check`; confirm verdict JSON block + output paths unchanged; run skills/agents consistency + prompting-standards tests if present.
+- Rollback: `git checkout .claude/agents/security-reviewer.md` (single-file edit).

@@ -60,7 +60,7 @@ test('applyScaffold produces a real scaffold from a Minimal Node profile', () =>
     assert.deepStrictEqual(manifest.architecture, { enabled: false });
     assert.deepStrictEqual(manifest.token_governor, {
       enabled: true,
-      mode: 'advisory',
+      mode: 'enforced',
       living_navigation: true,
       context_search_required: true,
       max_source_read_lines: 300,

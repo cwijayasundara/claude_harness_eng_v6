@@ -83,7 +83,7 @@ function observabilityBlock(enabled) {
 function tokenGovernorBlock() {
   return {
     enabled: true,
-    mode: 'advisory',
+    mode: 'enforced',
     living_navigation: true,
     context_search_required: true,
     max_source_read_lines: 300,
@@ -163,6 +163,9 @@ function buildManifest(profile) {
       model_tier: profile.modelTier || preset.model_tier,
       ceremony: profile.ceremony || preset.ceremony,
       session_chaining: true, teammate_model: 'sonnet',
+      // budget is intentionally unstamped: /auto falls back to the model_tier
+      // default cap. The '// budget' doc key below shows clients the lever.
+      '// budget': 'unset — /auto uses the model_tier default cap (cost tier ~= 80 agents / $8 / 30 min). To enforce a per-build ceiling, replace this key with  budget: { est_cost_usd, agents, wall_clock_ms }  — or pass --budget at run time. See docs/token-cost-playbook.md.',
     },
     verification: verificationBlock(profile.verificationMode || preset.verification_mode),
     topology,
