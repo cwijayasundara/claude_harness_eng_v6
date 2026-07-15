@@ -68,3 +68,11 @@ Append one micro-contract per `/vibe` change. Keep entries short and factual.
 - Out of scope: running builds, session-filtering cost-per-outcome.js, fixture, runbook, scaffolding project dirs (separate Phase-2 pieces). No cost/outcome math reimplementation — consume artifacts.
 - Verification: node .claude/scripts/run-compact.js --kind test -- node --test test/ab-report.test.js ; git diff --check ; each file < 300-line hard gate, funcs < 30.
 - Rollback: delete the two new files.
+
+## Micro-Contract — inferTier fusion/cost label bug (2026-07-15T16:27Z)
+- Class: CV2 (labeling bug in report-only tooling; dollar figures already correct via per-model pricing — only the inferred tier LABEL was wrong, and ab-report.js labels arms by that tier).
+- Change: In `.claude/scripts/cost-per-outcome.js` `inferTier`, attribute the Haiku pin by WHICH agent carries it, checking fusion BEFORE cost: a Haiku `implementer` receipt → 'fusion'; else a Haiku `codebase-explorer` receipt → 'cost'. Kept opus-generator→max-quality, sonnet-generator→balanced, final 'unknown', and a defensive last-resort `models.has(HAIKU)`→'cost' when neither implementer nor explorer attribution matched. Reused imported HAIKU/OPUS/SONNET5 constants (no literal model strings).
+- In scope: `cost-per-outcome.js` inferTier (+ its doc comment); `test/cost-per-outcome.test.js` (kept the haiku-explorer→'cost' assertion; ADDED haiku-implementer→'fusion' and the real fusion shape haiku-implementer+sonnet-explorer+sonnet-generator → 'fusion' not 'cost', pinning both labels).
+- Out of scope: budget-state.js RATE_USD (no 'fusion' rate-seed — known minor gap, only affects token-LESS estimation; real A/B runs carry tokens, priced per-model — left unedited); ab-report.js, the runbook.
+- Verification: node .claude/scripts/run-compact.js --kind test -- node --test test/cost-per-outcome.test.js (exit 0); git diff --check clean; both files < 300 lines (236, 162); local-regression-gate pass.
+- Rollback: git checkout -- .claude/scripts/cost-per-outcome.js test/cost-per-outcome.test.js

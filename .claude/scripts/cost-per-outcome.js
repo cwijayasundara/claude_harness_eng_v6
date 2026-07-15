@@ -40,9 +40,13 @@ function costPerPassed(cost, passed) {
 }
 
 // Reverse-infer the tier LABEL from the model mix actually recorded on receipts.
-// Presets share the Opus judgment pins, so the discriminators are the generation
-// and exploration pins: Haiku only appears as the cost/enterprise explorer, and
-// an Opus generator only appears on max-quality. Best-effort + honest note.
+// Presets share the Opus judgment pins, so the discriminators are the generation,
+// worker, and exploration pins: a Haiku IMPLEMENTER (worker) is unique to fusion,
+// a Haiku codebase-explorer is unique to cost/enterprise, and an Opus generator
+// only appears on max-quality. Check fusion BEFORE cost so a Haiku worker is not
+// mislabeled 'cost' (fusion has explorer=Sonnet5, cost has implementer=Sonnet5,
+// so the two Haiku pins are mutually exclusive in the real presets). Best-effort
+// + honest note.
 function inferTier(receipts) {
   const subs = (receipts || []).filter((r) => r.kind === 'subagent' && r.model);
   const models = new Set(subs.map((r) => r.model));
@@ -50,7 +54,12 @@ function inferTier(receipts) {
     return { label: 'unknown', note: 'no model pins recorded on receipts' };
   }
   const genModels = new Set(subs.filter((r) => r.agent === 'generator').map((r) => r.model));
-  if (models.has(HAIKU)) {
+  const implModels = new Set(subs.filter((r) => r.agent === 'implementer').map((r) => r.model));
+  const explModels = new Set(subs.filter((r) => r.agent === 'codebase-explorer').map((r) => r.model));
+  if (implModels.has(HAIKU)) {
+    return { label: 'fusion', note: `${HAIKU} implementer pin observed — fusion` };
+  }
+  if (explModels.has(HAIKU)) {
     return { label: 'cost', note: `${HAIKU} explorer pin observed (cost/enterprise)` };
   }
   if (genModels.has(OPUS)) {
@@ -61,6 +70,9 @@ function inferTier(receipts) {
       label: 'balanced',
       note: `${SONNET5} generation, no ${HAIKU}/opus-gen (cost indistinguishable without a haiku explorer)`,
     };
+  }
+  if (models.has(HAIKU)) {
+    return { label: 'cost', note: `${HAIKU} pin observed, unattributed (cost/enterprise, defensive)` };
   }
   return { label: 'unknown', note: 'no generation pin to disambiguate' };
 }

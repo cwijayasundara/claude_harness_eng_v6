@@ -123,6 +123,25 @@ test('inferTier: distinguishes cost (haiku) / max-quality (opus gen) / balanced 
   assert.strictEqual(inferTier([]).label, 'unknown');
 });
 
+test('inferTier: a haiku implementer is fusion, not cost — attribution is by agent', () => {
+  // A lone Haiku IMPLEMENTER (worker) receipt is the fusion discriminator.
+  assert.strictEqual(
+    inferTier([sub('G1', { agent: 'implementer', model: 'claude-haiku-4-5' })]).label,
+    'fusion',
+  );
+  // The real fusion shape: haiku worker + sonnet lead + sonnet explorer. Since
+  // fusion is checked before cost, the haiku pin must resolve to 'fusion', never
+  // 'cost' (which is instead the haiku-EXPLORER shape). Pin both labels so the
+  // fusion/cost distinction can't silently regress.
+  const fusionRun = [
+    sub('G1', { agent: 'implementer', model: 'claude-haiku-4-5' }),
+    sub('G1', { agent: 'generator', model: 'claude-sonnet-5' }),
+    sub('G1', { agent: 'codebase-explorer', model: 'claude-sonnet-5' }),
+  ];
+  assert.strictEqual(inferTier(fusionRun).label, 'fusion');
+  assert.notStrictEqual(inferTier(fusionRun).label, 'cost');
+});
+
 // --- report shape: caveats + rendering -------------------------------------
 
 test('buildReport: carries both honest caveats; tier is marked inferred', () => {
