@@ -12,10 +12,11 @@ const { modelsForTier, sessionFor, applyTier, PRESETS } = require(SCRIPT);
 const OPUS = 'claude-opus-4-8';
 const SONNET5 = 'claude-sonnet-5';
 const HAIKU = 'claude-haiku-4-5';
-const NAMED_PRESETS = ['cost', 'balanced', 'max-quality'];
+const NAMED_PRESETS = ['cost', 'balanced', 'max-quality', 'fusion'];
 const ROLES = [
   'planner',
   'generator',
+  'implementer',
   'evaluator',
   'design-critic',
   'security-reviewer',
@@ -86,6 +87,35 @@ test('max-quality: Opus 4.8 generation; explorer stays Sonnet', () => {
   assert.strictEqual(m['codebase-explorer'], SONNET5);
 });
 
+test('implementer (team worker) pins to the same model as the generator (lead) off the fusion path', () => {
+  // Introducing the worker role must not change behaviour unless fusion is picked.
+  for (const preset of ['cost', 'balanced', 'max-quality']) {
+    const m = modelsForTier(preset);
+    assert.strictEqual(m.implementer, m.generator, `preset ${preset}: worker must equal lead`);
+  }
+});
+
+test('fusion: Sonnet lead, Haiku worker, Sonnet explorer, Opus judgment', () => {
+  const m = modelsForTier('fusion');
+  assert.strictEqual(m.generator, SONNET5, 'lead is Sonnet');
+  assert.strictEqual(m.implementer, HAIKU, 'worker is the cheap Haiku tier');
+  assert.notStrictEqual(m.implementer, m.generator, 'fusion is the one preset where worker < lead');
+  assert.strictEqual(m['codebase-explorer'], SONNET5);
+  assert.strictEqual(m.planner, OPUS);
+  assert.strictEqual(m.evaluator, OPUS);
+  assert.strictEqual(m['code-reviewer'], OPUS);
+  assert.strictEqual(m.advisor, OPUS);
+});
+
+test('fusion leaves the named cost/balanced/max-quality pins untouched', () => {
+  // The new preset is additive: the three original presets are byte-identical.
+  assert.deepStrictEqual(modelsForTier('cost'), {
+    planner: OPUS, generator: SONNET5, implementer: SONNET5, evaluator: OPUS,
+    'design-critic': OPUS, 'security-reviewer': OPUS, 'code-reviewer': OPUS,
+    'modularity-reviewer': OPUS, advisor: OPUS, 'codebase-explorer': HAIKU,
+  });
+});
+
 test('unknown preset throws', () => {
   assert.throws(() => modelsForTier('cheapest'), /unknown.*tier|preset/i);
 });
@@ -95,6 +125,7 @@ test('session model guidance is Opus 4.8 in every tier', () => {
   assert.strictEqual(sessionFor('enterprise'), OPUS);
   assert.strictEqual(sessionFor('balanced'), OPUS);
   assert.strictEqual(sessionFor('max-quality'), OPUS);
+  assert.strictEqual(sessionFor('fusion'), OPUS);
 });
 
 // --- applyTier: stamps the model: frontmatter line in each agent file ----------
@@ -126,6 +157,19 @@ test('applyTier cost pins explorer to Haiku', () => {
   assert.match(fs.readFileSync(path.join(dir, 'advisor.md'), 'utf8'), /^model: claude-opus-4-8$/m);
 });
 
+test('applyTier fusion stamps the implementer worker to Haiku and the generator lead to Sonnet', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agents-'));
+  for (const role of ROLES) fakeAgent(dir, role, OPUS);
+  const changed = applyTier(dir, 'fusion');
+  // The measurability requirement: the worker agent's own frontmatter carries the
+  // cheap model, because record-run keys the receipt model off that frontmatter.
+  assert.match(fs.readFileSync(path.join(dir, 'implementer.md'), 'utf8'), /^model: claude-haiku-4-5$/m);
+  assert.match(fs.readFileSync(path.join(dir, 'generator.md'), 'utf8'), /^model: claude-sonnet-5$/m);
+  assert.match(fs.readFileSync(path.join(dir, 'codebase-explorer.md'), 'utf8'), /^model: claude-sonnet-5$/m);
+  assert.match(fs.readFileSync(path.join(dir, 'evaluator.md'), 'utf8'), /^model: claude-opus-4-8$/m);
+  assert.ok(changed.includes('implementer')); // OPUS -> Haiku
+});
+
 test('applyTier preserves the rest of the frontmatter and body', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agents-'));
   fakeAgent(dir, 'planner', OPUS);
@@ -144,7 +188,7 @@ test('repo agents are stamped with exact model ids (default dogfood tier = balan
   const expected = modelsForTier('balanced');
   const valid = new Set([OPUS, SONNET5, HAIKU]);
   // Advisor is new; modularity-reviewer may exist — require known roles only.
-  for (const role of ['planner', 'generator', 'evaluator', 'design-critic', 'security-reviewer', 'code-reviewer', 'codebase-explorer']) {
+  for (const role of ['planner', 'generator', 'implementer', 'evaluator', 'design-critic', 'security-reviewer', 'code-reviewer', 'codebase-explorer']) {
     const txt = fs.readFileSync(path.join(dir, `${role}.md`), 'utf8');
     const m = txt.match(/^model: (.+)$/m);
     assert.ok(m, `${role}.md must declare a model`);

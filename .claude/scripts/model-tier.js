@@ -12,8 +12,19 @@
 //                       Enterprise product default (Coinbase: defaults > caps).
 //   balanced          — Sonnet 5 generation + exploration, Opus judgment.
 //   max-quality       — Opus 4.8 generation; explorer stays Sonnet 5.
+//   fusion            — "cheap worker under a smart lead": Sonnet 5 lead
+//                       (generator), Haiku 4.5 worker (implementer), Sonnet 5
+//                       exploration, Opus judgment. Only preset where the
+//                       teammate worker is cheaper than the lead.
 //
 // `enterprise` is an alias of `cost` (same pin table; docs-facing name).
+//
+// The `generator` is the team LEAD; the `implementer` is the per-story WORKER it
+// spawns as a teammate. On every preset except fusion the worker pins to the same
+// model as the lead, so introducing the role changes no behaviour unless fusion
+// is selected. record-run keys a receipt's model off the spawned agent's own
+// frontmatter, so a distinct implementer identity is what makes a cheaper-worker
+// experiment measurable by cost-per-outcome.js.
 
 const fs = require('fs');
 const path = require('path');
@@ -37,16 +48,25 @@ const PRESETS = {
   cost: {
     ...JUDGMENT,
     generator: SONNET5,
+    implementer: SONNET5, // worker == lead: unchanged behaviour off the fusion path
     'codebase-explorer': HAIKU,
   },
   balanced: {
     ...JUDGMENT,
     generator: SONNET5,
+    implementer: SONNET5, // worker == lead
     'codebase-explorer': SONNET5,
   },
   'max-quality': {
     ...JUDGMENT,
     generator: OPUS,
+    implementer: OPUS, // worker == lead
+    'codebase-explorer': SONNET5,
+  },
+  fusion: {
+    ...JUDGMENT,
+    generator: SONNET5, // smart lead
+    implementer: HAIKU, // cheap worker — the only preset where worker < lead
     'codebase-explorer': SONNET5,
   },
 };
@@ -62,6 +82,7 @@ const SESSION = {
   enterprise: OPUS,
   balanced: OPUS,
   'max-quality': OPUS,
+  fusion: OPUS,
 };
 
 function normalizePreset(preset) {

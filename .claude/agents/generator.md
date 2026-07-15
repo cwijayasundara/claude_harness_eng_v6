@@ -40,7 +40,7 @@ Before spawning teammates, apply `node .claude/scripts/team-policy.js` semantics
 |--------|--------|
 | `solo` | Single story — implement yourself (no team). |
 | `solo_sequential` | Multiple tiny independent stories (small ownership spans, no Produces/Consumes cross-deps) — implement **one-by-one in this context**; do **not** spawn per-story teammates. Log `team_mode: solo_sequential` + reason to `iteration-log.md`. |
-| `team` | Real fan-out (shared interfaces, larger ownership, or cross-story deps) — **MUST** spawn one teammate per story via the `Agent` tool (`subagent_type: generator`). Your role is dispatcher + integrator, **NOT direct implementer**. You may not write production code for those stories yourself. |
+| `team` | Real fan-out (shared interfaces, larger ownership, or cross-story deps) — **MUST** spawn one teammate per story via the `Agent` tool (`subagent_type: implementer`). Your role is dispatcher + integrator, **NOT direct implementer**. You may not write production code for those stories yourself. |
 
 Honor `execution.force_teams` / `execution.force_solo` from the project manifest when set. Default heuristic: ownership ≤2 files/story and ≤4 files/group with no cross-deps → `solo_sequential`.
 
@@ -79,7 +79,7 @@ For each sprint group:
 1. Read the group's stories from `specs/stories/`
 2. Verify every story in the group is marked `Readiness: ready`. Do not implement `needs_breakdown` stories.
 3. Read `specs/design/component-map.md` to assign file ownership to each teammate
-4. Spawn one sub-agent per story — assign it:
+4. Spawn one sub-agent per story via the `Agent` tool as `subagent_type: implementer` — assign it:
    - The story file path
    - Its owned files/modules from the component map
    - The relevant schema files
@@ -134,7 +134,7 @@ Group C micro-DAG:
 
 ### Step 3: Spawn Agent Team
 
-Execute teammates in phases from the micro-DAG:
+Execute teammates in phases from the micro-DAG. Every teammate is spawned via the `Agent` tool as `subagent_type: implementer` (the per-story worker); you remain the lead dispatcher + integrator.
 
 **Phase 1 teammates** — spawn in parallel. Each teammate must:
 - Implement their code with TDD
@@ -196,7 +196,7 @@ Max 5 concurrent teammates per phase. If a phase has >5 stories, batch in groups
 
 ## Stack Expertise (load the reference for the project's stack)
 
-Stay stack-neutral by default. Detect the stack from `project-manifest.json` and **read the matching reference** under `.claude/skills/code-gen/references/` before writing code, then apply its idioms to each file you own. Teammates inherit this (they are spawned as `subagent_type: generator`).
+Stay stack-neutral by default. Detect the stack from `project-manifest.json` and **read the matching reference** under `.claude/skills/code-gen/references/` before writing code, then apply its idioms to each file you own. Teammates apply the same discipline: they are spawned as `subagent_type: implementer`, whose own prompt instructs it to detect the stack and read the matching reference, and your spawn prompt names the reference for the story's files (below).
 
 | Stack signal in `project-manifest.json` | Read this reference |
 |---|---|

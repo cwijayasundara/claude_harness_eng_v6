@@ -20,7 +20,7 @@ const SCAFFOLD_PROFILES = new Set(['core', 'brownfield', 'full']);
 
 const CORE_AGENTS = [
   'code-reviewer.md', 'design-critic.md',
-  'evaluator.md', 'generator.md', 'planner.md', 'security-reviewer.md',
+  'evaluator.md', 'generator.md', 'implementer.md', 'planner.md', 'security-reviewer.md',
   'codebase-explorer.md',
 ];
 const BROWNFIELD_AGENTS = [...CORE_AGENTS];

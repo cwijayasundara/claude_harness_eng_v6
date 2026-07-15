@@ -31,7 +31,7 @@ test('generator follows team-policy for multi-story groups (team vs solo_sequent
   assert.match(g, /team-policy/i, 'references team-policy');
   assert.match(g, /solo_sequential/i, 'allows solo sequential for tiny groups');
   assert.match(g, /one teammate per story/i, 'still teams when policy says team');
-  assert.match(g, /subagent_type:\s*`?generator`?/i, 'teammates are generator subagents');
+  assert.match(g, /subagent_type:\s*`?implementer`?/i, 'teammates are implementer (worker) subagents');
   assert.match(g, /iteration-log\.md/, 'logs team_mode as execution evidence');
 });
 
@@ -50,4 +50,15 @@ test('the /auto orchestrator delegates generation and verification to separate a
   const auto = readSkillCorpus('auto');
   assert.match(auto, /delegated to the \*\*generator\*\*/i, 'generation is delegated, not done inline');
   assert.match(auto, /delegated to the \*\*evaluator\*\*/i, 'verification is delegated to a distinct agent');
+});
+
+// The /auto team-execution template has its OWN copy of the spawn instruction —
+// it must agree with generator.md that per-story teammates are `implementer`
+// (the cheap-worker tier). A leftover `generator` per-story spawn here silently
+// defeats the fusion preset on the primary autonomous path while generator.md's
+// wiring test still passes. Pin both copies.
+test('the /auto team-execution template spawns per-story teammates as implementer', () => {
+  const auto = readSkillCorpus('auto');
+  assert.match(auto, /subagent_type=implementer\)\s*per story/i, 'per-story teammates spawn as implementer');
+  assert.doesNotMatch(auto, /subagent_type=generator\)\s*per story/i, 'no leftover generator per-story spawn');
 });

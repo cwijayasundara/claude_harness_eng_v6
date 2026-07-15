@@ -13,7 +13,7 @@ Concretely:
 1. Read specs/stories/ for every story in this group.
 2. Read specs/design/component-map.md and build the micro-DAG (Step 2.5).
 3. Decide team_mode via team-policy (solo | solo_sequential | team). Log the decision + reason to .claude/state/iteration-log.md.
-4. If team: create `.claude/state/parallel-implement.lock` (empty file) and set env `HARNESS_PARALLEL_AGENTS=1` for the team window so pre-bash git-safety is active; spawn one Agent(subagent_type=generator) per story — parallel Phase 1, then Phase 2 after Phase 1 commits. You are dispatching, not implementing (except designated Phase 3 integrator). Remove the lock when the team finishes.
+4. If team: create `.claude/state/parallel-implement.lock` (empty file) and set env `HARNESS_PARALLEL_AGENTS=1` for the team window so pre-bash git-safety is active; spawn one Agent(subagent_type=implementer) per story — parallel Phase 1, then Phase 2 after Phase 1 commits. You are dispatching, not implementing (except designated Phase 3 integrator). Remove the lock when the team finishes.
 5. If solo_sequential: implement stories one-by-one in this context — do NOT spawn per-story teammates.
 6. If solo (N=1): implement yourself.
 7. After implementation, run the validation gate (pytest, ruff, mypy/tsc, coverage) and hand off to the evaluator.
@@ -78,18 +78,20 @@ Roles are assigned by **capability tier**, not a specific model — no prompt in
 | `/auto` orchestrator | top-capability | Judgment, architectural decisions |
 | Evaluator | top-capability | Skeptical verification |
 | Design critic | top-capability | Subjective visual judgment |
-| Generator lead | cost-efficient | Coordination, lower cost |
-| Generator teammates | cost-efficient | Mechanical implementation |
+| Generator (team lead) | cost-efficient | Coordination, brief-writing, integration |
+| Implementer (team worker) | cost-efficient; **cheap** on `fusion` | Per-story mechanical implementation — spawned as `subagent_type: implementer` |
 | Security reviewer | top-capability | Contextual vuln reasoning + adversarial find-then-refute |
 
 - **top-capability** = Opus 4.8.
-- **cost-efficient** = Sonnet 4.6.
+- **cost-efficient** = Sonnet 5.
+- **cheap** = Haiku 4.5 (worker tier — only on the `fusion` preset, where the worker is cheaper than its lead).
 
 The orchestrator runs on the **session model** (whatever `/model` is set to — Opus 4.8). Subagent models are pinned per agent in `.claude/agents/<name>.md` frontmatter (`model:`), stamped from the cost-posture preset in `project-manifest.json` → `execution.model_tier` (default `balanced`):
 
 - **cost** — Sonnet generation, Opus judgment.
 - **balanced** (default) — identical pins to `cost` today (top tier is a single model, Opus 4.8); kept as a distinct posture name for per-project re-tuning.
 - **max-quality** — generation bumped to Opus 4.8; everything else already Opus, codebase-explorer stays Sonnet.
+- **fusion** — cheap worker under a smart lead: generator lead stays Sonnet 5, the `implementer` team worker drops to Haiku 4.5 (the only preset where the worker is cheaper than the lead), judgment Opus. On every other preset the implementer pins to the same model as the generator, so the role changes no behavior unless `fusion` is selected.
 
 Re-stamp after editing the manifest: `node .claude/scripts/model-tier.js <preset> --apply .claude/agents`. Full rationale + decision rule: `docs/model-allocation.md`.
 
