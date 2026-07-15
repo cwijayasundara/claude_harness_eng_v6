@@ -1,0 +1,12 @@
+{
+  "cluster_id": "test/ab-report.test.js",
+  "member_paths": [
+    "test/ab-report.test.js"
+  ],
+  "content_hashes": {
+    "test/ab-report.test.js": "5977ad4e5c885a67"
+  },
+  "content_hash": "103cafca4aaa922f",
+  "generated_at": "2026-07-15T15:29:03.033Z",
+  "stale": false
+}
