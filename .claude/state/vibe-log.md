@@ -53,3 +53,11 @@ Append one micro-contract per `/vibe` change. Keep entries short and factual.
 - Out of scope: `.claude/scripts/loop-health.js` orchestrator (unchanged — still report-only, exit 0), `budget-state.js`/`cost-report.js` (only referenced), any threshold on the ratio beyond the documented attention line (interpretation stays the /retro recommender's job), no new telemetry fields.
 - Verification: `node --test test/loop-health.test.js` (RED first, then GREEN); `git diff --check`; `node .claude/scripts/local-regression-gate.js`.
 - Rollback: `git checkout -- .claude/hooks/lib/loop-health.js test/loop-health.test.js`
+
+## Micro-Contract — cost-per-outcome instrument (2026-07-15T13:02:17.398Z)
+- Class: CV1 (new report-only tooling script + test, TDD-first; no product runtime behavior changed)
+- Change: Add .claude/scripts/cost-per-outcome.js + test/cost-per-outcome.test.js computing cost-per-passed-story per group and run-total; reverse-infer tier label from model pins. Report-only, exit 0 always, --json flag, writes .claude/state/cost-per-outcome.json.
+- In scope: the two new files only. Reuse receiptCost (budget-state), readRunReceipts/readFeatures/tallyFeatures (pipeline-state-readers), PRESETS/OPUS/SONNET5/HAIKU (model-tier). Never divide by zero (0 passed -> "n/a"). Clean no-runs/no-features status. Two honest caveats.
+- Out of scope: wiring into /status or pipeline-snapshot, multi-preset A/B run, current-story marker fidelity, scaffold preset/agent changes, new implementer agent.
+- Verification: node .claude/scripts/run-compact.js --kind test -- node --test test/cost-per-outcome.test.js ; git diff --check ; local-regression-gate.
+- Rollback: delete the two new files (no existing files modified).
