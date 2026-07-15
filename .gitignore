@@ -54,6 +54,9 @@ symphony_clone/logs/
 .claude/state/nav-graph-index.json
 .claude/state/context-pack-last.json
 .claude/state/nav-telemetry-summary.json
+# Token-governor compact-runner caches (run-compact.js) — transient
+.claude/state/context-cache/
+.claude/state/tool-output/
 !.claude/templates/state-seeds/pending-reviews.jsonl
 test/e2e/results/*
 !test/e2e/results/.gitkeep
