@@ -83,7 +83,7 @@ function observabilityBlock(enabled) {
 function tokenGovernorBlock() {
   return {
     enabled: true,
-    mode: 'advisory',
+    mode: 'enforced',
     living_navigation: true,
     context_search_required: true,
     max_source_read_lines: 300,
