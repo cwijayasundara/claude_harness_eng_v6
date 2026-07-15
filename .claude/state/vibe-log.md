@@ -61,3 +61,10 @@ Append one micro-contract per `/vibe` change. Keep entries short and factual.
 - Out of scope: wiring into /status or pipeline-snapshot, multi-preset A/B run, current-story marker fidelity, scaffold preset/agent changes, new implementer agent.
 - Verification: node .claude/scripts/run-compact.js --kind test -- node --test test/cost-per-outcome.test.js ; git diff --check ; local-regression-gate.
 - Rollback: delete the two new files (no existing files modified).
+
+## Micro-Contract — ab-report.js (Phase-2 A/B comparison)
+- Change: New report-only deterministic script `.claude/scripts/ab-report.js` + `test/ab-report.test.js` (TDD-first). Compares two build arms (armA, armB roots) on the article bar: cheaper per passed story AT EQUAL-OR-BETTER score.
+- In scope: read each arm's `.claude/state/cost-per-outcome.json` (run_total.*, tier.label) + `specs/retro/loop-health.json` (signals.telemetry.turns/subagents → turns_per_dispatch, div-0 guarded); per-arm table, deltas (abs+%), verdict object; honest guards (arm-missing, 0-passed inconclusive both single & both-arm); `--json`, writes `.claude/state/ab-report.json`; exit 0 always.
+- Out of scope: running builds, session-filtering cost-per-outcome.js, fixture, runbook, scaffolding project dirs (separate Phase-2 pieces). No cost/outcome math reimplementation — consume artifacts.
+- Verification: node .claude/scripts/run-compact.js --kind test -- node --test test/ab-report.test.js ; git diff --check ; each file < 300-line hard gate, funcs < 30.
+- Rollback: delete the two new files.
