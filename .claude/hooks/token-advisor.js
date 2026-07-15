@@ -9,7 +9,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { resolveProjectDir, readHookInput, reportFailure, countLines } = require('./lib/common');
+const { resolveProjectDir, runHook, countLines } = require('./lib/common');
 
 const RECEIPT_NAME = 'context-pack-last.json';
 const DEFAULT_RECEIPT_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4 hours
@@ -214,24 +214,20 @@ function unconstrainedSearchWarning(projectDir, command, cfg) {
   };
 }
 
-function adviseTokenUsage({ projectDir, input }) {
-  if (process.env.HARNESS_TOKEN_GOVERNOR === 'off') return { decision: 'ok' };
-  const cfg = tokenConfig(projectDir);
-  if (!cfg.enabled || cfg.mode === 'off') return { decision: 'ok' };
-  const toolName = input.tool_name || '';
-  const ti = input.tool_input || {};
-
-  // Prefer the more specific context-search warning when both could apply
-  let warning = null;
+// Pick the single most-specific warning for this tool call (Read prefers the
+// context-search warning over the broad-read one when both apply).
+function selectWarning(projectDir, toolName, ti, cfg) {
   if (toolName === 'Read') {
-    warning = contextSearchWarning(projectDir, ti, cfg) || broadReadWarning(projectDir, ti, cfg);
+    return contextSearchWarning(projectDir, ti, cfg) || broadReadWarning(projectDir, ti, cfg);
   }
   if (toolName === 'Bash') {
-    warning = unconstrainedSearchWarning(projectDir, ti.command, cfg)
+    return unconstrainedSearchWarning(projectDir, ti.command, cfg)
       || verboseCommandWarning(ti.command, cfg);
   }
-  if (!warning) return { decision: 'ok' };
-  appendWarning(projectDir, warning);
+  return null;
+}
+
+function emitNavEvent(projectDir, warning) {
   try {
     const { appendNavEvent } = require('../scripts/nav-telemetry');
     appendNavEvent(projectDir, {
@@ -241,28 +237,42 @@ function adviseTokenUsage({ projectDir, input }) {
       path: warning.path || null,
     });
   } catch (_) { /* fail open */ }
+}
+
+function decisionFromWarning(warning, cfg) {
   const enforced = cfg.mode === 'enforced' || cfg.mode === 'enforce';
-  if (enforced) {
-    const blockMsg = warning.message
-      .replace(/TOKEN ADVISORY:/g, 'TOKEN GOVERNOR (enforced):')
-      .replace(/Prefer compact execution:/, 'Blocked — use compact execution:');
-    return { decision: 'block', message: blockMsg, warning };
-  }
-  return { decision: 'warn', message: warning.message, warning };
+  if (!enforced) return { decision: 'warn', message: warning.message, warning };
+  const blockMsg = warning.message
+    .replace(/TOKEN ADVISORY:/g, 'TOKEN GOVERNOR (enforced):')
+    .replace(/Prefer compact execution:/, 'Blocked — use compact execution:');
+  return { decision: 'block', message: blockMsg, warning };
+}
+
+function adviseTokenUsage({ projectDir, input }) {
+  if (process.env.HARNESS_TOKEN_GOVERNOR === 'off') return { decision: 'ok' };
+  const cfg = tokenConfig(projectDir);
+  if (!cfg.enabled || cfg.mode === 'off') return { decision: 'ok' };
+  const warning = selectWarning(projectDir, input.tool_name || '', input.tool_input || {}, cfg);
+  if (!warning) return { decision: 'ok' };
+  appendWarning(projectDir, warning);
+  emitNavEvent(projectDir, warning);
+  return decisionFromWarning(warning, cfg);
 }
 
 if (require.main === module) {
-  try {
-    const input = readHookInput();
+  runHook('token-advisor', (input) => {
     const projectDir = resolveProjectDir(path.dirname(path.resolve(__filename)));
     const result = adviseTokenUsage({ projectDir, input });
-    if (result.decision === 'warn' || result.decision === 'block') {
-      process.stdout.write(result.message);
+    if (result.decision === 'block') {
+      // Exit-2 feedback MUST go on stderr: Claude Code surfaces a blocking hook's
+      // stderr to the model, and reports the bare "hook error: No stderr output"
+      // when a hook exits 2 with an empty stderr. Writing the explanation only to
+      // stdout (the old behavior) made every enforced block look like a crash.
+      process.stderr.write(result.message);
+      process.exit(2);
     }
-    if (result.decision === 'block') process.exit(2);
-  } catch (err) {
-    reportFailure('token-advisor', err);
-  }
+    if (result.decision === 'warn') process.stdout.write(result.message);
+  });
 }
 
 module.exports = {

@@ -15,7 +15,7 @@
 // HARNESS_PREFIX_EDIT=1 (prompt-cache prefix files only).
 
 const path = require('path');
-const { resolveProjectDir, readHookInput, realResolve, isWriteInScope, reportFailure } = require('./lib/common');
+const { resolveProjectDir, runHook, realResolve, isWriteInScope } = require('./lib/common');
 const { isHarnessRepo, machineryViolation } = require('./lib/trust-boundary');
 const { prefixCacheViolation, prefixCacheBlockMessage } = require('./lib/prefix-cache');
 const { isProtectedEnvFile } = require('./lib/secrets');
@@ -35,17 +35,10 @@ function isDeviceSink(target) {
   return target === '/dev/null' || target.startsWith('/dev/');
 }
 
-function checkTarget(projectDir, target, command, opts) {
-  if (isDeviceSink(target)) return;
-  // Targets are resolved relative to the project dir — the cwd Claude Code runs
-  // Bash in. realResolve handles symlinks and not-yet-existing paths.
-  const abs = path.isAbsolute(target) ? target : path.join(projectDir, target);
-  const resolved = realResolve(abs);
-
-  if (!isWriteInScope(projectDir, resolved)) {
-    block(`BLOCKED: Bash write outside the project directory: ${resolved}\n` +
-      `(from: ${command})\nFix: write inside the project, or use Write/Edit so the gate can verify the change.\n`);
-  }
+// The machinery / prompt-cache-prefix / protected-env subset of the target
+// checks. Split out of checkTarget so each function stays within the harness's
+// own function-length limit and each check is testable in isolation.
+function checkProtectedTarget(projectDir, resolved, command, opts) {
   if (opts.protect && !opts.harness) {
     const rel = machineryViolation(realResolve(projectDir), resolved);
     if (rel) {
@@ -69,8 +62,21 @@ function checkTarget(projectDir, target, command, opts) {
   }
 }
 
-try {
-  const input = readHookInput();
+function checkTarget(projectDir, target, command, opts) {
+  if (isDeviceSink(target)) return;
+  // Targets are resolved relative to the project dir — the cwd Claude Code runs
+  // Bash in. realResolve handles symlinks and not-yet-existing paths.
+  const abs = path.isAbsolute(target) ? target : path.join(projectDir, target);
+  const resolved = realResolve(abs);
+
+  if (!isWriteInScope(projectDir, resolved)) {
+    block(`BLOCKED: Bash write outside the project directory: ${resolved}\n` +
+      `(from: ${command})\nFix: write inside the project, or use Write/Edit so the gate can verify the change.\n`);
+  }
+  checkProtectedTarget(projectDir, resolved, command, opts);
+}
+
+runHook('pre-bash-gate', (input) => {
   if ((input.tool_name || '') !== 'Bash') process.exit(0);
   const command = (input.tool_input && input.tool_input.command) || '';
   if (typeof command !== 'string' || !command) process.exit(0);
@@ -90,8 +96,4 @@ try {
   for (const target of extractWriteTargets(command)) {
     checkTarget(projectDir, target, command, opts);
   }
-} catch (err) {
-  reportFailure('pre-bash-gate', err);
-}
-
-process.exit(0);
+});

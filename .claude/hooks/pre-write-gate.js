@@ -11,7 +11,7 @@
 // Escape hatches: HARNESS_TDD_GATE=off, HARNESS_PATTERN_BLOCK=off.
 
 const path = require('path');
-const { TRACKED_EXTS, resolveProjectDir, readHookInput, isSkippedPath, countLines, realResolve, reportFailure, isWriteInScope } =
+const { TRACKED_EXTS, resolveProjectDir, runHook, isSkippedPath, countLines, realResolve, isWriteInScope } =
   require('./lib/common');
 const { finalContent, insertedContent } = require('./lib/simulate');
 const { scanSecrets, secretScanExempt, isProtectedEnvFile } = require('./lib/secrets');
@@ -107,8 +107,7 @@ function checkTdd(projectDir, filePath) {
   );
 }
 
-try {
-  const input = readHookInput();
+runHook('pre-write-gate', (input) => {
   const toolName = input.tool_name || '';
   const ti = input.tool_input || {};
   const filePath = ti.file_path || '';
@@ -135,8 +134,4 @@ try {
     if (pf.decision === 'block') block(pf.message);
     if (pf.decision === 'note') process.stdout.write(pf.message);
   }
-} catch (err) {
-  reportFailure('pre-write-gate', err);
-}
-
-process.exit(0);
+});

@@ -8,7 +8,7 @@ const os = require('os');
 const { execFileSync } = require('child_process');
 const { appendLedger, pushSnapshot, readSkillCatalog, seedLedgerFromRuns } = require('../scripts/telemetry-memory');
 const { parseBuildInvocation } = require('../scripts/build-lane');
-const { readHookInput, reportFailure } = require('./lib/common');
+const { readHookInputAsync, reportFailure } = require('./lib/common');
 const { inferSkills } = require('./lib/record-skills');
 const { resolveAgentModel, extractUsageFields } = require('./lib/agent-model');
 
@@ -95,7 +95,7 @@ function shouldSkipCommandTelemetry(command) {
 
 (async () => {
   try {
-    const input = readHookInput();
+    const input = await readHookInputAsync();
     const eventKind = (input.hook_event_name || '').toString();
     const toolName = input.tool_name || '';
 

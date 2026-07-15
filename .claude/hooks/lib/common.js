@@ -40,7 +40,59 @@ function readHookInput() {
   // fails with ENXIO on Linux when stdin is a spawned pipe (which is how Claude
   // Code — and the tests — feed hook events), making every gate fail open. fd 0
   // reads the already-open descriptor and works for pipes on all platforms.
+  //
+  // WARNING: this is a BLOCKING read — it waits for EOF on fd 0. When the parent
+  // holds the pipe open a moment longer than expected (which happens under load
+  // on this checkout: iCloud sync + many concurrent hook spawns), the read can
+  // outlast the hook's external timeout and Claude Code kills the process
+  // mid-read: non-zero exit, no stderr, and the caller's try/catch never runs so
+  // nothing is logged ("hook error: No stderr output"). Entry points should use
+  // runHook / readHookInputAsync so a slow pipe degrades to a clean fail-open.
   return JSON.parse(fs.readFileSync(0, 'utf8'));
+}
+
+function detachStdin(stdin, timer) {
+  clearTimeout(timer);
+  stdin.removeAllListeners('data');
+  stdin.removeAllListeners('end');
+  stdin.removeAllListeners('error');
+  try { stdin.pause(); } catch (err) { void err; }
+}
+
+// Bounded, non-blocking stdin read for hook entry points. Reads the event JSON
+// via the stream (event-driven, so the timer fires even while we wait) and
+// rejects instead of hanging if EOF never arrives. The timeout sits well under
+// the tightest external hook timeout (5s), so a stalled pipe fails open
+// in-process rather than being hard-killed with no stderr and no log entry.
+function readHookInputAsync(timeoutMs = 4000) {
+  return new Promise((resolve, reject) => {
+    const stdin = process.stdin;
+    let data = '';
+    const fail = (e) => { detachStdin(stdin, timer); reject(e); };
+    const timer = setTimeout(() => fail(new Error('readHookInput: stdin read timed out')), timeoutMs);
+    stdin.setEncoding('utf8');
+    stdin.on('data', (c) => { data += c; });
+    stdin.on('end', () => {
+      detachStdin(stdin, timer);
+      try { resolve(JSON.parse(data)); } catch (e) { reject(e); }
+    });
+    stdin.on('error', fail);
+    stdin.resume();
+  });
+}
+
+// Uniform hook entry point: read the event (bounded) and run the handler with a
+// GUARANTEED fail-open — any read timeout, parse error, or handler throw is
+// logged and the process still exits 0, because a broken hook must never block
+// the tool it guards. A handler that means to BLOCK calls process.exit(2) itself.
+function runHook(hookName, handler) {
+  readHookInputAsync()
+    .then((input) => Promise.resolve(handler(input)))
+    .then(() => process.exit(0))
+    .catch((err) => {
+      reportFailure(hookName, err);
+      process.exit(0);
+    });
 }
 
 function isSkippedPath(filePath) {
@@ -115,6 +167,6 @@ function reportFailure(hookName, err) {
 
 module.exports = {
   TRACKED_EXTS, SKIP_DIRS, findProjectDir, resolveProjectDir,
-  readHookInput, isSkippedPath, countLines, realResolve, reportFailure,
-  projectMemoryDir, isWriteInScope,
+  readHookInput, readHookInputAsync, runHook, isSkippedPath, countLines,
+  realResolve, reportFailure, projectMemoryDir, isWriteInScope,
 };
