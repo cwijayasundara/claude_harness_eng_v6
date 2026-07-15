@@ -15,7 +15,7 @@ Per-arm receipt filtering **cannot** scope an arm: `build-chain.js` spawns a fre
 - `ANTHROPIC_API_KEY` set (`build-chain.js` shells out to `claude -p`).
 - A **budget cap** per arm: `BUILD_CHAIN_MAX_BUDGET_USD` (set it — a runaway build is real money).
 - The harness available as a plugin to each arm dir: point `HARNESS_PLUGIN_DIR` at this repo's control plane (`.claude`), the same way the `live` e2e layers do.
-- **Fixture:** reuse a small `live` e2e PRD (e.g. the one `test/e2e/harness-auto-run.test.js` feeds `freshProject`) as the story-group input — no new fixture needed. Both arms build the **same** PRD.
+- **Fixture:** `docs/fusion-ab-prd.md` (Personal Finance Ledger) is the recommended larger fixture — it fans out into foundation/domain/API/reporting/budgets/UI clusters, so the implementer worker is exercised enough to separate the arms. The tiny `test/e2e/fixtures/sample-prd.md` (bookmarks) works too but may not produce a measurable delta. Both arms build the **same** PRD.
 - The arms **cannot overlap** (in-place stamp + cache rule): run them serially, or in two clones.
 
 ## One-command orchestration (`ab-run.js`)
