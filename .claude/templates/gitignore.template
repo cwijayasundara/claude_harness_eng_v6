@@ -45,6 +45,8 @@ package-lock.json
 # Harness state (not source)
 .claude/runs/
 .claude/state/archive/
+.claude/state/context-cache/
+.claude/state/tool-output/
 .claude/state/lane-router-last.txt
 .claude/state/last-drift-scan.txt
 .claude/tdd-guard/
