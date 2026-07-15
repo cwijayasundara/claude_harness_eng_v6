@@ -1156,6 +1156,32 @@
         <div class="label">Do not copy as product default</div>
         <p>64 concurrent agents for days, always-on dual review for one-line fixes, core fuzz farms, or cgroup isolation. Keep dual review <strong>tiered</strong>; merge stays <strong>human-owned</strong>. Detail: <a href="./proposals/bun-adversarial-mechanical-loops.md">bun-adversarial-mechanical-loops.md</a>.</p>
       </div>
+
+      <h3 id="cost-outcome">5.5 Cost is an outcome metric, not a token metric (2.5)</h3>
+      <p class="lede">A per-token-cheaper model can be <em>dearer per shipped outcome</em>. The harness measures the outcome, then routes.</p>
+      <p>Cognition’s “Making Fable cheaper than Opus” makes the point sharply: swapping in a cheaper model only pays off if it does not spend the saving back in extra evaluator / self-heal cycles. So the Claude Harness Engine v5 (minor <strong>2.5</strong>) turns model choice into a <strong>measured</strong> decision rather than a vibe:</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Instrument</th><th>What it does</th><th>Where</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Cost-per-passed-story benchmark</strong></td><td>Σ per-spawn receipts ÷ evaluator-passed stories — cost per <em>outcome</em>, not tokens burned</td><td><code>cost-per-outcome.js</code></td></tr>
+            <tr><td><strong><code>fusion</code> model-tier preset</strong></td><td>“Cheap worker under a smart lead”: Sonnet 5 generator lead, <strong>Haiku 4.5</strong> per-story <code>implementer</code> worker, Opus judgment — the only preset where the teammate is cheaper than the lead</td><td><code>model-tier.js</code></td></tr>
+            <tr><td><strong>A/B harness + verdict rule</strong></td><td>Runs <code>balanced</code> vs <code>fusion</code> on the same PRD in isolated arms; the cheaper arm wins <em>only if</em> its pass-rate holds equal-or-better — cheaper-but-worse is “no clear winner”</td><td><code>ab-run.js</code> / <code>ab-report.js</code> · <a href="./fusion-ab-runbook.md">runbook</a></td></tr>
+            <tr><td><strong>Lead-turn efficiency signal</strong></td><td>Turns-per-dispatch — surfaces a lead that thrashes instead of delegating, which erases any cheap-worker saving</td><td>loop-health</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>The same 2.5 wave hardened two other control-plane instruments in the same spirit — a sensor or a budget lever that never bites is theater:</p>
+      <ul>
+        <li><strong>Biting meta-sensor</strong> — loop-health flags commit gates that have <em>never fired</em> or <em>never blocked</em>, so dead sensors get retired or fixed instead of scoring points for nothing.</li>
+        <li><strong>Token governor now enforced by default</strong> — broad repo reads without a recent context pack are blocked (not merely warned), forcing living-DeepWiki navigation; the security reviewer is diff-scoped so a review no longer greps the whole codebase.</li>
+      </ul>
+      <div class="callout info">
+        <div class="label">Routing, again</div>
+        <p>If <code>fusion</code> wins on a portfolio, the next step is a <strong>complexity router</strong>: send small/medium stories to the cheap worker, keep auth / schema-migration / low-plan-confidence / ambiguous-AC stories on the stronger one. Same doctrine as Z/L — place the <em>task</em>, now including which model tier proves it cheapest per outcome.</p>
+      </div>
     </section>
 
     <!-- 6 SWEET SPOT -->
@@ -1260,7 +1286,7 @@
         <div class="card">
           <div class="tag ok">Prefer</div>
           <h4>Control metrics</h4>
-          <p>Escape defects · Z/L score on PRs · time-to-green after AC freeze · glossary coverage · Z-band review compliance · unread-agent incidents.</p>
+          <p>Escape defects · Z/L score on PRs · time-to-green after AC freeze · <strong>cost-per-passed-story</strong> · glossary coverage · Z-band review compliance · unread-agent incidents.</p>
         </div>
         <div class="card">
           <div class="tag danger">Avoid as north stars</div>
@@ -1383,6 +1409,11 @@
           <h4>Identity concurrency</h4>
           <p>64 agents because Bun did.</p>
           <div class="fix">Fix: budget caps + tiered review + oracles</div>
+        </div>
+        <div class="fail-card">
+          <h4>Cheap-worker fallacy</h4>
+          <p>Swap to a per-token-cheaper model; it burns the saving back in extra evaluator / self-heal cycles.</p>
+          <div class="fix">Fix: A/B on cost-per-passed-story; adopt only if score holds</div>
         </div>
       </div>
     </section>
@@ -1515,7 +1546,7 @@ Is this a bulk mechanical transform (port / mass rewrite)?
     </section>
 
     <footer class="page-foot">
-      <p>Disposable research / operating narrative for engineering leadership (v1.1 · 2026-07-12 · harness companion 2.4.0). Not a product runtime artifact; does not go through the generator/evaluator shipping loop. Update when placement policy, research baselines, or harness control practices change.</p>
+      <p>Disposable research / operating narrative for engineering leadership (v1.2 · 2026-07-15 · harness companion 2.5.0). Not a product runtime artifact; does not go through the generator/evaluator shipping loop. Update when placement policy, research baselines, or harness control practices change.</p>
       <p><a href="#top">↑ Back to top</a> · <a href="./harness-guide.html">Harness field guide</a> · <a href="./agentic-engineering-whitepaper.md">Markdown source</a></p>
     </footer>
   </div>

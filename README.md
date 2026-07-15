@@ -2,7 +2,7 @@
 
 A Claude Code plugin for building and changing software with a generator/evaluator loop, ratcheting quality gates, and explicit human review before merge.
 
-Current version: `2.4.0`
+Current version: `2.5.0`
 
 **Field guide (navigable HTML):** open [docs/harness-guide.html](docs/harness-guide.html) in a browser — architecture diagrams, lane picker, GAN/ratchet under the covers, multi-dimension **vs Devin** comparison, playbooks, and glossary. Offline; no build step.
 
@@ -170,6 +170,22 @@ Default budget caps by model tier (`.claude/scripts/budget-state.js`):
 
 Cost figures are surfaced estimates (Σ per-spawn receipts × tier rate), not billing data. A first `--auto` run on `balanced` that stops after ~90 minutes with `BUDGET` in `next_action` is behaving as designed — resume it or merge what's done.
 
+## Cost per outcome (model tiers & the `fusion` preset)
+
+Model choice is a **measured** decision, not a vibe: a per-token-cheaper worker can be *dearer per shipped story* if it needs more evaluator/self-heal cycles. Model-tier presets (`node .claude/scripts/model-tier.js <preset>`) pin one model per agent role — generation is high-volume, judgment (evaluator + reviewers + planner) stays on Opus 4.8 across every posture:
+
+| Preset | Generator (lead) | `implementer` (worker) | Explorer | Judgment |
+|---|---|---|---|---|
+| `cost` / `enterprise` | Sonnet 5 | Sonnet 5 | Haiku 4.5 | Opus 4.8 |
+| `balanced` (default) | Sonnet 5 | Sonnet 5 | Sonnet 5 | Opus 4.8 |
+| `max-quality` | Opus 4.8 | Opus 4.8 | Sonnet 5 | Opus 4.8 |
+| **`fusion`** | Sonnet 5 | **Haiku 4.5** | Sonnet 5 | Opus 4.8 |
+
+`fusion` is the only preset where the per-story **worker is cheaper than the lead** ("cheap worker under a smart lead"). Whether it actually lowers cost is proven, not assumed:
+
+- `node .claude/scripts/cost-per-outcome.js --json` — **cost-per-passed-story** (Σ receipts ÷ evaluator-passed stories), the metric that matters instead of tokens burned.
+- `node .claude/scripts/ab-run.js <PRD> <balanced-dir> <fusion-dir>` — dry-run by default; `--execute --budget <usd>` runs both arms serially and `ab-report.js` returns a verdict. The cheaper arm wins **only if** its pass-rate holds equal-or-better; cheaper-but-worse is "no clear winner". Full protocol: [docs/fusion-ab-runbook.md](docs/fusion-ab-runbook.md).
+
 ## Existing-Code Flow
 
 For sprint-by-sprint product work on an existing repo, start with `/feature "<request>"`.
@@ -256,12 +272,14 @@ When agents generate code, humans need **proof** and a **map** — not alphabeti
 | `npm run ask -- "where is auth?"` | Ask the codebase (cited, slice-level) |
 | `npm run observability-gate -- --staged` | Static logging/exception ratchet |
 | `npm run perf-smell -- --staged` | N+1 / sync-in-async / unbounded-load smells |
+| `npm run custom-sensors` | Project-defined commit-cadence sensors (`project-manifest.json#custom_sensors`, normalized sensor schema) |
+| `npm run loop-health` | Loop-health signals, incl. the **biting meta-sensor** (flags commit gates that never fire / never block) and lead-turn efficiency |
 | `npm run readiness-digest` | Weekly ops view of agent-readiness + card freshness |
 
 ## Token Usage Optimizer
 
-The lean scaffold now ships a scaffold-native token-saving layer, enabled by
-default in `project-manifest.json#token_governor`:
+The lean scaffold ships a scaffold-native token-saving layer, **enforced by
+default** in `project-manifest.json#token_governor` (`mode: "enforced"`):
 
 - Living navigation from `/scaffold`: placeholder or fresh `code-graph.json`,
   `symbol-map.md`, and deterministic DeepWiki, kept current as code changes.
@@ -289,9 +307,12 @@ node .claude/scripts/context-retrieve.js <hash> --query "auth token"
 node .claude/scripts/pipeline-status.js status
 ```
 
-The optimizer is advisory by default. It suggests cheaper paths and records
-warnings, but it does not block work unless a future project explicitly enables
-enforced mode. See [docs/token-governor.md](docs/token-governor.md) and
+The optimizer is **enforced by default**: a broad repo search or source read
+without a recent context pack is blocked (not merely warned), and the
+`security-reviewer` is diff-scoped so a review no longer greps the whole
+codebase. `token-advisor.js` still warns rather than blocks on softer signals.
+Dial back to advisory with `token_governor.mode: "advisory"` in
+`project-manifest.json`. See [docs/token-governor.md](docs/token-governor.md) and
 [docs/token-usage-optimizer-design.md](docs/token-usage-optimizer-design.md).
 
 ## Optional Power-Ups
@@ -332,6 +353,7 @@ E2E logs land in `test/e2e/results/logs/`; summary JSON lands at `test/e2e/resul
 | Control-system registry | [HARNESS.md](HARNESS.md) · [harness-manifest.json](harness-manifest.json) |
 | PRD format | [docs/prd-format.md](docs/prd-format.md) |
 | Model/cost posture | [docs/model-allocation.md](docs/model-allocation.md) |
+| Cost-per-outcome A/B (`fusion` preset) | [docs/fusion-ab-runbook.md](docs/fusion-ab-runbook.md) |
 | Enterprise token cost | [docs/token-cost-playbook.md](docs/token-cost-playbook.md) |
 | Behavior preservation | [docs/behavior-preservation.md](docs/behavior-preservation.md) |
 | Sensor arbitration | [docs/sensor-arbitration.md](docs/sensor-arbitration.md) |
