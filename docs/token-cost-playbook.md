@@ -16,8 +16,8 @@ Principles (Lance Martin / Anthropic / Coinbase):
 |------|--------|--------|
 | `execution.model_tier` | `cost` (alias `enterprise`) | `project-manifest.json` |
 | Agent pins | Sonnet gen, Haiku explorer, Opus judgment | `node .claude/scripts/model-tier.js cost --apply .claude/agents` |
-| `token_governor.mode` | `advisory` default; `enforced` for org policy | `project-manifest.json#token_governor` |
-| Budgets | Tier defaults (cost: 30m / 80 agents / ~$8) | `execution.budget` or `/build --budget` |
+| `token_governor.mode` | `enforced` (default since 2026-07; blocks broad reads + unconstrained searches, redirects verbose cmds to `run-compact.js`). Set `advisory` to only warn. | `project-manifest.json#token_governor` |
+| Budgets | Unstamped → tier defaults (cost: 30m / 80 agents / ~$8). Scaffolded manifests carry a `execution."// budget"` doc key showing the lever. | `execution.budget` or `/build --budget` |
 | Advisor cap | `execution.advisor_max_per_run: 3` | optional manifest field |
 
 ## Measure first
@@ -65,7 +65,7 @@ node -e "console.log(require('./.claude/scripts/team-policy').decideTeamMode({st
 }
 ```
 
-Fail-open without symbol ranges. Escape: `HARNESS_TOKEN_GOVERNOR=off` or `mode: off`.
+Fail-open without symbol ranges. Escape: set `HARNESS_TOKEN_GOVERNOR=off` **in the session environment** (before launching `claude`) or `mode: off` in the manifest. An inline `HARNESS_TOKEN_GOVERNOR=off <cmd>` prefix does **not** bypass — the PreToolUse hook reads the session env, not the child command's. For verbose commands under `enforced`, run them through `run-compact.js` (below) rather than disabling the governor.
 
 Prefer:
 
