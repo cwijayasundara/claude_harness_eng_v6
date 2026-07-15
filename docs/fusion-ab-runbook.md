@@ -18,7 +18,23 @@ Per-arm receipt filtering **cannot** scope an arm: `build-chain.js` spawns a fre
 - **Fixture:** reuse a small `live` e2e PRD (e.g. the one `test/e2e/harness-auto-run.test.js` feeds `freshProject`) as the story-group input — no new fixture needed. Both arms build the **same** PRD.
 - The arms **cannot overlap** (in-place stamp + cache rule): run them serially, or in two clones.
 
-## Per-arm protocol
+## One-command orchestration (`ab-run.js`)
+
+Once both arm dirs are **scaffolded** (see below — that step stays manual, it's the model-driven `/scaffold` flow), `ab-run.js` runs the whole deterministic protocol: stamp each arm's own control plane, drive each arm's build with the budget cap, snapshot, and compare.
+
+```bash
+# DRY-RUN (default): print the exact plan, validate prereqs, spend/mutate nothing.
+node .claude/scripts/ab-run.js <PRD> <BALANCED_DIR> <FUSION_DIR>
+
+# EXECUTE: run both arms serially (billed). --budget and ANTHROPIC_API_KEY required.
+node .claude/scripts/ab-run.js <PRD> <BALANCED_DIR> <FUSION_DIR> --budget 10 --execute
+```
+
+Guardrails: dry-run is the default (nothing runs without `--execute`); `--execute` refuses without a positive `--budget` and `ANTHROPIC_API_KEY`; each arm's `HARNESS_PLUGIN_DIR` points at its **own** stamped `.claude` so the presets can't collide; and if a preset **stamp** fails, that arm's build is **skipped** (no spend on a wrong-model arm) and the run is marked VOID. Writes `.claude/state/ab-run.json`.
+
+The manual per-arm steps below are what `ab-run.js` automates — run them by hand only to debug an arm.
+
+## Per-arm protocol (manual / underlying)
 
 Run this once per arm. `<ARM>` ∈ {`balanced`, `fusion`}; `<ARM_DIR>` is that arm's isolated project dir; `<PRD>` is the shared PRD path.
 
