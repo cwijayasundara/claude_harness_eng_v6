@@ -42,12 +42,28 @@ coverage/
 *.lock
 package-lock.json
 
-# Harness state (not source)
+# Harness state — .claude/state/ is a tracked snapshot: ratchet baselines
+# (agent-readiness/coupling/coverage/cycle), learned-rules.md, process-rules.md,
+# failures.md, iteration-log.md stay committed. Only runtime churn is ignored
+# below — caches, indexes, logs, counters, and *.jsonl ledgers. All scoped to
+# .claude/state/ so real project data (e.g. a data/*.jsonl fixture) is never hit.
 .claude/runs/
 .claude/state/archive/
 .claude/state/context-cache/
 .claude/state/tool-output/
+.claude/state/nav-index/
+.claude/state/*.jsonl
+.claude/state/*.log
+.claude/state/*.offset
 .claude/state/lane-router-last.txt
 .claude/state/last-drift-scan.txt
+.claude/state/review-block-count
+.claude/state/auto-continue-count
+.claude/state/auto-continue-progress
+.claude/state/inflight-agents.json
+.claude/state/human-codebase.json
+.claude/state/nav-graph-index.json
+.claude/state/context-pack-last.json
+.claude/state/nav-telemetry-summary.json
 .claude/tdd-guard/
 .claude/claude-security-guidance.local.md
