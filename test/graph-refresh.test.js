@@ -4,11 +4,15 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const { test } = require('node:test');
 const { REPO_ROOT, makeHookProject, runHook } = require('./helpers/hook-fixture');
+const { STALE_MARK } = require(path.join(REPO_ROOT, '.claude', 'hooks', 'lib', 'stale-stamp'));
 
 const SCRIPTS_REL = path.join('.claude', 'skills', 'code-map', 'scripts');
 const INDEXER_REL = path.join(SCRIPTS_REL, 'code_index');
 const WIKI_DIR_REL = path.join(SCRIPTS_REL, 'code_wiki');
 const WIKI_CLI_REL = path.join(SCRIPTS_REL, 'code_wiki.js');
+// build_graph.js (+ its render/graph/extractors deps) renders the two derived
+// brownfield docs off the patched graph — the hook needs the whole toolchain.
+const BUILD_GRAPH_FILES = ['build_graph.js', 'render.js', 'graph.js', 'extractors.js'];
 const fixture = path.join(__dirname, 'fixtures', 'code-index', 'sample');
 
 function graphPath(projectDir) {
@@ -25,6 +29,9 @@ function makeIndexedProject(hookNames) {
   fs.cpSync(path.join(REPO_ROOT, INDEXER_REL), path.join(dir, INDEXER_REL), { recursive: true });
   fs.cpSync(path.join(REPO_ROOT, WIKI_DIR_REL), path.join(dir, WIKI_DIR_REL), { recursive: true });
   fs.copyFileSync(path.join(REPO_ROOT, WIKI_CLI_REL), path.join(dir, WIKI_CLI_REL));
+  for (const f of BUILD_GRAPH_FILES) {
+    fs.copyFileSync(path.join(REPO_ROOT, SCRIPTS_REL, f), path.join(dir, SCRIPTS_REL, f));
+  }
   fs.mkdirSync(path.join(dir, '.claude', 'scripts'), { recursive: true });
   fs.copyFileSync(
     path.join(REPO_ROOT, '.claude', 'scripts', 'navigation-refresh.js'),
@@ -86,6 +93,31 @@ test('graph-refresh drains the dirty list, patches the graph, and re-renders the
     path.join(dir, 'specs', 'brownfield', 'wiki', 'WIKI.md'), 'utf8'
   );
   assert.ok(wiki.includes('Codebase Wiki'), 'wiki not re-rendered by the hook');
+  // dependency-graph.md + coupling-report.md are rendered fresh off the patched
+  // graph, so they carry no STALE banner in normal operation (the readiness
+  // pillar stays active instead of flapping to partial every turn).
+  for (const name of ['dependency-graph.md', 'coupling-report.md']) {
+    const derived = fs.readFileSync(path.join(dir, 'specs', 'brownfield', name), 'utf8');
+    assert.ok(!derived.startsWith(STALE_MARK), `${name} should be rendered fresh, not STALE-stamped`);
+    assert.ok(derived.length > 0, `${name} not rendered`);
+  }
+});
+
+test('graph-refresh stamps the derived docs STALE when the renderer cannot run', async () => {
+  const dir = makeIndexedProject(['graph-refresh.js']);
+  // Simulate a genuine render failure: remove build_graph.js so renderDerivedDocs
+  // falls back to stampDerived(). The STALE banner must still warn planners.
+  fs.rmSync(path.join(dir, SCRIPTS_REL, 'build_graph.js'));
+  fs.writeFileSync(path.join(dir, 'specs', 'brownfield', 'dependency-graph.md'), '# deps\n');
+  fs.writeFileSync(path.join(dir, 'specs', 'brownfield', 'coupling-report.md'), '# coupling\n');
+  fs.appendFileSync(path.join(dir, 'db', 'session.py'), '\n\ndef q():\n    return 1\n');
+  fs.writeFileSync(dirtyPath(dir), JSON.stringify({ file: 'db/session.py', ts: 1 }) + '\n');
+  const result = await runHook(dir, 'graph-refresh.js', { hook_event_name: 'Stop' });
+  assert.strictEqual(result.status, 0, result.stdout + result.stderr);
+  for (const name of ['dependency-graph.md', 'coupling-report.md']) {
+    const content = fs.readFileSync(path.join(dir, 'specs', 'brownfield', name), 'utf8');
+    assert.ok(content.startsWith(STALE_MARK), `${name} not STALE-stamped on fallback: ${content.slice(0, 60)}`);
+  }
 });
 
 test('graph-refresh bootstraps a placeholder graph after first greenfield source write', async () => {

@@ -45,31 +45,56 @@ function holdLock(stateDir) {
   return lock;
 }
 
-function refresh(projectDir, rels) {
-  const indexer = path.join(
-    projectDir, '.claude', 'skills', 'code-map', 'scripts', 'code_index', 'code_index.py'
-  );
-  const graph = path.join(projectDir, 'specs', 'brownfield', 'code-graph.json');
-  if (!fs.existsSync(indexer)) return false;
-  const patch = spawnSync('python3', [
-    indexer, '--root', projectDir, '--out', graph,
-    '--skeleton-dir', path.join(projectDir, 'specs', 'brownfield', 'skeletons'),
-    '--files', ...rels,
-  ], { encoding: 'utf8', timeout: 25000 });
-  if (patch.status !== 0) return false;
+function renderSymbolMap(indexer, graph, projectDir) {
   spawnSync('python3', [
     indexer, '--render-map', graph,
     '--out', path.join(projectDir, 'specs', 'brownfield', 'symbol-map.md'),
   ], { encoding: 'utf8', timeout: 25000 });
-  // Re-render the deterministic wiki off the freshly-patched graph so it stays
-  // current with zero LLM cost (fails open — wiki render never blocks the stop,
-  // but a persistent failure is surfaced so a stale wiki is not silent).
+}
+
+// dependency-graph.md + coupling-report.md are derived purely from the graph
+// JSON (~25ms each, no source scan), so rebuild them fresh off the just-patched
+// graph every turn like symbol-map.md. That keeps the STALE banner — and the
+// Documentation/Navigation readiness pillar it demotes — off in normal
+// operation. stampDerived() is now a genuine-failure fallback: if build_graph.js
+// is missing or a render exits non-zero, a real STALE banner still warns
+// planners instead of silently shipping outdated coupling data.
+function renderDerivedDocs(projectDir, graph, rels) {
+  const buildGraph = path.join(
+    projectDir, '.claude', 'skills', 'code-map', 'scripts', 'build_graph.js'
+  );
+  let ok = fs.existsSync(buildGraph);
+  if (ok) {
+    for (const [flag, out] of [
+      ['--render-mermaid', 'dependency-graph.md'],
+      ['--coupling-report', 'coupling-report.md'],
+    ]) {
+      const r = spawnSync('node', [
+        buildGraph, flag, graph,
+        '--out', path.join(projectDir, 'specs', 'brownfield', out),
+      ], { encoding: 'utf8', timeout: 25000 });
+      if (r.status !== 0) {
+        ok = false;
+        process.stderr.write(`graph-refresh: ${out} render failed: ${(r.stderr || '').trim()}\n`);
+      }
+    }
+  }
+  if (!ok) stampDerived(projectDir, rels);
+}
+
+// Re-render the deterministic wiki off the freshly-patched graph so it stays
+// current with zero LLM cost (fails open — wiki render never blocks the stop,
+// but a persistent failure is surfaced so a stale wiki is not silent).
+function renderWiki(projectDir, graph) {
   const wiki = spawnSync('node', [
     path.join(projectDir, '.claude', 'skills', 'code-map', 'scripts', 'code_wiki.js'),
     'render', '--graph', graph, '--out', path.join(projectDir, 'specs', 'brownfield', 'wiki'),
   ], { encoding: 'utf8', timeout: 25000 });
   if (wiki.status !== 0) process.stderr.write(`graph-refresh: wiki render failed: ${(wiki.stderr || '').trim()}\n`);
-  // Fail-open secondary nav artifacts: TF-IDF index, co-change, concept pages
+}
+
+// Fail-open secondary nav artifacts: TF-IDF index, co-change, concept pages
+function runNavScripts(projectDir) {
   const navScripts = [
     path.join(projectDir, '.claude', 'scripts', 'nav-index.js'),
     path.join(projectDir, '.claude', 'scripts', 'nav-graph-index.js'),
@@ -88,6 +113,24 @@ function refresh(projectDir, rels) {
       process.stderr.write(`graph-refresh: ${path.basename(script)} failed: ${(r.stderr || '').trim()}\n`);
     }
   }
+}
+
+function refresh(projectDir, rels) {
+  const indexer = path.join(
+    projectDir, '.claude', 'skills', 'code-map', 'scripts', 'code_index', 'code_index.py'
+  );
+  const graph = path.join(projectDir, 'specs', 'brownfield', 'code-graph.json');
+  if (!fs.existsSync(indexer)) return false;
+  const patch = spawnSync('python3', [
+    indexer, '--root', projectDir, '--out', graph,
+    '--skeleton-dir', path.join(projectDir, 'specs', 'brownfield', 'skeletons'),
+    '--files', ...rels,
+  ], { encoding: 'utf8', timeout: 25000 });
+  if (patch.status !== 0) return false;
+  renderSymbolMap(indexer, graph, projectDir);
+  renderDerivedDocs(projectDir, graph, rels);
+  renderWiki(projectDir, graph);
+  runNavScripts(projectDir);
   return true;
 }
 
@@ -113,6 +156,22 @@ function producerIsPlaceholder(projectDir) {
   }
 }
 
+function bootstrapPlaceholder(projectDir, dirtyFile) {
+  const { refreshNavigation } = require('../scripts/navigation-refresh');
+  const status = refreshNavigation({ projectDir, mode: 'first-source' });
+  if (status.status === 'fresh') fs.writeFileSync(dirtyFile, '');
+}
+
+function refreshUnderLock(projectDir, stateDir, dirtyFile, rels) {
+  const lock = holdLock(stateDir);
+  if (!lock) return;
+  try {
+    if (refresh(projectDir, rels)) fs.writeFileSync(dirtyFile, '');
+  } finally {
+    try { fs.unlinkSync(lock); } catch (_) { /* already gone */ }
+  }
+}
+
 function main() {
   readHookInput();
   const projectDir = resolveProjectDir(path.dirname(path.resolve(__filename)));
@@ -121,9 +180,7 @@ function main() {
   const rels = readDirty(dirtyFile, projectDir);
   if (rels.length === 0) return;
   if (producerIsPlaceholder(projectDir)) {
-    const { refreshNavigation } = require('../scripts/navigation-refresh');
-    const status = refreshNavigation({ projectDir, mode: 'first-source' });
-    if (status.status === 'fresh') fs.writeFileSync(dirtyFile, '');
+    bootstrapPlaceholder(projectDir, dirtyFile);
     return;
   }
   if (!producerIsAst(projectDir)) {
@@ -136,16 +193,7 @@ function main() {
     fs.writeFileSync(dirtyFile, '');
     return;
   }
-  const lock = holdLock(stateDir);
-  if (!lock) return;
-  try {
-    if (refresh(projectDir, rels)) {
-      fs.writeFileSync(dirtyFile, '');
-      stampDerived(projectDir, rels);
-    }
-  } finally {
-    try { fs.unlinkSync(lock); } catch (_) { /* already gone */ }
-  }
+  refreshUnderLock(projectDir, stateDir, dirtyFile, rels);
 }
 
 try {
