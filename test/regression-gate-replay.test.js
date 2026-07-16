@@ -12,6 +12,11 @@ test('detectLiveExternalReach true on GoldenNotFoundError', () => {
 test('detectLiveExternalReach false on ordinary assertion failure', () => {
   assert.strictEqual(detectLiveExternalReach('AssertionError: expected 200 got 500'), false);
 });
+test('detectLiveExternalReach false on a bare mention without the exception colon', () => {
+  // a test titled after the class, or asserting on its name, must not false-fire
+  assert.strictEqual(detectLiveExternalReach('ok 3 - raises MissingFixtureError when unrecorded'), false);
+  assert.strictEqual(detectLiveExternalReach('# GoldenNotFoundError is the sentinel'), false);
+});
 test('detectLiveExternalReach false on empty/nullish input', () => {
   assert.strictEqual(detectLiveExternalReach(''), false);
   assert.strictEqual(detectLiveExternalReach(null), false);

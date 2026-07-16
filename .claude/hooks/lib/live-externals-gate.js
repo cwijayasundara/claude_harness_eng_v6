@@ -14,7 +14,7 @@ function isLocalHost(host) {
 
 const URL_RE = /https?:\/\/([a-z0-9._-]+(?::\d+)?)/gi;
 const DSN_RE = /\b(?:postgres|postgresql|mysql|mongodb|redis)(?:\+\w+)?:\/\/(?:[^@\s"']*@)?([a-z0-9._-]+(?::\d+)?)/gi;
-const SDK_RE = /\b(?:Anthropic|OpenAI|anthropic\.Client|openai\.OpenAI)\s*\(/;
+const SDK_RE = /\b(?:Anthropic|AzureOpenAI|OpenAI|anthropic\.Client|anthropic\.Anthropic|openai\.OpenAI)\s*\(/;
 
 function nonLocal(matchHost) {
   const host = String(matchHost).split(/[:/]/)[0];

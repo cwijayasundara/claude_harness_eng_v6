@@ -43,6 +43,12 @@ test('flags direct SDK client construction', () => {
   assert.strictEqual(f[0].kind, 'sdk-client');
 });
 
+test('flags AzureOpenAI (the \\bOpenAI boundary would otherwise miss it)', () => {
+  const f = classifyFile('tests/integration/t.py', 'client = AzureOpenAI(api_key=k)\n');
+  assert.strictEqual(f.length, 1);
+  assert.strictEqual(f[0].kind, 'sdk-client');
+});
+
 test('ignores files outside the integration/e2e scope', () => {
   assert.deepStrictEqual(classifyFiles([{ file: 'src/app.py', content: 'client = Anthropic()\n' }]), []);
 });

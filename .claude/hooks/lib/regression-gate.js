@@ -118,8 +118,10 @@ function splitCmd(cmd) { return cmd.trim().split(/\s+/); }
 
 // Under forced replay (gap G34/G36), a wrapper/LLM double with no recorded
 // fixture raises one of these — meaning the code path would have reached a live
-// external. In a regression run that is a hard failure, not a fallback.
-const LIVE_EXTERNAL_MARKERS = /(MissingFixtureError|GoldenNotFoundError)/;
+// external. In a regression run that is a hard failure, not a fallback. The
+// trailing `:` anchors on a raised exception's traceback line (`...Error: msg`)
+// so a test that merely mentions the class name in prose can't false-fire.
+const LIVE_EXTERNAL_MARKERS = /(MissingFixtureError|GoldenNotFoundError):/;
 function detectLiveExternalReach(output) {
   return LIVE_EXTERNAL_MARKERS.test(String(output || ''));
 }
