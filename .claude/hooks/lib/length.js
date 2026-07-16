@@ -13,6 +13,7 @@ function indentLen(line) {
 }
 
 const PY_FUNC_RE = /^(\s*)(async\s+)?def\s+(\w+)\s*\(/;
+const PY_CLASS_RE = /^(\s*)class\s+\w/;
 const NAMED_FUNC_RE = /\bfunction\s+(\w+)\s*[(<]/;
 // Arrow functions MUST contain `=>`, otherwise `const x = (a && b)` (a plain
 // parenthesised expression) is misread as a function. We track a function only
@@ -45,6 +46,13 @@ function functionsPython(lines) {
       const indent = indentLen(lines[i]);
       flushPython(funcStack, indent, i, out);
       funcStack.push({ name: match[3], startLine: i, indent });
+    } else if (PY_CLASS_RE.test(lines[i])) {
+      // A class at indent I ends any open function at indent >= I (the function
+      // is not the class's parent). The class itself is not length-capped —
+      // only its methods, which are their own `def` lines. Without this, a
+      // module-level function immediately followed by a class is mis-measured
+      // as spanning the whole class body to EOF.
+      flushPython(funcStack, indentLen(lines[i]), i, out);
     }
   }
   flushPython(funcStack, 0, lines.length, out);
