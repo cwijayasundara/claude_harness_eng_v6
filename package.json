@@ -38,6 +38,7 @@
     "deep-mutation": "node .claude/scripts/deep-mutation.js",
     "mutation": "node .claude/scripts/mutation-gate.js --staged",
     "test-deletion-gate": "node .claude/scripts/test-deletion-gate.js --staged",
+    "live-externals-gate": "node .claude/scripts/live-externals-gate.js --staged",
     "stub-smell-gate": "node .claude/scripts/stub-smell-gate.js --staged",
     "merge-review-verdicts": "node .claude/scripts/merge-review-verdicts.js",
     "review-tier": "node .claude/scripts/review-tier.js",
