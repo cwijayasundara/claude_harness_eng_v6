@@ -139,6 +139,12 @@ function writeClaudeMd(target, src, profile) {
   fs.writeFileSync(out, rendered);
   return out;
 }
+function writeReviewMd(target, src, profile) {
+  const body = fs.readFileSync(requireTemplate(src, 'templates/review.template.md'), 'utf8');
+  const out = path.join(target, 'REVIEW.md');
+  fs.writeFileSync(out, encoding.renderReviewMd(body, profile, render));
+  return out;
+}
 
 // Project-tailored user guide. New/empty repos get README.md. Brownfield repos
 // keep any existing product README intact and still receive SCAFFOLD_README.md.
@@ -252,7 +258,7 @@ function applyScaffold(rawOpts) {
   pruneSettings(target, scaffoldProfile);
   if (telemetryEnabled(profile, rawOpts)) enableTelemetry(target);
   const written = [
-    writeManifest(target, profile), writeClaudeMd(target, pluginSource, profile),
+    writeManifest(target, profile), writeClaudeMd(target, pluginSource, profile), writeReviewMd(target, pluginSource, profile),
     ...writeProjectReadme(target, pluginSource, profile),
     writeDesignMd(target, pluginSource), writeInitSh(target, pluginSource, profile),
   ];

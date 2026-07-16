@@ -55,4 +55,32 @@ function projectEncodingBlock(manifest) {
   return lines.join('\n');
 }
 
-module.exports = { projectEncodingBlock, encLayers, encContexts, encQuality, encDomain };
+// --- REVIEW.md: the project review policy the code-reviewer agent reads ---
+function reviewPolicyBlock(manifest) {
+  const m = manifest || {};
+  const arch = m.architecture || null;
+  const tier = (m.quality && m.quality.sensor_tier) || 'standard';
+  const packs = Array.isArray(m.domain_vertical_packs) ? m.domain_vertical_packs : [];
+  const lines = ['## Encoded Policy (from project-manifest.json)', '', encLayers(arch)];
+  const ctx = encContexts(arch);
+  if (ctx) lines.push(ctx);
+  lines.push(
+    `**Security posture:** sensor tier \`${tier}\`. A change crossing a security / data / API boundary triggers the security-reviewer + bounded re-verification — hold those to a higher bar.`,
+    packs.length
+      ? `**Domain conventions:** follow the ${packs.join(', ')} vertical's established patterns; reject a change that reinvents what the vertical already defines.`
+      : '**Domain conventions:** enforce the ubiquitous-language terms in `specs/design/CONTEXT.md`.',
+    '**Cross-sprint invariants:** must not be violated — see `specs/design/constitution.md`.',
+  );
+  return lines.join('\n');
+}
+
+function renderReviewMd(templateBody, profile, render) {
+  return templateBody
+    .replace('{project-name}', (profile && profile.name) || 'untitled-project')
+    .replace('{review-policy}', reviewPolicyBlock(render.buildManifest(profile)));
+}
+
+module.exports = {
+  projectEncodingBlock, encLayers, encContexts, encQuality, encDomain,
+  reviewPolicyBlock, renderReviewMd,
+};

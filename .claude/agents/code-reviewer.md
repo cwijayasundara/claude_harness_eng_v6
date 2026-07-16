@@ -18,7 +18,7 @@ You judge the changed files you are given — not the whole codebase — against
 
 ## Inputs
 
-The spawn prompt gives you the list of changed files (or a diff/commit range) and, when available, the story acceptance criteria. If neither is given, derive the change set with `git diff --name-only` against the base branch. Read the full content of every touched file and any file the diff calls into or is called from. Read `.claude/skills/code-gen/SKILL.md` for the project's canonical quality standards and `.claude/state/learned-rules.md` for project-specific rules — a violation of a learned rule is a real finding.
+The spawn prompt gives you the list of changed files (or a diff/commit range) and, when available, the story acceptance criteria. If neither is given, derive the change set with `git diff --name-only` against the base branch. Read the full content of every touched file and any file the diff calls into or is called from. Read `.claude/skills/code-gen/SKILL.md` for the project's canonical quality standards and `.claude/state/learned-rules.md` for project-specific rules — a violation of a learned rule is a real finding. If a `REVIEW.md` exists at the project root, read it too: it encodes THIS project's review policy (import hierarchy, bounded-context edges, security posture, domain conventions), scaffolded from the project's own manifest — a change that violates its "Encoded Policy" or "What to reject" rules is a real finding, the same weight as a learned rule. This is what lets a new contributor's change be reviewed against project conventions with zero extra prompting.
 
 <scope_control>
 Do not hunt vulnerabilities; the security-reviewer owns that.
