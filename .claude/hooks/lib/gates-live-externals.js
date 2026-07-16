@@ -28,7 +28,7 @@ function checkLiveExternalsGate(ctx) {
       id: 'live-externals',
       title: 'live-externals (G36) — a staged integration/e2e test reaches a real external system',
       detail: `${verdict.findings.map(gate.findingLine).join('\n')}\n`,
-      fix: 'route the call through the boundary-test-doubles kit: replay the HTTP wrapper (ReplayTransport), use FakeLLMClient for model calls, and the db_session transactional fixture — bind them under HARNESS_TEST_REPLAY=1. See .claude/templates/boundary-doubles/.',
+      fix: 'route the call through the boundary-test-doubles kit (Python or .ts sibling): replay the HTTP wrapper (ReplayTransport), use FakeLLMClient for model calls, and the DB transactional fixture — bind them under HARNESS_TEST_REPLAY=1. See .claude/templates/boundary-doubles/. For a deliberately-live line (e.g. a staging smoke test), annotate it with `harness:live-ok`.',
       waive: 'genuine live-integration exception in specs/reviews/sensor-waivers.json (sensor_id: live-externals)',
       envOff: 'HARNESS_LIVE_EXTERNALS_GATE',
       minTier: 'standard',
