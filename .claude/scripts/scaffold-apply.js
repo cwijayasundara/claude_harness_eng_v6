@@ -51,6 +51,7 @@
 const fs = require('fs');
 const path = require('path');
 const render = require('./scaffold-render');
+const encoding = require('./scaffold-encoding');
 const { copyScaffoldTree, pruneSettings, resolveScaffoldProfile, copyFrameworkPackSkills } = require('./scaffold-copy');
 const { refreshNavigation } = require('./navigation-refresh');
 
@@ -133,7 +134,9 @@ function writeManifest(target, profile) {
 function writeClaudeMd(target, src, profile) {
   const body = fs.readFileSync(requireTemplate(src, 'templates/claude-md.template.md'), 'utf8');
   const out = path.join(target, 'CLAUDE.md');
-  fs.writeFileSync(out, render.renderClaudeMd(body, profile));
+  const rendered = render.renderClaudeMd(body, profile)
+    .replace('{project-encoding}', encoding.projectEncodingBlock(render.buildManifest(profile)));
+  fs.writeFileSync(out, rendered);
   return out;
 }
 

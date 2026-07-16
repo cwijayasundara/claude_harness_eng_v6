@@ -4,6 +4,8 @@
 
 {description from user input}
 
+{project-encoding}
+
 ## Quick Reference
 
 **Backend:** `cd backend && uv run pytest -x -q` | `uv run ruff check --fix .` | `uv run mypy src/`
