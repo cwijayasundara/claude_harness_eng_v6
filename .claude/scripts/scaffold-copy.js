@@ -70,6 +70,7 @@ const CORE_SCRIPTS = [
   'build-chain-state.js',
   'build-chain.js',
   'canvas-sync-check.js',
+  'canvas-semantic-check.js',
   'ownership-check.js',
   'build-lane.js',
   'loop-health.js',

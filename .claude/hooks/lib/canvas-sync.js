@@ -131,6 +131,57 @@ function renderSyncReport(result, opts = {}) {
   return `${lines.join('\n')}\n`;
 }
 
+// --- Semantic sync (the agent-judged half of code->prompt sync) ---
+// The sync check above is path-level: does the Canvas still LIST the changed files.
+// This half is about whether the Canvas PROSE still DESCRIBES them. A code change
+// can honor Governs/Operations membership yet silently violate an Approach choice,
+// a Norm, or a Safeguard. Those narrative sections are global claims a diff can
+// falsify, so they can't be checked by a regex — the judgement is an agent's.
+
+// Design-narrative sections whose claims a code change can invalidate.
+const SEMANTIC_SECTIONS = ['Approach', 'Structure', 'Norms', 'Safeguards'];
+
+// Deterministically select WHICH claims an agent must re-verify for a change:
+// the global narrative sections, plus the specific Operations steps that name a
+// changed governed file (the most directly falsifiable). Empty when no governed
+// source changed — an ungoverned change is the sync check's concern, not this one.
+function buildSemanticReview({ canvasText, changedFiles }) {
+  const governs = canvas.extractGoverns(canvasText);
+  const changed = (changedFiles || []).map(normalize).filter(Boolean);
+  const changedGoverned = changed.filter((f) => matchesGoverned(f, governs));
+  if (!changedGoverned.length) return { changedGoverned: [], claims: [] };
+
+  const claims = [];
+  for (const section of SEMANTIC_SECTIONS) {
+    const body = canvas.sectionBody(canvasText, section).trim();
+    if (body) claims.push({ section, body });
+  }
+  const opsLines = canvas.sectionBody(canvasText, 'Operations')
+    .split('\n')
+    .filter((l) => changedGoverned.some((f) => l.includes(f) || l.includes(path.basename(f))))
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (opsLines.length) claims.push({ section: 'Operations', body: opsLines.join('\n') });
+  return { changedGoverned, claims };
+}
+
+// The agent-ready review packet: the changed governed files and, per claim, the
+// exact prose to judge against the diff. Instructs fix-the-prompt-first on a miss.
+function renderSemanticReview(review, opts = {}) {
+  const canvasFile = opts.canvasPath || 'specs/design/reasons-canvas.md';
+  const lines = ['# Canvas Semantic Review', ''];
+  if (!review.changedGoverned.length) {
+    lines.push('No governed source changed — nothing to semantically review.');
+    return `${lines.join('\n')}\n`;
+  }
+  lines.push('Changed governed files:', '', ...review.changedGoverned.map((f) => `- ${f}`), '');
+  lines.push('For each claim below, judge against the diff of those files whether it STILL holds.');
+  lines.push(`If a claim no longer describes the code, fix the Canvas prose in \`${canvasFile}\` first (fix-the-prompt-first), then the code.`, '');
+  for (const c of review.claims) lines.push(`## Claim — ${c.section}`, '', c.body, '');
+  return `${lines.join('\n')}\n`;
+}
+
 module.exports = {
   checkCanvasSync, renderSyncReport, proposeCanvasSync, applyCanvasProposal,
+  buildSemanticReview, renderSemanticReview,
 };

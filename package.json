@@ -32,6 +32,7 @@
     "scaffold:upgrade": "node .claude/scripts/scaffold-upgrade.js",
     "slo": "node .claude/scripts/slo-check.js",
     "canvas-sync": "node .claude/scripts/canvas-sync-check.js",
+    "canvas-semantic": "node .claude/scripts/canvas-semantic-check.js",
     "sensor-waivers": "node .claude/scripts/validate-sensor-waivers.js",
     "custom-sensors": "node .claude/scripts/run-custom-sensors.js",
     "deep-mutation": "node .claude/scripts/deep-mutation.js",
