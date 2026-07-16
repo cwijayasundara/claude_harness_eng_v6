@@ -1,0 +1,39 @@
+{
+  "type": "object",
+  "required": ["waterfall", "tiers"],
+  "additionalProperties": false,
+  "properties": {
+    "waterfall": {
+      "type": "object",
+      "required": ["fund", "mode", "hurdle"],
+      "additionalProperties": false,
+      "properties": {
+        "fund": { "type": "string" },
+        "mode": { "type": "string", "enum": ["european", "american"] },
+        "hurdle": { "type": "string", "enum": ["soft", "hard"] },
+        "clawback": { "type": "boolean" }
+      }
+    },
+    "tiers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["tier"],
+        "properties": {
+          "tier": { "type": "string", "enum": ["return_of_capital", "preferred_return", "gp_catchup", "carried_interest"] },
+          "to": { "type": "string", "enum": ["lp", "gp"] },
+          "basis": { "type": "string", "enum": ["contributed_capital", "contributed_plus_fees"] },
+          "rate": { "type": "number", "minimum": 0, "maximum": 1 },
+          "compounding": { "type": "string", "enum": ["annual", "quarterly"] },
+          "target_carry": { "type": "number", "minimum": 0, "maximum": 1 },
+          "above": { "type": "number", "minimum": 0 },
+          "split": {
+            "type": "object",
+            "required": ["gp", "lp"],
+            "properties": { "gp": { "type": "number" }, "lp": { "type": "number" } }
+          }
+        }
+      }
+    }
+  }
+}
