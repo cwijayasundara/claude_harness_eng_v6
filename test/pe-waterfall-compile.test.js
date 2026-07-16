@@ -36,3 +36,17 @@ test('compile keeps explicit clawback and european default false', () => {
             { tier: 'carried_interest', split: { gp: 0.2, lp: 0.8 } }] });
   assert.equal(eur.clawback, false);
 });
+
+test('compile preserves explicit clawback:false under american mode', () => {
+  const ir = compile({ waterfall: { fund: 'F', mode: 'american', hurdle: 'soft', clawback: false },
+    tiers: [{ tier: 'return_of_capital', to: 'lp' }, { tier: 'preferred_return', to: 'lp', rate: 0.08 },
+            { tier: 'gp_catchup', to: 'gp', rate: 1.0, target_carry: 0.20 }, { tier: 'carried_interest', split: { gp: 0.2, lp: 0.8 } }] });
+  assert.equal(ir.clawback, false);
+});
+
+test('compile preserves explicit clawback:true under european mode', () => {
+  const ir = compile({ waterfall: { fund: 'F', mode: 'european', hurdle: 'hard', clawback: true },
+    tiers: [{ tier: 'return_of_capital', to: 'lp' }, { tier: 'preferred_return', to: 'lp', rate: 0.08 },
+            { tier: 'carried_interest', split: { gp: 0.2, lp: 0.8 } }] });
+  assert.equal(ir.clawback, true);
+});
