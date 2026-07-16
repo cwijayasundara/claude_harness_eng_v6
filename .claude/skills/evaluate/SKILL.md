@@ -335,7 +335,7 @@ The overall VERDICT is PASS only if every check across all layers passes, the se
 
 (Accessibility runs only when the contract carries an `accessibility_checks` block; in Lean mode its violations are WARN, in Full mode blocking impacts FAIL.)
 
-Determine the current execution mode from `project-manifest.json` field `execution.default_mode` (`full`/`lean`), or the `--mode` override when invoked under `/auto` or `/build`. Default to Full if absent. Note: this is distinct from `verification.mode` (`docker`/`local`/`stub`), which controls how the app is reached — do not confuse the two.
+Determine the current execution mode from `project-manifest.json` field `execution.default_mode` (`full`/`lean`), or the `--mode` override when invoked under `/auto` or `/build`. Default to Full if absent. Note: this is distinct from `verification.mode` (`docker`/`local`/`stub`), which controls how the app is reached — do not confuse the two. When a regression run uses `--replay` (G34/G36), boot the app with `HARNESS_TEST_REPLAY=1` so its DB/HTTP/LLM resolve to the recorded boundary-doubles and a missing fixture is a hard fail.
 
 ---
 

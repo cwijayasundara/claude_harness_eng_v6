@@ -43,5 +43,5 @@ This skill is an **orchestrator index**. Load only the section file for the step
 
 ### Load-bearing gate names (always visible here for harness integrity)
 
-Gate 4 / pre-merge must continue to invoke: `cycle-gate.js`, `coupling-gate.js`, `mutation-gate.js` / mutation-smoke, `regression-gate.js`, `contract-accessibility-default.js` as specified in the section files. Full procedure lives in the references.
+Gate 4 / pre-merge must continue to invoke: `cycle-gate.js`, `coupling-gate.js`, `mutation-gate.js` / mutation-smoke, `regression-gate.js` (with `--replay`, booting the app-under-test under `HARNESS_TEST_REPLAY=1` so its DB/HTTP/LLM resolve to the recorded boundary-doubles and a missing fixture is a hard fail), `contract-accessibility-default.js` as specified in the section files. Full procedure lives in the references.
 
