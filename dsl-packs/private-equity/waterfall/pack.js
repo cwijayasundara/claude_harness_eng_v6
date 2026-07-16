@@ -1,5 +1,6 @@
 const schema = require('./schema.json');
 const { compile } = require("./compile");
+const { validate } = require('./validate');
 
 const meta = {
   id: 'pe-waterfall',
@@ -8,4 +9,4 @@ const meta = {
   boundedContext: 'Investment Decision & Returns'
 };
 
-module.exports = { meta, schema, compile };
+module.exports = { meta, schema, compile, validate };
