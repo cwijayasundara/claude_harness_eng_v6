@@ -59,4 +59,15 @@ function insertedContent(toolName, ti) {
   return '';
 }
 
-module.exports = { finalContent, insertedContent };
+// The file's current on-disk content, or null if it does not exist yet (a new
+// file). The baseline the length ratchet grandfathers pre-existing function
+// length debt against.
+function originalContent(filePath) {
+  try {
+    return fs.readFileSync(filePath, 'utf8');
+  } catch (_) {
+    return null;
+  }
+}
+
+module.exports = { finalContent, insertedContent, originalContent };

@@ -30,10 +30,16 @@ function netBraces(line) {
   return net;
 }
 
-function flushPython(funcStack, untilIndent, curLine, out) {
+function flushPython(funcStack, untilIndent, curLine, out, lines) {
   while (funcStack.length > 0 && funcStack[funcStack.length - 1].indent >= untilIndent) {
     const fn = funcStack.pop();
-    out.push({ name: fn.name, startLine: fn.startLine, length: curLine - fn.startLine });
+    let end = curLine;
+    // Exclude trailing blank lines so a function's measured length is independent
+    // of the blank separators that follow it — a last-in-file function and one
+    // followed by another then measure the same, which keeps the length-ratchet
+    // baseline stable across an append.
+    while (end > fn.startLine + 1 && lines[end - 1].trim() === '') end--;
+    out.push({ name: fn.name, startLine: fn.startLine, length: end - fn.startLine });
   }
 }
 
@@ -44,7 +50,7 @@ function functionsPython(lines) {
     const match = lines[i].match(PY_FUNC_RE);
     if (match) {
       const indent = indentLen(lines[i]);
-      flushPython(funcStack, indent, i, out);
+      flushPython(funcStack, indent, i, out, lines);
       funcStack.push({ name: match[3], startLine: i, indent });
     } else if (PY_CLASS_RE.test(lines[i])) {
       // A class at indent I ends any open function at indent >= I (the function
@@ -52,10 +58,10 @@ function functionsPython(lines) {
       // only its methods, which are their own `def` lines. Without this, a
       // module-level function immediately followed by a class is mis-measured
       // as spanning the whole class body to EOF.
-      flushPython(funcStack, indentLen(lines[i]), i, out);
+      flushPython(funcStack, indentLen(lines[i]), i, out, lines);
     }
   }
-  flushPython(funcStack, 0, lines.length, out);
+  flushPython(funcStack, 0, lines.length, out, lines);
   return out;
 }
 
@@ -98,4 +104,27 @@ function oversizedFunctions(content, ext) {
   return fns.filter((f) => f.length > FUNC_HARD_LIMIT);
 }
 
-module.exports = { FILE_HARD_LIMIT, FUNC_HARD_LIMIT, oversizedFunctions };
+// Ratchet: the oversized functions in `after` that are NOT grandfathered by
+// `before` — a function absent from before's oversized set, or one that grew.
+// `before === null` (a brand-new file) grandfathers nothing, so every oversized
+// function is returned (no free pass for new code). Same-named functions in one
+// file are keyed by name to their max prior length (a rare, deliberately
+// permissive edge, disclosed: a grown one may be missed if a larger sibling of
+// the same name exists). Mirrors the cycle-gate / coupling-gate ratchets.
+function newlyOversized(before, after, ext) {
+  const oversizedAfter = oversizedFunctions(after, ext);
+  if (oversizedAfter.length === 0) return [];
+  const baseline = new Map();
+  if (before !== null && before !== undefined) {
+    for (const f of oversizedFunctions(before, ext)) {
+      const prev = baseline.get(f.name);
+      if (prev === undefined || f.length > prev) baseline.set(f.name, f.length);
+    }
+  }
+  return oversizedAfter.filter((f) => {
+    const prior = baseline.get(f.name);
+    return prior === undefined || f.length > prior;
+  });
+}
+
+module.exports = { FILE_HARD_LIMIT, FUNC_HARD_LIMIT, oversizedFunctions, newlyOversized };
