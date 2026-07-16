@@ -166,6 +166,17 @@ Every implementation-ready AC should have a corresponding AT before the story is
 
 **If `--plan-only`: STOP HERE.** Steps 4–4.6 (plan + cases + fixtures + trace spine + grounding gate + acceptance tests) are the complete deliverable for the planning phase. Do not proceed to Playwright generation — source code does not exist yet. Report the generated artifacts and exit.
 
+### Step 4.7 — Generate Integration Tests (`tests/integration/`) [when source exists]
+
+For each story that crosses an external boundary (database, HTTP service, or LLM), generate a deterministic integration test under `tests/integration/` that binds the shipped **boundary-test-doubles kit** (gap G34) instead of reaching real externals. On first use, copy the kit into the project's `tests/` tree from `.claude/templates/boundary-doubles/` (`replay_transport.py`, `fake_llm.py`, `db_fixture.py`, `conftest.py`) and record one HTTP/LLM golden per operation via the kit's record step (run once with `HARNESS_TEST_REPLAY` unset against the real service/model).
+
+Rules:
+- The test runs under `HARNESS_TEST_REPLAY=1` so the app's DB/HTTP/LLM resolve to the doubles — HTTP via `ReplayTransport` at the wrapper's `_call` seam, LLM via `FakeLLMClient` golden responses, DB via the `db_session` transactional-rollback fixture.
+- No integration test may reach a real external — the `live-externals` gate (G36) blocks a non-localhost URL, a real DB DSN, or a directly-constructed SDK client at commit time.
+- Record each generated integration test in `specs/test_artefacts/integration-traces.json` with its `matrix_id`.
+
+This is additive to Step 5's Playwright E2E (which remains the final full-stack layer). If source does not exist yet (`--plan-only`), skip this step.
+
 ### Step 5 — Generate Playwright E2E Tests (`e2e/`)
 
 Create `e2e/` at the project root if it does not exist.
