@@ -49,6 +49,7 @@ test('withoutSourceOnly returns only docs-safe gates', () => {
     'amendment-provenance',
     'test-deletion-guard',
     'stub-smell-gate',
+    'live-externals',
   ]);
 });
 

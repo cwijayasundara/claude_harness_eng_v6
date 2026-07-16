@@ -137,6 +137,7 @@ const CORE_SCRIPTS = [
   'modularity-pack.js',
   'mutation-gate.js',
   'test-deletion-gate.js',
+  'live-externals-gate.js',
   'stub-smell-gate.js',
   'merge-review-verdicts.js',
   'review-tier.js',
