@@ -38,11 +38,22 @@ function secretScanExempt(filePath, projectDir) {
   return rel.startsWith('hooks/') || rel.startsWith('evals/') || rel.startsWith('templates/');
 }
 
+// A line carrying this marker is an explicit, greppable, reviewer-visible
+// exception (e.g. a test fixture whose whole purpose is to feed a
+// secret-shaped string to a parser/validator). It suppresses findings on THAT
+// line only — never a whole file — the same trust model as `harness:stub-ok`.
+// No secret pattern matches across a newline, so per-line scanning is
+// behaviour-identical to whole-content scanning for every unmarked line.
+const SECRET_OK_MARKER = /harness:secret-ok/;
+
 function scanSecrets(content) {
   const findings = [];
-  for (const [label, pattern] of SECRET_PATTERNS) {
-    for (const match of content.matchAll(pattern)) {
-      findings.push({ label, value: redact(match[0]) });
+  for (const line of String(content).split('\n')) {
+    if (SECRET_OK_MARKER.test(line)) continue;
+    for (const [label, pattern] of SECRET_PATTERNS) {
+      for (const match of line.matchAll(pattern)) {
+        findings.push({ label, value: redact(match[0]) });
+      }
     }
   }
   return findings;
