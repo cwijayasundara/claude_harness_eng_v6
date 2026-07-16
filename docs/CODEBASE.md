@@ -1,6 +1,6 @@
 # Codebase map (human homepage)
 
-> Living orientation document. Generated 2026-07-14T22:14:05.328Z from the code-graph + CONTEXT.
+> Living orientation document. Generated 2026-07-16T05:13:16.199Z from the code-graph + CONTEXT.
 > Prefer this page + concept wiki over opening the whole tree.
 
 ## What this system is
@@ -13,8 +13,8 @@ _Source: `README.md`_
 
 | Metric | Value |
 |---|---|
-| Indexed files | 387 |
-| Graph edges | 1748 |
+| Indexed files | 393 |
+| Graph edges | 1779 |
 | Concept pages | 20 |
 | Wiki cluster pages | 20 |
 
@@ -39,10 +39,10 @@ npm run ask -- "..."     # ask the codebase
 | `test/e2e/helpers/project-suite.js` | 9 | 0 |
 | `test/helpers/pre-commit-fixtures.js` | 8 | 0 |
 | `symphony_clone/src/orchestrator/scheduler.js` | 7 | 6 |
-| `symphony_clone/src/config.js` | 5 | 0 |
-| `test/e2e/helpers/fresh-project.js` | 5 | 0 |
-| `test/helpers/record-run-fixture.js` | 5 | 0 |
 | `symphony_clone/src/orchestrator/workspace-manager.js` | 5 | 0 |
+| `symphony_clone/src/config.js` | 5 | 0 |
+| `test/helpers/record-run-fixture.js` | 5 | 0 |
+| `test/e2e/helpers/fresh-project.js` | 5 | 0 |
 | `test/e2e/helpers/prometheus-checker.js` | 4 | 0 |
 | `symphony_clone/src/tracker/http.js` | 4 | 0 |
 
@@ -63,6 +63,8 @@ npm run ask -- "..."     # ask the codebase
 - [test/evals](specs/brownfield/wiki/concepts/test__evals.md)
 - [symphony_clone/scripts](specs/brownfield/wiki/concepts/symphony_clone__scripts.md)
 - [eslint.config.js](specs/brownfield/wiki/concepts/eslint.config.js.md)
+- [test/ab-report.test.js](specs/brownfield/wiki/concepts/test__ab-report.test.js.md)
+- [test/ab-run.test.js](specs/brownfield/wiki/concepts/test__ab-run.test.js.md)
 - [test/accessibility-contract.test.js](specs/brownfield/wiki/concepts/test__accessibility-contract.test.js.md)
 - [test/adherence-critic-contract.test.js](specs/brownfield/wiki/concepts/test__adherence-critic-contract.test.js.md)
 - [test/adversarial-fixtures-contract.test.js](specs/brownfield/wiki/concepts/test__adversarial-fixtures-contract.test.js.md)
@@ -73,8 +75,6 @@ npm run ask -- "..."     # ask the codebase
 - [test/amendment-provenance-check.test.js](specs/brownfield/wiki/concepts/test__amendment-provenance-check.test.js.md)
 - [test/approve-fixtures.test.js](specs/brownfield/wiki/concepts/test__approve-fixtures.test.js.md)
 - [test/approved-fixtures-gate.test.js](specs/brownfield/wiki/concepts/test__approved-fixtures-gate.test.js.md)
-- [test/archive-state.test.js](specs/brownfield/wiki/concepts/test__archive-state.test.js.md)
-- [test/ask-codebase-readiness-digest.test.js](specs/brownfield/wiki/concepts/test__ask-codebase-readiness-digest.test.js.md)
 
 ## DeepWiki cluster pages
 

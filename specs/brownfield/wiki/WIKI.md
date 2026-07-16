@@ -3,7 +3,7 @@
 > Deterministic, always-current map rendered from `code-graph.json`. No LLM — re-rendered on graph change.
 
 - Producer: `vendored-ast`  ·  Language: `mixed`
-- Modules: 387  ·  Edges: 1748  ·  Clusters: 47
+- Modules: 393  ·  Edges: 1779  ·  Clusters: 47
 
 ## Hubs (most-depended-on)
 
@@ -66,6 +66,8 @@ _(none)_
 - [test/evals](concepts/test__evals.md)
 - [symphony_clone/scripts](concepts/symphony_clone__scripts.md)
 - [eslint.config.js](concepts/eslint.config.js.md)
+- [test/ab-report.test.js](concepts/test__ab-report.test.js.md)
+- [test/ab-run.test.js](concepts/test__ab-run.test.js.md)
 - [test/accessibility-contract.test.js](concepts/test__accessibility-contract.test.js.md)
 - [test/adherence-critic-contract.test.js](concepts/test__adherence-critic-contract.test.js.md)
 - [test/adversarial-fixtures-contract.test.js](concepts/test__adversarial-fixtures-contract.test.js.md)
@@ -76,14 +78,12 @@ _(none)_
 - [test/amendment-provenance-check.test.js](concepts/test__amendment-provenance-check.test.js.md)
 - [test/approve-fixtures.test.js](concepts/test__approve-fixtures.test.js.md)
 - [test/approved-fixtures-gate.test.js](concepts/test__approved-fixtures-gate.test.js.md)
-- [test/archive-state.test.js](concepts/test__archive-state.test.js.md)
-- [test/ask-codebase-readiness-digest.test.js](concepts/test__ask-codebase-readiness-digest.test.js.md)
 
 _(Hash-cached concept pages from `nav-concepts.js`.)_
 
 ## Pages
 
-- [`test/` — 258 module(s)](pages/01-test.md) — 258 module(s)
+- [`test/` — 264 module(s)](pages/01-test.md) — 264 module(s)
 - [`test/e2e/` — 18 module(s)](pages/02-test-e2e.md) — 18 module(s)
 - [`symphony_clone/src/orchestrator/` — 16 module(s)](pages/03-symphony_clone-src-orchestrator.md) — 16 module(s)
 - [`test/e2e/helpers/` — 14 module(s)](pages/04-test-e2e-helpers.md) — 14 module(s)

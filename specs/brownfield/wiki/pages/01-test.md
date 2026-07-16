@@ -1,11 +1,13 @@
-# `test/` — 258 module(s)
+# `test/` — 264 module(s)
 
-258 module(s).
+264 module(s).
 
 ## Dependencies
 
 ```mermaid
 flowchart LR
+  n_js_test_ab_report_test_js["ab-report.test.js"]
+  n_js_test_ab_run_test_js["ab-run.test.js"]
   n_js_test_accessibility_contract_test_js["accessibility-contract.test.js"]
   n_js_test_adherence_critic_contract_test_js["adherence-critic-contract.test.js"]
   n_js_test_adversarial_fixtures_contract_test_js["adversarial-fixtures-contract.test.js"]
@@ -37,6 +39,8 @@ flowchart LR
   n_js_test_build_chain_state_test_js["build-chain-state.test.js"]
   n_js_test_build_lane_test_js["build-lane.test.js"]
   n_js_test_canary_rollout_wiring_test_js["canary-rollout-wiring.test.js"]
+  n_js_test_canvas_semantic_test_js["canvas-semantic.test.js"]
+  n_js_test_canvas_sync_proposal_test_js["canvas-sync-proposal.test.js"]
   n_js_test_canvas_sync_wiring_test_js["canvas-sync-wiring.test.js"]
   n_js_test_canvas_wiring_contract_test_js["canvas-wiring-contract.test.js"]
   n_js_test_canvas_test_js["canvas.test.js"]
@@ -61,6 +65,7 @@ flowchart LR
   n_js_test_contract_accessibility_default_test_js["contract-accessibility-default.test.js"]
   n_js_test_contract_drift_gate_test_js["contract-drift-gate.test.js"]
   n_js_test_contract_validate_test_js["contract-validate.test.js"]
+  n_js_test_cost_per_outcome_test_js["cost-per-outcome.test.js"]
   n_js_test_cost_report_test_js["cost-report.test.js"]
   n_js_test_coupling_gate_wiring_contract_test_js["coupling-gate-wiring-contract.test.js"]
   n_js_test_coupling_gate_test_js["coupling-gate.test.js"]
@@ -81,12 +86,27 @@ flowchart LR
   n_js_test_drift_test_js["drift.test.js"]
   n_js_test_e2e_no_hang_contract_test_js["e2e-no-hang-contract.test.js"]
   n_js_test_e2e_pack_runner_test_js["e2e-pack-runner.test.js"]
-  n_js_test_e2e_route_matrix_contract_test_js["e2e-route-matrix-contract.test.js"]
-  n_js_test_e2e_workflow_template_test_js["e2e-workflow-template.test.js"]
-  n_js_test_evals_runner_test_js["evals-runner.test.js"]
-  n_js_test_evals_tasks_test_js["evals-tasks.test.js"]
-  n_js_test_feature_autonomous_contract_test_js["feature-autonomous-contract.test.js"]
 ```
+
+## `js:test/ab-report.test.js`
+
+- fan-in: 0, fan-out: 6
+
+### Symbols
+  - `costObj` (function) → js:test/ab-report.test.js:21 — `function costObj(label, est, passed, total)`
+  - `mkArm` (function) → js:test/ab-report.test.js:35 — `function mkArm(cost, telemetry)`
+
+## `js:test/ab-run.test.js`
+
+- fan-in: 0, fan-out: 4
+
+### Symbols
+  - `agents` (function) → js:test/ab-run.test.js:12 — `agents = (dir) => path.join(dir, '.claude', 'agents')`
+  - `costArtifact` (function) → js:test/ab-run.test.js:13 — `costArtifact = (dir) => path.join(path.resolve(dir), '.claude', 'state', 'cost-per-outcome.json')`
+  - `makeDeps` (function) → js:test/ab-run.test.js:19 — `function makeDeps(opts = {})`
+  - `baseCfg` (function) → js:test/ab-run.test.js:36 — `baseCfg = (over = {}) => (`
+  - `executeSpawn` (function) → js:test/ab-run.test.js:146 — `function executeSpawn(rec, buildStatus = 0)`
+  - `stampFailSpawn` (function) → js:test/ab-run.test.js:200 — `function stampFailSpawn(rec)`
 
 ## `js:test/accessibility-contract.test.js`
 
@@ -328,6 +348,22 @@ flowchart LR
 ### Symbols
   - `read` (function) → js:test/canary-rollout-wiring.test.js:15 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
 
+## `js:test/canvas-semantic.test.js`
+
+- fan-in: 0, fan-out: 5
+
+### Symbols
+  - `tmpProject` (function) → js:test/canvas-semantic.test.js:44 — `function tmpProject(canvasText)`
+
+## `js:test/canvas-sync-proposal.test.js`
+
+- fan-in: 0, fan-out: 5
+
+### Symbols
+  - `tmpProject` (function) → js:test/canvas-sync-proposal.test.js:45 — `function tmpProject(canvasText)`
+  - `readReport` (function) → js:test/canvas-sync-proposal.test.js:52 — `readReport = (p) => fs.readFileSync(p.outPath, 'utf8')`
+  - `readCanvas` (function) → js:test/canvas-sync-proposal.test.js:53 — `readCanvas = (p) => fs.readFileSync(p.canvasPath, 'utf8')`
+
 ## `js:test/canvas-sync-wiring.test.js`
 
 - fan-in: 0, fan-out: 4
@@ -518,6 +554,15 @@ flowchart LR
 ### Symbols
   - `validContract` (function) → js:test/contract-validate.test.js:18 — `function validContract()`
 
+## `js:test/cost-per-outcome.test.js`
+
+- fan-in: 0, fan-out: 5
+
+### Symbols
+  - `mkRoot` (function) → js:test/cost-per-outcome.test.js:14 — `function mkRoot(features, receipts)`
+  - `sub` (function) → js:test/cost-per-outcome.test.js:27 — `sub = (group, extra = {}) => (`
+  - `tok` (function) → js:test/cost-per-outcome.test.js:31 — `tok = (group, model, input, output) => (`
+
 ## `js:test/cost-report.test.js`
 
 - fan-in: 0, fan-out: 6
@@ -666,39 +711,4 @@ flowchart LR
 ### Symbols
   _(no extracted symbols)_
 
-## `js:test/e2e-route-matrix-contract.test.js`
-
-- fan-in: 0, fan-out: 5
-
-### Symbols
-  - `read` (function) → js:test/e2e-route-matrix-contract.test.js:8 — `function read(rel)`
-
-## `js:test/e2e-workflow-template.test.js`
-
-- fan-in: 0, fan-out: 5
-
-### Symbols
-  _(no extracted symbols)_
-
-## `js:test/evals-runner.test.js`
-
-- fan-in: 0, fan-out: 5
-
-### Symbols
-  - `task` (function) → js:test/evals-runner.test.js:16 — `function task(overrides)`
-
-## `js:test/evals-tasks.test.js`
-
-- fan-in: 0, fan-out: 4
-
-### Symbols
-  _(no extracted symbols)_
-
-## `js:test/feature-autonomous-contract.test.js`
-
-- fan-in: 0, fan-out: 4
-
-### Symbols
-  _(no extracted symbols)_
-
-_+ 178 more module(s) not shown (page capped at 80)._
+_+ 184 more module(s) not shown (page capped at 80)._
