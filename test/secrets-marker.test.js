@@ -36,3 +36,11 @@ test('a real AWS key IS suppressible on a marked line (explicit, greppable excep
   const findings = scanSecrets('KEY = "AKIA' + 'ABCDEFGHIJKLMNOP"  # harness:secret-ok\n');
   assert.deepStrictEqual(findings, []);
 });
+
+test('connection-string detection is single-line (review-fix: pattern excludes whitespace)', () => {
+  // a real single-line DSN is still caught...
+  assert.strictEqual(scanSecrets(`x = "${dsn('h.example.com')}"`).length, 1);
+  // ...and the classes exclude \s, so a DSN broken across a newline is not a
+  // match — the per-line and whole-content scans agree (the fixed invariant).
+  assert.deepStrictEqual(scanSecrets('postgres' + ':' + '/' + '/' + 'user\n:pw@h.example.com'), []);
+});

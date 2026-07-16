@@ -58,6 +58,9 @@ function functionsPython(lines) {
       // only its methods, which are their own `def` lines. Without this, a
       // module-level function immediately followed by a class is mis-measured
       // as spanning the whole class body to EOF.
+      // Heuristic, same string-blindness the `def` scan already has: a
+      // `class`-shaped line inside a triple-quoted string or comment reads as a
+      // real class, so a function that embeds Python source can be under-counted.
       flushPython(funcStack, indentLen(lines[i]), i, out, lines);
     }
   }

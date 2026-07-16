@@ -10,7 +10,7 @@ const SECRET_PATTERNS = [
   ['OpenAI Key',         /sk-[a-zA-Z0-9]{20,}/g],
   ['Slack Token',        /xox[baprs]-[^\s"'`]{1,}/g],
   ['Private Key Block',  /-----BEGIN .* PRIVATE KEY-----/g],
-  ['Connection String',  /:\/\/[^:]+:[^@]+@/g],
+  ['Connection String',  /:\/\/[^:\s]+:[^@\s]+@/g],
   ['SSN',                /\b\d{3}-\d{2}-\d{4}\b/g],
 ];
 
@@ -42,8 +42,11 @@ function secretScanExempt(filePath, projectDir) {
 // exception (e.g. a test fixture whose whole purpose is to feed a
 // secret-shaped string to a parser/validator). It suppresses findings on THAT
 // line only — never a whole file — the same trust model as `harness:stub-ok`.
-// No secret pattern matches across a newline, so per-line scanning is
-// behaviour-identical to whole-content scanning for every unmarked line.
+// Every SECRET_PATTERN is single-line by construction — none can match across a
+// newline (the Connection String classes exclude \s, so a DSN broken over two
+// lines is not a match, exactly as the prior whole-content scan behaved). That
+// invariant makes per-line scanning behaviour-identical to whole-content
+// scanning for every unmarked line; keep any new pattern single-line.
 const SECRET_OK_MARKER = /harness:secret-ok/;
 
 function scanSecrets(content) {
