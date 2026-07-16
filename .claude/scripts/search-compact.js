@@ -13,12 +13,13 @@ function argValue(args, flag, fallback = null) {
 
 // Dirs excluded everywhere by bare name (VCS / installed deps).
 const EXCLUDED_DIR_NAMES = new Set(['.git', 'node_modules']);
-// Heavy/generated trees excluded by repo-relative prefix. Crucially NOT bare
-// '.claude': excluding the whole tree hid the harness's own control-plane source
-// (hooks, scripts, skills) from /retro and every scoped search — the real cause of
-// "canvas-sync doesn't exist". Only the runtime state logs under .claude/state are
-// heavy enough to exclude.
-const EXCLUDED_PREFIXES = ['.claude/state'];
+// Heavy/transient trees that sit directly under a .claude/ control dir: runtime
+// state logs, run journals, and worktree checkouts. Excluded by (parent === .claude,
+// name) rather than a single top-level prefix, so nested copies inside a worktree's
+// own .claude/ are caught too. Crucially NOT a blanket '.claude' exclusion — that hid
+// the harness's own hooks/scripts/skills from /retro and every scoped search (the real
+// cause of "canvas-sync doesn't exist").
+const CLAUDE_HEAVY_DIRS = new Set(['state', 'runs', 'worktrees']);
 
 function underPrefix(rel, prefix) {
   return rel === prefix || rel.startsWith(`${prefix}/`);
@@ -26,12 +27,16 @@ function underPrefix(rel, prefix) {
 
 function sourceFiles(dir, prefix = '') {
   const out = [];
+  const parent = prefix.split('/').pop();
   for (const entry of fs.readdirSync(path.join(dir, prefix), { withFileTypes: true })) {
     if (EXCLUDED_DIR_NAMES.has(entry.name)) continue;
     const rel = path.join(prefix, entry.name).split(path.sep).join('/');
-    if (EXCLUDED_PREFIXES.some((p) => underPrefix(rel, p))) continue;
-    if (entry.isDirectory()) out.push(...sourceFiles(dir, rel));
-    else out.push(rel);
+    if (entry.isDirectory()) {
+      if (parent === '.claude' && CLAUDE_HEAVY_DIRS.has(entry.name)) continue;
+      out.push(...sourceFiles(dir, rel));
+    } else {
+      out.push(rel);
+    }
   }
   return out;
 }

@@ -26,18 +26,23 @@ function tmpProject() {
   write('.claude/hooks/lib/foo.js', `// ${MARKER} in harness source\n`);
   write('.claude/scripts/bar.js', `const x = '${MARKER}';\n`);
   write('.claude/state/big.log', `${MARKER} noise noise noise\n`); // must be excluded
+  write('.claude/runs/2026-07-16.jsonl', `{"m":"${MARKER}"}\n`); // heavy run journal — excluded
+  write('.claude/worktrees/wt1/.claude/state/x.log', `${MARKER}\n`); // nested worktree state — excluded
+  write('.claude/worktrees/wt1/src/dup.js', `${MARKER}\n`); // worktree checkout — excluded
   write('src/app.js', `run(); // ${MARKER}\n`);
   write('node_modules/pkg/index.js', `${MARKER}\n`); // must be excluded
   return dir;
 }
 
-test('sourceFiles walks .claude/ source but excludes .claude/state and node_modules', () => {
+test('sourceFiles walks .claude/ source but excludes .claude state/runs/worktrees and node_modules', () => {
   const dir = tmpProject();
   const files = sourceFiles(dir);
   assert.ok(files.includes('.claude/hooks/lib/foo.js'), 'harness source under .claude/ must be walked');
   assert.ok(files.includes('.claude/scripts/bar.js'));
   assert.ok(files.includes('src/app.js'));
   assert.ok(!files.some((f) => f.startsWith('.claude/state/')), '.claude/state logs must stay excluded');
+  assert.ok(!files.some((f) => f.startsWith('.claude/runs/')), '.claude/runs journals must stay excluded');
+  assert.ok(!files.some((f) => f.startsWith('.claude/worktrees/')), 'worktree checkouts (incl. nested .claude/state) must stay excluded');
   assert.ok(!files.some((f) => f.startsWith('node_modules/')), 'node_modules must stay excluded');
 });
 
