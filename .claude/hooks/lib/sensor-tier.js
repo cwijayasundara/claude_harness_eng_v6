@@ -13,6 +13,7 @@ const GATE_TIERS = Object.freeze({
   'secret-scan': new Set(VALID_TIERS),
   'amendment-provenance': new Set(VALID_TIERS),
   'test-deletion-guard': new Set(['standard', 'strict']),
+  'live-externals': new Set(['standard', 'strict']),
   'stub-smell-gate': new Set(['standard', 'strict']),
   'refactor-purity': new Set(VALID_TIERS),
   'layer-imports': new Set(VALID_TIERS),

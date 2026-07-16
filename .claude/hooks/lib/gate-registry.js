@@ -8,6 +8,7 @@ const { recordOutcome } = require('./sensor-outcomes');
 const early = require('./gates-early');
 const legacy = require('./gates-legacy');
 const quality = require('./gates-quality');
+const liveExternals = require('./gates-live-externals');
 
 // Strict gates lazy-loaded so standard/minimal pre-commit never requires
 // coupling-gate → drift.js → code-map scripts (absent in hook fixtures).
@@ -24,6 +25,9 @@ const GATE_CATALOG = Object.freeze([
   { id: 'amendment-provenance', order: 20, runsWithoutSource: true, run: early.checkAmendmentProvenance },
   { id: 'test-deletion-guard', order: 30, runsWithoutSource: true, run: early.checkTestDeletionGate },
   { id: 'stub-smell-gate', order: 35, runsWithoutSource: true, run: early.checkStubSmellGate },
+  // live-externals is runsWithoutSource:true so it fires on a test-only commit
+  // (a new tests/integration file with no other source), like test-deletion-guard.
+  { id: 'live-externals', order: 36, runsWithoutSource: true, run: liveExternals.checkLiveExternalsGate },
   // source-only exit sits here in the runner
   { id: 'refactor-purity', order: 40, runsWithoutSource: false, run: early.checkRefactorPurity },
   { id: 'layer-imports', order: 50, runsWithoutSource: false, run: early.checkLayers },
