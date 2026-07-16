@@ -62,6 +62,7 @@ function parseOptions(argv, root) {
     schemaPath: arg(argv, '--schema', DEFAULT_SCHEMA),
     flakeHistoryPath: arg(argv, '--flake-history', path.join(root, 'specs', 'drift', 'flake-history.jsonl')),
     outPath: arg(argv, '--out', path.join(root, 'specs', 'reviews', 'regression-gate-verdict.json')),
+    replay: argv.includes('--replay'),
   };
 }
 
@@ -75,9 +76,13 @@ function runE2eRegression(root, opts, quarantine, notes, findings) {
     notes.push(`${opts.e2eDir}/ exists but has no *.spec.(ts|js) files — nothing to run`);
     return;
   }
-  const result = runE2eSuite(root, opts.e2eCmd, opts.e2eTimeout);
+  const result = runE2eSuite(root, opts.e2eCmd, opts.e2eTimeout, undefined, opts.replay);
   if (result.unprovisioned) {
     notes.push(`e2e command "${opts.e2eCmd}" is not runnable (binary not found) — accumulated Playwright regression skipped; install/configure it to enforce`);
+    return;
+  }
+  if (result.liveExternalReached) {
+    findings.push({ file: opts.e2eDir, line: 1, detail: 'regression under forced replay reached a LIVE external — a wrapper/LLM call had no recorded fixture (MissingFixtureError/GoldenNotFoundError). Record it (HARNESS_TEST_REPLAY unset) or fix the test; boot the app under HARNESS_TEST_REPLAY=1.' });
     return;
   }
   if (!result.report) {

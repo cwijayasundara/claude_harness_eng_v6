@@ -76,6 +76,7 @@ function parseOptions(argv, root) {
     schemaPath: arg(argv, '--schema', DEFAULT_SCHEMA),
     flakeHistoryPath: arg(argv, '--flake-history', path.join(root, 'specs', 'drift', 'flake-history.jsonl')),
     outPath: arg(argv, '--out', path.join(root, 'specs', 'reviews', 'local-regression-gate-verdict.json')),
+    replay: argv.includes('--replay'),
   };
 }
 

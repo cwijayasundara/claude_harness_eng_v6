@@ -48,9 +48,13 @@ function loadGoldenPaths(root, notes) {
 
 function runScopedE2e(root, opts, specs, quarantine, notes, findings) {
   if (!specs.length) { notes.push('no e2e specs in scope (impact analysis + golden paths) — nothing to run'); return; }
-  const result = runE2eSuite(root, opts.e2eCmd, opts.e2eTimeout, specs);
+  const result = runE2eSuite(root, opts.e2eCmd, opts.e2eTimeout, specs, opts.replay);
   if (result.unprovisioned) {
     notes.push(`e2e command "${opts.e2eCmd}" is not runnable (binary not found) — impact-scoped e2e check skipped`);
+    return;
+  }
+  if (result.liveExternalReached) {
+    findings.push({ file: opts.e2eDir, line: 1, detail: 'regression under forced replay reached a LIVE external — a wrapper/LLM call had no recorded fixture (MissingFixtureError/GoldenNotFoundError). Record it (HARNESS_TEST_REPLAY unset) or fix the test; boot the app under HARNESS_TEST_REPLAY=1.' });
     return;
   }
   if (!result.report) {

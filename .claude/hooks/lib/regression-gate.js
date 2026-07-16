@@ -116,20 +116,31 @@ function extractPlaywrightResults(report) {
 
 function splitCmd(cmd) { return cmd.trim().split(/\s+/); }
 
+// Under forced replay (gap G34/G36), a wrapper/LLM double with no recorded
+// fixture raises one of these — meaning the code path would have reached a live
+// external. In a regression run that is a hard failure, not a fallback.
+const LIVE_EXTERNAL_MARKERS = /(MissingFixtureError|GoldenNotFoundError)/;
+function detectLiveExternalReach(output) {
+  return LIVE_EXTERNAL_MARKERS.test(String(output || ''));
+}
+
 // specFiles (gap G16): optional list of spec file args appended after the base
 // command, so a caller can run a targeted subset (`npx playwright test <file1>
 // <file2> ...`) instead of the whole suite. Omitted/undefined preserves pass
 // 1's original whole-suite behavior unchanged; an empty array is equivalent
 // to omitting it.
-function runE2eSuite(root, e2eCmd, timeoutMs, specFiles) {
+function runE2eSuite(root, e2eCmd, timeoutMs, specFiles, replay) {
   const [bin, ...args] = splitCmd(e2eCmd);
   if (specFiles && specFiles.length) args.push(...specFiles);
-  const res = spawnSync(bin, args, { cwd: root, encoding: 'utf8', timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024 });
+  const env = replay ? { ...process.env, HARNESS_TEST_REPLAY: '1' } : process.env;
+  const res = spawnSync(bin, args, { cwd: root, encoding: 'utf8', timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024, env });
   if (res.error && res.error.code === 'ENOENT') return { unprovisioned: true };
   const stdout = res.stdout || '';
+  const stderr = res.stderr || '';
+  if (replay && detectLiveExternalReach(stdout + stderr)) return { liveExternalReached: true, stdout, stderr };
   let report = null;
   try { report = JSON.parse(stdout); } catch (_) { /* not JSON — fall back to exit code only */ }
-  return { code: res.status == null ? 1 : res.status, stdout, stderr: res.stderr || '', report };
+  return { code: res.status == null ? 1 : res.status, stdout, stderr, report };
 }
 
 // ---------------------------------------------------------------------------
@@ -234,6 +245,7 @@ module.exports = {
   extractPlaywrightFailures,
   extractPlaywrightResults,
   runE2eSuite,
+  detectLiveExternalReach,
   lineOfCheckId,
   bodyMatches,
   evaluateApiCheck,
