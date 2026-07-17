@@ -149,6 +149,25 @@ Machine gates always stay on: tests, lint/types, coverage, architecture, evaluat
 
 **Review cost dial:** `project-manifest.json#review` — `adversarial: auto|always|never`, file/line thresholds (defaults 8 files / 200 lines), `block_merge_policy: union`. Small `/vibe` edits stay single-reviewer under `auto`.
 
+### Unattended permissions (`settings.auto.json`)
+
+The `--auto` / `--autonomous` flags above control **approval gates** (BRD/story/design sign-off). They do *not* remove the per-tool **permission prompts** an interactive session still raises for `Bash`, `Write`, etc. For a truly hands-off headless run there is no human to answer those prompts, so `/scaffold` ships a second, opt-in permission profile:
+
+| File | Role | Loaded when |
+|---|---|---|
+| `.claude/settings.json` | Curated interactive allowlist — prompts for risky ops | Always (default) |
+| `.claude/settings.auto.json` | **Unattended full-auto profile** — no permission prompts (`Bash(*)`, `Write(*)`, `Edit(*)`, … + `CLAUDE_AUTO_CONTINUE=1`, agent teams) | Only when passed explicitly |
+
+Both files are copied into every scaffolded project (`scaffold-apply.js`). Claude Code does **not** auto-load `settings.auto.json` — you opt in per run:
+
+```bash
+claude -p "/build docs/prd.md --auto" --settings .claude/settings.auto.json
+```
+
+It **merges over** `settings.json`, so the deterministic gate hooks (`pre-write-gate`, `pre-bash-gate`), git hooks, the `/auto` ratchet, security review, and pre-PR verify all still fire, and no PR opens over a red build.
+
+> ⚠️ **Run it only inside an isolation boundary.** `Bash(*)` still permits *reading* host secrets (`~/.ssh`, cloud creds) and network egress — the gate hooks only constrain writes. Use it inside a container / CI runner / VM with no host secrets mounted and limited egress. **Do not** make it the default `settings.json`; interactive dev sessions keep the curated allowlist.
+
 For long unattended PRD-to-PR runs, prefer the resilient chain launcher — see the recovery section below.
 
 ## If Your Run Dies (and What It Costs First)

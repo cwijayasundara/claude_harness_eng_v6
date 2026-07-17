@@ -259,6 +259,19 @@ Jarred Sumner’s write-up of [rewriting Bun in Rust with Claude Code](https://b
 
 Detail: [`docs/proposals/bun-adversarial-mechanical-loops.md`](./proposals/bun-adversarial-mechanical-loops.md).
 
+### 5.4.1 Unattended runs need a second permission plane
+
+Approval flags and tool permissions are **two different planes**, and headless autonomy needs both relaxed. The `--auto` / `--autonomous` flags only drop the *human approval gates* (BRD, story, design sign-off); an interactive session still raises a *permission prompt* for every `Bash`, `Write`, or `Edit`. In a headless run there is no human to answer those, so `/scaffold` ships a second, opt-in profile alongside the curated default:
+
+| File | Role | Loaded when |
+|---|---|---|
+| `.claude/settings.json` | Curated interactive allowlist — prompts for risky ops | Always (default) |
+| `.claude/settings.auto.json` | Unattended full-auto profile — no permission prompts (`Bash(*)`, `Write(*)`, … + `CLAUDE_AUTO_CONTINUE=1`, agent teams) | Only when passed explicitly |
+
+Claude Code does not auto-load the auto profile; you opt in per run — `claude -p "/build docs/prd.md --auto" --settings .claude/settings.auto.json`. It **merges over** `settings.json`, so the deterministic gate hooks (`pre-write-gate`, `pre-bash-gate`), git hooks, the `/auto` ratchet, security review, and pre-PR verify all still fire, and no PR opens over a red build.
+
+**Isolation boundary required:** `Bash(*)` still permits *reading* host secrets (`~/.ssh`, cloud creds) and network egress — the gate hooks only constrain writes. This is the productized form of Bun's cgroup-isolation caveat above: run the auto profile only inside a container / CI runner / VM with no host secrets mounted and limited egress. Never promote it to the default `settings.json`.
+
 ### 5.5 Cost is an outcome metric, not a token metric (harness 2.5)
 
 A per-token-cheaper model can be *dearer per shipped outcome* if it spends the saving back in extra evaluator / self-heal cycles. Cognition’s “Making Fable cheaper than Opus” makes the point; the harness answers it by **measuring** model choice rather than guessing:

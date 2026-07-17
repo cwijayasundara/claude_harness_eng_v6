@@ -1157,6 +1157,25 @@
         <p>64 concurrent agents for days, always-on dual review for one-line fixes, core fuzz farms, or cgroup isolation. Keep dual review <strong>tiered</strong>; merge stays <strong>human-owned</strong>. Detail: <a href="./proposals/bun-adversarial-mechanical-loops.md">bun-adversarial-mechanical-loops.md</a>.</p>
       </div>
 
+      <h3 id="unattended-permissions">5.4.1 Unattended runs need a second permission plane</h3>
+      <p>Approval flags and tool permissions are <strong>two different planes</strong>, and headless autonomy needs both relaxed. The <code>--auto</code> / <code>--autonomous</code> flags only drop the <em>human approval gates</em> (BRD, story, design sign-off); an interactive session still raises a <em>permission prompt</em> for every <code>Bash</code>, <code>Write</code>, or <code>Edit</code>. In a headless run there is no human to answer those, so <code>/scaffold</code> ships a second, opt-in profile alongside the curated default:</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>File</th><th>Role</th><th>Loaded when</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>.claude/settings.json</code></td><td>Curated interactive allowlist — prompts for risky ops</td><td>Always (default)</td></tr>
+            <tr><td><code>.claude/settings.auto.json</code></td><td>Unattended full-auto profile — no permission prompts (<code>Bash(*)</code>, <code>Write(*)</code>, … + <code>CLAUDE_AUTO_CONTINUE=1</code>, agent teams)</td><td>Only when passed explicitly</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Claude Code does not auto-load the auto profile; you opt in per run — <code>claude -p "/build docs/prd.md --auto" --settings .claude/settings.auto.json</code>. It <strong>merges over</strong> <code>settings.json</code>, so the deterministic gate hooks (<code>pre-write-gate</code>, <code>pre-bash-gate</code>), git hooks, the <code>/auto</code> ratchet, security review, and pre-PR verify all still fire, and no PR opens over a red build.</p>
+      <div class="callout danger">
+        <div class="label">Isolation boundary required</div>
+        <p><code>Bash(*)</code> still permits <em>reading</em> host secrets (<code>~/.ssh</code>, cloud creds) and network egress — the gate hooks only constrain writes. This is the productized form of Bun’s cgroup-isolation caveat above: run the auto profile only inside a container / CI runner / VM with no host secrets mounted and limited egress. Never promote it to the default <code>settings.json</code>.</p>
+      </div>
+
       <h3 id="cost-outcome">5.5 Cost is an outcome metric, not a token metric (2.5)</h3>
       <p class="lede">A per-token-cheaper model can be <em>dearer per shipped outcome</em>. The harness measures the outcome, then routes.</p>
       <p>Cognition’s “Making Fable cheaper than Opus” makes the point sharply: swapping in a cheaper model only pays off if it does not spend the saving back in extra evaluator / self-heal cycles. So the Claude Harness Engine v5 (minor <strong>2.5</strong>) turns model choice into a <strong>measured</strong> decision rather than a vibe:</p>
