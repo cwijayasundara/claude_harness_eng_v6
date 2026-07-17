@@ -16,7 +16,7 @@ const { TRACKED_EXTS, resolveProjectDir, runHook, isSkippedPath, countLines, rea
 const { finalContent, insertedContent, originalContent } = require('./lib/simulate');
 const { scanSecrets, secretScanExempt, isProtectedEnvFile } = require('./lib/secrets');
 const { blockingHits } = require('./lib/security-patterns');
-const { FILE_HARD_LIMIT, FUNC_HARD_LIMIT, newlyOversized } = require('./lib/length');
+const { FILE_HARD_LIMIT, FUNC_HARD_LIMIT, newlyOversized, newlyOverFileLimit } = require('./lib/length');
 const { missingTest } = require('./lib/tdd');
 const { isHarnessRepo, machineryViolation } = require('./lib/trust-boundary');
 const { prefixCacheViolation, prefixCacheBlockMessage } = require('./lib/prefix-cache');
@@ -86,15 +86,16 @@ function checkLength(toolName, ti, filePath, ext) {
   if (!TRACKED_EXTS.has(ext) || isSkippedPath(filePath)) return;
   const final = finalContent(toolName, ti, filePath);
   if (final === null) return; // the tool call will fail on its own
+  const before = originalContent(filePath);
   const count = countLines(final);
-  if (count >= FILE_HARD_LIMIT) {
+  const beforeCount = before === null ? null : countLines(before);
+  // Ratchet BOTH limits: grandfather pre-existing length debt so an unrelated
+  // edit to a large legacy file (or one carrying a legacy oversized function) is
+  // not held hostage by it; block only a NEW file over the limit, an edit that
+  // newly crosses it, or one that GROWS an already-over file/function further.
+  if (newlyOverFileLimit(beforeCount, count)) {
     block(`BLOCKED: ${toolName} on ${filePath} would produce ${count} lines (hard limit ${FILE_HARD_LIMIT}).\nFix: Split the file into modules by responsibility BEFORE writing. One file, one responsibility (SRP).\n`);
   }
-  // Ratchet the per-function limit: grandfather functions already oversized on
-  // disk so pre-existing length debt never blocks an unrelated edit; only a NEW
-  // or GROWN oversized function blocks. (The file-length limit above stays
-  // absolute — a >300-line file is a coarser, rarer smell that should be split.)
-  const before = originalContent(filePath);
   for (const f of newlyOversized(before, final, ext)) {
     block(`BLOCKED: Function ${f.name} in ${filePath}:${f.startLine + 1} would be ${f.length} lines (limit ${FUNC_HARD_LIMIT}).\nFix: Decompose into named sub-functions. Each should be testable in isolation.\n`);
   }

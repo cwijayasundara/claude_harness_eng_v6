@@ -130,4 +130,16 @@ function newlyOversized(before, after, ext) {
   });
 }
 
-module.exports = { FILE_HARD_LIMIT, FUNC_HARD_LIMIT, oversizedFunctions, newlyOversized };
+// Ratchet the file-length limit (companion to newlyOversized for functions):
+// a file already at/over the limit is grandfathered unless the edit grows it
+// further; a new file, or one that newly crosses the limit, is blocked. So an
+// unrelated edit to a large legacy file is not held hostage by its size, but
+// the debt can never worsen. beforeCount === null means a brand-new file.
+function newlyOverFileLimit(beforeCount, afterCount, limit = FILE_HARD_LIMIT) {
+  if (afterCount < limit) return false;
+  if (beforeCount === null || beforeCount === undefined) return true; // new file over limit
+  if (beforeCount < limit) return true; // an edit that newly crosses the limit
+  return afterCount > beforeCount; // already over — block only if it grew
+}
+
+module.exports = { FILE_HARD_LIMIT, FUNC_HARD_LIMIT, oversizedFunctions, newlyOversized, newlyOverFileLimit };

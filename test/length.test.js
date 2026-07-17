@@ -1,7 +1,8 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { oversizedFunctions, newlyOversized } = require('../.claude/hooks/lib/length');
+const { oversizedFunctions, newlyOversized, newlyOverFileLimit, FILE_HARD_LIMIT } = require('../.claude/hooks/lib/length');
+const L = FILE_HARD_LIMIT;
 
 const names = (content, ext) => oversizedFunctions(content, ext).map((f) => f.name);
 // filler body lines at a given indent
@@ -71,4 +72,27 @@ test('newlyOversized flags a NEW oversized function while grandfathering the unt
 
 test('newlyOversized returns nothing when no function is oversized', () => {
   assert.deepStrictEqual(newNames(null, 'def small():\n    return 1\n'), []);
+});
+
+// --- file-length ratchet: newlyOverFileLimit ---
+test('newlyOverFileLimit: a file under the limit is fine', () => {
+  assert.strictEqual(newlyOverFileLimit(null, L - 1), false);
+  assert.strictEqual(newlyOverFileLimit(L - 10, L - 1), false);
+});
+
+test('newlyOverFileLimit: a NEW file over the limit is blocked', () => {
+  assert.strictEqual(newlyOverFileLimit(null, L + 50), true);
+});
+
+test('newlyOverFileLimit: an edit that newly crosses the limit is blocked', () => {
+  assert.strictEqual(newlyOverFileLimit(L - 1, L), true);
+});
+
+test('newlyOverFileLimit: a legacy over-limit file is grandfathered when unchanged or shrunk', () => {
+  assert.strictEqual(newlyOverFileLimit(L + 50, L + 50), false); // unchanged
+  assert.strictEqual(newlyOverFileLimit(L + 50, L + 20), false); // shrunk, still over
+});
+
+test('newlyOverFileLimit: a legacy over-limit file that GROWS is blocked', () => {
+  assert.strictEqual(newlyOverFileLimit(L + 50, L + 51), true);
 });
