@@ -4,7 +4,7 @@
 
 ## Summary
 
-Cluster `test/evals` groups **9** file(s).
+Cluster `test/evals` groups **9** file(s) (hub fan-in hint 2).
 
 ## Files
 

@@ -1,6 +1,6 @@
 # Codebase map (human homepage)
 
-> Living orientation document. Generated 2026-07-17T06:46:42.395Z from the code-graph + CONTEXT.
+> Living orientation document. Deterministically rendered from the code-graph + CONTEXT.
 > Prefer this page + concept wiki over opening the whole tree.
 
 ## What this system is
@@ -36,15 +36,15 @@ npm run ask -- "..."     # ask the codebase
 | `test/helpers/skill-corpus.js` | 31 | 0 |
 | `test/helpers/hook-fixture.js` | 25 | 0 |
 | `test/e2e/helpers/claude-runner.js` | 17 | 0 |
-| `test/helpers/pre-commit-fixtures.js` | 9 | 0 |
 | `test/e2e/helpers/project-suite.js` | 9 | 0 |
+| `test/helpers/pre-commit-fixtures.js` | 9 | 0 |
 | `symphony_clone/src/orchestrator/scheduler.js` | 7 | 6 |
-| `test/helpers/record-run-fixture.js` | 5 | 0 |
-| `symphony_clone/src/orchestrator/workspace-manager.js` | 5 | 0 |
 | `symphony_clone/src/config.js` | 5 | 0 |
+| `symphony_clone/src/orchestrator/workspace-manager.js` | 5 | 0 |
 | `test/e2e/helpers/fresh-project.js` | 5 | 0 |
-| `test/e2e/helpers/prometheus-checker.js` | 4 | 0 |
+| `test/helpers/record-run-fixture.js` | 5 | 0 |
 | `symphony_clone/src/tracker/http.js` | 4 | 0 |
+| `test/e2e/helpers/prometheus-checker.js` | 4 | 0 |
 
 ## Entry points
 

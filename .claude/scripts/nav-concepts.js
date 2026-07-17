@@ -174,7 +174,6 @@ function buildConceptPages({ projectDir = process.cwd(), force = false } = {}) {
       member_paths: cluster.paths,
       content_hashes: hashes,
       content_hash: contentHash,
-      generated_at: new Date().toISOString(),
       stale: false,
     }, null, 2)}\n`);
     written += 1;

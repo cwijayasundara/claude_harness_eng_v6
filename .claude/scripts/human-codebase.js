@@ -49,11 +49,18 @@ function loadContextBlurb(root) {
 
 function hubsFromGraph(graph) {
   const hubs = (graph.metrics && (graph.metrics.hubs || graph.metrics.unstable_hubs)) || [];
-  return hubs.slice(0, 12).map((h) => {
-    const id = h.id || h.path || '';
-    const p = id.includes(':') ? id.split(':').slice(1).join(':') : id;
-    return { path: p, fan_in: h.fan_in || h.fanIn || 0, fan_out: h.fan_out || h.fanOut || 0 };
-  });
+  // Sort with a stable path tiebreak BEFORE slicing, so equal-key hubs (same
+  // fan_in/fan_out) render in a canonical order regardless of the graph's array
+  // order — otherwise CODEBASE.md's hub table reshuffles on every re-index. Same
+  // ordering convention as code_wiki/model.js's hub sort.
+  return hubs
+    .map((h) => {
+      const id = h.id || h.path || '';
+      const p = id.includes(':') ? id.split(':').slice(1).join(':') : id;
+      return { path: p, fan_in: h.fan_in || h.fanIn || 0, fan_out: h.fan_out || h.fanOut || 0 };
+    })
+    .sort((a, b) => b.fan_in - a.fan_in || b.fan_out - a.fan_out || a.path.localeCompare(b.path))
+    .slice(0, 12);
 }
 
 function entrypoints(graph) {
@@ -130,12 +137,11 @@ function buildHomepage({ root = process.cwd() } = {}) {
   const pages = wikiPages(root);
   const fileCount = (graph.files || []).length || (graph.metrics && graph.metrics.files) || 0;
   const edgeCount = (graph.edges || []).length || (graph.metrics && graph.metrics.edges) || 0;
-  const generatedAt = new Date().toISOString();
 
   const md = [
     '# Codebase map (human homepage)',
     '',
-    `> Living orientation document. Generated ${generatedAt} from the code-graph + CONTEXT.`,
+    '> Living orientation document. Deterministically rendered from the code-graph + CONTEXT.',
     '> Prefer this page + concept wiki over opening the whole tree.',
     '',
     '## What this system is',
@@ -215,7 +221,7 @@ function buildHomepage({ root = process.cwd() } = {}) {
   return {
     md,
     meta: {
-      generated_at: generatedAt,
+      generated_at: new Date().toISOString(),
       files: fileCount,
       edges: edgeCount,
       concepts: concepts.length,
