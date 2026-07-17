@@ -3,7 +3,7 @@
 > Deterministic, always-current map rendered from `code-graph.json`. No LLM — re-rendered on graph change.
 
 - Producer: `vendored-ast`  ·  Language: `mixed`
-- Modules: 408  ·  Edges: 1842  ·  Clusters: 47
+- Modules: 410  ·  Edges: 1853  ·  Clusters: 47
 
 ## Hubs (most-depended-on)
 
@@ -83,7 +83,7 @@ _(Hash-cached concept pages from `nav-concepts.js`.)_
 
 ## Pages
 
-- [`test/` — 279 module(s)](pages/01-test.md) — 279 module(s)
+- [`test/` — 281 module(s)](pages/01-test.md) — 281 module(s)
 - [`test/e2e/` — 18 module(s)](pages/02-test-e2e.md) — 18 module(s)
 - [`symphony_clone/src/orchestrator/` — 16 module(s)](pages/03-symphony_clone-src-orchestrator.md) — 16 module(s)
 - [`test/e2e/helpers/` — 14 module(s)](pages/04-test-e2e-helpers.md) — 14 module(s)

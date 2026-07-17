@@ -1,6 +1,6 @@
-# `test/` — 279 module(s)
+# `test/` — 281 module(s)
 
-279 module(s).
+281 module(s).
 
 ## Dependencies
 
@@ -67,6 +67,7 @@ flowchart LR
   n_js_test_contract_accessibility_default_test_js["contract-accessibility-default.test.js"]
   n_js_test_contract_drift_gate_test_js["contract-drift-gate.test.js"]
   n_js_test_contract_validate_test_js["contract-validate.test.js"]
+  n_js_test_control_budget_test_js["control-budget.test.js"]
   n_js_test_cost_per_outcome_test_js["cost-per-outcome.test.js"]
   n_js_test_cost_report_test_js["cost-report.test.js"]
   n_js_test_coupling_gate_wiring_contract_test_js["coupling-gate-wiring-contract.test.js"]
@@ -85,7 +86,6 @@ flowchart LR
   n_js_test_diff_hunks_test_js["diff-hunks.test.js"]
   n_js_test_dogfood_manifest_test_js["dogfood-manifest.test.js"]
   n_js_test_drift_wiring_contract_test_js["drift-wiring-contract.test.js"]
-  n_js_test_drift_test_js["drift.test.js"]
 ```
 
 ## `js:test/ab-report.test.js`
@@ -570,6 +570,13 @@ flowchart LR
 ### Symbols
   - `validContract` (function) → js:test/contract-validate.test.js:18 — `function validContract()`
 
+## `js:test/control-budget.test.js`
+
+- fan-in: 0, fan-out: 4
+
+### Symbols
+  - `base` (function) → js:test/control-budget.test.js:25 — `function base(ids)`
+
 ## `js:test/cost-per-outcome.test.js`
 
 - fan-in: 0, fan-out: 5
@@ -706,11 +713,4 @@ flowchart LR
 ### Symbols
   - `read` (function) → js:test/drift-wiring-contract.test.js:13 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
 
-## `js:test/drift.test.js`
-
-- fan-in: 0, fan-out: 3
-
-### Symbols
-  - `graph` (function) → js:test/drift.test.js:10 — `function graph()`
-
-_+ 199 more module(s) not shown (page capped at 80)._
+_+ 201 more module(s) not shown (page capped at 80)._
