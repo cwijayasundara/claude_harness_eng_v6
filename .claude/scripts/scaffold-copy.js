@@ -119,6 +119,7 @@ const CORE_SCRIPTS = [
   'verification-matrix-gate.js',
   'cycle-gate.js',
   'coupling-gate.js',
+  'duplication-gate.js',
   'regression-gate.js',
   'impact-scope.js',
   'local-regression-gate.js',
