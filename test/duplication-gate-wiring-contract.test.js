@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const test = require('node:test');
 const assert = require('node:assert');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 
 const ROOT = path.resolve(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -35,4 +36,12 @@ test('CLI degrades loudly (exit 0) when jscpd is unavailable', () => {
   } catch (e) { code = e.status; out = `${e.stdout || ''}${e.stderr || ''}`; }
   assert.strictEqual(code, 0, 'must not block when the tool is missing');
   assert.match(out, /jscpd.*(not installed|unprovisioned|unavailable)/i, 'must announce the skip loudly');
+});
+
+test('/auto Gate 4 runs the duplication ratchet', () => {
+  assert.match(readSkillCorpus('auto'), /duplication-gate\.js/, 'Gate 4 must run the duplication ratchet');
+});
+
+test('/gate runs the duplication ratchet', () => {
+  assert.match(readSkillCorpus('gate'), /duplication-gate\.js/, '/gate must run the duplication ratchet');
 });

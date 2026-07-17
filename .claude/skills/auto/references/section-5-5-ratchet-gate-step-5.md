@@ -115,6 +115,14 @@ node .claude/scripts/coupling-gate.js   # exit 1 if the group ADDED an unstable 
 
 Unstable hubs (fan_in >= 5 and instability >= 0.8 — the same thresholds `coupling-report.md` and the drift monitor already use) are a monotonic ratchet like cycles: the count may only stay equal or drop. A new unstable hub **BLOCKS**, naming the specific new hub(s) with fan-in/instability numbers and remediation guidance (extract a narrower interface or split responsibilities to lower fan-in); removing unstable hubs ratchets the baseline (`.claude/state/coupling-baseline.txt`) down. No graph → skipped loudly, never silently passed. This closes the gap where coupling/instability data existed only on the drift cadence (`npm run drift`) or in the on-demand `coupling-report.md`, never fed back to the agent at commit time.
 
+Also run the **duplication ratchet**, independent of the code-graph (it wraps `jscpd` directly over the changed source):
+
+```bash
+node .claude/scripts/duplication-gate.js   # exit 1 if the group ADDED a new code-clone occurrence
+```
+
+Clone occurrences are a monotonic ratchet like cycles and unstable hubs: the count may only stay equal or drop. A new clone **BLOCKS**, naming the offending file(s); removing duplication ratchets the baseline (`.claude/state/duplication-baseline.txt`) down. `jscpd` not installed → skipped loudly, never silently passed.
+
 ### Gate 5 — Evaluator (API + Playwright)
 
 Spawn evaluator with the full sprint contract. The evaluator runs:
