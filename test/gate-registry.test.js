@@ -4,6 +4,7 @@ const assert = require('assert');
 const { test } = require('node:test');
 
 const { GATE_CATALOG, selectGates } = require('../.claude/hooks/lib/gate-registry');
+const { GATE_TIERS } = require('../.claude/hooks/lib/sensor-tier');
 
 test('GATE_CATALOG is ordered and has unique ids', () => {
   const ids = GATE_CATALOG.map((g) => g.id);
@@ -40,6 +41,14 @@ test('strict adds architecture ratchets', () => {
   assert.ok(ids.includes('sprout-diff'));
   assert.ok(ids.includes('cycle-detection'));
   assert.ok(ids.includes('coupling-ratchet'));
+});
+
+test('duplication-ratchet is registered in the GATE_CATALOG at strict tier', () => {
+  const entry = GATE_CATALOG.find((g) => g.id === 'duplication-ratchet');
+  assert.ok(entry, 'duplication-ratchet must be in the catalog');
+  assert.strictEqual(entry.runsWithoutSource, false);
+  assert.strictEqual(typeof entry.run, 'function');
+  assert.ok(GATE_TIERS['duplication-ratchet'].has('strict'));
 });
 
 test('withoutSourceOnly returns only docs-safe gates', () => {

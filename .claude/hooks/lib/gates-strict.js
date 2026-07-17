@@ -95,7 +95,34 @@ function checkCouplingRatchet(ctx) {
   } catch (_) { /* best effort */ }
 }
 
+function checkDuplicationRatchet(_ctx) {
+  const { runJscpd, readBaseline, writeBaseline } = require('../../scripts/duplication-gate');
+  const { cloneKeys } = require('./duplication-gate');
+  const { gateDecision } = require('./cycle-gate');
+  const { report, unavailable } = runJscpd(['.']);
+  if (unavailable) {
+    noteSkip('duplication-ratchet', 'jscpd not installed or unprovisioned');
+    return;
+  }
+  const keys = cloneKeys(report);
+  const baseline = readBaseline();
+  const d = gateDecision(keys, baseline ? baseline.length : undefined);
+  if (d.blocked) {
+    const prev = new Set(baseline || []);
+    const added = keys.filter((k) => !prev.has(k));
+    failBlock({
+      id: 'duplication-ratchet',
+      title: `clone occurrences increased ${d.baseline} -> ${d.count} (the ratchet only goes down)`,
+      detail: added.map((k) => `  - new clone occurrence in ${k.split(':').slice(1).join(':') || k}`).join('\n') + '\n',
+      fix: 'extend the existing implementation or extract a shared function instead of copy-pasting.',
+      minTier: 'strict',
+    });
+  }
+  writeBaseline(keys);
+}
+
 module.exports = {
   checkCycleDetection,
   checkCouplingRatchet,
+  checkDuplicationRatchet,
 };

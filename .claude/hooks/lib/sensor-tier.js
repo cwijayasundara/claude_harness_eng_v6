@@ -29,6 +29,7 @@ const GATE_TIERS = Object.freeze({
   'mutation-smoke': new Set(['standard', 'strict']),
   'cycle-detection': new Set(['strict']),
   'coupling-ratchet': new Set(['strict']),
+  'duplication-ratchet': new Set(['strict']),
 });
 
 function normalizeTier(raw) {

@@ -43,6 +43,7 @@ const GATE_CATALOG = Object.freeze([
   { id: 'mutation-smoke', order: 150, runsWithoutSource: false, run: quality.checkMutation },
   { id: 'cycle-detection', order: 200, runsWithoutSource: false, run: strictRun('checkCycleDetection') },
   { id: 'coupling-ratchet', order: 210, runsWithoutSource: false, run: strictRun('checkCouplingRatchet') },
+  { id: 'duplication-ratchet', order: 220, runsWithoutSource: false, run: strictRun('checkDuplicationRatchet') },
 ]);
 
 function selectGates(tier, { withoutSourceOnly = false } = {}) {
