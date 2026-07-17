@@ -8,7 +8,7 @@
 
 function encLayers(arch) {
   if (arch && Array.isArray(arch.layers) && arch.layers.length) {
-    return `**Import hierarchy (one-way):** ${arch.layers.join(' → ')}. An upstream→downstream import is a layer violation the pre-commit gate blocks.`;
+    return `**Import hierarchy (lowest→highest, one-way):** ${arch.layers.join(' → ')}. A file may import only from layers earlier in this list; importing a later (higher) layer is an upward-import violation the pre-commit gate blocks.`;
   }
   return '**Import hierarchy:** not configured — see `.claude/architecture.md`.';
 }
