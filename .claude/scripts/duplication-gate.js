@@ -36,14 +36,18 @@ function writeBaseline(keys) {
 
 function runJscpd(targets) {
   const out = fs.mkdtempSync(path.join(os.tmpdir(), 'jscpd-'));
-  const argv = ['jscpd', '--silent', '--reporters', 'json', '--output', out,
-    ...IGNORE.flatMap((g) => ['--ignore', g]), ...targets];
-  const res = spawnSync(argv[0], argv.slice(1), { encoding: 'utf8', cwd: REPO, timeout: 120000 });
-  if ((res.error && res.error.code === 'ENOENT') || res.status === 127) return { unavailable: true };
   try {
-    return { report: JSON.parse(fs.readFileSync(path.join(out, 'jscpd-report.json'), 'utf8')) };
-  } catch (_) {
-    return { unavailable: true }; // ran but produced no parseable report — loud skip
+    const argv = ['jscpd', '--silent', '--reporters', 'json', '--output', out,
+      ...IGNORE.flatMap((g) => ['--ignore', g]), ...targets];
+    const res = spawnSync(argv[0], argv.slice(1), { encoding: 'utf8', cwd: REPO, timeout: 120000 });
+    if ((res.error && res.error.code === 'ENOENT') || res.status === 127) return { unavailable: true };
+    try {
+      return { report: JSON.parse(fs.readFileSync(path.join(out, 'jscpd-report.json'), 'utf8')) };
+    } catch (_) {
+      return { unavailable: true }; // ran but produced no parseable report — loud skip
+    }
+  } finally {
+    fs.rmSync(out, { recursive: true, force: true }); // never leak the temp report dir
   }
 }
 
