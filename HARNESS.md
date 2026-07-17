@@ -5,6 +5,8 @@
 > This file is the registry of that control system. Its machine-readable companion is [`harness-manifest.json`](harness-manifest.json) — the single source of truth for *what governs what* and *where the holes are*. The gap roadmap lives in [`docs/internal/HARNESS_ENGINEERING_GAP_ANALYSIS.md`](docs/internal/HARNESS_ENGINEERING_GAP_ANALYSIS.md).
 >
 > Framing follows Thoughtworks/Fowler *Harness Engineering for Coding Agents* and *Maintainability Sensors for Coding Agents*.
+>
+> **Doc map:** this file is canonical for the *control system* (gates/sensors). For architecture rationale see `design.md`; for install/usage see `README.md`; for the "which doc for what" index see `CODEBASE_MAP.md`.
 
 ## Why this exists
 
@@ -146,6 +148,14 @@ per axis, so no single instance's blind spot decides the verdict alone (see the
 ## Skill-description conventions
 
 Skill-description markers: pipeline *stage* skills carry a leading `[Internal pipeline stage — …]` prefix; discipline micro-skills carry a trailing `[Internal discipline — …]` suffix instead, because their leading "Use when…" phrase is the auto-invocation trigger and must stay first (pinned by `test/skills-consistency.test.js`).
+
+The seven **legacy-change disciplines** (`checking-coverage-before-change`,
+`pinning-down-behavior`, `sprouting-instead-of-editing`, `keeping-refactors-pure`,
+`writing-acceptance-tests-first`, `checking-migration-safety`, `upgrading-dependencies`)
+are a *family* — each fires in a different situation and each is proved by its own
+distinct gate (deliberately not merged into a god-gate). One map of the whole family,
+with the decision flow and the discipline→gate table, lives in
+[`docs/legacy-change-disciplines.md`](docs/legacy-change-disciplines.md).
 
 ## The current holes (so they're not invisible)
 

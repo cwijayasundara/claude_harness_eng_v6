@@ -1,5 +1,7 @@
 # Claude Harness Engine v5 — Architecture Reference
 
+> **Doc map:** this file is canonical for *architecture rationale*. For the live gate/sensor inventory see `HARNESS.md`; for install/usage see `README.md`; for the "which doc for what" index see `CODEBASE_MAP.md`.
+
 Comprehensive design document for the Claude Harness Engine: a GAN-inspired orchestration system for autonomous, long-running application development with Claude Code.
 
 Copied into target projects by `/scaffold`.
