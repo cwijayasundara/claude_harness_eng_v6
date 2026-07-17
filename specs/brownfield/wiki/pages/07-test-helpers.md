@@ -15,7 +15,7 @@ flowchart LR
 
 ## `js:test/helpers/hook-fixture.js`
 
-- fan-in: 24, fan-out: 5
+- fan-in: 25, fan-out: 5
 
 ### Symbols
   - `makeHookProject` (function) → js:test/helpers/hook-fixture.js:25 — `function makeHookProject(hookNames)`
@@ -33,7 +33,7 @@ flowchart LR
 
 ## `js:test/helpers/pre-commit-fixtures.js`
 
-- fan-in: 8, fan-out: 3
+- fan-in: 9, fan-out: 3
 
 ### Symbols
   - `stage` (function) → js:test/helpers/pre-commit-fixtures.js:8 — `function stage(projectDir, rel, content)`

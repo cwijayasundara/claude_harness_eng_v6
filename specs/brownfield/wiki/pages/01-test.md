@@ -1,6 +1,6 @@
-# `test/` — 264 module(s)
+# `test/` — 279 module(s)
 
-264 module(s).
+279 module(s).
 
 ## Dependencies
 
@@ -31,6 +31,8 @@ flowchart LR
   n_js_test_automated_e2e_contract_test_js["automated-e2e-contract.test.js"]
   n_js_test_autonomous_build_contract_test_js["autonomous-build-contract.test.js"]
   n_js_test_bash_targets_test_js["bash-targets.test.js"]
+  n_js_test_boundary_doubles_roundtrip_test_js["boundary-doubles-roundtrip.test.js"]
+  n_js_test_boundary_doubles_ts_roundtrip_test_js["boundary-doubles-ts-roundtrip.test.js"]
   n_js_test_budget_state_test_js["budget-state.test.js"]
   n_js_test_build_auto_merge_contract_test_js["build-auto-merge-contract.test.js"]
   n_js_test_build_chain_contract_test_js["build-chain-contract.test.js"]
@@ -84,8 +86,6 @@ flowchart LR
   n_js_test_dogfood_manifest_test_js["dogfood-manifest.test.js"]
   n_js_test_drift_wiring_contract_test_js["drift-wiring-contract.test.js"]
   n_js_test_drift_test_js["drift.test.js"]
-  n_js_test_e2e_no_hang_contract_test_js["e2e-no-hang-contract.test.js"]
-  n_js_test_e2e_pack_runner_test_js["e2e-pack-runner.test.js"]
 ```
 
 ## `js:test/ab-report.test.js`
@@ -287,6 +287,22 @@ flowchart LR
 
 ### Symbols
   - `has` (function) → js:test/bash-targets.test.js:9 — `function has(cmd, target)`
+
+## `js:test/boundary-doubles-roundtrip.test.js`
+
+- fan-in: 0, fan-out: 6
+
+### Symbols
+  - `hasPython` (function) → js:test/boundary-doubles-roundtrip.test.js:9 — `function hasPython()`
+  - `runPy` (function) → js:test/boundary-doubles-roundtrip.test.js:15 — `function runPy(script, cwd)`
+
+## `js:test/boundary-doubles-ts-roundtrip.test.js`
+
+- fan-in: 0, fan-out: 6
+
+### Symbols
+  - `hasTsx` (function) → js:test/boundary-doubles-ts-roundtrip.test.js:9 — `function hasTsx()`
+  - `runTs` (function) → js:test/boundary-doubles-ts-roundtrip.test.js:15 — `function runTs(files, lines)`
 
 ## `js:test/budget-state.test.js`
 
@@ -697,18 +713,4 @@ flowchart LR
 ### Symbols
   - `graph` (function) → js:test/drift.test.js:10 — `function graph()`
 
-## `js:test/e2e-no-hang-contract.test.js`
-
-- fan-in: 0, fan-out: 4
-
-### Symbols
-  - `read` (function) → js:test/e2e-no-hang-contract.test.js:17 — `read = (...p) => fs.readFileSync(path.join(ROOT, ...p), 'utf8')`
-
-## `js:test/e2e-pack-runner.test.js`
-
-- fan-in: 0, fan-out: 4
-
-### Symbols
-  _(no extracted symbols)_
-
-_+ 184 more module(s) not shown (page capped at 80)._
+_+ 199 more module(s) not shown (page capped at 80)._

@@ -1,6 +1,6 @@
 # Codebase map (human homepage)
 
-> Living orientation document. Generated 2026-07-16T05:13:16.199Z from the code-graph + CONTEXT.
+> Living orientation document. Generated 2026-07-17T04:47:00.327Z from the code-graph + CONTEXT.
 > Prefer this page + concept wiki over opening the whole tree.
 
 ## What this system is
@@ -13,8 +13,8 @@ _Source: `README.md`_
 
 | Metric | Value |
 |---|---|
-| Indexed files | 393 |
-| Graph edges | 1779 |
+| Indexed files | 408 |
+| Graph edges | 1842 |
 | Concept pages | 20 |
 | Wiki cluster pages | 20 |
 
@@ -34,17 +34,17 @@ npm run ask -- "..."     # ask the codebase
 | Module | fan-in | fan-out |
 |---|---|---|
 | `test/helpers/skill-corpus.js` | 31 | 0 |
-| `test/helpers/hook-fixture.js` | 24 | 0 |
+| `test/helpers/hook-fixture.js` | 25 | 0 |
 | `test/e2e/helpers/claude-runner.js` | 17 | 0 |
 | `test/e2e/helpers/project-suite.js` | 9 | 0 |
-| `test/helpers/pre-commit-fixtures.js` | 8 | 0 |
+| `test/helpers/pre-commit-fixtures.js` | 9 | 0 |
 | `symphony_clone/src/orchestrator/scheduler.js` | 7 | 6 |
-| `symphony_clone/src/orchestrator/workspace-manager.js` | 5 | 0 |
-| `symphony_clone/src/config.js` | 5 | 0 |
 | `test/helpers/record-run-fixture.js` | 5 | 0 |
+| `symphony_clone/src/config.js` | 5 | 0 |
+| `symphony_clone/src/orchestrator/workspace-manager.js` | 5 | 0 |
 | `test/e2e/helpers/fresh-project.js` | 5 | 0 |
-| `test/e2e/helpers/prometheus-checker.js` | 4 | 0 |
 | `symphony_clone/src/tracker/http.js` | 4 | 0 |
+| `test/e2e/helpers/prometheus-checker.js` | 4 | 0 |
 
 ## Entry points
 
