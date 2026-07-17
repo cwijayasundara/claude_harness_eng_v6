@@ -10,6 +10,7 @@
 const fs = require('fs');
 const path = require('path');
 const { resolveProjectDir, runHook, countLines } = require('./lib/common');
+const { verboseCommandWarning } = require('./lib/verbose-command');
 
 const RECEIPT_NAME = 'context-pack-last.json';
 const DEFAULT_RECEIPT_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4 hours
@@ -109,6 +110,11 @@ function broadReadWarning(projectDir, ti, cfg) {
   const filePath = ti.file_path || ti.path || '';
   if (!filePath || typeof filePath !== 'string') return null;
   const abs = path.resolve(filePath);
+  const rel = relPath(projectDir, abs);
+  // Only guard broad reads of real PRODUCT SOURCE. Reading a test, doc, spec,
+  // or config file in full is normal and was never the target — flagging it
+  // (as this rule used to) is a false positive that blocks routine work.
+  if (!looksLikeSource(rel)) return null;
   let text = '';
   try {
     text = fs.readFileSync(abs, 'utf8');
@@ -117,7 +123,6 @@ function broadReadWarning(projectDir, ti, cfg) {
   }
   const lines = countLines(text);
   if (lines < (cfg.max_source_read_lines || 300)) return null;
-  const rel = relPath(projectDir, abs);
   if (!graphHasRange(projectDir, rel)) return null;
   return {
     kind: 'broad_source_read',
@@ -156,31 +161,6 @@ function contextSearchWarning(projectDir, ti, cfg) {
       `token_governor.context_search_required is true — run first:\n` +
       `  node .claude/scripts/context-pack.js --diff --budget 1600 "<your question>"\n` +
       `  (or /context "<question>") then Read only the returned line ranges.\n`,
-  };
-}
-
-function verboseCommandWarning(command, cfg) {
-  if (!cfg.compress_tool_output) return null;
-  const trimmed = String(command || '').trim();
-  if (!trimmed) return null;
-  // Already compacted — do not warn/block.
-  if (/run-compact\.js/.test(trimmed)) return null;
-  const kind = /\b(test|pytest|vitest|jest|mocha|playwright)\b/i.test(trimmed)
-    ? 'test'
-    : /\b(build|compile|tsc|webpack|vite)\b/i.test(trimmed)
-      ? 'build-log'
-      : /\b(lint|eslint|ruff)\b/i.test(trimmed)
-        ? 'lint'
-        : null;
-  if (!kind) return null;
-  return {
-    kind: 'verbose_command',
-    tool: 'Bash',
-    command: trimmed,
-    compact_kind: kind,
-    message:
-      `TOKEN ADVISORY: likely verbose command. Prefer compact execution:\n` +
-      `  node .claude/scripts/run-compact.js --kind ${kind} -- ${trimmed}\n`,
   };
 }
 

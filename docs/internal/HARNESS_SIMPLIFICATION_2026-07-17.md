@@ -61,9 +61,12 @@ These aren't opinions — they surfaced while merely *inspecting* the repo for t
    never accumulated a single record. The capability to measure control value was built
    and then never turned on.
 
-3. **Documented paths that point at nothing.** `harness-lite/` is a lone `README.md`
-   instructing users to `--plugin-dir harness-lite/.claude` — a directory that **does not
-   exist**. The advertised "lite loadout" is already broken.
+3. **The empirical mechanism was never turned on.** Beyond the empty ledger above:
+   `recordOutcome` is wired, but the commit gate that calls it has not been running over
+   real history in this checkout, so the biting-meta capability sits idle. Built, then
+   not operated. *(An earlier draft of this doc also claimed `harness-lite/` was a broken
+   stub pointing at a non-existent `.claude/` dir — that was wrong, a `ls` artifact hiding
+   the dot-dir; `harness-lite/` is a real, working loadout. Corrected 2026-07-17.)*
 
 Together: controls are added, then neither measured nor pruned, and some actively harm.
 
@@ -86,16 +89,21 @@ Without this, everything below grows back in a month, exactly as it just did.
   with zero fires or a false-positive-only record across N runs is proposed for deletion in
   `/retro`. Let the harness nominate its own shelfware.
 
-### P1 — Remove negative-value and dead weight (pure upside, low risk)
+### P1 — Remove negative-value friction (pure upside, low risk)
 
-- **Fix or scope-off operator-hostile gates.** Exempt the harness's own repo from
-  `token-governor`, tune the length gate to ignore its own files, stop secret-scan
-  matching test/fixture URLs. These have *negative* value here; removing the friction is
-  all upside.
-- **Delete dead top-level dirs:** `harness-lite/` (broken stub), `symphony_clone/`
-  (vendored clone, unreferenced by `.claude`), `dist/`, and `telemetry/` (opt-in, off by
-  default — its files are *already staged for deletion* in git status). None is
-  load-bearing for the core loop.
+- **Fix the operator-hostile gate false positives.** The `token-governor` blocked routine
+  read-only work (`test -d`, `du`, `ls test`, `git add …test…`, commit messages) because
+  its verbose-command detector matched the bare word *test/build/lint* anywhere, and its
+  broad-read guard treated test/doc/spec files as product source. **DONE (2026-07-17):**
+  fixed at the root in `hooks/lib/verbose-command.js` + `token-advisor.js` — real runners
+  are still compacted, real source reads still guarded, but the false positives are gone.
+  The gate keeps all its intended teeth.
+- **Top-level dirs — decided KEEP.** An earlier draft proposed deleting `harness-lite/`,
+  `symphony_clone/`, `dist/`, `telemetry/`. Per owner decision (2026-07-17) these stay:
+  `harness-lite/` is a real, working artifact-only loadout (not a stub — see the §3
+  correction); `symphony_clone/` is the tracker/Jira-board-as-control-plane codegen path;
+  telemetry + the token/sensor controls are explicitly kept intact. This bullet is
+  retained only to record that the delete proposal was considered and rejected.
 
 ### P2 — Execute the 2026-06-10 cut, updated for today's tree
 
