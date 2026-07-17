@@ -1,5 +1,5 @@
 {
-  "count": 119,
+  "count": 120,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -45,6 +45,7 @@
     "drift-dead-code",
     "drift-deps",
     "drift-design-code",
+    "duplication-ratchet",
     "eslint-ruff",
     "eval-api",
     "eval-design-critic",
