@@ -49,6 +49,14 @@ answer for each before drafting new ones.
 - `harness-manifest.json` / `HARNESS.md` — to check whether a proposed target
   (a gate, sensor, guide) already exists and how it's currently wired, so a
   recommendation references the real file, not an invented one.
+- `npm run sensor-value` — the biting-meta value meter: commit gates that never
+  fire or never block over run history (candidate shelfware to retire). Below
+  its data floor it prints INSUFFICIENT DATA; treat that as "no removal
+  evidence yet", not "everything is earning its keep".
+- `npm run control-budget -- --check` — the harness's own control-count ratchet
+  (`HARNESS.md` → *The control budget*). Reports whether the registered-control
+  count is at/over baseline. This is the *subtractive* counter-force: `/retro`
+  is the venue where removals get proposed, not just additions.
 
 ## What this skill writes
 
@@ -73,6 +81,13 @@ Read `learned-rules.md`, `process-rules.md`, `specs/drift/flake-history.md`
 (if present), and the existing `specs/retro/recommendations.jsonl` (if
 present, so you don't re-propose something already `proposed` or
 `rejected` with the same evidence).
+
+Also run `npm run sensor-value` and `npm run control-budget -- --check`. A gate
+the value meter reports as **never-blocked** over a real run window is concrete
+evidence for a *removal* recommendation (`class: docs` or a manifest edit to
+retire it) — the flywheel must propose subtractions, not only additions, or the
+control surface only ever grows. When you draft such a removal, cite the
+sensor-value line as `evidence`.
 
 ### Step 3 — Draft recommendations (report everything, let the human filter)
 

@@ -54,7 +54,7 @@ Status: ✅ active · 🟡 partial (limited/opt-in/report-only) · ⛔ planned (
 
 | | Guides (feedforward) | Sensors (feedback) |
 |---|---|---|
-| | `code-gen` skill (10 principles) · `clarify` | ✅ ruff/eslint (session+commit; **per-rule self-correction guidance**, G5) · ✅ mypy/tsc · ✅ length caps (30-line fn / 300-line file) · ✅ coverage ratchet + per-diff coverage · ✅ `code-reviewer` — structure lens (inferential) · ✅ coupling/dead-code report *(report-only)* · ✅ **drift: dead-code accumulation** (`drift-report.js`) · ✅ **drift: biting-meta** (commit gates never firing/blocking over run history, `loop-health.js`, report-only) · ✅ **mutation-smoke gate** (diff-scoped, /auto, `mutation-gate.js`) · ✅ **modularity review** (inferential, grounded in `modularity-pack`, manually/human-triggered via /brownfield --full or /design --delta Step D3.5, no periodic component of its own, G6; now applies Khononov's published Balanced Coupling rubric — Integration Strength × Distance × Volatility, flags only high-strength+far-distance+high-volatility, G27) · ✅ **drift: modularity-review staleness** (unstable hubs new since the last real review vs `.claude/state/modularity-review-marker.json`, `drift-report.js`, G19) |
+| | `code-gen` skill (10 principles) · `clarify` | ✅ ruff/eslint (session+commit; **per-rule self-correction guidance**, G5) · ✅ mypy/tsc · ✅ length caps (30-line fn / 300-line file) · ✅ coverage ratchet + per-diff coverage · ✅ `code-reviewer` — structure lens (inferential) · ✅ coupling/dead-code report *(report-only)* · ✅ **drift: dead-code accumulation** (`drift-report.js`) · ✅ **drift: biting-meta** (commit gates never firing/blocking over run history, `loop-health.js`, report-only) · ✅ **mutation-smoke gate** (diff-scoped, /auto, `mutation-gate.js`) · ✅ **modularity review** (inferential, grounded in `modularity-pack`, manually/human-triggered via /brownfield --full or /design --delta Step D3.5, no periodic component of its own, G6; now applies Khononov's published Balanced Coupling rubric — Integration Strength × Distance × Volatility, flags only high-strength+far-distance+high-volatility, G27) · ✅ **drift: modularity-review staleness** (unstable hubs new since the last real review vs `.claude/state/modularity-review-marker.json`, `drift-report.js`, G19) · ✅ **control-budget ratchet** (`control-budget-gate.js`: the count of registered controls may only stay flat or drop unless each new control carries a `net_add_justification` — a ratchet on the harness's OWN complexity, the counter-force to accretion; see *The control budget* below) · ✅ **sensor-value-meter** (`sensor-value-report.js`, report-only: turns `recordOutcome`'s `sensor-outcomes.jsonl` into a ranked never-fired/never-blocked cut list for `/retro`) |
 
 ### Architecture
 
@@ -75,6 +75,36 @@ Status: ✅ active · 🟡 partial (limited/opt-in/report-only) · ⛔ planned (
 | | FRD/PRD as immutable baseline · ✅ **sensor arbitration policy** (blocking levels + waivers) · ✅ **Token Governor / living navigation** (`token_governor`: DeepWiki/code-map before broad reads) | ✅ `grounding-check` (BRD vs FRD or confirmed interview spine, hard block) · ✅ `trace-check` (spec vs BRD; test vs AC+obligation) · ✅ `vocabulary-check` (entity/model names vs CONTEXT.md glossary terms, vertical-seeded via vertical-glossary-pack.js for any registered vertical plugin) · ✅ `verification-matrix-gate` (BRD/story AC -> unit/API/E2E evidence matrix, hard-blocking before PR; commit-time backstop via pre-commit hook, executed phase) · ✅ `constraints-extract` · ✅ `plan-confidence` · ✅ `seam-confidence` · ✅ `living-navigation-refresh` (graph/wiki freshness + token-savings status) · ✅ `canvas-sync-check` (changed files vs REASONS Canvas) · ✅ `ownership-check` (changed files vs component-map story ownership) · ✅ **amendment-provenance-check** (specs/design/ change requires a matching amendment, sprint-delta lane) · ✅ **impact-classifier** (routes /feature stories to /change vs /design --delta) · ✅ **custom-sensor-runner** (sensors-cli parity: runs project-declared sensors from `project-manifest.json#custom_sensors[]` through the default parser at commit + on demand, opt-in blocking) |
 
 > This row is **ahead of the source material**: the deterministic FRD→BRD→spec→test grounding chain has no equivalent in the SPDD example, which leans on human review. Keep it; the SPDD idea to *add* is the living, code-synced design artifact (G4), not its traceability.
+
+## The control budget — a ratchet on the harness itself
+
+Every sensor and guide in this registry earns its keep, and this file's doctrine —
+*gaps are explicit; wire a control so it joins the loop* — is purely **additive**.
+That was the whole problem: for months every gap analysis argued to *add*, nothing
+ever argued to *subtract*, and a detailed 2026-06-10 cut-to-half proposal
+(`docs/internal/SIMPLIFICATION_PROPOSAL.md`) partially executed and was then
+overwhelmed by accretion in five weeks (27→45 skills, 22→69 hook files). The harness
+ratchets *product* code (coverage, cycles, coupling, length, perf) one way — better —
+but had **no ratchet on its own size**.
+
+The `control-budget` sensor is that missing counter-force. It treats the count of
+registered controls (guides + sensors, non-planned) as a monotonic ratchet against
+`.claude/state/control-budget-baseline.json`, the same decision shape as
+`cycle-gate.js`: the count may only stay flat or drop. **A new control must either
+replace an existing one (keeping the count flat/down — frictionless) or carry a
+written `net_add_justification` in its manifest entry.** Unjustified net growth
+`BLOCK`s at `npm run control-budget` (and in `/retro`), naming the offending
+additions. Removing controls ratchets the baseline down.
+
+Its companion `sensor-value-meter` (`npm run sensor-value`, report-only) supplies the
+*removal* half: it turns the always-wired `recordOutcome` ledger
+(`sensor-outcomes.jsonl`) into a ranked list of commit gates that never fire or never
+block — the shelfware `/retro` should propose retiring. Budget ceiling + shelfware
+nominations together make subtraction a standing force, not an occasional cleanup.
+
+> **When you add a control**, register it in `harness-manifest.json` as before — then
+> either retire one to stay net-flat, or add a one-line `net_add_justification` saying
+> why it earns its keep, and run `npm run control-budget` to re-ratchet the baseline.
 
 ## Steering loop (the human layer)
 

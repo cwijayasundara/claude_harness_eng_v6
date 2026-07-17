@@ -46,6 +46,8 @@
     "review-commit-msg": "node .claude/scripts/review-commit-msg.js",
     "cycles": "node .claude/scripts/cycle-gate.js",
     "coupling-gate": "node .claude/scripts/coupling-gate.js",
+    "control-budget": "node .claude/scripts/control-budget-gate.js",
+    "sensor-value": "node .claude/scripts/sensor-value-report.js",
     "approved-fixtures": "node .claude/scripts/approved-fixtures-gate.js",
     "approve-fixtures": "node .claude/scripts/approve-fixtures.js",
     "flake-history": "node .claude/scripts/flake-history.js",
