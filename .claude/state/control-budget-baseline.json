@@ -1,5 +1,5 @@
 {
-  "count": 121,
+  "count": 123,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -95,9 +95,11 @@
     "quality-card",
     "readiness-digest",
     "reasons-canvas",
+    "record-reuse-decision",
     "regression-suite-full",
     "resume-smoke",
     "retro-auto-invoke",
+    "reuse-or-justify",
     "reuse-scout",
     "review-commit-attribution",
     "runtime-slo",

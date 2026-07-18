@@ -137,6 +137,7 @@ const INTERNAL_DISCIPLINE_SKILLS = [
   'pinning-down-behavior',
   'sprouting-instead-of-editing',
   'writing-acceptance-tests-first',
+  'reuse-or-justify',
 ];
 
 test('internal discipline skills carry the marker after their trigger phrase', () => {

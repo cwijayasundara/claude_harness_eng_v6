@@ -35,6 +35,7 @@ const CORE_SKILLS = [
   'context', 'evaluate', 'gate', 'implement', 'spec', 'status', 'test',
   'feature', 'brownfield', 'change', 'code-map', 'pr-respond', 'refactor',
   'seam-finder', 'sprint', 'tracker-publish', 'vibe', 'agent-readiness', 'retro', 'promote',
+  'reuse-or-justify',
   // --- discipline ---
   'checking-coverage-before-change',
   'checking-migration-safety',
@@ -147,6 +148,7 @@ const CORE_SCRIPTS = [
   'naming-clusters.js',
   'seam-confidence.js',
   'reuse-scout.js',
+  'record-reuse-decision.js',
   'security-scan.js',
   'slo-check.js',
   'validate-canvas.js',
