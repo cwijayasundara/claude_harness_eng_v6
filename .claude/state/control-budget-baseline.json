@@ -1,5 +1,5 @@
 {
-  "count": 120,
+  "count": 121,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -98,6 +98,7 @@
     "regression-suite-full",
     "resume-smoke",
     "retro-auto-invoke",
+    "reuse-scout",
     "review-commit-attribution",
     "runtime-slo",
     "sast",

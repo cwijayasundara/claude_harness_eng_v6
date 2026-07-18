@@ -146,6 +146,7 @@ const CORE_SCRIPTS = [
   'review-commit-msg.js',
   'naming-clusters.js',
   'seam-confidence.js',
+  'reuse-scout.js',
   'security-scan.js',
   'slo-check.js',
   'validate-canvas.js',
