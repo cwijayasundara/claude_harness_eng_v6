@@ -1,6 +1,6 @@
-# `test/` — 281 module(s)
+# `test/` — 284 module(s)
 
-281 module(s).
+284 module(s).
 
 ## Dependencies
 
@@ -82,10 +82,10 @@ flowchart LR
   n_js_test_cycle_gate_test_js["cycle-gate.test.js"]
   n_js_test_cyclic_prepass_wiring_test_js["cyclic-prepass-wiring.test.js"]
   n_js_test_deep_mutation_test_js["deep-mutation.test.js"]
+  n_js_test_deepwiki_determinism_test_js["deepwiki-determinism.test.js"]
   n_js_test_diagnostics_parse_test_js["diagnostics-parse.test.js"]
   n_js_test_diff_hunks_test_js["diff-hunks.test.js"]
   n_js_test_dogfood_manifest_test_js["dogfood-manifest.test.js"]
-  n_js_test_drift_wiring_contract_test_js["drift-wiring-contract.test.js"]
 ```
 
 ## `js:test/ab-report.test.js`
@@ -685,6 +685,13 @@ flowchart LR
   - `tmpProject` (function) → js:test/deep-mutation.test.js:13 — `function tmpProject()`
   - `run` (function) → js:test/deep-mutation.test.js:19 — `function run(root, args = [])`
 
+## `js:test/deepwiki-determinism.test.js`
+
+- fan-in: 0, fan-out: 7
+
+### Symbols
+  - `tempProjectWithGraph` (function) → js:test/deepwiki-determinism.test.js:37 — `function tempProjectWithGraph()`
+
 ## `js:test/diagnostics-parse.test.js`
 
 - fan-in: 0, fan-out: 7
@@ -706,11 +713,4 @@ flowchart LR
 ### Symbols
   _(no extracted symbols)_
 
-## `js:test/drift-wiring-contract.test.js`
-
-- fan-in: 0, fan-out: 4
-
-### Symbols
-  - `read` (function) → js:test/drift-wiring-contract.test.js:13 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
-
-_+ 201 more module(s) not shown (page capped at 80)._
+_+ 204 more module(s) not shown (page capped at 80)._
