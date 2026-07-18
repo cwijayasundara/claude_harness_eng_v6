@@ -124,6 +124,11 @@ test('strict tier runs cycle-detection when graph present', async () => {
   const result = await runGitHook(projectDir, HOOK, {
     HARNESS_COVERAGE_GATE: 'off',
     HARNESS_OWNERSHIP_GATE: 'off',
+    // Isolate cycle-detection from the unrelated strict-tier security baseline
+    // gates (this bare fixture has no security.yml / scanners), same as the
+    // coverage/ownership offs above.
+    HARNESS_SECURITY_BASELINE_GATE: 'off',
+    HARNESS_SECURE_BASELINE_WIRING_GATE: 'off',
   });
   assert.notStrictEqual(result.status, 0, result.stdout + result.stderr);
   assert.ok(

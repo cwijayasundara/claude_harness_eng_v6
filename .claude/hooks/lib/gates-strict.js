@@ -95,6 +95,114 @@ function checkCouplingRatchet(ctx) {
   } catch (_) { /* best effort */ }
 }
 
+function readManifestSastEngine(projectDir) {
+  try {
+    const m = JSON.parse(fs.readFileSync(path.join(projectDir, 'project-manifest.json'), 'utf8'));
+    return m && m.quality && m.quality.sast_engine;
+  } catch (_) { return undefined; }
+}
+
+// Read a specific 1-based line from a source file (for harness:secret-ok checks).
+function readSourceLine(projectDir, file, line) {
+  const body = fs.readFileSync(path.join(projectDir, file), 'utf8');
+  return body.split('\n')[line - 1];
+}
+
+function readSecurityBaseline(baselinePath) {
+  try {
+    return fs.readFileSync(baselinePath, 'utf8').split('\n').map((l) => l.trim()).filter(Boolean);
+  } catch (_) { return undefined; }
+}
+
+function writeSecurityBaseline(baselinePath, keys) {
+  try {
+    fs.mkdirSync(path.dirname(baselinePath), { recursive: true });
+    fs.writeFileSync(baselinePath, keys.length ? `${keys.join('\n')}\n` : '');
+  } catch (_) { /* best effort, same as the sibling ratchets */ }
+}
+
+function blockMissingScanners(missing) {
+  failBlock({
+    id: 'security-baseline',
+    title: `required security scanner(s) not installed: ${missing.join(', ')}`,
+    fix: 'install the scanner(s) to enable the strict-tier enforced path, or lower quality.sensor_tier.',
+    minTier: 'strict',
+  });
+}
+
+function blockSecrets(secrets) {
+  failBlock({
+    id: 'security-baseline',
+    title: `${secrets.length} secret finding(s) — secrets are absolute, never grandfathered`,
+    detail: secrets.map((s) => `  - ${s.tool}:${s.rule} ${s.file || '?'}${s.line ? ':' + s.line : ''}`).join('\n') + '\n',
+    fix: 'remove the secret (rotate it if it was ever committed), or mark a reviewed test-fixture line with harness:secret-ok.',
+    minTier: 'strict',
+  });
+}
+
+function blockSast(d) {
+  failBlock({
+    id: 'security-baseline',
+    title: `${d.addedSast.length} new high/critical SAST finding(s) introduced (the ratchet only goes down — a fix-one-add-another swap still blocks)`,
+    detail: d.addedSast.map((k) => `  - new finding ${k}`).join('\n') + '\n',
+    fix: 'fix the newly introduced finding(s), or suppress with a reviewed rule exception — do not raise the baseline.',
+    minTier: 'strict',
+  });
+}
+
+// C2: security-baseline ratchet (mechanics mirror checkDuplicationRatchet).
+function checkSecurityBaseline(ctx) {
+  if (process.env.HARNESS_SECURITY_BASELINE_GATE === 'off') return;
+  let collectTiered;
+  try { ({ collectTiered } = require('../../scripts/security-scan')); }
+  catch (_) { noteSkip('security-baseline', 'security-scan.js unavailable (scripts/ not present)'); return; }
+  const { baselineDecision } = require('./security-baseline');
+  const { projectDir, stagedSource } = ctx;
+  const baselinePath = path.join(projectDir, '.claude', 'state', 'security-baseline.txt');
+  const sastEngine = readManifestSastEngine(projectDir) || 'semgrep';
+  const opts = { tiers: new Set(['secrets', 'sast']), boundaryOnly: false };
+  const { findings, missing } = collectTiered(opts, stagedSource || [], projectDir, sastEngine);
+  if (missing.length) blockMissingScanners(missing);
+  const d = baselineDecision({
+    findings,
+    prevKeys: readSecurityBaseline(baselinePath),
+    readLine: (f, l) => readSourceLine(projectDir, f, l),
+  });
+  if (d.secretBlocked) blockSecrets(d.blockingSecrets);
+  if (d.sastBlocked) blockSast(d);
+  writeSecurityBaseline(baselinePath, d.sastKeys);
+}
+
+// C3: secure-baseline-wiring presence invariant.
+function checkSecureBaselineWiring(ctx) {
+  if (process.env.HARNESS_SECURE_BASELINE_WIRING_GATE === 'off') return;
+  const { wiringViolations } = require('./security-baseline');
+  const { projectDir } = ctx;
+  let workflowText = null;
+  try {
+    workflowText = fs.readFileSync(path.join(projectDir, '.github', 'workflows', 'security.yml'), 'utf8');
+  } catch (_) { workflowText = null; }
+  let gitleaksTomlText = null;
+  try {
+    gitleaksTomlText = fs.readFileSync(path.join(projectDir, '.gitleaks.toml'), 'utf8');
+  } catch (_) { gitleaksTomlText = null; }
+  const violations = wiringViolations({
+    workflowText,
+    gitleaksTomlExists: gitleaksTomlText !== null,
+    gitleaksTomlText,
+    sastEngine: readManifestSastEngine(projectDir),
+  });
+  if (violations.length) {
+    failBlock({
+      id: 'secure-baseline-wiring',
+      title: 'the secure-repo baseline guard is missing or downgraded',
+      detail: violations.map((v) => `  - ${v}`).join('\n') + '\n',
+      fix: 'restore .github/workflows/security.yml (blocking gitleaks + sast jobs), .gitleaks.toml, and quality.sast_engine — re-run /scaffold or /scaffold-upgrade if unsure.',
+      minTier: 'strict',
+    });
+  }
+}
+
 function checkDuplicationRatchet(_ctx) {
   const { runJscpd, readBaseline, writeBaseline } = require('../../scripts/duplication-gate');
   const { cloneKeys } = require('./duplication-gate');
@@ -125,4 +233,6 @@ module.exports = {
   checkCycleDetection,
   checkCouplingRatchet,
   checkDuplicationRatchet,
+  checkSecurityBaseline,
+  checkSecureBaselineWiring,
 };

@@ -41,6 +41,10 @@ const GATE_CATALOG = Object.freeze([
   { id: 'coverage-ratchet-py', order: 130, runsWithoutSource: false, run: quality.checkCoverage },
   { id: 'coverage-ratchet-js', order: 140, runsWithoutSource: false, run: quality.checkCoverageJs },
   { id: 'mutation-smoke', order: 150, runsWithoutSource: false, run: quality.checkMutation },
+  // Secure-repo baseline (strict): secrets must be caught even on a docs/config-only
+  // commit, so both run without staged source (Increment 1).
+  { id: 'security-baseline', order: 160, runsWithoutSource: true, run: strictRun('checkSecurityBaseline') },
+  { id: 'secure-baseline-wiring', order: 165, runsWithoutSource: true, run: strictRun('checkSecureBaselineWiring') },
   { id: 'cycle-detection', order: 200, runsWithoutSource: false, run: strictRun('checkCycleDetection') },
   { id: 'coupling-ratchet', order: 210, runsWithoutSource: false, run: strictRun('checkCouplingRatchet') },
   { id: 'duplication-ratchet', order: 220, runsWithoutSource: false, run: strictRun('checkDuplicationRatchet') },

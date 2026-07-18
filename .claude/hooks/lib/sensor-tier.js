@@ -30,6 +30,8 @@ const GATE_TIERS = Object.freeze({
   'cycle-detection': new Set(['strict']),
   'coupling-ratchet': new Set(['strict']),
   'duplication-ratchet': new Set(['strict']),
+  'security-baseline': new Set(['strict']),
+  'secure-baseline-wiring': new Set(['strict']),
 });
 
 function normalizeTier(raw) {

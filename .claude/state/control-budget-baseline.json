@@ -1,5 +1,5 @@
 {
-  "count": 123,
+  "count": 125,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -106,6 +106,8 @@
     "sast",
     "seam-confidence",
     "secret-scan",
+    "secure-baseline-wiring",
+    "security-baseline",
     "security-review",
     "semantic-divergence",
     "sensor-arbitration-policy",

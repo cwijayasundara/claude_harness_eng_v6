@@ -143,6 +143,8 @@ If a trigger fires, spawn the `security-reviewer` agent against the group's chan
 
 If no trigger fires, do not spawn `security-reviewer`; record `security_review: skipped_no_boundary` in `review-context-pack.md`. This is an explicit policy decision, not a silent skip.
 
+**Secure-repo baseline ratchet (strict tier, Increment 1).** At `sensor_tier=strict`, the pre-commit gate registry also runs two computational security controls that surface here at Gate 7 through registry membership (no separate `/auto` wiring): the **`security-baseline`** ratchet (`gates-strict.js`, order 160) — gitleaks secrets are absolute (any new one BLOCKs, never grandfathered, honours `harness:secret-ok`) and semgrep high/critical findings ratchet down against `.claude/state/security-baseline.txt` via `security-scan.js` (tier-aware: fail-closed on a missing required scanner in strict, loud note-skip otherwise) — and the **`secure-baseline-wiring`** presence invariant (order 165) — BLOCKs if `.github/workflows/security.yml`'s gitleaks/sast jobs are absent or non-blocking, `.gitleaks.toml` is missing, or `quality.sast_engine` is unset. Both run even on a docs/config-only commit (`runsWithoutSource: true`) so a secret cannot slip in on a "trivial" change. These complement the inferential `security-reviewer` above; they do not replace it.
+
 ### Gate 8 — Fresh-Context Code Review (Full + Lean)
 
 Resolve review mode first:

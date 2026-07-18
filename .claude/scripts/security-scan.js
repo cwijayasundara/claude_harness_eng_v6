@@ -20,9 +20,24 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { run, skipped } = require('../hooks/lib/toolchain');
+const { loadSensorTier } = require('../hooks/lib/sensor-tier');
 const lib = require('../hooks/lib/security-scan');
 
 const TIERS = ['secrets', 'sast', 'deps'];
+
+// Required scanners on the strict-tier enforced path. gitleaks (secrets) is
+// always required; the local computational SAST is semgrep — the runnable
+// binary. `veracode` is a CI-only engine (no local CLI), so it adds no local
+// required scanner: its enforcement lives in the security.yml workflow (C3/C4).
+function localSastCommand(sastEngine) {
+  return sastEngine === 'veracode' ? null : 'semgrep';
+}
+function requiredScanners(sastEngine) {
+  const req = ['gitleaks'];
+  const sast = localSastCommand(sastEngine);
+  if (sast) req.push(sast);
+  return req;
+}
 
 function noteSkip(tool, reason) {
   process.stderr.write(
@@ -33,13 +48,15 @@ function noteSkip(tool, reason) {
 }
 
 function parseArgs(argv) {
-  const opts = { tiers: new Set(), staged: false, boundaryOnly: false, threshold: 'high', files: [] };
+  const opts = { tiers: new Set(), staged: false, boundaryOnly: false, threshold: 'high', files: [], tier: null, sastEngine: null };
   for (const a of argv) {
     if (a === '--all') TIERS.forEach((t) => opts.tiers.add(t));
     else if (a === '--secrets' || a === '--sast' || a === '--deps') opts.tiers.add(a.slice(2));
     else if (a === '--staged') opts.staged = true;
     else if (a === '--boundary-only') opts.boundaryOnly = true;
     else if (a.startsWith('--threshold=')) opts.threshold = a.split('=')[1] || 'high';
+    else if (a.startsWith('--tier=')) opts.tier = a.split('=')[1] || null;
+    else if (a.startsWith('--sast-engine=')) opts.sastEngine = a.split('=')[1] || null;
     else if (!a.startsWith('--')) opts.files.push(a);
   }
   if (opts.tiers.size === 0) TIERS.forEach((t) => opts.tiers.add(t));
@@ -67,17 +84,33 @@ function gatherFiles(opts, cwd) {
   return [];
 }
 
-function runGitleaks(cwd) {
+// Detail runners return { findings, ran } so a tier-aware caller can tell a
+// clean/empty pass from a scanner that never ran (absent/unprovisioned). The
+// back-compat wrappers below preserve the old array + noteSkip behaviour.
+function runGitleaksDetail(cwd) {
   const report = path.join(os.tmpdir(), `gitleaks-${process.pid}.json`);
-  const res = run(['gitleaks', 'detect', '--no-banner', '--report-format', 'json', '--report-path', report, '--source', cwd], cwd, 60000);
-  if (skipped(res)) { noteSkip('gitleaks', 'not installed or unprovisioned'); return []; }
+  // Local gate scans the WORKING TREE only (--no-git): a retrofit repo with a
+  // secret anywhere in history would otherwise brick every strict commit, and the
+  // harness:secret-ok marker cannot reach historical blobs (CR-002). Deep-history
+  // scanning is CI's job (gitleaks-action with fetch-depth:0 in security.yml).
+  const res = run(['gitleaks', 'detect', '--no-banner', '--no-git', '--report-format', 'json', '--report-path', report, '--source', cwd], cwd, 60000);
+  if (skipped(res)) return { findings: [], ran: false };
   try {
-    return lib.normalizeGitleaks(JSON.parse(fs.readFileSync(report, 'utf8')));
+    return { findings: lib.normalizeGitleaks(JSON.parse(fs.readFileSync(report, 'utf8'))), ran: true };
   } catch (_) {
-    return [];
+    // A gitleaks run that started but produced no readable report ERRORED — it
+    // must count as "did not run" (ran:false) so strict tier fail-closes, never
+    // as a clean zero-finding pass (VULN-001). Mirrors the semgrep unparseable path.
+    return { findings: [], ran: false };
   } finally {
     try { fs.unlinkSync(report); } catch (_) { /* best effort */ }
   }
+}
+
+function runGitleaks(cwd) {
+  const d = runGitleaksDetail(cwd);
+  if (!d.ran) noteSkip('gitleaks', 'not installed or unprovisioned');
+  return d.findings;
 }
 
 function runSecrets(files, cwd) {
@@ -85,14 +118,21 @@ function runSecrets(files, cwd) {
   return baseline.concat(runGitleaks(cwd));
 }
 
-function runSast(files, cwd, boundaryOnly) {
+// hadTargets:false means there was nothing to scan (not a missing scanner).
+function runSastDetail(files, cwd, boundaryOnly) {
   const targets = boundaryOnly ? lib.boundaryFiles(files) : files;
-  if (!targets.length) return [];
+  if (!targets.length) return { findings: [], ran: true, hadTargets: false };
   const res = run(['semgrep', '--json', '--quiet', '--config', 'auto', ...targets], cwd, 120000);
-  if (skipped(res)) { noteSkip('semgrep', 'not installed or unprovisioned'); return []; }
+  if (skipped(res)) return { findings: [], ran: false, hadTargets: true };
   const json = parseJsonSafe(res.stdout);
-  if (!json) { noteSkip('semgrep', 'could not parse output'); return []; }
-  return lib.normalizeSemgrep(json);
+  if (!json) return { findings: [], ran: false, hadTargets: true };
+  return { findings: lib.normalizeSemgrep(json), ran: true, hadTargets: true };
+}
+
+function runSast(files, cwd, boundaryOnly) {
+  const d = runSastDetail(files, cwd, boundaryOnly);
+  if (!d.ran) noteSkip('semgrep', 'not installed, unprovisioned, or unparseable');
+  return d.findings;
 }
 
 function runNpmAudit(cwd) {
@@ -136,13 +176,48 @@ function collect(opts, files, cwd) {
   return findings;
 }
 
+// Tier-aware collection: like collect(), but also returns `missing` — the
+// required scanners (requiredScanners(sastEngine)) that did not run. The caller
+// decides policy: block in strict, loud noteSkip otherwise (C1).
+function collectTiered(opts, files, cwd, sastEngine) {
+  const findings = [];
+  const missing = new Set();
+  const required = new Set(requiredScanners(sastEngine));
+  if (opts.tiers.has('secrets')) {
+    findings.push(...lib.baselineSecretFindings(files, (f) => readSource(cwd, f)));
+    const g = runGitleaksDetail(cwd);
+    findings.push(...g.findings);
+    if (!g.ran) { noteSkip('gitleaks', 'not installed or unprovisioned'); if (required.has('gitleaks')) missing.add('gitleaks'); }
+  }
+  if (opts.tiers.has('sast')) {
+    const s = runSastDetail(files, cwd, opts.boundaryOnly);
+    findings.push(...s.findings);
+    if (!s.ran) { noteSkip('semgrep', 'not installed, unprovisioned, or unparseable'); if (required.has('semgrep')) missing.add('semgrep'); }
+  }
+  if (opts.tiers.has('deps')) findings.push(...runDeps(cwd));
+  return { findings, missing: [...missing] };
+}
+
 function main() {
   const opts = parseArgs(process.argv.slice(2));
   const cwd = process.cwd();
   const files = gatherFiles(opts, cwd);
-  const summary = lib.summarize(collect(opts, files, cwd), opts.threshold);
-  writeReport(cwd, { threshold: opts.threshold, tiers: [...opts.tiers], ...summary });
+  const tier = opts.tier || loadSensorTier(cwd);
+  const sastEngine = opts.sastEngine || 'semgrep';
+  const { findings, missing } = collectTiered(opts, files, cwd, sastEngine);
+  const summary = lib.summarize(findings, opts.threshold);
+  writeReport(cwd, { tier, threshold: opts.threshold, tiers: [...opts.tiers], missing, ...summary });
 
+  // Strict tier is fail-closed: a required scanner that never ran is a BLOCK,
+  // never a silent zero-finding pass. Other tiers keep the loud note-skip
+  // (already emitted by collectTiered) so unprovisioned repos are not bricked.
+  if (tier === 'strict' && missing.length) {
+    process.stderr.write(
+      `BLOCKED: SENSOR REQUIRED but not installed in strict tier: ${missing.join(', ')}.\n` +
+      `         Install the scanner(s) to enable the enforced security path, or lower quality.sensor_tier.\n`
+    );
+    process.exit(1);
+  }
   if (summary.blocking > 0) {
     process.stderr.write(
       `BLOCKED: ${summary.blocking} security finding(s) at or above "${opts.threshold}":\n` +
@@ -157,6 +232,6 @@ function main() {
 // Export the tier runners so other harness tools (e.g. the drift monitor) can
 // reuse the dependency audit without re-running the whole CLI or clobbering its
 // report. Only run as a CLI when invoked directly.
-module.exports = { runSecrets, runSast, runDeps, collect, parseArgs };
+module.exports = { runSecrets, runSast, runDeps, collect, collectTiered, requiredScanners, localSastCommand, parseArgs };
 
 if (require.main === module) main();

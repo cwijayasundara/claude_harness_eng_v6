@@ -54,6 +54,7 @@ const render = require('./scaffold-render');
 const encoding = require('./scaffold-encoding');
 const { copyScaffoldTree, pruneSettings, resolveScaffoldProfile, copyFrameworkPackSkills } = require('./scaffold-copy');
 const { refreshNavigation } = require('./navigation-refresh');
+const secBaseline = require('./scaffold-security-baseline');
 
 const OUTPUT_DIRS = [
   'specs/brd', 'specs/stories', 'specs/design/mockups', 'specs/design/amendments',
@@ -127,6 +128,7 @@ function writeManifest(target, profile) {
   // file-length hard limit (300 lines) and cannot accept new lines. The runner
   // tolerates the key's absence, so this is a convenience default only.
   manifest.custom_sensors = [];
+  secBaseline.applySastEngineDefault(manifest, profile);
   fs.writeFileSync(file, `${JSON.stringify(manifest, null, 2)}\n`);
   return file;
 }
@@ -196,18 +198,6 @@ function copyStarterFiles(target, src) {
   }
 }
 
-function driftWorkflowEnabled(profile, opts = {}) {
-  return opts.driftWorkflow === true || profile?.quality?.drift?.workflow === true;
-}
-
-function copyDriftWorkflow(target, src) {
-  const from = requireTemplate(src, 'templates/github-workflows/harness-drift.yml');
-  const to = path.join(target, '.github', 'workflows', 'harness-drift.yml');
-  fs.mkdirSync(path.dirname(to), { recursive: true });
-  fs.copyFileSync(from, to);
-  return to;
-}
-
 function makeDirs(target) {
   for (const d of OUTPUT_DIRS) fs.mkdirSync(path.join(target, d), { recursive: true });
 }
@@ -263,7 +253,8 @@ function applyScaffold(rawOpts) {
     writeDesignMd(target, pluginSource), writeInitSh(target, pluginSource, profile),
   ];
   copyStarterFiles(target, pluginSource);
-  if (driftWorkflowEnabled(profile, rawOpts)) written.push(copyDriftWorkflow(target, pluginSource));
+  written.push(secBaseline.materializeSecurityBaseline(target, pluginSource));
+  if (secBaseline.driftWorkflowEnabled(profile, rawOpts)) written.push(secBaseline.copyDriftWorkflow(target, pluginSource));
   makeDirs(target);
   writeStateFiles(target, profile);
   const navigation = refreshNavigation({ projectDir: target, mode: 'scaffold' });

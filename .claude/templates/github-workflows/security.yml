@@ -1,0 +1,64 @@
+# Secure-repo baseline CI — two BLOCKING jobs: gitleaks (secret scan) and sast
+# (static analysis). The SAST job is selected at scaffold time from
+# project-manifest.json#quality.sast_engine (semgrep | veracode) by
+# scaffold-copy.js#renderSecurityWorkflow. No org/repo/branch literals: GitHub
+# context and repo-configured secrets supply every environment value.
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Secret scan (gitleaks)
+        # Pinned to a full commit SHA (VULN-005): a floating @v2 tag could be
+        # retagged to malicious code that runs in-repo with GITHUB_TOKEN.
+        uses: gitleaks/gitleaks-action@83373cf2f8c4db6e24b41c1a9b086bb9619e9cd3 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+# >>> sast:semgrep
+  sast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Static analysis (Semgrep)
+        run: |
+          python -m pip install semgrep==1.90.0
+          semgrep ci --error
+# <<< sast:semgrep
+# >>> sast:veracode
+  sast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Static analysis (Veracode)
+        env:
+          VERACODE_API_ID: ${{ secrets.VERACODE_API_ID }}
+          VERACODE_API_KEY: ${{ secrets.VERACODE_API_KEY }}
+        run: |
+          if [ -z "$VERACODE_API_ID" ] || [ -z "$VERACODE_API_KEY" ]; then
+            echo "::error::Veracode SAST is the configured engine but VERACODE_API_ID /"
+            echo "::error::VERACODE_API_KEY are not set — no static analysis ran. Configure"
+            echo "the credentials (repo/org secrets) or switch quality.sast_engine to semgrep."
+            # Fail, not exit 0 (VULN-004): a green 'sast' check must mean code was
+            # actually scanned. An unconfigured engine is a visibly failing gate,
+            # never a silent pass.
+            exit 1
+          fi
+          curl -fsSL https://tools.veracode.com/veracode-cli/install | sh
+          ./veracode static scan --fail-on-severity "High, Very High"
+# <<< sast:veracode

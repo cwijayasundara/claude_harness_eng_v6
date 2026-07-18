@@ -3,13 +3,13 @@
 > Deterministic, always-current map rendered from `code-graph.json`. No LLM — re-rendered on graph change.
 
 - Producer: `vendored-ast`  ·  Language: `mixed`
-- Modules: 419  ·  Edges: 1895  ·  Clusters: 47
+- Modules: 424  ·  Edges: 1928  ·  Clusters: 47
 
 ## Hubs (most-depended-on)
 
 | Module | fan-in | fan-out |
 |---|---|---|
-| `js:test/helpers/skill-corpus.js` | 33 | 2 |
+| `js:test/helpers/skill-corpus.js` | 34 | 2 |
 | `js:test/helpers/hook-fixture.js` | 25 | 5 |
 | `js:test/e2e/helpers/claude-runner.js` | 17 | 4 |
 | `js:test/e2e/helpers/project-suite.js` | 9 | 3 |
@@ -83,7 +83,7 @@ _(Hash-cached concept pages from `nav-concepts.js`.)_
 
 ## Pages
 
-- [`test/` — 290 module(s)](pages/01-test.md) — 290 module(s)
+- [`test/` — 295 module(s)](pages/01-test.md) — 295 module(s)
 - [`test/e2e/` — 18 module(s)](pages/02-test-e2e.md) — 18 module(s)
 - [`symphony_clone/src/orchestrator/` — 16 module(s)](pages/03-symphony_clone-src-orchestrator.md) — 16 module(s)
 - [`test/e2e/helpers/` — 14 module(s)](pages/04-test-e2e-helpers.md) — 14 module(s)
