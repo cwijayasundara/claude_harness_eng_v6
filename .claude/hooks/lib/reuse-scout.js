@@ -63,6 +63,19 @@ function rankCandidates(ranked) {
     .slice(0, TOP_N);
 }
 
+// band/target are derived from the best GOAL-RELEVANT candidate only:
+// total_score is funnel-dominated (the busiest structural hub scores high
+// regardless of goal), so gating on candidates[0] fires the reuse dialogue
+// for goals with zero semantic connection to the graph. A candidate only
+// counts once it actually matched a goal term.
+function selectTarget(candidates, reasons) {
+  const relevant = candidates.filter((c) => (c.matched_terms && c.matched_terms.length) || (c.goal_relevance || 0) > 0);
+  const target = relevant[0] || null;
+  if (!candidates.length) reasons.push('no seam candidates for this goal');
+  else if (!target) reasons.push('no goal-relevant seam — candidates matched no goal terms');
+  return target;
+}
+
 function scoutReuse({ graph, goal, invariantsText, batch } = {}) {
   const reasons = [];
   let ranked = [];
@@ -72,15 +85,15 @@ function scoutReuse({ graph, goal, invariantsText, batch } = {}) {
     reasons.push(`seam scoring unavailable: ${e.message}`);
   }
   const candidates = rankCandidates(ranked);
-  const best = candidates[0];
-  const band = best ? bandFor(best.total_score) : 'low';
-  if (!best) reasons.push('no seam candidates for this goal');
+  const target = selectTarget(candidates, reasons);
+  const band = target ? bandFor(target.total_score) : 'low';
   const touched = touchedInvariants(goal, invariantsText);
   const intra = intraBatchClusters(batch);
   return {
     fire: band !== 'low' || touched.length > 0 || intra.length > 0,
     band,
-    target_seam: best ? best.path : null,
+    target_seam: target ? target.path : null,
+    target_action: target ? target.recommended_action : null,
     candidates,
     touched_invariants: touched,
     intra_batch: intra,

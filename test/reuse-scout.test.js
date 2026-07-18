@@ -120,3 +120,48 @@ test('scoutReuse does not throw on a malformed batch entry', () => {
     assert.ok(Array.isArray(r.intra_batch));
   });
 });
+
+// FR-1 locking test: the busy upload_service.py hub scores 0.84 total_score
+// (0.4*0.6 observable + 0.4*1.0 funnel + 0.2*1.0 asymmetry, no goal bump)
+// purely from graph structure -- high enough to clear BAND_HIGH (0.7) even
+// though NO candidate matches any term in this unrelated goal. Before the
+// fix, band/fire were derived from candidates[0] regardless of goal
+// relevance, so this fired band='high'/fire=true on a goal with zero
+// semantic connection to the graph. After the fix, no candidate is
+// goal-relevant (matched_terms is empty for all of them), so band must be
+// 'low' and fire must be false (no invariants touched, no batch supplied).
+test('scoutReuse does not fire on a goal that matches no seam terms, even with a high-scoring structural hub', () => {
+  const r = scoutReuse({ graph, goal: 'totally unrelated xyzzy widget' });
+  assert.ok(r.candidates.length >= 1, 'the busy hub is still scored and surfaced as a candidate');
+  assert.ok(
+    r.candidates.every((c) => !(c.matched_terms && c.matched_terms.length)),
+    'no candidate matched any goal term'
+  );
+  assert.strictEqual(r.band, 'low', 'band must not be inflated by structural score alone');
+  assert.strictEqual(r.target_seam, null, 'no goal-relevant target seam exists');
+  assert.strictEqual(r.fire, false, 'the confidence gate must not fire for a goal-irrelevant seam');
+});
+
+// FR-1 locking test: an empty goal produces no goal terms at all, so no
+// candidate can ever be goal-relevant -- the gate must stay low/quiet.
+test('scoutReuse does not fire on an empty goal', () => {
+  const r = scoutReuse({ graph, goal: '' });
+  assert.strictEqual(r.band, 'low');
+  assert.strictEqual(r.fire, false);
+});
+
+// FR-2 locking test: the best goal-relevant candidate for the 'upload'
+// goal is upload_service.py, whose recommended_action is 'split' (per
+// score_seams.js: asymmetry=1.0 with fan_out===0 -> 'split'), a
+// non-reuse-shaped action. Before the fix, the summary had no
+// target_action field at all, hiding this from the reuse dialogue. After
+// the fix, target_action must surface the target candidate's
+// recommended_action verbatim, and target_seam must still point at it
+// (the action must be visible, not suppress the seam).
+test('scoutReuse surfaces the target candidate\'s recommended_action as target_action', () => {
+  const r = scoutReuse({ graph, goal: 'add a new upload source variant' });
+  assert.match(r.candidates[0].path, /upload_service/);
+  assert.strictEqual(r.candidates[0].recommended_action, 'split');
+  assert.match(r.target_seam, /upload_service/, 'target_seam still points at the goal-relevant seam');
+  assert.strictEqual(r.target_action, 'split', 'target_action surfaces the recommended action, even though it is not reuse-shaped');
+});
