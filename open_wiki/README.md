@@ -2,8 +2,8 @@
 
 This package runs [OpenWiki 0.2](https://github.com/langchain-ai/openwiki) against
 the repository while keeping generated documentation in `open_wiki/wiki/` rather
-than OpenWiki's default root-level `openwiki/` directory. Its default is OpenAI
-with `gpt-5.6-terra`; Moonshot Kimi K3 remains available as an alternative.
+than OpenWiki's default root-level `openwiki/` directory. It uses OpenAI with
+`gpt-5.6-terra` by default.
 
 ## One-time setup
 
@@ -80,18 +80,14 @@ Defaults are in `.env.example`:
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
-| `OPENWIKI_PROVIDER` | `openai` | `openai` (default) or `moonshot` |
-| `OPENAI_API_KEY` | required for `openai` | OpenAI API credential |
+| `OPENAI_API_KEY` | required | OpenAI API credential |
 | `OPENWIKI_MODEL_ID` | `gpt-5.6-terra` | OpenAI model ID |
-| `MOONSHOT_API_KEY` | required for `moonshot` | Moonshot API credential |
-| `MOONSHOT_BASE_URL` | `https://api.moonshot.ai/v1` | OpenAI-compatible Moonshot endpoint |
-| `MOONSHOT_MODEL_ID` | `kimi-k3` | Model passed to Moonshot |
 | `OPENWIKI_TELEMETRY_DISABLED` | `1` | Opt out of OpenWiki telemetry |
 
 OpenWiki itself manages a small marked block in root `AGENTS.md` and `CLAUDE.md`
 so future coding agents know to consult the wiki. The wrapper rewrites that block
 to point to `open_wiki/wiki/`. It also replaces OpenWiki's default workflow with
-`github-actions.yml`, which calls this wrapper and needs `MOONSHOT_API_KEY` saved
+`github-actions.yml`, which calls this wrapper and needs `OPENAI_API_KEY` saved
 as a GitHub Actions repository secret.
 
 ## Important implementation detail

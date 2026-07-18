@@ -25,10 +25,10 @@ jobs:
       - name: Install OpenWiki
         run: npm ci --prefix open_wiki
 
-      - name: Refresh wiki with Kimi K3
+      - name: Refresh wiki with OpenAI
         run: npm run wiki:update --prefix open_wiki
         env:
-          MOONSHOT_API_KEY: ${{ secrets.MOONSHOT_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENWIKI_TELEMETRY_DISABLED: "1"
 
       - name: Create documentation pull request
@@ -42,4 +42,4 @@ jobs:
           branch: openwiki/update
           commit-message: "docs: update OpenWiki"
           title: "docs: update OpenWiki"
-          body: "Automated OpenWiki documentation update using Moonshot Kimi K3."
+          body: "Automated OpenWiki documentation update using OpenAI."

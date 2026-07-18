@@ -5,14 +5,12 @@ import { loadEnvFile } from "./load-env.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const environment = { ...(await loadEnvFile(path.join(packageRoot, ".env"))), ...process.env };
-const provider = environment.OPENWIKI_PROVIDER ?? "openai";
-const requiredKey = provider === "moonshot" ? "MOONSHOT_API_KEY" : "OPENAI_API_KEY";
-const missing = [requiredKey].filter((name) => !environment[name]);
+const missing = ["OPENAI_API_KEY"].filter((name) => !environment[name]);
 
 if (missing.length > 0) {
   console.error(`Missing required environment variable: ${missing.join(", ")}`);
-  console.error(`Set OPENWIKI_PROVIDER=${provider} and ${requiredKey} in open_wiki/.env.`);
+  console.error("Set OPENAI_API_KEY in open_wiki/.env.");
   process.exit(1);
 }
 
-console.log(`${provider} configuration is present.`);
+console.log("OpenAI configuration is present.");

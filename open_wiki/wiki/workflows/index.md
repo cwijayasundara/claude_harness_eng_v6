@@ -6,5 +6,5 @@ description: "Files and subdirectories in Workflows."
 
 # Files
 
-- [Graph navigation and resumable execution](navigation-and-continuation.md) - How the harness turns source changes into refreshed code-graph navigation, context packs, token guidance, and resumable autonomous execution across sessions and processes.
-- [Product and brownfield work routes](product-routes.md) - How Claude Harness Engine v5 selects and conducts greenfield, brownfield, sprint, behavior-change, refactor, and artifact-only workflows while preserving human merge ownership.
+- [Continuation, discovery, and reuse decisions](continuation-and-reuse.md) - Durable execution state, cross-session recovery, brownfield navigation, and the confidence-gated reuse-or-justify intake discipline.
+- [Product routes and install boundaries](product-routes.md) - How Claude Harness Engine packages its three loadouts and routes greenfield, existing-code, sprint, and review work through scaffolded controls.

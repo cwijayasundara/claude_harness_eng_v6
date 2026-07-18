@@ -23,35 +23,13 @@ async function exists(target) {
 }
 
 function configuredEnvironment(environment) {
-  const provider = environment.OPENWIKI_PROVIDER ?? "openai";
-
-  if (provider === "openai") {
-    if (!environment.OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY is required for OPENWIKI_PROVIDER=openai.");
-    }
-    return {
-      ...environment,
-      OPENWIKI_PROVIDER: "openai",
-      OPENWIKI_MODEL_ID: environment.OPENWIKI_MODEL_ID ?? "gpt-5.6-terra",
-      OPENWIKI_TELEMETRY_DISABLED: environment.OPENWIKI_TELEMETRY_DISABLED ?? "1",
-    };
-  }
-
-  if (provider === "moonshot") {
-    if (!environment.MOONSHOT_API_KEY) {
-      throw new Error("MOONSHOT_API_KEY is required for OPENWIKI_PROVIDER=moonshot.");
-    }
-    return {
-      ...environment,
-      OPENWIKI_PROVIDER: "openai-compatible",
-      OPENAI_COMPATIBLE_API_KEY: environment.MOONSHOT_API_KEY,
-      OPENAI_COMPATIBLE_BASE_URL: environment.MOONSHOT_BASE_URL ?? "https://api.moonshot.ai/v1",
-      OPENWIKI_MODEL_ID: environment.MOONSHOT_MODEL_ID ?? "kimi-k3",
-      OPENWIKI_TELEMETRY_DISABLED: environment.OPENWIKI_TELEMETRY_DISABLED ?? "1",
-    };
-  }
-
-  throw new Error(`Unsupported OPENWIKI_PROVIDER=${provider}. Use openai or moonshot.`);
+  if (!environment.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is required.");
+  return {
+    ...environment,
+    OPENWIKI_PROVIDER: "openai",
+    OPENWIKI_MODEL_ID: environment.OPENWIKI_MODEL_ID ?? "gpt-5.6-terra",
+    OPENWIKI_TELEMETRY_DISABLED: environment.OPENWIKI_TELEMETRY_DISABLED ?? "1",
+  };
 }
 
 async function restoreWiki() {

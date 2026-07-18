@@ -1,7 +1,10 @@
 # Claude Harness Engine wiki brief
 
-Generate an evidence-backed, agent-first wiki for this repository. Prioritize the
-public product surface and the execution model over exhaustive file inventories.
+Generate an evidence-backed, agent-first wiki for this repository. Treat `.claude/`
+as the primary implementation surface of the distributable scaffold: explain its
+skills, commands, agents, hooks, scripts, settings, and state before secondary
+repository tooling. Prioritize the public product surface and execution model over
+exhaustive file inventories.
 
 The most important sources are `README.md`, `HARNESS.md`, `design.md`,
 `CODEBASE_MAP.md`, `CLAUDE.md`, `project-manifest.json`, `.claude/`,
@@ -23,7 +26,9 @@ Treat the wiki as a context graph, not a set of isolated summaries. Give every
 substantive page a descriptive `type`, `title`, `description`, and useful `tags`.
 Create explicit Markdown links between pages whenever one consumes, enforces,
 tests, configures, or operationalizes another. Prefer repository-relative paths
-in backticks when citing source files, directories, commands, or artifacts: the
-context-graph generator turns those verified references into navigable source
-nodes. Create focused pages for independently changing subsystems rather than
-burying those relationships in a broad catch-all page.
+in backticks when citing source files, directories, commands, or artifacts. For
+each substantive `.claude/` subsystem, cite the concrete entry files (for example,
+the relevant command, skill, hook, or script) instead of citing `.claude/` alone:
+the context-graph generator turns verified citations into source nodes. Create
+focused pages for independently changing subsystems rather than burying those
+relationships in a broad catch-all page.
