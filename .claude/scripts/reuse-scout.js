@@ -17,11 +17,40 @@ function arg(flag, def) {
 }
 function readMaybe(p) { try { return fs.readFileSync(p, 'utf8'); } catch (_) { return undefined; } }
 
+// --batch accepts a story-list JSON file OR a directory of per-story JSON files
+// (e.g. specs/stories/sprint-N/). A directory is the natural shape /sprint and
+// /feature epics already produce, so glob its *.json and normalise each story to
+// {id, goal}; a bare file path is read directly. Returns undefined when there is
+// nothing usable — never throws (a directory passed to readFileSync throws EISDIR).
+function readBatch(batchArg) {
+  if (!batchArg) return undefined;
+  const abs = path.resolve(REPO, batchArg);
+  let stat;
+  try { stat = fs.statSync(abs); } catch (_) { return undefined; }
+  const items = [];
+  const collect = (text) => {
+    let parsed;
+    try { parsed = JSON.parse(text); } catch (_) { return; }
+    for (const s of (Array.isArray(parsed) ? parsed : [parsed])) {
+      if (s && s.id) items.push({ id: s.id, goal: s.goal || s.text || s.title || s.name || '' });
+    }
+  };
+  if (stat.isDirectory()) {
+    for (const name of fs.readdirSync(abs).sort()) {
+      if (name.endsWith('.json')) { const t = readMaybe(path.join(abs, name)); if (t) collect(t); }
+    }
+  } else {
+    const t = readMaybe(abs);
+    if (t) collect(t);
+  }
+  return items.length ? items : undefined;
+}
+
 function main() {
   const graphPath = path.resolve(REPO, arg('--graph', 'specs/brownfield/code-graph.json'));
   const goal = arg('--goal', '');
   const constitutionText = readMaybe(path.resolve(REPO, arg('--constitution', 'specs/design/constitution.md')));
-  const batchRaw = readMaybe(path.resolve(REPO, arg('--batch', '')));
+  const batch = readBatch(arg('--batch', ''));
   const outPath = arg('--out', '');
 
   const graphText = readMaybe(graphPath);
@@ -31,8 +60,6 @@ function main() {
   } else {
     let graph = {};
     try { graph = JSON.parse(graphText); } catch (_) { graph = { nodes: [], edges: [], metrics: {} }; }
-    let batch;
-    try { batch = batchRaw ? JSON.parse(batchRaw) : undefined; } catch (_) { batch = undefined; }
     result = scoutReuse({ graph, goal, invariantsText: constitutionText, batch });
   }
 

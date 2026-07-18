@@ -18,11 +18,26 @@ test('reuse-or-justify skill exists with valid frontmatter + internal-discipline
   assert.match(desc, /\[Internal discipline — .+power-user path\.\]$/, 'carries the internal-discipline marker');
 });
 
-test('skill invokes reuse-scout for grounding and records via record-reuse-decision', () => {
+test('skill self-grounds on reuse-scout and records via record-reuse-decision', () => {
   const text = read(SKILL);
   assert.match(text, /reuse-scout\.js/, 'runs reuse-scout for the fire decision');
   assert.match(text, /record-reuse-decision\.js/, 'records the resolved decision');
-  assert.match(text, /fire/, 'branches on the fire signal');
+});
+
+test('skill gates both ways: fire:false silently records net-new; fire:true interrogates', () => {
+  const text = read(SKILL);
+  // The fire:false branch must still write a record (the provenance-completeness
+  // fix) — assert the net-new record instruction sits with the fire:false case,
+  // so an edit that drops it (the original inert bug) fails here.
+  assert.match(text, /`fire: false`[\s\S]{0,400}record-reuse-decision\.js --story <id> --decision net-new/,
+    'fire:false must record a net-new decision, not merely "note and proceed"');
+  assert.match(text, /`fire: true`[\s\S]{0,200}interrogate/i, 'fire:true must interrogate');
+  // Guards against the inverted-gate regression class (interrogating on fire:false).
+  assert.match(text, /Do not interrogate on `fire: false`/, 'must not interrogate on fire:false');
+});
+
+test('skill passes --band to the recorder (durable confidence for P2)', () => {
+  assert.match(read(SKILL), /--band/, 'records reuse-scout band');
 });
 
 test('skill is not a tombstone', () => {
@@ -30,9 +45,11 @@ test('skill is not a tombstone', () => {
 });
 
 for (const skill of ['change', 'feature', 'sprint']) {
-  test(`/${skill} intake invokes reuse-or-justify (gated on reuse-scout fire)`, () => {
+  test(`/${skill} intake invokes reuse-or-justify and does not pre-run reuse-scout itself`, () => {
     const corpus = readSkillCorpus(skill);
     assert.match(corpus, /reuse-or-justify/, `/${skill} must invoke the reuse-or-justify dialogue`);
-    assert.match(corpus, /reuse-scout\.js/, `/${skill} must run reuse-scout for the fire decision`);
+    // The sub-skill owns grounding now — a caller that runs reuse-scout.js itself
+    // reintroduces the double-run / caller-pre-gate split the review flagged.
+    assert.doesNotMatch(corpus, /reuse-scout\.js/, `/${skill} must delegate grounding to the sub-skill, not run reuse-scout itself`);
   });
 }

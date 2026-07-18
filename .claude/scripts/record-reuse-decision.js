@@ -9,7 +9,8 @@
 //
 // CLI: node .claude/scripts/record-reuse-decision.js --story <id>
 //        --decision <extend|new-seam|net-new> [--seam <path>] [--action <a>]
-//        --justification "<why>" [--invariant-impact "<txt>"] [--budget '<json>']
+//        --justification "<why>" [--band <high|medium|low>]
+//        [--invariant-impact "<txt>"] [--budget '<json>']
 //        [--options "<considered>"] [--root DIR] [--out <path>]
 
 const fs = require('fs');
@@ -20,7 +21,12 @@ const DECISIONS = new Set(['extend', 'new-seam', 'net-new']);
 
 function arg(argv, name, fallback) {
   const i = argv.indexOf(name);
-  return i === -1 ? fallback : argv[i + 1];
+  if (i === -1) return fallback;
+  const v = argv[i + 1];
+  // A missing value or a following flag (e.g. `--justification --budget`) is
+  // not a value — return the fallback so the caller's presence check catches it
+  // rather than silently recording the next flag name as the field's value.
+  return (v === undefined || String(v).startsWith('--')) ? fallback : v;
 }
 
 function resolveOutPath(root, argv) {
@@ -34,7 +40,7 @@ function appendRecord(outPath, record) {
 }
 
 function usage() {
-  process.stderr.write('usage: record-reuse-decision.js --story <id> --decision <extend|new-seam|net-new> --justification "<why>" [--seam <path>] [--action <a>] [--invariant-impact <t>] [--budget <json>] [--options <t>]\n');
+  process.stderr.write('usage: record-reuse-decision.js --story <id> --decision <extend|new-seam|net-new> --justification "<why>" [--seam <path>] [--action <a>] [--band <high|medium|low>] [--invariant-impact <t>] [--budget <json>] [--options <t>]\n');
 }
 
 function run(argv, root, deps) {
@@ -51,6 +57,7 @@ function run(argv, root, deps) {
   appendRecord(resolveOutPath(root, argv), {
     storyId: story,
     decision,
+    band: arg(argv, '--band', null),
     seam: seam || null,
     action: arg(argv, '--action', null),
     options_considered: arg(argv, '--options', null),

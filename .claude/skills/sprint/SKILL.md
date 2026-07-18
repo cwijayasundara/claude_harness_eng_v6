@@ -80,12 +80,13 @@ Run `/spec specs/brd/sprint-N/brd.md --sprint N` (see `spec/SKILL.md`'s
 sprint addendum). Writes `specs/stories/sprint-N/`.
 
 **Reuse-or-justify — REQUIRED SUB-SKILL: `reuse-or-justify`** when the PRD
-adds or materially extends behavior. Run
-`node .claude/scripts/reuse-scout.js --graph specs/brownfield/code-graph.json --goal "<prd-file>" --batch specs/stories/sprint-N/`
-so intra-batch clusters across the sprint's stories surface; if it reports
-`fire: true`, invoke `reuse-or-justify` to settle reuse-vs-new (and any
-touched invariant/budget) before GATE 1. If `fire: false`, note the net-new
-assumption and proceed.
+adds or materially extends behavior. Invoke `reuse-or-justify` at intake with the
+sprint's theme as the goal string and the sprint's story directory
+`specs/stories/sprint-N/` as its batch, so intra-batch clusters across the
+sprint's stories surface, before GATE 1. The sub-skill grounds on reuse-scout
+itself: on a fire it settles reuse-vs-new (and any touched invariant / budget);
+otherwise it records the net-new assumption and proceeds. The decision is
+recorded either way — do not run reuse-scout here yourself.
 
 ## GATE 1 — Approve Requirement Delta + Decomposition
 

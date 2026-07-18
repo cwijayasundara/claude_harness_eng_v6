@@ -170,13 +170,14 @@ After GATE 1 you hold the decomposition. First classify size, reusing
 State the chosen lane in one line before proceeding.
 
 **Reuse-or-justify — REQUIRED SUB-SKILL: `reuse-or-justify`** when the request
-adds or materially extends behavior. Run
-`node .claude/scripts/reuse-scout.js --graph specs/brownfield/code-graph.json --goal "<feature request>"`
-(epic/cluster lane: also pass `--batch <path-to-epic-story-list.json>` so
-intra-batch clusters across the epic's stories surface); if it reports
-`fire: true`, invoke `reuse-or-justify` to settle reuse-vs-new (and any
-touched invariant/budget) before Impact classification / the epic design
-pass. If `fire: false`, note the net-new assumption and proceed.
+adds or materially extends behavior. Invoke `reuse-or-justify` at intake with the
+feature request as the goal (epic/cluster lane: also hand it the epic's story
+list — a story-list JSON or the epic's story directory — so intra-batch clusters
+across the epic's stories surface), before Impact classification / the epic
+design pass. The sub-skill grounds on reuse-scout itself: on a fire it settles
+reuse-vs-new (and any touched invariant / budget); otherwise it records the
+net-new assumption and proceeds. The decision is recorded either way — do not run
+reuse-scout here yourself.
 
 ### Impact classification (single-story lane only)
 

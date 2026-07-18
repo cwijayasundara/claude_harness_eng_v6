@@ -12,15 +12,17 @@ Resolve one question before a change is built: **does this increment extend an e
 Run reuse-scout for the change's goal:
 
 ```bash
-node .claude/scripts/reuse-scout.js --graph specs/brownfield/code-graph.json --goal "<the change's one-line goal>" [--constitution specs/design/constitution.md] [--batch <stories.json>]
+node .claude/scripts/reuse-scout.js --graph specs/brownfield/code-graph.json --goal "<the change's one-line goal>" [--constitution specs/design/constitution.md] [--batch <stories.json-or-directory>]
 ```
+
+Pass `--goal` a plain goal string, never a file path. For feature/sprint epic scope, pass `--batch` the epic's story-list JSON **or** its story directory (e.g. `specs/stories/sprint-N/`) so intra-batch clusters across the sprint's stories surface.
 
 Read its JSON: `fire`, `band`, `target_seam`, `target_action`, `candidates[]` (each with `path`, `total_score`, `recommended_action`, `matched_terms`), `touched_invariants[]`, `intra_batch[]`.
 
 ## Step 2 — Decide whether to interrogate
 
 - **`fire: false`** → do not interrogate. Record the net-new assumption and proceed:
-  `node .claude/scripts/record-reuse-decision.js --story <id> --decision net-new --justification "reuse-scout found no goal-relevant seam, invariant, or same-release clone"`. Continue the caller's flow.
+  `node .claude/scripts/record-reuse-decision.js --story <id> --decision net-new --band low --justification "reuse-scout found no goal-relevant seam, invariant, or same-release clone"`. Continue the caller's flow. This record is what keeps the provenance trail complete — it is not optional.
 - **`fire: true`** → interrogate at the genuine fork points only (below). One question at a time.
 
 ## Step 3 — The dialogue (only the questions the grounding raises)
@@ -52,9 +54,11 @@ Once resolved, record each fork:
 
 ```bash
 node .claude/scripts/record-reuse-decision.js --story <id> --decision <extend|new-seam|net-new> \
-  [--seam <path-or-name>] [--action <extend|wrap|introduce-adapter|split|new>] \
+  --band <high|medium|low> [--seam <path-or-name>] [--action <extend|wrap|introduce-adapter|split|new>] \
   --justification "<one line>" [--invariant-impact "<txt>"] [--budget '<json>'] [--options "<considered>"]
 ```
+
+Pass `--band` reuse-scout's reported `band` so the durable record carries the confidence the P2 seam-conformance gate reads.
 
 Then reflect the outcome in the design artifacts (per the /design authoring instructions): set the extended component's `seam`/`extension_mechanism`/`instances`/`budget` in `component-map.md`, and `extends_seam`/`budget_inherited_from` in `design-traces.json`. These are optional fields the ownership/trace sensors already tolerate — do not backtick non-path values.
 

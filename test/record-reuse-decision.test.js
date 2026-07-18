@@ -13,7 +13,7 @@ test('appends a well-formed decision record and returns 0', () => {
   const root = tmpRoot();
   const code = run(
     ['--story', 'E1-S2', '--decision', 'extend', '--seam', 'src/services/upload_service.py',
-     '--action', 'extend', '--justification', 'reuse the upload pipeline node',
+     '--action', 'extend', '--band', 'high', '--justification', 'reuse the upload pipeline node',
      '--invariant-impact', 'I-3 upload-goes-through-pipeline', '--budget', '{"latency_ms_p95":800}',
      '--options', 'considered new module; rejected as clone'],
     root, { now: () => '2026-07-18T00:00:00.000Z' });
@@ -23,6 +23,7 @@ test('appends a well-formed decision record and returns 0', () => {
   const rec = JSON.parse(lines[0]);
   assert.strictEqual(rec.storyId, 'E1-S2');
   assert.strictEqual(rec.decision, 'extend');
+  assert.strictEqual(rec.band, 'high');
   assert.strictEqual(rec.seam, 'src/services/upload_service.py');
   assert.strictEqual(rec.action, 'extend');
   assert.strictEqual(rec.justification, 'reuse the upload pipeline node');
@@ -54,4 +55,20 @@ test('malformed --budget JSON is stored as null, not thrown', () => {
   const code = run(['--story', 'S1', '--decision', 'net-new', '--justification', 'x', '--budget', 'not json'], root, { now: () => 't' });
   assert.strictEqual(code, 0);
   assert.strictEqual(JSON.parse(fs.readFileSync(path.join(root, OUT), 'utf8').trim()).budget, null);
+});
+
+test('band is null when --band is omitted', () => {
+  const root = tmpRoot();
+  run(['--story', 'S1', '--decision', 'net-new', '--justification', 'x'], root, { now: () => 't' });
+  assert.strictEqual(JSON.parse(fs.readFileSync(path.join(root, OUT), 'utf8').trim()).band, null);
+});
+
+test('a following flag is not consumed as a value → required check fails, exit 2, nothing written', () => {
+  const root = tmpRoot();
+  // --justification has no value (--budget follows); it must not swallow "--budget"
+  // as the justification and record a misleading net-new decision.
+  assert.strictEqual(
+    run(['--story', 'S1', '--decision', 'net-new', '--justification', '--budget', '{}'], root, {}),
+    2);
+  assert.ok(!fs.existsSync(path.join(root, OUT)));
 });
