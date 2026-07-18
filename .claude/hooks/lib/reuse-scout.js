@@ -31,7 +31,9 @@ function touchedInvariants(goal, invariantsText) {
 }
 
 function intraBatchClusters(batch) {
-  const items = (batch || []).map((s) => ({ id: s.id, t: new Set(terms(s.goal || s.text)) }));
+  const items = (batch || [])
+    .filter((s) => s && s.id)
+    .map((s) => ({ id: s.id, t: new Set(terms(s.goal || s.text)) }));
   const clusters = [];
   const seen = new Set();
   for (let i = 0; i < items.length; i++) {
@@ -46,6 +48,21 @@ function intraBatchClusters(batch) {
   return clusters;
 }
 
+// Rank by total_score first (it already encodes goal-relevance + structural
+// signal); reuse-shaped action (extend/wrap/introduce-adapter) is only a
+// tiebreak. recommendAction's per-node classification is informational
+// metadata, not a ranking key on its own — a used leaf service can be
+// labeled 'split' while scoring highest, and a disconnected orphan can be
+// labeled 'wrap' while scoring lowest.
+const REUSE_ACTIONS = new Set(['extend', 'wrap', 'introduce-adapter']);
+function rankCandidates(ranked) {
+  return ranked
+    .slice()
+    .sort((a, b) => (b.total_score - a.total_score)
+      || (REUSE_ACTIONS.has(b.recommended_action) - REUSE_ACTIONS.has(a.recommended_action)))
+    .slice(0, TOP_N);
+}
+
 function scoutReuse({ graph, goal, invariantsText, batch } = {}) {
   const reasons = [];
   let ranked = [];
@@ -54,13 +71,7 @@ function scoutReuse({ graph, goal, invariantsText, batch } = {}) {
   } catch (e) {
     reasons.push(`seam scoring unavailable: ${e.message}`);
   }
-  // Surface extend/wrap/adapter candidates (reuse-shaped) first, then by score.
-  const reuseActions = new Set(['extend', 'wrap', 'introduce-adapter']);
-  const candidates = ranked
-    .slice()
-    .sort((a, b) => (reuseActions.has(b.recommended_action) - reuseActions.has(a.recommended_action))
-      || (b.total_score - a.total_score))
-    .slice(0, TOP_N);
+  const candidates = rankCandidates(ranked);
   const best = candidates[0];
   const band = best ? bandFor(best.total_score) : 'low';
   if (!best) reasons.push('no seam candidates for this goal');
