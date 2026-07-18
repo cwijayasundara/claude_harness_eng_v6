@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const test = require('node:test');
 const assert = require('node:assert');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 const ROOT = path.resolve(__dirname, '..');
 const SKILL = path.join(ROOT, '.claude/skills/reuse-or-justify/SKILL.md');
 const read = (p) => fs.readFileSync(p, 'utf8');
@@ -27,3 +28,11 @@ test('skill invokes reuse-scout for grounding and records via record-reuse-decis
 test('skill is not a tombstone', () => {
   assert.ok(!/\[Reference, not a command\]|do not invoke this skill/i.test(read(SKILL)));
 });
+
+for (const skill of ['change', 'feature', 'sprint']) {
+  test(`/${skill} intake invokes reuse-or-justify (gated on reuse-scout fire)`, () => {
+    const corpus = readSkillCorpus(skill);
+    assert.match(corpus, /reuse-or-justify/, `/${skill} must invoke the reuse-or-justify dialogue`);
+    assert.match(corpus, /reuse-scout\.js/, `/${skill} must run reuse-scout for the fire decision`);
+  });
+}
