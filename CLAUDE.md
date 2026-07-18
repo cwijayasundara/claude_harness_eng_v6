@@ -117,3 +117,13 @@ Monitor cache hit rate like uptime. Telemetry is **off by default** (opt-in) —
 - `HARNESS.md` + `harness-manifest.json` — Registry of the control system (guides × sensors across maintainability/architecture/behaviour/traceability). Read before adding or changing any gate/sensor/reviewer so the new control gets registered, not orphaned; keep the manifest honest (`node .claude/scripts/validate-harness-manifest.js`, enforced by `npm test`)
 - `README.md` — Installation and usage guide
 - `docs/prompting-standards.md` — How to author agent/skill prompts for the current models (read before editing any `.claude/agents/*` or `.claude/skills/*` prompt)
+
+<!-- OPENWIKI:START -->
+
+## OpenWiki
+
+This repository uses OpenWiki for recurring code documentation. Start with `open_wiki/wiki/quickstart.md`, then follow its links to architecture, workflows, domain concepts, operations, integrations, testing guidance, and source maps.
+
+The scheduled OpenWiki GitHub Actions workflow refreshes the repository wiki. Do not hand-edit generated OpenWiki pages unless explicitly asked; prefer updating source code/docs and letting OpenWiki regenerate.
+
+<!-- OPENWIKI:END -->

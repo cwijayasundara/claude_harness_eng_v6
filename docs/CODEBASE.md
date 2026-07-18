@@ -13,8 +13,8 @@ _Source: `README.md`_
 
 | Metric | Value |
 |---|---|
-| Indexed files | 413 |
-| Graph edges | 1870 |
+| Indexed files | 419 |
+| Graph edges | 1895 |
 | Concept pages | 20 |
 | Wiki cluster pages | 20 |
 
@@ -33,7 +33,7 @@ npm run ask -- "..."     # ask the codebase
 
 | Module | fan-in | fan-out |
 |---|---|---|
-| `test/helpers/skill-corpus.js` | 32 | 0 |
+| `test/helpers/skill-corpus.js` | 33 | 0 |
 | `test/helpers/hook-fixture.js` | 25 | 0 |
 | `test/e2e/helpers/claude-runner.js` | 17 | 0 |
 | `test/e2e/helpers/project-suite.js` | 9 | 0 |
@@ -58,9 +58,9 @@ npm run ask -- "..."     # ask the codebase
 - [test/helpers](specs/brownfield/wiki/concepts/test__helpers.md)
 - [test/e2e](specs/brownfield/wiki/concepts/test__e2e.md)
 - [symphony_clone/src](specs/brownfield/wiki/concepts/symphony_clone__src.md)
-- [test/evals](specs/brownfield/wiki/concepts/test__evals.md)
 - [test/fixtures](specs/brownfield/wiki/concepts/test__fixtures.md)
 - [symphony_clone/test](specs/brownfield/wiki/concepts/symphony_clone__test.md)
+- [test/evals](specs/brownfield/wiki/concepts/test__evals.md)
 - [symphony_clone/scripts](specs/brownfield/wiki/concepts/symphony_clone__scripts.md)
 - [eslint.config.js](specs/brownfield/wiki/concepts/eslint.config.js.md)
 - [test/ab-report.test.js](specs/brownfield/wiki/concepts/test__ab-report.test.js.md)

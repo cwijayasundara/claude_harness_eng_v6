@@ -1,0 +1,19 @@
+{
+  "name": "claude-harness-open-wiki",
+  "private": true,
+  "version": "0.1.0",
+  "description": "OpenWiki 0.2 integration for the Claude Harness Engine.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "wiki:init": "node scripts/run-openwiki.mjs --init",
+    "wiki:update": "node scripts/run-openwiki.mjs --update",
+    "wiki:ask": "node scripts/run-openwiki.mjs",
+    "wiki:graph": "node scripts/generate-context-graph.mjs --bundle wiki --repo .. --name \"Claude Harness Engine v5\"",
+    "wiki:check": "node scripts/check-config.mjs"
+  },
+  "dependencies": {
+    "openwiki": "0.2.0"
+  }
+}

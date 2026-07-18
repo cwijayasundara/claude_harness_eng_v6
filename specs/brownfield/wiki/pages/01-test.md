@@ -1,6 +1,6 @@
-# `test/` — 284 module(s)
+# `test/` — 290 module(s)
 
-284 module(s).
+290 module(s).
 
 ## Dependencies
 
@@ -58,6 +58,7 @@ flowchart LR
   n_js_test_concurrency_gate_doc_contract_test_js["concurrency-gate-doc-contract.test.js"]
   n_js_test_concurrency_gate_wiring_contract_test_js["concurrency-gate-wiring-contract.test.js"]
   n_js_test_concurrency_gate_test_js["concurrency-gate.test.js"]
+  n_js_test_constitution_invariants_test_js["constitution-invariants.test.js"]
   n_js_test_constraints_extract_test_js["constraints-extract.test.js"]
   n_js_test_context_compact_wrappers_test_js["context-compact-wrappers.test.js"]
   n_js_test_context_pack_test_js["context-pack.test.js"]
@@ -85,7 +86,6 @@ flowchart LR
   n_js_test_deepwiki_determinism_test_js["deepwiki-determinism.test.js"]
   n_js_test_diagnostics_parse_test_js["diagnostics-parse.test.js"]
   n_js_test_diff_hunks_test_js["diff-hunks.test.js"]
-  n_js_test_dogfood_manifest_test_js["dogfood-manifest.test.js"]
 ```
 
 ## `js:test/ab-report.test.js`
@@ -498,6 +498,13 @@ flowchart LR
 ### Symbols
   - `runGate` (function) → js:test/concurrency-gate.test.js:56 — `function runGate(payload, env)`
 
+## `js:test/constitution-invariants.test.js`
+
+- fan-in: 0, fan-out: 3
+
+### Symbols
+  _(no extracted symbols)_
+
 ## `js:test/constraints-extract.test.js`
 
 - fan-in: 0, fan-out: 6
@@ -706,11 +713,4 @@ flowchart LR
 ### Symbols
   _(no extracted symbols)_
 
-## `js:test/dogfood-manifest.test.js`
-
-- fan-in: 0, fan-out: 4
-
-### Symbols
-  _(no extracted symbols)_
-
-_+ 204 more module(s) not shown (page capped at 80)._
+_+ 210 more module(s) not shown (page capped at 80)._

@@ -1,0 +1,45 @@
+# Managed by open_wiki/scripts/run-openwiki.mjs.
+name: OpenWiki Update
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 8 * * *"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: open_wiki/package-lock.json
+
+      - name: Install OpenWiki
+        run: npm ci --prefix open_wiki
+
+      - name: Refresh wiki with Kimi K3
+        run: npm run wiki:update --prefix open_wiki
+        env:
+          MOONSHOT_API_KEY: ${{ secrets.MOONSHOT_API_KEY }}
+          OPENWIKI_TELEMETRY_DISABLED: "1"
+
+      - name: Create documentation pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          add-paths: |
+            open_wiki/wiki
+            AGENTS.md
+            CLAUDE.md
+            .github/workflows/openwiki-update.yml
+          branch: openwiki/update
+          commit-message: "docs: update OpenWiki"
+          title: "docs: update OpenWiki"
+          body: "Automated OpenWiki documentation update using Moonshot Kimi K3."
