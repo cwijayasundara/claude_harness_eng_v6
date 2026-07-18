@@ -29,6 +29,8 @@ In a single message, invoke both agents using the Agent tool. Do not wait for th
 >
 > 7. **component-map.md** — A table mapping every ready story ID (from specs/stories/) to the specific files that will be created or modified to implement it. Include `Produces:` and `Consumes:` notes for cross-story interfaces, and identify the owning story for every shared file. Wrap every file/directory path in backticks — the ownership sensor (`ownership-check.js`) parses only backticked tokens, and a map it cannot parse blocks commits loudly (`empty_map`).
 >
+> **Seam metadata (optional, for the reuse-or-justify loop):** a component that is a designed extension point may also carry `seam: true`, an `extension_mechanism` of `config | strategy | node | subclass`, an `instances:` note listing the story ids that already extend it, and a `budget:` note (e.g. latency/memory/cost). Write these as plain table cells or prose — do NOT wrap non-path values (mechanism, instances, budget numbers) in backticks, because the ownership sensor treats backticked tokens as owned file paths.
+>
 > 8. **deployment.md** — Deployment architecture: environments (dev/staging/prod), CI/CD pipeline steps, infrastructure-as-code approach, secrets management strategy, rollback procedure.
 >
 > 9. **reasons-canvas.md** — The SPDD **REASONS Canvas**: the design's single narrative spine, consolidating the above into eight sections — **R**equirements, **E**ntities, **A**pproach, **S**tructure, **O**perations, **N**orms, **S**afeguards, and **Governs**. Follow `.claude/skills/design/references/reasons-canvas-template.md` exactly. The `Entities` section marks each entity **existing** (citing a `specs/brownfield/code-graph.json` node) or **new** when that graph is present, so the design extends real code. The `Governs` section is a machine-read bullet list of every source path this design creates or modifies (derive it from `component-map.md`) — the drift monitor uses it to detect Canvas↔code drift, so it must be accurate.
@@ -67,6 +69,8 @@ After both agents complete, write `specs/design/design-traces.json` — one entr
   { "id": "user-repository", "text": "User persistence", "traces": ["E1-S1"] }
 ]
 ```
+
+A component entry may also carry optional `"extends_seam": "<seam-id>"` and `"budget_inherited_from": "<seam-id>"` keys when it reuses a seam from `component-map.md` — the validator (`trace-check.js`) reads only `id`/`text`/`traces` and passes extra keys through untouched.
 
 Every component must trace to at least one story. A component realizing no story is scope creep or dead design; a story with no component will never be built. Prove it deterministically (when the spec emitted a trace spine):
 

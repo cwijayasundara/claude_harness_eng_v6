@@ -130,7 +130,12 @@ since a brand-new path has no pack entry yet and will typically read as
 
 Same mechanism as full mode Step 1.9, scoped to this sprint's stories. Append
 new entries to the existing `specs/design/design-traces.json` (do not drop
-prior sprints' entries), then check only this sprint's set:
+prior sprints' entries), then check only this sprint's set. As in full mode, a
+new `design-traces.json` entry may carry optional `"extends_seam"` /
+`"budget_inherited_from"` keys, and a `component-map.md` row for a designed
+extension point may carry optional `seam: true` / `extension_mechanism` /
+`instances:` / `budget:` metadata — non-path values only, never backtick-
+wrapped (the ownership sensor treats backticked tokens as owned file paths):
 
 ```bash
 node .claude/scripts/trace-check.js \
