@@ -21,7 +21,7 @@ const AXES = new Set(['maintainability', 'architecture', 'behaviour', 'traceabil
 const SENSOR_TYPES = new Set(['computational', 'inferential', 'hybrid']);
 const CADENCES = new Set(['planning', 'session', 'commit', 'integration', 'drift']);
 const STATUSES = new Set(['active', 'partial', 'planned']);
-const SCOPES = new Set(['universal', 'test-covered', 'layer-roots', 'contexts', 'runtime', 'dependencies', 'artifacts', 'repo']);
+const SCOPES = new Set(['universal', 'test-covered', 'layer-roots', 'contexts', 'runtime', 'dependencies', 'artifacts', 'repo', 'portfolio']);
 const GAP_RE = /^G\d+$/;
 
 // A wired_at may carry a JSON-pointer-ish fragment (file.json#path); the file is

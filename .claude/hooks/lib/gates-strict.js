@@ -102,6 +102,15 @@ function readManifestSastEngine(projectDir) {
   } catch (_) { return undefined; }
 }
 
+// Increment 2, C4: the ruleset's require_code_owner_review flag drives whether the
+// wiring gate also demands a real .github/CODEOWNERS.
+function readRequireCodeOwnerReview(projectDir) {
+  try {
+    const m = JSON.parse(fs.readFileSync(path.join(projectDir, 'project-manifest.json'), 'utf8'));
+    return !!(m && m.github && m.github.require_code_owner_review === true);
+  } catch (_) { return false; }
+}
+
 // Read a specific 1-based line from a source file (for harness:secret-ok checks).
 function readSourceLine(projectDir, file, line) {
   const body = fs.readFileSync(path.join(projectDir, file), 'utf8');
@@ -173,31 +182,35 @@ function checkSecurityBaseline(ctx) {
   writeSecurityBaseline(baselinePath, d.sastKeys);
 }
 
-// C3: secure-baseline-wiring presence invariant.
-function checkSecureBaselineWiring(ctx) {
-  if (process.env.HARNESS_SECURE_BASELINE_WIRING_GATE === 'off') return;
-  const { wiringViolations } = require('./security-baseline');
-  const { projectDir } = ctx;
-  let workflowText = null;
-  try {
-    workflowText = fs.readFileSync(path.join(projectDir, '.github', 'workflows', 'security.yml'), 'utf8');
-  } catch (_) { workflowText = null; }
-  let gitleaksTomlText = null;
-  try {
-    gitleaksTomlText = fs.readFileSync(path.join(projectDir, '.gitleaks.toml'), 'utf8');
-  } catch (_) { gitleaksTomlText = null; }
-  const violations = wiringViolations({
-    workflowText,
+function readFileOrNull(file) {
+  try { return fs.readFileSync(file, 'utf8'); } catch (_) { return null; }
+}
+
+// Gather every input the secure-baseline-wiring invariant inspects (C3 + the C4
+// CODEOWNERS extension), so checkSecureBaselineWiring stays small.
+function readWiringInputs(projectDir) {
+  const gitleaksTomlText = readFileOrNull(path.join(projectDir, '.gitleaks.toml'));
+  return {
+    workflowText: readFileOrNull(path.join(projectDir, '.github', 'workflows', 'security.yml')),
     gitleaksTomlExists: gitleaksTomlText !== null,
     gitleaksTomlText,
     sastEngine: readManifestSastEngine(projectDir),
-  });
+    requireCodeOwnerReview: readRequireCodeOwnerReview(projectDir),
+    codeownersText: readFileOrNull(path.join(projectDir, '.github', 'CODEOWNERS')),
+  };
+}
+
+// C3: secure-baseline-wiring presence invariant (+ C4 CODEOWNERS requirement).
+function checkSecureBaselineWiring(ctx) {
+  if (process.env.HARNESS_SECURE_BASELINE_WIRING_GATE === 'off') return;
+  const { wiringViolations } = require('./security-baseline');
+  const violations = wiringViolations(readWiringInputs(ctx.projectDir));
   if (violations.length) {
     failBlock({
       id: 'secure-baseline-wiring',
       title: 'the secure-repo baseline guard is missing or downgraded',
       detail: violations.map((v) => `  - ${v}`).join('\n') + '\n',
-      fix: 'restore .github/workflows/security.yml (blocking gitleaks + sast jobs), .gitleaks.toml, and quality.sast_engine — re-run /scaffold or /scaffold-upgrade if unsure.',
+      fix: 'restore .github/workflows/security.yml (blocking gitleaks + sast jobs), .gitleaks.toml, quality.sast_engine, and — when github.require_code_owner_review is true — a real .github/CODEOWNERS (generate-codeowners.js). Re-run /scaffold or /scaffold-upgrade if unsure.',
       minTier: 'strict',
     });
   }

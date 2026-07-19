@@ -59,5 +59,17 @@
     "api_base_url": null,
     "ui_base_url": null,
     "health_check": null
+  },
+  "github": {
+    "org": "",
+    "default_branch": "main",
+    "required_checks": ["gitleaks", "sast"],
+    "required_approvals": 1,
+    "require_code_owner_review": true,
+    "enforce_admins": true,
+    "ruleset_scope": "org",
+    "ruleset_name": "harness-baseline-protection",
+    "target_repos": "~ALL",
+    "default_owners": []
   }
 }

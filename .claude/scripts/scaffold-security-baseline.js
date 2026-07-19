@@ -8,6 +8,57 @@
 const fs = require('fs');
 const path = require('path');
 const { renderSecurityWorkflow } = require('../hooks/lib/security-baseline');
+const { writeCodeowners } = require('./generate-codeowners');
+
+// Increment 2 (C1): the branch-protection provisioner + CODEOWNERS generator read
+// this block. Scaffold writes it with empty org/default_owners (placeholders, no
+// client literals); a profile may override any field.
+const GITHUB_DEFAULTS = {
+  org: '',
+  default_branch: 'main',
+  required_checks: ['gitleaks', 'sast'],
+  required_approvals: 1,
+  require_code_owner_review: true,
+  enforce_admins: true,
+  ruleset_scope: 'org',
+  ruleset_name: 'harness-baseline-protection',
+  target_repos: '~ALL',
+  default_owners: [],
+};
+
+// Ensure manifest.github carries the full defaults. Deep-merge so a PARTIAL block
+// (e.g. a profile that supplies only {org}) still inherits every strong security
+// field — required_checks, required_approvals, require_code_owner_review, … —
+// rather than silently under-provisioning them. Precedence, low→high:
+// GITHUB_DEFAULTS < profile.github < any field already on manifest.github.
+function applyGithubDefault(manifest, profile) {
+  if (!manifest) return;
+  manifest.github = {
+    ...GITHUB_DEFAULTS,
+    ...((profile && profile.github) || {}),
+    ...(manifest.github || {}),
+  };
+}
+
+// Render .github/CODEOWNERS from the target's github.default_owners (C3). Skips
+// (no file) when owners are empty. When code-owner review is required but no
+// owners are configured, surface the contradiction LOUDLY at scaffold time — a
+// strict-tier repo would otherwise self-block its first commit on the wiring gate.
+function materializeCodeowners(target) {
+  let github = {};
+  try {
+    const m = JSON.parse(fs.readFileSync(path.join(target, 'project-manifest.json'), 'utf8'));
+    github = (m && m.github) || {};
+  } catch (_) { github = {}; }
+  const noOwners = !Array.isArray(github.default_owners) || github.default_owners.length === 0;
+  if (github.require_code_owner_review === true && noOwners) {
+    process.stderr.write(
+      'ACTION REQUIRED: project-manifest.json github.require_code_owner_review is true but ' +
+      'github.default_owners is empty. Set default_owners before enabling strict tier, or the ' +
+      'CODEOWNERS review requirement will block commits.\n');
+  }
+  return writeCodeowners(target, github);
+}
 
 function requireTemplate(src, rel) {
   const p = path.join(src, rel);
@@ -57,7 +108,9 @@ function copyDriftWorkflow(target, src) {
 
 module.exports = {
   applySastEngineDefault,
+  applyGithubDefault,
   materializeSecurityBaseline,
+  materializeCodeowners,
   driftWorkflowEnabled,
   copyDriftWorkflow,
 };

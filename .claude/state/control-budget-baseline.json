@@ -1,5 +1,5 @@
 {
-  "count": 125,
+  "count": 126,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -17,6 +17,7 @@
     "biting-meta",
     "boundary-test-doubles",
     "bounded-context-rules",
+    "branch-protection-verify",
     "brd-spec-design",
     "canary-first-rollout",
     "canary-implement-feature",

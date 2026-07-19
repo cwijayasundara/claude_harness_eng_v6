@@ -104,7 +104,7 @@ test('naming-clusters sensor is active and wired', () => {
 });
 
 test('every active or partial sensor declares a valid scope (G11)', () => {
-  const SCOPES = new Set(['universal', 'test-covered', 'layer-roots', 'contexts', 'runtime', 'dependencies', 'artifacts', 'repo']);
+  const SCOPES = new Set(['universal', 'test-covered', 'layer-roots', 'contexts', 'runtime', 'dependencies', 'artifacts', 'repo', 'portfolio']);
   const offenders = manifest.sensors
     .filter((s) => (s.status || 'active') !== 'planned')
     .filter((s) => !SCOPES.has(s.scope))

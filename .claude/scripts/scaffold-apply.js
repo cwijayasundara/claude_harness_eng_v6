@@ -129,6 +129,7 @@ function writeManifest(target, profile) {
   // tolerates the key's absence, so this is a convenience default only.
   manifest.custom_sensors = [];
   secBaseline.applySastEngineDefault(manifest, profile);
+  secBaseline.applyGithubDefault(manifest, profile);
   fs.writeFileSync(file, `${JSON.stringify(manifest, null, 2)}\n`);
   return file;
 }
@@ -254,6 +255,8 @@ function applyScaffold(rawOpts) {
   ];
   copyStarterFiles(target, pluginSource);
   written.push(secBaseline.materializeSecurityBaseline(target, pluginSource));
+  const codeowners = secBaseline.materializeCodeowners(target);
+  if (codeowners) written.push(codeowners);
   if (secBaseline.driftWorkflowEnabled(profile, rawOpts)) written.push(secBaseline.copyDriftWorkflow(target, pluginSource));
   makeDirs(target);
   writeStateFiles(target, profile);

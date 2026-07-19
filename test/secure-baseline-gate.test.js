@@ -21,6 +21,11 @@ const BASE_PROFILE = {
   stack: { backend: null, frontend: null, database: null },
   projectType: 'D', verificationMode: 'C', modelTier: 'balanced', tracker: 'A',
   frameworkPacks: [], lsp: [],
+  // Increment 2 (C4): the wiring invariant now also requires .github/CODEOWNERS
+  // when github.require_code_owner_review is true (the scaffold default). A
+  // genuinely wiring-complete repo therefore configures owners so the generator
+  // materializes CODEOWNERS — this probe scaffolds that complete state.
+  github: { default_owners: ['@probe/owners'] },
 };
 
 function scaffold() {

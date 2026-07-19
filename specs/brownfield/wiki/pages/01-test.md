@@ -1,6 +1,6 @@
-# `test/` — 295 module(s)
+# `test/` — 302 module(s)
 
-295 module(s).
+302 module(s).
 
 ## Dependencies
 
@@ -54,6 +54,7 @@ flowchart LR
   n_js_test_code_index_jsonc_test_js["code-index-jsonc.test.js"]
   n_js_test_code_index_test_js["code-index.test.js"]
   n_js_test_code_wiki_test_js["code-wiki.test.js"]
+  n_js_test_codeowners_scaffold_hardening_test_js["codeowners-scaffold-hardening.test.js"]
   n_js_test_commit_msg_git_hook_test_js["commit-msg-git-hook.test.js"]
   n_js_test_concurrency_gate_doc_contract_test_js["concurrency-gate-doc-contract.test.js"]
   n_js_test_concurrency_gate_wiring_contract_test_js["concurrency-gate-wiring-contract.test.js"]
@@ -85,7 +86,6 @@ flowchart LR
   n_js_test_deep_mutation_test_js["deep-mutation.test.js"]
   n_js_test_deepwiki_determinism_test_js["deepwiki-determinism.test.js"]
   n_js_test_diagnostics_parse_test_js["diagnostics-parse.test.js"]
-  n_js_test_diff_hunks_test_js["diff-hunks.test.js"]
 ```
 
 ## `js:test/ab-report.test.js`
@@ -469,6 +469,14 @@ flowchart LR
 ### Symbols
   _(no extracted symbols)_
 
+## `js:test/codeowners-scaffold-hardening.test.js`
+
+- fan-in: 0, fan-out: 7
+
+### Symbols
+  - `mkManifest` (function) → js:test/codeowners-scaffold-hardening.test.js:63 — `function mkManifest(github)`
+  - `captureStderr` (function) → js:test/codeowners-scaffold-hardening.test.js:69 — `function captureStderr(fn)`
+
 ## `js:test/commit-msg-git-hook.test.js`
 
 - fan-in: 0, fan-out: 7
@@ -706,11 +714,4 @@ flowchart LR
 ### Symbols
   _(no extracted symbols)_
 
-## `js:test/diff-hunks.test.js`
-
-- fan-in: 0, fan-out: 3
-
-### Symbols
-  _(no extracted symbols)_
-
-_+ 215 more module(s) not shown (page capped at 80)._
+_+ 222 more module(s) not shown (page capped at 80)._

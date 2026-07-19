@@ -150,8 +150,15 @@ function isCatchAllAllowlist(tomlText) {
     && /(['"]{1,3})\s*(\^\??)?\.\*(\$\??)?\s*\1/.test(tomlText);
 }
 
+// A CODEOWNERS file carries at least one real ownership rule when a non-comment,
+// non-blank line exists (Increment 2, C4). A comment-only/empty file leaves the
+// ruleset's require_code_owner_review rule inert.
+function codeownersHasRule(text) {
+  return String(text || '').split('\n').some((l) => l.trim() && !l.trim().startsWith('#'));
+}
+
 // Returns a list of human-legible wiring violations; empty === wired correctly.
-function wiringViolations({ workflowText, gitleaksTomlExists, gitleaksTomlText, sastEngine }) {
+function wiringViolations({ workflowText, gitleaksTomlExists, gitleaksTomlText, sastEngine, requireCodeOwnerReview, codeownersText }) {
   const out = [];
   if (!workflowText) {
     out.push('.github/workflows/security.yml is absent');
@@ -163,6 +170,9 @@ function wiringViolations({ workflowText, gitleaksTomlExists, gitleaksTomlText, 
   if (!gitleaksTomlExists) out.push('.gitleaks.toml is absent');
   else if (isCatchAllAllowlist(gitleaksTomlText)) out.push('.gitleaks.toml has a catch-all allowlist (.*) that neuters the scan');
   if (!VALID_ENGINES.has(sastEngine)) out.push('project-manifest.json#quality.sast_engine is unset or invalid');
+  if (requireCodeOwnerReview === true && !codeownersHasRule(codeownersText)) {
+    out.push('project-manifest.json#github.require_code_owner_review is true but .github/CODEOWNERS is absent or has no ownership rule (the rule is inert) — run generate-codeowners.js');
+  }
   return out;
 }
 
