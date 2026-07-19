@@ -376,6 +376,7 @@ E2E logs land in `test/e2e/results/logs/`; summary JSON lands at `test/e2e/resul
 | Model/cost posture | [docs/model-allocation.md](docs/model-allocation.md) |
 | Cost-per-outcome A/B (`fusion` preset) | [docs/fusion-ab-runbook.md](docs/fusion-ab-runbook.md) |
 | Turning the security-compliance gates ON (org-admin) | [docs/operator-apply-runbook.md](docs/operator-apply-runbook.md) |
+| Remediating a leaked credential (rotate → scrub → prevent) | [docs/credential-remediation-runbook.md](docs/credential-remediation-runbook.md) |
 | Enterprise token cost | [docs/token-cost-playbook.md](docs/token-cost-playbook.md) |
 | Behavior preservation | [docs/behavior-preservation.md](docs/behavior-preservation.md) |
 | Sensor arbitration | [docs/sensor-arbitration.md](docs/sensor-arbitration.md) |
