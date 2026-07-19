@@ -1,5 +1,5 @@
 {
-  "count": 129,
+  "count": 130,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -54,6 +54,7 @@
     "eval-design-critic",
     "eval-playwright",
     "first-window-init",
+    "fleet-gate-retrofit",
     "fix-diagnostics-workflow",
     "fix-from-diagnostics",
     "flake-detection",

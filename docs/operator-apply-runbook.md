@@ -237,6 +237,14 @@ the gates are still in place; verify exits non-zero on drift so a job can gate o
 - **Credential remediation** (mandate point a — rotate leaked creds, scrub git history,
   incident reports): a separate ops runbook, mostly `git-filter-repo`/BFG + your secret
   manager.
-- **A bulk fleet-retrofit driver.** The provisioners take `--fleet` today; a one-command
-  "apply across every existing repo and report" driver is a separate deliverable.
+- **Bulk fleet retrofit.** To apply §2b + §3 across an entire fleet in one command and get a
+  single per-repo compliance report, use the fleet-retrofit runner instead of looping by hand:
+  ```bash
+  node .claude/scripts/fleet-retrofit.js --fleet fleet.json            # audit (read-only)
+  node .claude/scripts/fleet-retrofit.js --fleet fleet.json --apply    # apply both gates + re-verify
+  ```
+  It invokes the §2/§3 provisioners per repo, isolates per-repo failures (one repo's error never
+  aborts the rest), and writes `specs/reviews/fleet-retrofit.json` (each repo gated / drifted /
+  not-gating / failed). Exit 0 iff every repo is gated. See the `fleet-retrofit` skill. (CODEOWNERS
+  §2a and attestation §4 still run per repo — the runner is API-gates-only, no checkout.)
 - **Signing** the attestation for non-repudiation (the documented seam in §4).
