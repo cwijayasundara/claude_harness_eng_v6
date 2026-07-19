@@ -111,6 +111,16 @@ function readRequireCodeOwnerReview(projectDir) {
   } catch (_) { return false; }
 }
 
+// Increment 3, C4: the configured deployment-approval environment names drive
+// whether the wiring gate also demands a deploy.yml referencing one of them.
+function readEnvironmentNames(projectDir) {
+  try {
+    const m = JSON.parse(fs.readFileSync(path.join(projectDir, 'project-manifest.json'), 'utf8'));
+    const envs = m && m.github && m.github.environments;
+    return Array.isArray(envs) ? envs.map((e) => e && e.name).filter(Boolean) : [];
+  } catch (_) { return []; }
+}
+
 // Read a specific 1-based line from a source file (for harness:secret-ok checks).
 function readSourceLine(projectDir, file, line) {
   const body = fs.readFileSync(path.join(projectDir, file), 'utf8');
@@ -197,6 +207,8 @@ function readWiringInputs(projectDir) {
     sastEngine: readManifestSastEngine(projectDir),
     requireCodeOwnerReview: readRequireCodeOwnerReview(projectDir),
     codeownersText: readFileOrNull(path.join(projectDir, '.github', 'CODEOWNERS')),
+    environments: readEnvironmentNames(projectDir),
+    deployWorkflowText: readFileOrNull(path.join(projectDir, '.github', 'workflows', 'deploy.yml')),
   };
 }
 

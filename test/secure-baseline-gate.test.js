@@ -60,3 +60,19 @@ test('checkSecureBaselineWiring BLOCKs (exit 1) when security.yml is deleted', (
     fs.rmSync(workDir, { recursive: true, force: true });
   }
 });
+
+// Increment 3, C4: environments are configured by default (production), so a
+// scaffolded repo with its deploy.yml deleted must block on the deploy-wiring rule.
+test('checkSecureBaselineWiring BLOCKs (exit 1) when the configured environment has no deploy.yml', () => {
+  const { workDir, target } = scaffold();
+  try {
+    fs.rmSync(path.join(target, '.github', 'workflows', 'deploy.yml'), { force: true });
+    const child = `require(${JSON.stringify(path.join(ROOT, '.claude/hooks/lib/gates-strict.js'))})` +
+      `.checkSecureBaselineWiring({ projectDir: ${JSON.stringify(target)} });`;
+    const res = spawnSync(process.execPath, ['-e', child], { encoding: 'utf8' });
+    assert.strictEqual(res.status, 1, 'a missing deploy.yml must block when environments are configured');
+    assert.match(`${res.stdout}${res.stderr}`, /deploy\.yml is absent/);
+  } finally {
+    fs.rmSync(workDir, { recursive: true, force: true });
+  }
+});

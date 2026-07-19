@@ -47,6 +47,35 @@ test('scaffold writes a github block with empty org/default_owners by default (n
   }
 });
 
+test('scaffold writes the default production environment; a partial github block still inherits it (C1)', () => {
+  const { workDir, target } = scaffold({ ...BASE_PROFILE, github: { org: 'acme' } });
+  try {
+    const m = JSON.parse(fs.readFileSync(path.join(target, 'project-manifest.json'), 'utf8'));
+    assert.ok(Array.isArray(m.github.environments), 'environments must be inherited into a partial github block');
+    assert.strictEqual(m.github.environments[0].name, 'production');
+    assert.deepStrictEqual(m.github.environments[0].reviewers, []);
+    assert.strictEqual(m.github.environments[0].protected_branches, true);
+  } finally {
+    fs.rmSync(workDir, { recursive: true, force: true });
+  }
+});
+
+test('scaffold materializes an environment-gated deploy.yml with the configured env name (C3, real round-trip)', () => {
+  const { workDir, target } = scaffold({ ...BASE_PROFILE, github: { environments: [{ name: 'prod-eu', reviewers: [], protected_branches: true }] } });
+  try {
+    const deploy = path.join(target, '.github', 'workflows', 'deploy.yml');
+    assert.ok(fs.existsSync(deploy), 'deploy.yml must be materialized when environments are configured');
+    const text = fs.readFileSync(deploy, 'utf8');
+    assert.match(text, /^\s*environment:\s*prod-eu$/m, 'environment: stamped from config, not a literal');
+    assert.match(text, /workflow_dispatch/, 'manual-dispatch only — never auto-deploys');
+    assert.match(text, /uses: actions\/checkout@[0-9a-f]{40}/, 'checkout pinned to a SHA');
+    assert.match(text, /exit 1/, 'placeholder deploy step is inert (fails until wired)');
+    assert.doesNotMatch(text, /\bacme\b|\bproduction\b/, 'no stale/client literals left in the env gate');
+  } finally {
+    fs.rmSync(workDir, { recursive: true, force: true });
+  }
+});
+
 test('scaffold materializes .github/CODEOWNERS when default_owners is configured', () => {
   const { workDir, target } = scaffold({
     ...BASE_PROFILE,

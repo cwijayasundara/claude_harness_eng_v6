@@ -1,5 +1,5 @@
 {
-  "count": 126,
+  "count": 127,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -41,6 +41,7 @@
     "cyclic-dependency-prepass",
     "deep-mutation",
     "dep-audit",
+    "deploy-gate-verify",
     "diff-review",
     "drift-architecture",
     "drift-dead-code",

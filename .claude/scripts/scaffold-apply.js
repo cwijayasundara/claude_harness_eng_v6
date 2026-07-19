@@ -257,6 +257,8 @@ function applyScaffold(rawOpts) {
   written.push(secBaseline.materializeSecurityBaseline(target, pluginSource));
   const codeowners = secBaseline.materializeCodeowners(target);
   if (codeowners) written.push(codeowners);
+  const deployWorkflow = secBaseline.materializeDeployWorkflow(target, pluginSource);
+  if (deployWorkflow) written.push(deployWorkflow);
   if (secBaseline.driftWorkflowEnabled(profile, rawOpts)) written.push(secBaseline.copyDriftWorkflow(target, pluginSource));
   makeDirs(target);
   writeStateFiles(target, profile);

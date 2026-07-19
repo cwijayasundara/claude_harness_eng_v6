@@ -157,8 +157,51 @@ function codeownersHasRule(text) {
   return String(text || '').split('\n').some((l) => l.trim() && !l.trim().startsWith('#'));
 }
 
+// Increment 3 (C4): the `environment:` references in a deploy workflow. A scalar
+// (`environment: prod`) or a mapping (`environment:` then `name: prod`) both
+// count — a shallow parse mirroring parseWorkflowJobs, not a full YAML parse.
+function stripQuotes(s) { return String(s).replace(/^['"]|['"]$/g, ''); }
+
+// Strip a trailing inline YAML comment (whitespace + `#...`) then surrounding
+// quotes, so `environment: production # gate` yields `production`, not
+// `production # gate` (which would fail the wiring name match). Env names are
+// [A-Za-z0-9._-] so a bare `#` is never part of a real value.
+function scalarValue(raw) { return stripQuotes(String(raw).replace(/\s+#.*$/, '').trim()); }
+
+function deployEnvironmentRefs(text) {
+  const refs = [];
+  const lines = String(text || '').split('\n');
+  for (let i = 0; i < lines.length; i += 1) {
+    const m = lines[i].match(/^\s*environment:\s*(.*)$/);
+    if (!m) continue;
+    const val = scalarValue(m[1]);
+    if (val && val !== '{}') { refs.push(val); continue; }
+    for (let j = i + 1; j < lines.length && /^\s/.test(lines[j]) && lines[j].trim(); j += 1) {
+      const nm = lines[j].match(/^\s*name:\s*(.*)$/);
+      if (nm) { const nv = scalarValue(nm[1]); if (nv) { refs.push(nv); break; } }
+    }
+  }
+  return refs;
+}
+
+// C4: when github.environments is non-empty, a deploy workflow must exist AND
+// reference one of the configured environment names — otherwise the provisioned
+// approval gate is never actually invoked. Conditional on config (no
+// environments ⇒ no requirement), so non-deploying projects are unaffected.
+function deployWiringViolations(environments, deployWorkflowText, out) {
+  if (!Array.isArray(environments) || environments.length === 0) return;
+  if (!deployWorkflowText) {
+    out.push('project-manifest.json#github.environments is configured but .github/workflows/deploy.yml is absent (the deploy-approval gate is never invoked) — run scaffold or materializeDeployWorkflow');
+    return;
+  }
+  const names = new Set(environments);
+  if (!deployEnvironmentRefs(deployWorkflowText).some((r) => names.has(r))) {
+    out.push(`.github/workflows/deploy.yml does not reference a configured environment (environment: must name one of: ${[...names].join(', ')}) — the deploy-approval gate is inert`);
+  }
+}
+
 // Returns a list of human-legible wiring violations; empty === wired correctly.
-function wiringViolations({ workflowText, gitleaksTomlExists, gitleaksTomlText, sastEngine, requireCodeOwnerReview, codeownersText }) {
+function wiringViolations({ workflowText, gitleaksTomlExists, gitleaksTomlText, sastEngine, requireCodeOwnerReview, codeownersText, environments, deployWorkflowText }) {
   const out = [];
   if (!workflowText) {
     out.push('.github/workflows/security.yml is absent');
@@ -173,6 +216,7 @@ function wiringViolations({ workflowText, gitleaksTomlExists, gitleaksTomlText, 
   if (requireCodeOwnerReview === true && !codeownersHasRule(codeownersText)) {
     out.push('project-manifest.json#github.require_code_owner_review is true but .github/CODEOWNERS is absent or has no ownership rule (the rule is inert) — run generate-codeowners.js');
   }
+  deployWiringViolations(environments, deployWorkflowText, out);
   return out;
 }
 
@@ -204,6 +248,7 @@ module.exports = {
   sastKeys,
   baselineDecision,
   parseWorkflowJobs,
+  deployEnvironmentRefs,
   wiringViolations,
   renderSecurityWorkflow,
 };

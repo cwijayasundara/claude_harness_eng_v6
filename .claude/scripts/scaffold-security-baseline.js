@@ -24,13 +24,23 @@ const GITHUB_DEFAULTS = {
   ruleset_name: 'harness-baseline-protection',
   target_repos: '~ALL',
   default_owners: [],
+  // Increment 3 (C1): the deployment-approval Environments provisioner + deploy.yml
+  // skeleton read this. reviewers default to [] (client-specific ids, no literals);
+  // an empty array is loud non-compliant at --verify. Empty/absent environments ⇒
+  // no environment provisioning and no deploy-wiring requirement.
+  environments: [
+    { name: 'production', reviewers: [], wait_timer: 0, protected_branches: true },
+  ],
 };
 
 // Ensure manifest.github carries the full defaults. Deep-merge so a PARTIAL block
 // (e.g. a profile that supplies only {org}) still inherits every strong security
-// field — required_checks, required_approvals, require_code_owner_review, … —
-// rather than silently under-provisioning them. Precedence, low→high:
-// GITHUB_DEFAULTS < profile.github < any field already on manifest.github.
+// field — required_checks, required_approvals, require_code_owner_review,
+// environments, … — rather than silently under-provisioning them. A per-key
+// spread is the deep-merge that matters here: an absent key on the partial block
+// keeps the default (so {org} alone still inherits the production environments
+// gate). Precedence, low→high: GITHUB_DEFAULTS < profile.github < any field
+// already on manifest.github.
 function applyGithubDefault(manifest, profile) {
   if (!manifest) return;
   manifest.github = {
@@ -94,6 +104,39 @@ function materializeSecurityBaseline(target, src) {
   return to;
 }
 
+// Increment 3 (C3): read the first configured environment's name for the deploy
+// skeleton's `environment:` gate. Empty/absent environments ⇒ null (no workflow).
+function firstEnvironmentName(target) {
+  try {
+    const m = JSON.parse(fs.readFileSync(path.join(target, 'project-manifest.json'), 'utf8'));
+    const envs = m && m.github && m.github.environments;
+    return (Array.isArray(envs) && envs.length && envs[0].name) ? envs[0].name : null;
+  } catch (_) { return null; }
+}
+
+// Render the environment-gated deploy.yml skeleton into the target, stamping the
+// `environment:` gate with the first configured environment's name (no client
+// literals — the name comes from config). Returns the workflow path, or null when
+// no environments are configured (not every project deploys via GitHub Actions).
+const ENV_NAME = /^[A-Za-z0-9._-]+$/;
+
+function materializeDeployWorkflow(target, src) {
+  const envName = firstEnvironmentName(target);
+  if (!envName) return null;
+  // The name is stamped into the workflow — reject anything but a safe segment,
+  // and use a replacement FUNCTION so a `$` in the value can never be read as a
+  // replacement special ($&, $1) and corrupt the YAML.
+  if (!ENV_NAME.test(envName)) {
+    throw new Error(`scaffold: invalid environment name "${envName}" (chars [A-Za-z0-9._-])`);
+  }
+  const template = fs.readFileSync(requireTemplate(src, 'templates/github-workflows/deploy.yml'), 'utf8');
+  const workflow = template.replace(/^(\s*environment:\s*).*$/m, (_m, p1) => `${p1}${envName}`);
+  const to = path.join(target, '.github', 'workflows', 'deploy.yml');
+  fs.mkdirSync(path.dirname(to), { recursive: true });
+  fs.writeFileSync(to, workflow.endsWith('\n') ? workflow : `${workflow}\n`);
+  return to;
+}
+
 function driftWorkflowEnabled(profile, opts = {}) {
   return opts.driftWorkflow === true || (profile && profile.quality && profile.quality.drift && profile.quality.drift.workflow === true);
 }
@@ -111,6 +154,7 @@ module.exports = {
   applyGithubDefault,
   materializeSecurityBaseline,
   materializeCodeowners,
+  materializeDeployWorkflow,
   driftWorkflowEnabled,
   copyDriftWorkflow,
 };

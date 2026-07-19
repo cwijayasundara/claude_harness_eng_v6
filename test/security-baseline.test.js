@@ -190,3 +190,62 @@ test('wiringViolations flags an unset/invalid sast_engine', () => {
   const v = lib.wiringViolations({ workflowText: GOOD_WORKFLOW, gitleaksTomlExists: true, sastEngine: undefined });
   assert.ok(v.some((x) => /sast_engine is unset/.test(x)));
 });
+
+// --- C4: deploy-approval environment wiring ----------------------------------
+
+const fs = require('fs');
+// The REAL deploy.yml skeleton, env-stamped as materializeDeployWorkflow does.
+const DEPLOY_TEMPLATE = fs.readFileSync(
+  path.resolve(__dirname, '..', '.claude', 'templates', 'github-workflows', 'deploy.yml'), 'utf8');
+function renderDeploy(envName) {
+  return DEPLOY_TEMPLATE.replace(/^(\s*environment:\s*).*$/m, `$1${envName}`);
+}
+const CLEAN = { workflowText: GOOD_WORKFLOW, gitleaksTomlExists: true, sastEngine: 'semgrep' };
+
+test('deployEnvironmentRefs reads a scalar environment: reference from the real skeleton', () => {
+  assert.deepStrictEqual(lib.deployEnvironmentRefs(renderDeploy('production')), ['production']);
+});
+
+test('deployEnvironmentRefs reads a mapping-form environment: name reference', () => {
+  const text = 'jobs:\n  deploy:\n    environment:\n      name: staging\n    steps: []\n';
+  assert.deepStrictEqual(lib.deployEnvironmentRefs(text), ['staging']);
+});
+
+test('deployEnvironmentRefs strips a trailing inline YAML comment (scalar and mapping)', () => {
+  assert.deepStrictEqual(lib.deployEnvironmentRefs('    environment: production # deploy gate\n'), ['production']);
+  const mapping = 'jobs:\n  deploy:\n    environment:\n      name: staging  # gate\n    steps: []\n';
+  assert.deepStrictEqual(lib.deployEnvironmentRefs(mapping), ['staging']);
+});
+
+test('C4: a configured env named in deploy.yml with an inline comment still matches (no false violation)', () => {
+  const withComment = renderDeploy('production').replace('environment: production', 'environment: production # prod gate');
+  const v = lib.wiringViolations({ ...CLEAN, environments: ['production'], deployWorkflowText: withComment });
+  assert.deepStrictEqual(v, []);
+});
+
+test('C4: no environments configured ⇒ no deploy-wiring requirement', () => {
+  assert.deepStrictEqual(lib.wiringViolations({ ...CLEAN, environments: [] }), []);
+  assert.deepStrictEqual(lib.wiringViolations({ ...CLEAN, environments: undefined }), []);
+});
+
+test('C4: environments configured + deploy.yml absent ⇒ violation', () => {
+  const v = lib.wiringViolations({ ...CLEAN, environments: ['production'], deployWorkflowText: null });
+  assert.ok(v.some((x) => /deploy\.yml is absent/.test(x)), JSON.stringify(v));
+});
+
+test('C4: environments configured + deploy.yml references a DIFFERENT env ⇒ violation', () => {
+  const v = lib.wiringViolations({ ...CLEAN, environments: ['production'], deployWorkflowText: renderDeploy('staging') });
+  assert.ok(v.some((x) => /does not reference a configured environment/.test(x)), JSON.stringify(v));
+});
+
+test('C4: environments configured + real deploy.yml referencing a configured env ⇒ clean', () => {
+  const v = lib.wiringViolations({ ...CLEAN, environments: ['production'], deployWorkflowText: renderDeploy('production') });
+  assert.deepStrictEqual(v, []);
+});
+
+test('C4: the deploy requirement does not regress the Increment-1 checks (both fire together)', () => {
+  const v = lib.wiringViolations({ workflowText: null, gitleaksTomlExists: false, sastEngine: 'semgrep', environments: ['production'], deployWorkflowText: null });
+  assert.ok(v.some((x) => /security\.yml is absent/.test(x)), 'Increment-1 check still fires');
+  assert.ok(v.some((x) => /\.gitleaks\.toml is absent/.test(x)), 'Increment-1 check still fires');
+  assert.ok(v.some((x) => /deploy\.yml is absent/.test(x)), 'Increment-3 check also fires');
+});

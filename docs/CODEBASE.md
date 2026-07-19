@@ -13,8 +13,8 @@ _Source: `README.md`_
 
 | Metric | Value |
 |---|---|
-| Indexed files | 431 |
-| Graph edges | 1968 |
+| Indexed files | 433 |
+| Graph edges | 1983 |
 | Concept pages | 20 |
 | Wiki cluster pages | 20 |
 
@@ -59,8 +59,8 @@ npm run ask -- "..."     # ask the codebase
 - [test/e2e](specs/brownfield/wiki/concepts/test__e2e.md)
 - [symphony_clone/src](specs/brownfield/wiki/concepts/symphony_clone__src.md)
 - [test/fixtures](specs/brownfield/wiki/concepts/test__fixtures.md)
-- [symphony_clone/test](specs/brownfield/wiki/concepts/symphony_clone__test.md)
 - [test/evals](specs/brownfield/wiki/concepts/test__evals.md)
+- [symphony_clone/test](specs/brownfield/wiki/concepts/symphony_clone__test.md)
 - [symphony_clone/scripts](specs/brownfield/wiki/concepts/symphony_clone__scripts.md)
 - [eslint.config.js](specs/brownfield/wiki/concepts/eslint.config.js.md)
 - [test/ab-report.test.js](specs/brownfield/wiki/concepts/test__ab-report.test.js.md)
