@@ -1,6 +1,6 @@
-# `test/` — 304 module(s)
+# `test/` — 306 module(s)
 
-304 module(s).
+306 module(s).
 
 ## Dependencies
 
@@ -23,6 +23,8 @@ flowchart LR
   n_js_test_assert_readiness_ratchet_test_js["assert-readiness-ratchet.test.js"]
   n_js_test_at_first_gate_wiring_contract_test_js["at-first-gate-wiring-contract.test.js"]
   n_js_test_at_first_gate_test_js["at-first-gate.test.js"]
+  n_js_test_attestation_hardening_test_js["attestation-hardening.test.js"]
+  n_js_test_attestation_test_js["attestation.test.js"]
   n_js_test_auto_continue_on_stop_test_js["auto-continue-on-stop.test.js"]
   n_js_test_auto_merge_test_js["auto-merge.test.js"]
   n_js_test_auto_multi_context_window_test_js["auto-multi-context-window.test.js"]
@@ -84,8 +86,6 @@ flowchart LR
   n_js_test_cycle_gate_test_js["cycle-gate.test.js"]
   n_js_test_cyclic_prepass_wiring_test_js["cyclic-prepass-wiring.test.js"]
   n_js_test_deep_mutation_test_js["deep-mutation.test.js"]
-  n_js_test_deepwiki_determinism_test_js["deepwiki-determinism.test.js"]
-  n_js_test_diagnostics_parse_test_js["diagnostics-parse.test.js"]
 ```
 
 ## `js:test/ab-report.test.js`
@@ -226,6 +226,28 @@ flowchart LR
 
 ### Symbols
   - `makeProject` (function) → js:test/at-first-gate.test.js:20 — `function makeProject({ mapText, atFiles, receipts } = {})`
+
+## `js:test/attestation-hardening.test.js`
+
+- fan-in: 0, fan-out: 5
+
+### Symbols
+  - `shaRunner` (function) → js:test/attestation-hardening.test.js:21 — `shaRunner = (sha) => (_cmd, args) => (args[0] === 'rev-parse' ? '${sha}\n' : 'git@github.com:acme/widgets.git\n')`
+  - `makeRoot` (function) → js:test/attestation-hardening.test.js:23 — `function makeRoot(reviews = {})`
+  - `gen` (function) → js:test/attestation-hardening.test.js:39 — `function gen(root, extra = {})`
+  - `reorderKeysDeep` (function) → js:test/attestation-hardening.test.js:43 — `function reorderKeysDeep(v)`
+
+## `js:test/attestation.test.js`
+
+- fan-in: 0, fan-out: 5
+
+### Symbols
+  - `runner` (function) → js:test/attestation.test.js:24 — `runner = (_cmd, args) =>`
+  - `shaRunner` (function) → js:test/attestation.test.js:29 — `shaRunner = (sha) => (_cmd, args) => (args[0] === 'rev-parse' ? '${sha}\n' : 'git@github.com:acme/widgets.git\n')`
+  - `reorderKeysDeep` (function) → js:test/attestation.test.js:34 — `function reorderKeysDeep(v)`
+  - `makeRoot` (function) → js:test/attestation.test.js:46 — `function makeRoot(opts = {})`
+  - `readTemplateStandardMap` (function) → js:test/attestation.test.js:65 — `function readTemplateStandardMap()`
+  - `gen` (function) → js:test/attestation.test.js:69 — `function gen(root, extra = {})`
 
 ## `js:test/auto-continue-on-stop.test.js`
 
@@ -700,18 +722,4 @@ flowchart LR
   - `tmpProject` (function) → js:test/deep-mutation.test.js:13 — `function tmpProject()`
   - `run` (function) → js:test/deep-mutation.test.js:19 — `function run(root, args = [])`
 
-## `js:test/deepwiki-determinism.test.js`
-
-- fan-in: 0, fan-out: 7
-
-### Symbols
-  - `tempProjectWithGraph` (function) → js:test/deepwiki-determinism.test.js:37 — `function tempProjectWithGraph()`
-
-## `js:test/diagnostics-parse.test.js`
-
-- fan-in: 0, fan-out: 7
-
-### Symbols
-  _(no extracted symbols)_
-
-_+ 224 more module(s) not shown (page capped at 80)._
+_+ 226 more module(s) not shown (page capped at 80)._

@@ -1,0 +1,10 @@
+{
+  "id": "harness-default/1",
+  "by_axis": {
+    "behaviour": "SDL-secure-development",
+    "traceability": "AUD-audit-traceability",
+    "architecture": "ARC-architecture-integrity",
+    "maintainability": "MNT-maintainability"
+  },
+  "by_id": {}
+}

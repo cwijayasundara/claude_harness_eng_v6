@@ -110,9 +110,14 @@ Bundle shape:
   "integrity": { "algo": "sha256", "hash": "<hex>" }
 }
 ```
-- `compliant` = `(gate.pass !== false)` AND `(verify.branch_protection?.compliant !== false)` AND
-  `(verify.deploy_gate?.compliant !== false)`. Absent inputs do not fail compliance but are recorded
-  as `null` so a reader sees what was and wasn't evaluated (no vacuous pass hidden as present).
+- **Fail-safe tri-state (revised after whole-branch review).** Each of the three sources
+  (branch_protection, deploy_gate, gate) is classified `absent` | `invalid` | `pass` | `fail`:
+  `invalid` = present but unparseable or missing a boolean verdict (a corrupt file is never a silent
+  pass). `status` = `non-compliant` if any *present* source is failing or invalid; `not-evaluated` if
+  every source is absent; else `compliant`. Boolean `compliant = (status === "compliant")` — so an
+  all-absent run is **not** a vacuous green (`compliant:false`, `status:"not-evaluated"`). `sources_evaluated`
+  / `sources_total` record coverage; absent sources are still recorded `null` and invalid ones as
+  `{invalid:true}` so an auditor tells "not run" from "ran but broken".
 - **Integrity**: canonicalize the bundle with the `integrity` field removed via stable key sorting
   (a deterministic JSON serializer), `sha256` hex over the UTF-8 bytes, store under `integrity.hash`.
 - **Immutability**: if `.claude/attestations/<sha>.json` exists, exit 0 as a no-op (print "already

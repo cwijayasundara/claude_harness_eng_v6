@@ -1,5 +1,5 @@
 {
-  "count": 127,
+  "count": 128,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -27,6 +27,7 @@
     "clarify",
     "clean-code-review",
     "code-gen",
+    "compliance-attestation",
     "constraints-extract",
     "context-pack",
     "control-budget",

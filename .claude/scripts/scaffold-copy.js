@@ -35,7 +35,7 @@ const CORE_SKILLS = [
   'context', 'evaluate', 'gate', 'implement', 'spec', 'status', 'test',
   'feature', 'brownfield', 'change', 'code-map', 'pr-respond', 'refactor',
   'seam-finder', 'sprint', 'tracker-publish', 'vibe', 'agent-readiness', 'retro', 'promote',
-  'reuse-or-justify', 'provision-protection', 'provision-environments',
+  'reuse-or-justify', 'provision-protection', 'provision-environments', 'attestation',
   // --- discipline ---
   'checking-coverage-before-change',
   'checking-migration-safety',
@@ -169,6 +169,10 @@ const CORE_SCRIPTS = [
   'generate-codeowners.js',
   'provision-environments.js',
   'env-diff.js',
+  'generate-attestation.js',
+  'attestation-bundle.js',
+  'attestation-io.js',
+  'canonical-json.js',
 ];
 const BROWNFIELD_SCRIPTS = [
   ...CORE_SCRIPTS,
