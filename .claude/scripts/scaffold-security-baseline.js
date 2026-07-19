@@ -76,6 +76,26 @@ function requireTemplate(src, rel) {
   return p;
 }
 
+// Increment 4b (C1): stamp the harness version into the scaffolded repo's
+// project-manifest.json so generate-attestation.js reports the harness version
+// the repo was built with (not the project's own package.json version). An
+// operator-set value is preserved — only write when absent/empty.
+function applyHarnessVersion(manifest, harnessVersion) {
+  if (!manifest) return;
+  const existing = manifest.harness_version;
+  if (typeof existing === 'string' && existing.trim()) return;
+  manifest.harness_version = harnessVersion || null;
+}
+
+// Read the harness's own package.json version from the plugin-source repo root
+// (pluginSource is the harness `.claude` dir; its parent is the harness repo root).
+function readHarnessVersion(pluginSource) {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(pluginSource, '..', 'package.json'), 'utf8'));
+    return pkg && pkg.version ? pkg.version : null;
+  } catch (_) { return null; }
+}
+
 // quality.sast_engine seam: default semgrep, honour an explicit veracode choice.
 function applySastEngineDefault(manifest, profile) {
   if (manifest && manifest.quality && !manifest.quality.sast_engine) {
@@ -152,6 +172,8 @@ function copyDriftWorkflow(target, src) {
 module.exports = {
   applySastEngineDefault,
   applyGithubDefault,
+  applyHarnessVersion,
+  readHarnessVersion,
   materializeSecurityBaseline,
   materializeCodeowners,
   materializeDeployWorkflow,

@@ -28,18 +28,7 @@ const runner = (_cmd, args) => {
 };
 const shaRunner = (sha) => (_cmd, args) => (args[0] === 'rev-parse' ? `${sha}\n` : 'git@github.com:acme/widgets.git\n');
 
-// Rebuild an object with keys in reverse-sorted order at EVERY nesting level, so a
-// canonicalizer that only sorts top-level keys (or uses plain JSON.stringify) would
-// produce a different hash than the original — the guard for the deep recursive sort.
-function reorderKeysDeep(v) {
-  if (Array.isArray(v)) return v.map(reorderKeysDeep);
-  if (v && typeof v === 'object') {
-    const out = {};
-    for (const k of Object.keys(v).sort().reverse()) out[k] = reorderKeysDeep(v[k]);
-    return out;
-  }
-  return v;
-}
+// (The deep key-reorder canonicalization guard lives in attestation-hardening.test.js.)
 
 // A tmp root carrying the REAL manifest + package.json + the default standard
 // map; each test drops in only the optional inputs it exercises.
@@ -70,18 +59,18 @@ function gen(root, extra = {}) {
   return generateAttestation({ root, attestDir: path.join(root, '.claude', 'attestations'), runner, now: () => NOW, ...extra });
 }
 
-test('control_inventory round-trips the REAL manifest: total == guides+sensors == 128', () => {
+test('control_inventory round-trips the REAL manifest: total == guides+sensors == 129', () => {
   const root = makeRoot();
   const { bundle } = gen(root);
   const inv = bundle.control_inventory;
-  assert.strictEqual(inv.total, 128);
+  assert.strictEqual(inv.total, 129);
   assert.strictEqual(inv.total, inv.guides + inv.sensors);
   assert.strictEqual(inv.guides, 44);
-  assert.strictEqual(inv.sensors, 84);
+  assert.strictEqual(inv.sensors, 85);
   const axisSum = Object.values(inv.by_axis).reduce((a, b) => a + b, 0);
   const statusSum = Object.values(inv.by_status).reduce((a, b) => a + b, 0);
-  assert.strictEqual(axisSum, 128);
-  assert.strictEqual(statusSum, 128);
+  assert.strictEqual(axisSum, 129);
+  assert.strictEqual(statusSum, 129);
   assert.ok(inv.by_status.active > 0, 'expected active controls');
 });
 
@@ -254,17 +243,18 @@ test('standard-map: by_id overrides by_axis; an unknown axis is recorded unmappe
   assert.strictEqual(other.standard_ref, 'unmapped');
 });
 
-test('manifest is valid with the new sensor and the control budget holds at 128', () => {
+test('manifest is valid with the new sensor and the control budget holds at 129', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'harness-manifest.json'), 'utf8'));
   const { errors, counts } = validate(manifest);
   assert.deepStrictEqual(errors, [], errors.join('\n'));
-  assert.strictEqual(counts.guides + counts.sensors, 128);
+  assert.strictEqual(counts.guides + counts.sensors, 129);
   const ids = controlIds(manifest);
-  assert.strictEqual(ids.length, 128);
+  assert.strictEqual(ids.length, 129);
   assert.ok(ids.includes('compliance-attestation'));
+  assert.ok(ids.includes('portfolio-compliance-rollup'));
   const baseline = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, '.claude', 'state', 'control-budget-baseline.json'), 'utf8'));
   const decision = budgetDecision(ids, baseline, justifiedIds(manifest));
-  assert.strictEqual(decision.blocked, false, 'control budget must not block at 128');
+  assert.strictEqual(decision.blocked, false, 'control budget must not block at 129');
 });
 
 test('scaffold round-trip: generator script, attestation skill, and standard-map ship to a target', () => {

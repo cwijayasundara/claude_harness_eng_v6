@@ -59,7 +59,13 @@ function headSha(runner) {
   } catch (_) { return null; }
 }
 
+// Prefer the scaffold-stamped project-manifest.json#harness_version (the harness
+// version the repo was built/upgraded with, Increment 4b C1); fall back to the
+// local package.json version (a pre-stamp scaffolded repo reports its own project
+// version — honest, and version-drift reads it as 'unknown' if non-semver); else null.
 function readHarnessVersion(root) {
+  const pm = io.readJson(path.join(root, 'project-manifest.json'));
+  if (pm && typeof pm.harness_version === 'string' && pm.harness_version.trim()) return pm.harness_version;
   const pkg = io.readJson(path.join(root, 'package.json'));
   return pkg && pkg.version ? pkg.version : null;
 }

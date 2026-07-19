@@ -1,6 +1,6 @@
-# `test/` — 306 module(s)
+# `test/` — 309 module(s)
 
-306 module(s).
+309 module(s).
 
 ## Dependencies
 
@@ -244,10 +244,9 @@ flowchart LR
 ### Symbols
   - `runner` (function) → js:test/attestation.test.js:24 — `runner = (_cmd, args) =>`
   - `shaRunner` (function) → js:test/attestation.test.js:29 — `shaRunner = (sha) => (_cmd, args) => (args[0] === 'rev-parse' ? '${sha}\n' : 'git@github.com:acme/widgets.git\n')`
-  - `reorderKeysDeep` (function) → js:test/attestation.test.js:34 — `function reorderKeysDeep(v)`
-  - `makeRoot` (function) → js:test/attestation.test.js:46 — `function makeRoot(opts = {})`
-  - `readTemplateStandardMap` (function) → js:test/attestation.test.js:65 — `function readTemplateStandardMap()`
-  - `gen` (function) → js:test/attestation.test.js:69 — `function gen(root, extra = {})`
+  - `makeRoot` (function) → js:test/attestation.test.js:35 — `function makeRoot(opts = {})`
+  - `readTemplateStandardMap` (function) → js:test/attestation.test.js:54 — `function readTemplateStandardMap()`
+  - `gen` (function) → js:test/attestation.test.js:58 — `function gen(root, extra = {})`
 
 ## `js:test/auto-continue-on-stop.test.js`
 
@@ -722,4 +721,4 @@ flowchart LR
   - `tmpProject` (function) → js:test/deep-mutation.test.js:13 — `function tmpProject()`
   - `run` (function) → js:test/deep-mutation.test.js:19 — `function run(root, args = [])`
 
-_+ 226 more module(s) not shown (page capped at 80)._
+_+ 229 more module(s) not shown (page capped at 80)._

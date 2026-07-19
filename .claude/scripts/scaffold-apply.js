@@ -119,7 +119,7 @@ function requireTemplate(src, rel) {
   return p;
 }
 
-function writeManifest(target, profile) {
+function writeManifest(target, profile, pluginSource) {
   const file = path.join(target, 'project-manifest.json');
   const manifest = render.buildManifest(profile);
   // custom-sensor-runner (sensors-cli parity): opt-in slot for project-declared
@@ -130,6 +130,7 @@ function writeManifest(target, profile) {
   manifest.custom_sensors = [];
   secBaseline.applySastEngineDefault(manifest, profile);
   secBaseline.applyGithubDefault(manifest, profile);
+  secBaseline.applyHarnessVersion(manifest, secBaseline.readHarnessVersion(pluginSource));
   fs.writeFileSync(file, `${JSON.stringify(manifest, null, 2)}\n`);
   return file;
 }
@@ -249,7 +250,7 @@ function applyScaffold(rawOpts) {
   pruneSettings(target, scaffoldProfile);
   if (telemetryEnabled(profile, rawOpts)) enableTelemetry(target);
   const written = [
-    writeManifest(target, profile), writeClaudeMd(target, pluginSource, profile), writeReviewMd(target, pluginSource, profile),
+    writeManifest(target, profile, pluginSource), writeClaudeMd(target, pluginSource, profile), writeReviewMd(target, pluginSource, profile),
     ...writeProjectReadme(target, pluginSource, profile),
     writeDesignMd(target, pluginSource), writeInitSh(target, pluginSource, profile),
   ];

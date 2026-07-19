@@ -36,6 +36,7 @@ const CORE_SKILLS = [
   'feature', 'brownfield', 'change', 'code-map', 'pr-respond', 'refactor',
   'seam-finder', 'sprint', 'tracker-publish', 'vibe', 'agent-readiness', 'retro', 'promote',
   'reuse-or-justify', 'provision-protection', 'provision-environments', 'attestation',
+  'portfolio-rollup',
   // --- discipline ---
   'checking-coverage-before-change',
   'checking-migration-safety',
@@ -173,6 +174,8 @@ const CORE_SCRIPTS = [
   'attestation-bundle.js',
   'attestation-io.js',
   'canonical-json.js',
+  'portfolio-rollup.js',
+  'portfolio-rollup-core.js',
 ];
 const BROWNFIELD_SCRIPTS = [
   ...CORE_SCRIPTS,

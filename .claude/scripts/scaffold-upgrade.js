@@ -122,6 +122,21 @@ function applyUpgrade(pluginSource, target, profileName, plan) {
   }
 }
 
+// Increment 4b (C1): on upgrade, refresh project-manifest.json#harness_version to
+// the harness version being upgraded TO (overwrite, unlike scaffold-apply which
+// preserves an operator value) so version-drift reads the upgraded version. The
+// manifest is otherwise preserved — this touches only the one field.
+function stampHarnessVersion(target, pluginSource) {
+  const manifestPath = path.join(target, 'project-manifest.json');
+  let manifest;
+  try { manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')); } catch (_) { return null; }
+  let version = null;
+  try { version = (JSON.parse(fs.readFileSync(path.join(pluginSource, '..', 'package.json'), 'utf8')) || {}).version || null; } catch (_) { version = null; }
+  manifest.harness_version = version;
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  return version;
+}
+
 function main(argv = process.argv.slice(2)) {
   const target = path.resolve(arg(argv, '--target', process.cwd()));
   const pluginSource = path.resolve(arg(argv, '--plugin-source', REPO_PLUGIN));
@@ -149,17 +164,23 @@ function main(argv = process.argv.slice(2)) {
   );
   if (!apply) {
     process.stdout.write('  dry-run only. Re-run with --apply to copy hooks/scripts/git-hooks/agents.\n');
-    process.stdout.write('  Never overwrites project-manifest.json (lives at project root, not in plan).\n');
+    process.stdout.write('  Preserves project-manifest.json except its harness_version stamp (refreshed on --apply).\n');
     process.exit(0);
   }
 
+  applyAndReport(pluginSource, target, plan);
+  process.exit(0);
+}
+
+function applyAndReport(pluginSource, target, plan) {
   const n = applyUpgrade(pluginSource, target, plan.profile, plan);
+  const stamped = stampHarnessVersion(target, pluginSource);
   process.stdout.write(`scaffold-upgrade: applied ${n} path(s).\n`);
+  if (stamped) process.stdout.write(`  stamped project-manifest.json harness_version=${stamped}.\n`);
   process.stdout.write(
     'Next: review git diff under .claude/hooks .claude/scripts .claude/git-hooks; ' +
       'run npm test if this is the harness monorepo.\n'
   );
-  process.exit(0);
 }
 
 module.exports = { planUpgrade, PRESERVE };

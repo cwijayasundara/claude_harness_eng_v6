@@ -1,5 +1,5 @@
 {
-  "count": 128,
+  "count": 129,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -91,6 +91,7 @@
     "perf-ratchet",
     "perf-smell-static",
     "plan-confidence",
+    "portfolio-compliance-rollup",
     "pr-respond",
     "pr-walkthrough",
     "promote-eligibility-gate",
