@@ -55,6 +55,14 @@ test('3: a repo is gated iff BOTH gates are gated; else worst gate wins', () => 
   assert.strictEqual(core.rollupRepo('not-gating', 'failed'), 'failed');
 });
 
+test('3b: an unconfigured gate is never gated; precedence failed > not-configured', () => {
+  assert.strictEqual(core.rollupRepo('gated', 'not-configured'), 'not-configured', 'a gated ruleset + unconfigured deploy gate is NOT a gated repo');
+  assert.strictEqual(core.rollupRepo('not-configured', 'gated'), 'not-configured');
+  assert.strictEqual(core.rollupRepo('not-configured', 'not-configured'), 'not-configured');
+  assert.strictEqual(core.rollupRepo('failed', 'not-configured'), 'failed');
+  assert.strictEqual(core.rollupRepo('not-configured', 'not-gating'), 'not-configured');
+});
+
 // ============================ 4. summarize + fleet_gated ====================
 
 test('4a: summarize counts each repo status; buildReport fleet_gated is fail-safe', () => {
@@ -65,7 +73,7 @@ test('4a: summarize counts each repo status; buildReport fleet_gated is fail-saf
     { repo: 'acme/d', branch_protection: 'gated', deploy_gate: 'not-gating', status: 'not-gating' },
   ];
   const report = core.buildReport({ rows, mode: 'audit', now: NOW });
-  assert.deepStrictEqual(report.summary, { total: 4, gated: 1, drifted: 1, not_gating: 1, failed: 1 });
+  assert.deepStrictEqual(report.summary, { total: 4, gated: 1, drifted: 1, not_gating: 1, not_configured: 0, failed: 1 });
   assert.strictEqual(report.fleet_gated, false);
   assert.strictEqual(report.mode, 'audit');
   assert.strictEqual(report.generated_at, NOW);
@@ -84,5 +92,13 @@ test('4b: an all-gated fleet is fleet_gated:true', () => {
 test('4c: an empty fleet is NOT a green (fail-safe)', () => {
   const report = core.buildReport({ rows: [], mode: 'audit', now: NOW });
   assert.strictEqual(report.summary.total, 0);
+  assert.strictEqual(report.fleet_gated, false);
+});
+
+test('4d: a fleet of only not-configured repos is not a green', () => {
+  const rows = [{ repo: 'acme/a', branch_protection: 'not-configured', deploy_gate: 'not-configured', status: 'not-configured' }];
+  const report = core.buildReport({ rows, mode: 'audit', now: NOW });
+  assert.strictEqual(report.summary.not_configured, 1);
+  assert.strictEqual(report.summary.gated, 0);
   assert.strictEqual(report.fleet_gated, false);
 });

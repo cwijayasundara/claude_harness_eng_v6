@@ -43,23 +43,27 @@ node .claude/scripts/fleet-retrofit.js --fleet fleet.json --json     # also prin
 - **Per-repo isolation** — each provisioner is invoked per repo (`--repo owner/repo`). A repo that
   errors (no admin, 404, gh down) becomes a `failed` row and **never aborts the rest**, so the report
   is always the complete fleet picture. `--apply` requires org/repo-admin on `gh`; audit is read-only.
-- **Per-repo classification** — each gate is `gated` / `drifted` / `not-gating` / `failed` from the
-  provisioners' exit codes (`--verify`: 0 compliant / 1 drift / 2 error; env `--apply` code 3 =
-  provisioned but empty reviewers = `not-gating`). A repo is `gated` only when **both** gates are
-  gated; otherwise it takes its worst gate.
+- **Per-repo classification** — each gate is `gated` / `drifted` / `not-gating` / `not-configured` /
+  `failed` from the provisioners' exit codes (`--verify`: 0 compliant / 1 drift / 2 error; env
+  `--apply` code 3 = provisioned but empty reviewers = `not-gating`). A repo is `gated` only when
+  **both** gates are gated; otherwise it takes its worst gate.
+- **An unconfigured gate is `not-configured`, never `gated`** — the provisioners return exit 0 for
+  "nothing to provision", so the runner decides configured-ness from the manifest up front: no
+  `project-manifest.json#github` ⇒ branch-protection `not-configured`; empty/absent
+  `github.environments` ⇒ deploy-approval `not-configured`. A `not-configured` gate is never counted as
+  gated and keeps `fleet_gated:false`, so a repo whose gate simply doesn't exist can **never** read as a
+  false green. Configure the ruleset/environment(s) for those gates to become meaningful.
 - **`fleet_gated`** is fail-safe: `true` only when the fleet is non-empty AND every repo is `gated`; an
-  empty fleet or any non-gated repo makes it `false`.
-- **`deploy_gate` reflects the configured environments** — with no `github.environments` configured the
-  environment provisioner reports nothing to gate; configure the deploy environment(s) for the
-  deploy-approval gate to be meaningful.
+  empty fleet or any non-gated repo (drifted, not-gating, not-configured, failed) makes it `false`.
 
 ## Exit codes & report
 
 - Exit **0** iff `fleet_gated` (every repo gated); **1** if any repo is not gated (the report is still
-  fully written — read it for the worklist); **2** for usage / unreadable `fleet.json` / a traversal
-  owner/repo entry (rejected before any `gh` call).
+  fully written — read it for the worklist); **2** for usage / unreadable or malformed `fleet.json` /
+  a traversal owner/repo entry (rejected before any `gh` call).
 - The report is written to `--out` (default `specs/reviews/fleet-retrofit.json`): per-repo
-  `{ repo, branch_protection, deploy_gate, status }` rows plus a `summary` and `fleet_gated`. It is an
+  `{ repo, branch_protection, deploy_gate, status }` rows (each gate/status one of gated / drifted /
+  not-gating / not-configured / failed) plus a `summary` and `fleet_gated`. It is an
   operational action-log (not a signed/evidence artifact — the durable evidence is the per-repo
   attestation and the portfolio rollup).
 

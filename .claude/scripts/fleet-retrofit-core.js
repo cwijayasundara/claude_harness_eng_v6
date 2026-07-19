@@ -27,21 +27,32 @@ function classifyGate(kind, mode, applyCode, verifyCode) {
   return 'failed';
 }
 
+// A gate the operator never configured. The provisioners collapse "nothing to
+// provision" onto exit 0 (provision-environments returns 0 when github.environments
+// is empty; provision-protection returns 0 when there is no github section), which
+// classifyGate cannot distinguish from "verified compliant". So the RUNNER decides
+// configured-ness from the manifest up front (fleet-retrofit.js) and hands this
+// state in directly — a not-configured gate is NEVER 'gated' and never counts
+// toward fleet_gated, so an unconfigured gate can never read as a false green.
+// Kept out of classifyGate on purpose: exit 0 alone is not enough to tell them apart.
+
 // A repo is 'gated' only when BOTH gates are gated; otherwise it takes its worst
-// gate: failed > not-gating > drifted (a gate can't be anything else here).
+// gate. Precedence over the non-gated states (a gate is only ever one of these):
+// failed > not-configured > not-gating > drifted.
+const NON_GATED_PRECEDENCE = ['failed', 'not-configured', 'not-gating', 'drifted'];
 function rollupRepo(bp, dg) {
   if (bp === 'gated' && dg === 'gated') return 'gated';
-  if (bp === 'failed' || dg === 'failed') return 'failed';
-  if (bp === 'not-gating' || dg === 'not-gating') return 'not-gating';
+  for (const s of NON_GATED_PRECEDENCE) if (bp === s || dg === s) return s;
   return 'drifted';
 }
 
 function summarize(rows) {
-  const s = { total: rows.length, gated: 0, drifted: 0, not_gating: 0, failed: 0 };
+  const s = { total: rows.length, gated: 0, drifted: 0, not_gating: 0, not_configured: 0, failed: 0 };
   for (const r of rows) {
     if (r.status === 'gated') s.gated += 1;
     else if (r.status === 'drifted') s.drifted += 1;
     else if (r.status === 'not-gating') s.not_gating += 1;
+    else if (r.status === 'not-configured') s.not_configured += 1;
     else s.failed += 1;
   }
   return s;

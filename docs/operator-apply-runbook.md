@@ -245,6 +245,7 @@ the gates are still in place; verify exits non-zero on drift so a job can gate o
   ```
   It invokes the §2/§3 provisioners per repo, isolates per-repo failures (one repo's error never
   aborts the rest), and writes `specs/reviews/fleet-retrofit.json` (each repo gated / drifted /
-  not-gating / failed). Exit 0 iff every repo is gated. See the `fleet-retrofit` skill. (CODEOWNERS
+  not-gating / not-configured / failed). Exit 0 iff every repo is gated. An unconfigured gate is
+  `not-configured` (never a false `gated`). See the `fleet-retrofit` skill. (CODEOWNERS
   §2a and attestation §4 still run per repo — the runner is API-gates-only, no checkout.)
 - **Signing** the attestation for non-repudiation (the documented seam in §4).

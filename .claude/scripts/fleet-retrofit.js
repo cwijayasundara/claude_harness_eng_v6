@@ -57,15 +57,27 @@ function parseFlags(argv) {
   return flags;
 }
 
+// Read the operator's github config (the single source of the gate specs). Absent
+// => both gates are unconfigured (see retrofitRepo). Never throws.
+function readGithub(cwd) {
+  try {
+    const m = JSON.parse(fs.readFileSync(path.join(cwd, 'project-manifest.json'), 'utf8'));
+    return (m && m.github) || null;
+  } catch (_) { return null; }
+}
+
 // Read + validate the fleet registry. Returns { ok, repos:[{owner,repo,slug}] } or
-// { ok:false, reason } — an unreadable file or a traversal owner/repo is a hard
-// exit-2 error BEFORE any repo is touched.
+// { ok:false, reason } — an unreadable file, a non-array `repos`, or a traversal
+// owner/repo is a hard exit-2 error BEFORE any repo is touched.
 function readFleet(file) {
   let reg;
   try {
     reg = JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch (err) {
     return { ok: false, reason: `cannot read fleet registry ${file}: ${String((err && err.message) || err).split('\n')[0]}` };
+  }
+  if (reg.repos !== undefined && !Array.isArray(reg.repos)) {
+    return { ok: false, reason: `fleet "repos" must be an array (got ${typeof reg.repos})` };
   }
   const repos = Array.isArray(reg.repos) ? reg.repos : [];
   for (const r of repos) {
@@ -77,25 +89,34 @@ function readFleet(file) {
 }
 
 // Run one provisioner in one mode against one repo, returning its numeric exit
-// code. The provisioners are result-object/never-throw by design, but a defensive
-// try/catch maps any unexpected throw to code 2 (failed) so a single repo can
-// never crash the fleet loop.
+// code. The provisioners are result-object/never-throw by design; a genuine throw
+// therefore signals a programming bug, so we surface it on stderr (observable, not
+// silently indistinguishable from a gh failure) and map to code 2 (failed) so a
+// single repo can never crash the fleet loop.
 function provRun(mod, mode, slug, cwd, runner) {
   try {
     return mod.run([`--${mode}`, '--repo', slug], { cwd, runner });
-  } catch (_) {
+  } catch (err) {
+    process.stderr.write(`fleet-retrofit: unexpected error from ${mode} on ${slug}: ${String((err && err.message) || err).split('\n')[0]}\n`);
     return 2;
   }
 }
 
-// Retrofit one repo: (optionally) apply both gates, then verify both, then classify.
-function retrofitRepo(slug, mode, cwd, runner) {
-  const bpApply = mode === 'apply' ? provRun(provProt, 'apply', slug, cwd, runner) : null;
-  const dgApply = mode === 'apply' ? provRun(provEnv, 'apply', slug, cwd, runner) : null;
-  const bpVerify = provRun(provProt, 'verify', slug, cwd, runner);
-  const dgVerify = provRun(provEnv, 'verify', slug, cwd, runner);
-  const branch_protection = core.classifyGate('protection', mode, bpApply, bpVerify);
-  const deploy_gate = core.classifyGate('env', mode, dgApply, dgVerify);
+// Classify one gate, short-circuiting to 'not-configured' when the operator never
+// configured it. Without this, the provisioner's "nothing to provision" exit 0
+// would be read as 'gated' — a false green (see fleet-retrofit-core NON_GATED note).
+function classifyOne(mod, kind, mode, slug, cwd, runner, configured) {
+  if (!configured) return 'not-configured';
+  const applyCode = mode === 'apply' ? provRun(mod, 'apply', slug, cwd, runner) : null;
+  const verifyCode = provRun(mod, 'verify', slug, cwd, runner);
+  return core.classifyGate(kind, mode, applyCode, verifyCode);
+}
+
+// Retrofit one repo: (optionally) apply then verify each CONFIGURED gate, classify,
+// roll up. cfg carries which gates the manifest actually configures.
+function retrofitRepo(slug, mode, cwd, runner, cfg) {
+  const branch_protection = classifyOne(provProt, 'protection', mode, slug, cwd, runner, cfg.bpConfigured);
+  const deploy_gate = classifyOne(provEnv, 'env', mode, slug, cwd, runner, cfg.dgConfigured);
   return { repo: slug, branch_protection, deploy_gate, status: core.rollupRepo(branch_protection, deploy_gate) };
 }
 
@@ -108,6 +129,39 @@ function writeReport(cwd, outFlag, report) {
   return out;
 }
 
+// Which gates the operator actually configured. An unconfigured gate is reported
+// 'not-configured' (never 'gated') because the provisioners return exit 0 for
+// "nothing to provision" — indistinguishable from "compliant" by code alone.
+function resolveConfig(cwd) {
+  const github = readGithub(cwd);
+  const cfg = {
+    bpConfigured: !!github,
+    dgConfigured: !!(github && Array.isArray(github.environments) && github.environments.length),
+  };
+  if (!cfg.bpConfigured) process.stdout.write('fleet-retrofit: no project-manifest.json#github — branch-protection is not-configured for the fleet.\n');
+  if (!cfg.dgConfigured) process.stdout.write('fleet-retrofit: no github.environments configured — deploy-approval is not-configured for the fleet.\n');
+  return cfg;
+}
+
+function retrofitFleet(repos, mode, cwd, runner, cfg) {
+  const rows = [];
+  for (const r of repos) {
+    process.stdout.write(`fleet-retrofit: ${mode === 'apply' ? 'applying' : 'auditing'} ${r.slug} ...\n`);
+    rows.push(retrofitRepo(r.slug, mode, cwd, runner, cfg));
+  }
+  return rows;
+}
+
+function printSummary(report, cwd, outPath) {
+  const s = report.summary;
+  process.stdout.write(
+    `fleet-retrofit: ${s.gated}/${s.total} gated (drifted ${s.drifted}, not-gating ${s.not_gating},` +
+    ` not-configured ${s.not_configured}, failed ${s.failed}); report ${path.relative(cwd, outPath)}.\n`);
+  if (!report.fleet_gated) {
+    process.stdout.write('fleet-retrofit: fleet is NOT fully gated — see the report for the per-repo worklist.\n');
+  }
+}
+
 function run(argv, opts = {}) {
   const cwd = opts.cwd || process.cwd();
   const runner = opts.gh || defaultGh;
@@ -118,23 +172,12 @@ function run(argv, opts = {}) {
   const fleet = readFleet(flags.fleet);
   if (!fleet.ok) { process.stderr.write(`fleet-retrofit: ${fleet.reason}\n`); return 2; }
 
-  const rows = [];
-  for (const r of fleet.repos) {
-    process.stdout.write(`fleet-retrofit: ${flags.mode === 'apply' ? 'applying' : 'auditing'} ${r.slug} ...\n`);
-    rows.push(retrofitRepo(r.slug, flags.mode, cwd, runner));
-  }
-
+  const cfg = resolveConfig(cwd);
+  const rows = retrofitFleet(fleet.repos, flags.mode, cwd, runner, cfg);
   const report = core.buildReport({ rows, mode: flags.mode, now: now() });
   const outPath = writeReport(cwd, flags.out, report);
-
   if (flags.json) process.stdout.write(JSON.stringify(report, null, 2) + '\n');
-  const s = report.summary;
-  process.stdout.write(
-    `fleet-retrofit: ${s.gated}/${s.total} gated` +
-    ` (drifted ${s.drifted}, not-gating ${s.not_gating}, failed ${s.failed}); report ${path.relative(cwd, outPath)}.\n`);
-  if (!report.fleet_gated) {
-    process.stdout.write('fleet-retrofit: fleet is NOT fully gated — see the report for the per-repo worklist.\n');
-  }
+  printSummary(report, cwd, outPath);
   return report.fleet_gated ? 0 : 1;
 }
 

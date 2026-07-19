@@ -12,7 +12,7 @@ const fs = require('fs');
 const path = require('path');
 
 const H = require('./fleet-retrofit-helpers');
-const { defaultGithub, operatorCwd, writeFleet, makeGh, capture, readReport, REPO_ROOT, SCRIPTS, NOW } = H;
+const { tmp, defaultGithub, operatorCwd, writeFleet, makeGh, capture, readReport, REPO_ROOT, SCRIPTS, NOW } = H;
 const { run } = require(path.join(SCRIPTS, 'fleet-retrofit'));
 
 function runFleet(cwd, fleet, extraArgs, gh) {
@@ -84,6 +84,37 @@ test('8b: --apply issues apply (PUT/POST) then verify per repo', () => {
   assert.ok(calls.some((c) => c.includes('--method PUT') && c.includes('repos/acme/alpha/environments/production')), 'environment applied');
 });
 
+// ===================== CR-001. unconfigured gate is never a false green =======
+
+test('CR-001: branch-protection compliant but NO environments configured => deploy_gate not-configured, not a green', () => {
+  const github = { org: 'acme', ruleset_name: 'secure-baseline', required_checks: ['gitleaks', 'sast'], required_approvals: 1, require_code_owner_review: true }; // no environments key
+  const cwd = operatorCwd(github);
+  const fleet = writeFleet(cwd, [{ owner: 'acme', repo: 'alpha' }]);
+  const { res, report } = runFleet(cwd, fleet, [], makeGh(github, { 'acme/alpha': 'gated' }));
+  const row = report.repos.find((r) => r.repo === 'acme/alpha');
+  assert.strictEqual(row.branch_protection, 'gated');
+  assert.strictEqual(row.deploy_gate, 'not-configured', 'an unconfigured deploy gate must not read as gated');
+  assert.strictEqual(row.status, 'not-configured');
+  assert.strictEqual(report.summary.not_configured, 1);
+  assert.strictEqual(report.fleet_gated, false, 'a repo with an unconfigured gate can never make the fleet green');
+  assert.strictEqual(res.code, 1);
+});
+
+test('CR-001b: NO github section => both gates not-configured, ZERO gh calls, not a green', () => {
+  const cwd = tmp('fr-nogh-');
+  fs.writeFileSync(path.join(cwd, 'project-manifest.json'), JSON.stringify({}));
+  const fleet = writeFleet(cwd, [{ owner: 'acme', repo: 'alpha' }]);
+  const calls = [];
+  function noGh(args) { calls.push(args.join(' ')); throw new Error('gh must not be called when nothing is configured'); }
+  const { res, report } = runFleet(cwd, fleet, [], noGh);
+  const row = report.repos.find((r) => r.repo === 'acme/alpha');
+  assert.strictEqual(row.branch_protection, 'not-configured');
+  assert.strictEqual(row.deploy_gate, 'not-configured');
+  assert.strictEqual(report.fleet_gated, false);
+  assert.strictEqual(res.code, 1);
+  assert.strictEqual(calls.length, 0, 'no gh calls are made for an unconfigured fleet');
+});
+
 // ===================== 7. fleet-file validation =============================
 
 test('7a: a missing/unreadable --fleet file => exit 2 before any repo', () => {
@@ -96,6 +127,14 @@ test('7b: a traversal owner/repo in the fleet is rejected (exit 2) before any gh
   const cwd = operatorCwd(defaultGithub());
   const fleet = writeFleet(cwd, [{ owner: '..', repo: 'x/y' }]);
   const res = capture(() => run(['--fleet', fleet], { cwd, gh: () => { throw new Error('gh must not run on a traversal entry'); }, now: () => NOW }));
+  assert.strictEqual(res.code, 2);
+});
+
+test('7d: a non-array repos in the fleet => exit 2 (malformed config, not silently empty)', () => {
+  const cwd = operatorCwd(defaultGithub());
+  const file = path.join(cwd, 'fleet.json');
+  fs.writeFileSync(file, JSON.stringify({ org: 'acme', repos: 'not-an-array' }));
+  const res = capture(() => run(['--fleet', file], { cwd, gh: () => { throw new Error('gh must not run'); }, now: () => NOW }));
   assert.strictEqual(res.code, 2);
 });
 
