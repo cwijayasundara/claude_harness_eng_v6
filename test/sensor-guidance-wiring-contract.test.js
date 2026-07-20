@@ -15,8 +15,12 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 test('verify-on-save imports and applies the guidance enricher', () => {
   const src = read('.claude/hooks/verify-on-save.js');
   assert.match(src, /require\('\.\/lib\/sensor-guidance'\)/, 'must import sensor-guidance');
-  const enrichCalls = (src.match(/enrich\(output\(res\)\)/g) || []).length;
-  assert.ok(enrichCalls >= 3, `expected enrich on lint+type blocks, found ${enrichCalls}`);
+  // Enrichment is centralized in emit(); the invariant is that emit enriches the
+  // message AND that all three lint/type failure branches (ruff, mypy, eslint)
+  // route their block/advisory message through emit().
+  assert.match(src, /enrich\(output\(res\)\)/, 'emit() must enrich the reported message');
+  const emitCalls = (src.match(/emit\('(?:lint|type) errors'/g) || []).length;
+  assert.ok(emitCalls >= 3, `expected all 3 lint/type blocks to route through emit(), found ${emitCalls}`);
 });
 
 test('the guidance lib is require-safe and covers high-signal rules', () => {
