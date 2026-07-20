@@ -173,7 +173,12 @@ function refreshUnderLock(projectDir, stateDir, dirtyFile, rels) {
 }
 
 function main() {
-  readHookInput();
+  const input = readHookInput();
+  // SubagentStop fires once per teammate during an agent-team turn. Draining +
+  // re-indexing the graph on each is the dominant per-turn cost and is pure
+  // waste: graph-dirty.jsonl is append-only and persists, so the top-level Stop
+  // coalesces every teammate's edits into a single refresh. Defer here.
+  if (input && input.hook_event_name === 'SubagentStop') return;
   const projectDir = resolveProjectDir(path.dirname(path.resolve(__filename)));
   const stateDir = path.join(projectDir, '.claude', 'state');
   const dirtyFile = path.join(stateDir, 'graph-dirty.jsonl');

@@ -131,10 +131,14 @@ Are you building something NEW?
 └── No (existing codebase) → normal route: /feature "<request>"
           first time here? /feature refreshes the DeepWiki/code-map first, then:
           ├── tiny safe edit (≤3 files, <150 lines, no auth/API) → /vibe
-          ├── changed behavior (add --issue N for a GitHub bug)  → /change
           ├── structure only, no behavior change                 → /refactor
-          └── big enough to need specs                           → /build (brownfield-aware)
+          ├── one bounded behavior change — the DEFAULT lane,
+          │   even for auth / API / migration work               → /change  (add --issue N for a GitHub bug)
+          └── multi-story scope: >~2–3 stories, spans many
+              modules, or a new subsystem                        → /build (brownfield-aware)
 ```
+
+**Sensitivity does not force the heavy pipeline — only scale does.** A single bounded change belongs in `/change` even when it touches auth, a public API, or a migration; that sensitivity raises the *review tier inside* `/change` (adversarial review, security-reviewer, feature-flag defaults), it does not send you to `/brd→/spec→/design`. The full pipeline is for work that genuinely needs more than ~2–3 stories, spans many modules, or introduces a new subsystem. See `/change` Step 0 for the exact auto-routing table.
 
 Not sure? Describe the request plainly. The harness should classify the lane before it edits.
 
@@ -286,6 +290,8 @@ Design notes: [docs/proposals/bun-adversarial-mechanical-loops.md](docs/proposal
 ### Complexity dial
 
 Commit-time ceremony is dialed by **`project-manifest.json#quality.sensor_tier`**: `minimal` · `standard` (default) · `strict`. Install boundaries are separate products (**harness-lite / core / full**). See [docs/product-skus-and-tiers.md](docs/product-skus-and-tiers.md). This monorepo dogfoods itself (Project Zero) via the root `project-manifest.json`.
+
+**Per-save speed dial:** the `verify-on-save` hook runs the project linter/typechecker on every source write. It prefers a project-local binary (`node_modules/.bin/eslint`, `.venv/bin/ruff`/`mypy`) over the `npx`/`uv run` wrappers to skip per-call resolver overhead, falling back to the wrapper when the local binary is absent. To make saves non-blocking entirely — surfacing lint/type findings as warnings and leaving the commit gate as the enforcing checkpoint — set **`project-manifest.json#quality.verify_on_save: "advisory"`** (or `HARNESS_VERIFY_ADVISORY=1`). Architecture (layer/bounded-context) checks stay blocking regardless. The graph-refresh index rebuild is also deferred off every `SubagentStop` and coalesced into the top-level `Stop`, so agent-team runs no longer re-index once per teammate.
 
 ### Project Zero CI
 

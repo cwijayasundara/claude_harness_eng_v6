@@ -1,5 +1,7 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
 const { spawnSync } = require('child_process');
 
 // Block only on a genuine tool failure, never because the tool or environment
@@ -29,6 +31,34 @@ const MISSING_SIGNATURES = [
 // execute). spawnSync with argv passes them as literal arguments instead.
 function run(argv, cwd, timeout) {
   return spawnSync(argv[0], argv.slice(1), { encoding: 'utf8', cwd, timeout });
+}
+
+// Resolve a project-local tool binary (e.g. node_modules/.bin/eslint,
+// .venv/bin/ruff) to an argv, or null when it is not present. Invoking it
+// directly skips the per-call resolver overhead of the `npx`/`uv run` wrappers
+// — the single largest cost on the per-save verify hot path — while resolving
+// the SAME binary the wrapper would (same version), so linting is unchanged.
+function localBinArgv(cwd, subdir, bin, args) {
+  // POSIX only: the extensionless node_modules/.bin & .venv/bin shims are not
+  // directly spawnable on Windows (needs .cmd), so there we keep the wrapper.
+  if (process.platform === 'win32') return null;
+  const p = path.join(cwd, subdir, bin);
+  return fs.existsSync(p) ? [p, ...args] : null;
+}
+
+// Run `direct` when it resolved to a local binary, else fall back to the wrapper
+// argv. The fallback preserves the exact unprovisioned behavior (its
+// tool/env-missing output is what shouldBlock/skipped key on), so a project
+// without the local binary behaves precisely as before — just without the speedup.
+// A present-but-unspawnable local binary (e.g. a relocated venv whose shebang
+// points at a moved interpreter → ENOENT, or a 127 exec failure) must NOT
+// silently skip the check the way shouldBlock() treats a spawn error — retry the
+// wrapper, which self-heals (re-resolves / recreates the environment).
+function runLocalFirst(direct, fallback, cwd, timeout) {
+  if (!direct) return run(fallback, cwd, timeout);
+  const res = run(direct, cwd, timeout);
+  if (res && (res.error || res.status === 127)) return run(fallback, cwd, timeout);
+  return res;
 }
 
 function output(result) {
@@ -69,4 +99,7 @@ function detectCwd(filePath, fallback) {
   return fallback;
 }
 
-module.exports = { run, output, shouldBlock, skipped, unavailable, detectCwd };
+module.exports = {
+  run, output, shouldBlock, skipped, unavailable, detectCwd,
+  localBinArgv, runLocalFirst,
+};

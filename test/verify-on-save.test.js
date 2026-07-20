@@ -79,6 +79,31 @@ test('treats "npx canceled due to missing packages" as unprovisioned, not a fail
   );
 });
 
+test('resolveAdvisory reads the manifest flag and env override, defaulting to blocking', () => {
+  const { resolveAdvisory } = require(path.join(
+    __dirname, '..', '.claude', 'hooks', 'verify-on-save.js'
+  ));
+  assert.strictEqual(resolveAdvisory({ quality: { verify_on_save: 'advisory' } }, {}), true);
+  assert.strictEqual(resolveAdvisory({ quality: { verify_on_save: 'blocking' } }, {}), false);
+  assert.strictEqual(resolveAdvisory(null, {}), false, 'default is blocking');
+  assert.strictEqual(resolveAdvisory(null, { HARNESS_VERIFY_ADVISORY: '1' }), true, 'env override wins');
+  assert.strictEqual(resolveAdvisory({ quality: { verify_on_save: 'advisory' } }, { HARNESS_VERIFY_ADVISORY: '0' }), true);
+});
+
+test('advisory mode does NOT downgrade the architecture (layer) block', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  const p = writeFileIn(projectDir, 'src/service/user.py', 'from src.api import routes\n');
+  writeFileIn(projectDir, 'project-manifest.json', JSON.stringify({ quality: { verify_on_save: 'advisory' } }));
+  const result = await runHook(projectDir, HOOK, {
+    tool_name: 'Write',
+    tool_input: { file_path: p },
+  });
+  // Layer/context invariants stay blocking regardless of advisory mode — only
+  // the lint/typecheck toolchain becomes advisory.
+  assert.strictEqual(result.status, 2, result.stdout + result.stderr);
+  assert.ok(result.stdout.includes('service cannot import from api'), result.stdout);
+});
+
 test('does not block when the lint/typecheck toolchain is unprovisioned', async () => {
   // Temp project has no pyproject/eslint config — the hook must fail open.
   const projectDir = makeHookProject([HOOK]);

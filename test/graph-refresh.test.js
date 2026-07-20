@@ -153,6 +153,29 @@ test('graph-refresh bootstraps a placeholder graph after first greenfield source
   );
 });
 
+test('graph-refresh defers on SubagentStop, leaving the dirty list for the top-level Stop', async () => {
+  const dir = makeIndexedProject(['graph-refresh.js']);
+  fs.appendFileSync(
+    path.join(dir, 'db', 'session.py'),
+    '\n\ndef deferred_symbol():\n    return 0\n'
+  );
+  fs.writeFileSync(dirtyPath(dir), JSON.stringify({ file: 'db/session.py', ts: 1 }) + '\n');
+  const result = await runHook(dir, 'graph-refresh.js', { hook_event_name: 'SubagentStop' });
+  assert.strictEqual(result.status, 0, result.stdout + result.stderr);
+  // A teammate stop must NOT drain/re-index — the dirty entry survives so the
+  // parent Stop coalesces every teammate's edits into one refresh.
+  assert.notStrictEqual(
+    fs.readFileSync(dirtyPath(dir), 'utf8').trim(), '',
+    'dirty list should survive SubagentStop'
+  );
+  const graph = JSON.parse(fs.readFileSync(graphPath(dir), 'utf8'));
+  const rec = graph.files.find((f) => f.path === 'db/session.py');
+  assert.ok(
+    !rec.symbols.some((s) => s.name === 'deferred_symbol'),
+    'graph should not be patched on SubagentStop'
+  );
+});
+
 test('graph-refresh is a silent no-op when there is nothing dirty', async () => {
   const dir = makeHookProject(['graph-refresh.js']);
   const result = await runHook(dir, 'graph-refresh.js', { hook_event_name: 'Stop' });
