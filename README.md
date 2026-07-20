@@ -40,11 +40,13 @@ Add `--permission-mode auto` to launch a mostly-hands-off session (auto-runs act
 claude --plugin-dir /path/to/claude_harness_eng_v5/dist/skus/harness-core --permission-mode auto
 ```
 
-To make it the default so you don't pass the flag each time, set it in your **project's** `.claude/settings.json` (the scaffolded target, not this harness repo):
+To make it the default so you don't pass the flag each time, set it in your **user-level** `~/.claude/settings.json`:
 
 ```json
 { "permissions": { "defaultMode": "auto" } }
 ```
+
+> **Not the project's `.claude/settings.json`.** Claude Code (v2.1.142+) *silently ignores* `defaultMode: "auto"` from a repo's `.claude/settings.json` or `.claude/settings.local.json` — a checked-in config is not allowed to escalate itself to auto mode (it just starts in `default`, with no error). So `auto` **cannot be scoped to a single repo** via committed settings: user-level `~/.claude/settings.json` turns it on for *every* project, so to keep auto scoped to one repo pass the `--permission-mode auto` flag (or a shell alias) at launch instead.
 
 Modes, least → most permissive: `plan`, `default`, `acceptEdits`, `auto`, `bypassPermissions`. Prefer `auto`; reserve `bypassPermissions` (skips *all* checks) for isolated, offline containers only. Auto mode skips per-action prompts but does **not** bypass the harness's own pipeline gates (`/build` phases 1–3, `/gate` before merge).
 
