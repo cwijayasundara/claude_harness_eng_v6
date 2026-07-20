@@ -20,6 +20,9 @@ npm run package:skus
 # → dist/skus/harness-core , dist/skus/harness-lite , dist/skus/harness-full
 
 cd ~/my-project
+# Point at the packaged SKU root itself — NOT a .claude/ subfolder.
+# `npm run package:skus` flattens .claude/* to the package root (plugin.json
+# lives at harness-core/.claude-plugin/), so do not append /.claude here.
 claude --plugin-dir /path/to/claude_harness_eng_v5/dist/skus/harness-core
 ```
 
@@ -28,6 +31,22 @@ Then inside Claude Code:
 ```text
 /scaffold
 ```
+
+#### Optional: start in auto mode
+
+Add `--permission-mode auto` to launch a mostly-hands-off session (auto-runs actions except ones a background classifier flags — force pushes, credential leaks, prod deploys, destructive commands):
+
+```bash
+claude --plugin-dir /path/to/claude_harness_eng_v5/dist/skus/harness-core --permission-mode auto
+```
+
+To make it the default so you don't pass the flag each time, set it in your **project's** `.claude/settings.json` (the scaffolded target, not this harness repo):
+
+```json
+{ "permissions": { "defaultMode": "auto" } }
+```
+
+Modes, least → most permissive: `plan`, `default`, `acceptEdits`, `auto`, `bypassPermissions`. Prefer `auto`; reserve `bypassPermissions` (skips *all* checks) for isolated, offline containers only. Auto mode skips per-action prompts but does **not** bypass the harness's own pipeline gates (`/build` phases 1–3, `/gate` before merge).
 
 | SKU | Load | Use when |
 |---|---|---|
