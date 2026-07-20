@@ -1,6 +1,6 @@
 ---
 name: gate
-description: Run the adaptive pre-merge quality gate: deterministic checks, evaluator, diff review, and security review only when the diff crosses a security/data/API boundary. (Renamed from /review to avoid colliding with Claude Code's native /review PR-review command.)
+description: "Run the adaptive pre-merge quality gate: deterministic checks, evaluator, diff review, and security review only when the diff crosses a security/data/API boundary. (Renamed from /review to avoid colliding with Claude Code's native /review PR-review command.)"
 argument-hint: "[story-id]"
 context: fork
 ---

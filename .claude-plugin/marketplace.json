@@ -1,0 +1,14 @@
+{
+  "name": "claude-harness-local",
+  "description": "Local marketplace for installing the Claude Harness Engine v5 plugin from this checkout.",
+  "owner": {
+    "name": "Claude Harness Engine"
+  },
+  "plugins": [
+    {
+      "name": "claude_harness_eng_v5",
+      "source": "./.claude",
+      "description": "Claude Harness Engine v5 — generator/evaluator SDLC pipeline, ratcheting quality gates, and project scaffolding. Run /scaffold to initialize a project."
+    }
+  ]
+}

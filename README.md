@@ -10,21 +10,19 @@ Current version: `2.5.0`
 
 ## Start Here
 
-### Recommended: load a packaged SKU
+### Recommended: install as a local plugin
 
-From a checkout of this repo (or a release artifact):
+This repo ships a **local marketplace** (`.claude-plugin/marketplace.json`), so you can install the harness as a persistent Claude Code plugin — it stays loaded across sessions with no `--plugin-dir` flag to retype:
 
 ```bash
-# Build local plugin trees (core = lean product, lite = artifacts only)
-npm run package:skus
-# → dist/skus/harness-core , dist/skus/harness-lite , dist/skus/harness-full
+git clone https://github.com/cwijayasundara/claude_harness_eng_v5.git ~/claude_harness_eng_v5
 
-cd ~/my-project
-# Point at the packaged SKU root itself — NOT a .claude/ subfolder.
-# `npm run package:skus` flattens .claude/* to the package root (plugin.json
-# lives at harness-core/.claude-plugin/), so do not append /.claude here.
-claude --plugin-dir /path/to/claude_harness_eng_v5/dist/skus/harness-core
+# Register the local marketplace (points at your clone), then install the plugin
+claude plugin marketplace add ~/claude_harness_eng_v5
+claude plugin install claude_harness_eng_v5@claude-harness-local
 ```
+
+`claude plugin install` defaults to `--scope user` (available in every project). Use `--scope project` to write it into a specific project's `.claude/settings.json` (shared with everyone who clones that project), or `--scope local` for a gitignored per-project install. After pulling new commits, refresh with `claude plugin marketplace update claude-harness-local`.
 
 Then inside Claude Code:
 
@@ -32,12 +30,24 @@ Then inside Claude Code:
 /scaffold
 ```
 
+If your Claude Code UI shows a namespaced command, use `/claude_harness_eng_v5:scaffold`.
+
+Installing gives you every harness *command*; `/scaffold` still installs the lean `core` surface into your project by default (`/scaffold --full` for the full set). The deterministic gate hooks wire up when `/scaffold` copies `.claude/` into a target project.
+
+#### Quick one-session load (no install)
+
+To try it without installing, point `--plugin-dir` at the checked-in `.claude/` directory — the plugin root that holds `.claude-plugin/plugin.json`. Per the [plugins reference](https://code.claude.com/docs/en/plugins-reference#plugin-caching-and-file-resolution), this loads the plugin for the current session only:
+
+```bash
+claude --plugin-dir ~/claude_harness_eng_v5/.claude
+```
+
 #### Optional: start in auto mode
 
 Add `--permission-mode auto` to launch a mostly-hands-off session (auto-runs actions except ones a background classifier flags — force pushes, credential leaks, prod deploys, destructive commands):
 
 ```bash
-claude --plugin-dir /path/to/claude_harness_eng_v5/dist/skus/harness-core --permission-mode auto
+claude --permission-mode auto
 ```
 
 To make it the default so you don't pass the flag each time, set it in your **user-level** `~/.claude/settings.json`:
@@ -50,7 +60,22 @@ To make it the default so you don't pass the flag each time, set it in your **us
 
 Modes, least → most permissive: `plan`, `default`, `acceptEdits`, `auto`, `bypassPermissions`. Prefer `auto`; reserve `bypassPermissions` (skips *all* checks) for isolated, offline containers only. Auto mode skips per-action prompts but does **not** bypass the harness's own pipeline gates (`/build` phases 1–3, `/gate` before merge).
 
-| SKU | Load | Use when |
+### Optional: build a pruned SKU (core / full / lite)
+
+`--plugin-dir <clone>/.claude` loads the **full** harness surface. To load a lean/pruned loadout instead — or to produce a distributable tree/tarball — build a SKU first. **`dist/` is a generated build artifact: it is gitignored and absent from a fresh clone** until you run `npm run package:skus`:
+
+```bash
+npm run package:skus
+# → dist/skus/harness-core , dist/skus/harness-lite , dist/skus/harness-full
+
+cd ~/my-project
+# Point at the packaged SKU root itself — NOT a .claude/ subfolder.
+# package:skus flattens .claude/* up to the package root (plugin.json lives at
+# harness-core/.claude-plugin/), so do NOT append /.claude here.
+claude --plugin-dir /path/to/claude_harness_eng_v5/dist/skus/harness-core
+```
+
+| SKU | Load (`--plugin-dir`) | Use when |
 |---|---|---|
 | **harness-core** (default product) | `dist/skus/harness-core` | Building/changing software |
 | **harness-full** | `dist/skus/harness-full` | Need optional skills / full surface |
@@ -58,16 +83,6 @@ Modes, least → most permissive: `plan`, `default`, `acceptEdits`, `auto`, `byp
 
 SKU vocabulary: [docs/product-skus-and-tiers.md](docs/product-skus-and-tiers.md).  
 Publish process (marketplace / tarball / interim): [docs/marketplace-publish.md](docs/marketplace-publish.md).
-
-### Contributors: clone + monorepo plugin dir
-
-```bash
-git clone https://github.com/cwijayasundara/claude_harness_eng_v5.git ~/claude_harness_eng_v5
-cd ~/my-project
-claude --plugin-dir ~/claude_harness_eng_v5/.claude
-```
-
-If your Claude Code UI shows a namespaced command, use `/claude_harness_eng_v5:scaffold`.
 
 Every project gets the lean `core` scaffold by default: `/build`, `/auto`, `/gate`, plus the minimal brownfield spine (`/feature`, `/brownfield`, `/code-map`, `/change`, `/refactor`, `/vibe`, tracker publishing). Use `/scaffold --full` only when you explicitly want the optional harness surface.
 
