@@ -3,7 +3,7 @@
 > Deterministic, always-current map rendered from `code-graph.json`. No LLM — re-rendered on graph change.
 
 - Producer: `vendored-ast`  ·  Language: `mixed`
-- Modules: 441  ·  Edges: 2018  ·  Clusters: 47
+- Modules: 441  ·  Edges: 2020  ·  Clusters: 47
 
 ## Hubs (most-depended-on)
 

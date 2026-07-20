@@ -1,0 +1,11 @@
+{
+  "cluster_id": "test/fleet-retrofit-helpers.js",
+  "member_paths": [
+    "test/fleet-retrofit-helpers.js"
+  ],
+  "content_hashes": {
+    "test/fleet-retrofit-helpers.js": "5662370674619416"
+  },
+  "content_hash": "b6fe333609957067",
+  "stale": false
+}
