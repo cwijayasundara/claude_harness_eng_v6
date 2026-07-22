@@ -72,6 +72,31 @@ function normalizeEdges(stories, allStories) {
   return edges.sort((a, b) => cmp(edgeKey(a), edgeKey(b)));
 }
 
+// A cyclic story graph cannot be ordered. wave-plan.js already throws on one,
+// but that is at /auto time — long after the plan was reviewed and allocated.
+// Catching it here means a cycle surfaces while the decomposition is still open.
+function assertAcyclic(ids, edges) {
+  const out = new Map(ids.map((id) => [id, []]));
+  for (const e of edges) out.get(e.from).push(e.to);
+  const state = new Map(ids.map((id) => [id, 'new']));
+
+  const walk = (id, path) => {
+    state.set(id, 'open');
+    for (const next of (out.get(id) || []).slice().sort(cmp)) {
+      if (state.get(next) === 'open') {
+        const cycle = path.slice(path.indexOf(next)).concat(next);
+        throw new Error(`story-clusters: dependency cycle — ${cycle.join(' -> ')}`);
+      }
+      if (state.get(next) === 'new') walk(next, path.concat(next));
+    }
+    state.set(id, 'done');
+  };
+
+  for (const id of ids.slice().sort(cmp)) {
+    if (state.get(id) === 'new') walk(id, [id]);
+  }
+}
+
 function connectedComponents(ids, edges) {
   const parent = new Map(ids.map((id) => [id, id]));
   const find = (x) => {
@@ -244,6 +269,7 @@ module.exports = {
   cmp,
   pointsOf,
   normalizeEdges,
+  assertAcyclic,
   connectedComponents,
   splitOversized,
   mergeUndersized,

@@ -391,6 +391,8 @@ Every one of the ten slots — `functional`, `data_lifecycle`, `integration`, `p
 
 Resolve a failure at the source: a genuinely uncovered slot usually means the interview skipped a dimension. Return to Step 2, ask, capture the answer as a `C-n` clarification, and add the requirement — do not paper over it with an excuse.
 
+**Pre-existing BRD (not authored in this session).** A spine written before this gate existed carries no `taxonomy` field at all, so every requirement reports `UNTAGGED`. That is a migration state, not a quality signal. Tag the existing requirements first — reading each one and assigning its slots is a mechanical pass over an artifact you already have — then re-run. Do **not** record blanket `na_reason` entries to clear it; that converts a one-time migration into a permanently false clean bill of health. If you authored the spine in this session, `UNTAGGED` is a Step 4 execution bug: go back and tag them.
+
 ### Step 4.5 — Phase Evaluation Gate
 
 Spawn the `evaluator` agent (artifact mode) to validate the BRD before human review.

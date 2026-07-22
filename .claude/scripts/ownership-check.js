@@ -180,7 +180,13 @@ function runClusterMode(root, mapPath, strict) {
     process.stdout.write('ownership-clusters: SKIP (no story-clusters.json — run /spec Step 4.5)\n');
     return 0;
   }
-  const plan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
+  let plan;
+  try {
+    plan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
+  } catch (e) {
+    process.stderr.write(`ownership-clusters: cannot read ${planPath}: ${e.message}\n`);
+    return 2;
+  }
   const verdict = checkClusterCollisions(fs.readFileSync(mapPath, 'utf8'), plan);
   const out = path.join(root, 'specs', 'reviews', 'ownership-clusters.json');
   fs.mkdirSync(path.dirname(out), { recursive: true });

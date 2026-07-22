@@ -18,7 +18,7 @@ const path = require('path');
 
 const {
   HARD_KINDS, CUTTABLE_KINDS, asArray, cmp, pointsOf,
-  normalizeEdges, connectedComponents, splitOversized, mergeUndersized, resolveContractStory,
+  normalizeEdges, assertAcyclic, connectedComponents, splitOversized, mergeUndersized, resolveContractStory,
 } = require('../hooks/lib/story-graph');
 
 const DEFAULTS = { maxPointsPerCluster: 21, minPointsPerCluster: 5 };
@@ -32,6 +32,7 @@ function readyStories(stories) {
 
 function buildContext(ready, allStories) {
   const edges = normalizeEdges(ready, asArray(allStories));
+  assertAcyclic(ready.map((s) => s.id), edges);
   const depsOf = new Map(ready.map((s) => [s.id, []]));
   for (const e of edges) depsOf.get(e.from).push(e.to);
   return {
