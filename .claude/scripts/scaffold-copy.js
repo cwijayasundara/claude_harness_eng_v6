@@ -158,6 +158,7 @@ const CORE_SCRIPTS = [
   'wave-plan.js',
   'wave-pr.js',
   'story-clusters.js',
+  'brd-taxonomy-check.js',
   'quality-card.js',
   'pr-walkthrough.js',
   'pr-body.js',
