@@ -38,15 +38,33 @@ const RELATION_KIND_MAP = {
   inherits: 'inherits',
 };
 
+// The first six languages are the ones the vendored AST indexer also covers;
+// the rest are non-AST languages Graphify can parse (36 tree-sitter grammars)
+// but the vendored indexer cannot — the whole point of importing Graphify is to
+// gain graph coverage for those, so they must map to a language rather than fall
+// through to 'unknown' (which drops the file). Truly unrecognized extensions
+// still fall through and are skipped, preserving the "does not invent" policy.
 const LANGUAGE_BY_EXT = {
   '.py': 'python',
   '.js': 'node', '.mjs': 'node', '.cjs': 'node', '.jsx': 'node',
   '.ts': 'typescript', '.tsx': 'typescript',
   '.java': 'java', '.cs': 'csharp', '.go': 'go',
+  '.rs': 'rust',
+  '.rb': 'ruby',
+  '.c': 'c', '.h': 'c',
+  '.cpp': 'cpp', '.cc': 'cpp', '.cxx': 'cpp', '.hpp': 'cpp', '.hh': 'cpp', '.hxx': 'cpp',
+  '.php': 'php',
+  '.kt': 'kotlin', '.kts': 'kotlin',
+  '.swift': 'swift',
+  '.scala': 'scala', '.sc': 'scala',
+  '.lua': 'lua',
+  '.sql': 'sql',
 };
 
 const PREFIX_BY_LANGUAGE = {
-  python: 'py', node: 'js', typescript: 'ts', java: 'java', csharp: 'cs', go: 'go', unknown: 'file',
+  python: 'py', node: 'js', typescript: 'ts', java: 'java', csharp: 'cs', go: 'go',
+  rust: 'rs', ruby: 'rb', c: 'c', cpp: 'cpp', php: 'php', kotlin: 'kt',
+  swift: 'swift', scala: 'scala', lua: 'lua', sql: 'sql', unknown: 'file',
 };
 
 function normPath(p) {

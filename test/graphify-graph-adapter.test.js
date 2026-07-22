@@ -71,6 +71,39 @@ test('metrics count internal edges and find no cycle in the acyclic sample', () 
   assert.deepStrictEqual(g.metrics.cycles, []);
 });
 
+test('non-AST languages (rust, ruby, ...) Graphify can parse survive as nodes and edges', () => {
+  // The vendored AST indexer only covers py/js/ts/java/cs/go. Graphify's value
+  // as a fallback producer is precisely the languages it cannot parse, so those
+  // must become graph nodes rather than being dropped as "unknown".
+  const poly = {
+    nodes: [
+      { id: 'm', label: 'main.rs', file_type: 'code', source_file: 'src/main.rs', source_location: 'L1' },
+      { id: 'm_run', label: 'run', file_type: 'code', source_file: 'src/main.rs', source_location: 'L3' },
+      { id: 'l', label: 'lib.rs', file_type: 'code', source_file: 'src/lib.rs', source_location: 'L1' },
+      { id: 'l_helper', label: 'helper', file_type: 'code', source_file: 'src/lib.rs', source_location: 'L2' },
+      { id: 'w', label: 'worker.rb', file_type: 'code', source_file: 'app/worker.rb', source_location: 'L1' },
+    ],
+    links: [
+      { relation: 'calls', confidence: 'EXTRACTED', source_file: 'src/main.rs', source_location: 'L4', source: 'm_run', target: 'l_helper' },
+    ],
+  };
+  const g = buildGraphifyGraph(poly, 'poly.json');
+  const rust = g.nodes.filter((n) => n.language === 'rust').map((n) => n.id).sort();
+  assert.deepStrictEqual(rust, ['rs:src/lib.rs', 'rs:src/main.rs']);
+  assert.ok(g.nodes.some((n) => n.language === 'ruby' && n.id === 'rb:app/worker.rb'));
+  const edges = new Set(g.edges.map((e) => `${e.source} ${e.kind} ${e.target}`));
+  assert.ok(edges.has('rs:src/main.rs calls rs:src/lib.rs'), 'cross-file rust call edge resolves');
+});
+
+test('genuinely unrecognized extensions are still skipped, not invented', () => {
+  const g = buildGraphifyGraph({
+    nodes: [{ id: 'x', label: 'weird.xyzq', file_type: 'code', source_file: 'a/weird.xyzq', source_location: 'L1' }],
+    links: [],
+  }, 'unknown.json');
+  assert.strictEqual(g.nodes.length, 0);
+  assert.ok(g.meta.warnings.some((w) => /weird\.xyzq/.test(w)));
+});
+
 test('cycle detection works on a mutually-referencing graphify graph', () => {
   const cyclic = {
     nodes: [
