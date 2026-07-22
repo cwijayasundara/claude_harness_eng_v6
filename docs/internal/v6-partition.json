@@ -1,0 +1,401 @@
+{
+  "version": 1,
+  "purpose": "v6 reduction partition. Assigns every harness unit to the kernel or exactly one pack. The single structural rule: a kernel unit may not hard-reference a pack unit. Checked by tools/check-partition.js.",
+  "baseline_tag": "v5-preserve",
+  "kernel": {
+    "skill": [
+      "change",
+      "code-gen",
+      "gate",
+      "refactor",
+      "status",
+      "vibe"
+    ],
+    "agent": [
+      "code-reviewer",
+      "implementer",
+      "security-reviewer"
+    ],
+    "hook": [
+      "check-git-hooks",
+      "pre-bash-gate",
+      "pre-write-gate",
+      "record-run",
+      "verify-on-save"
+    ],
+    "githook": [
+      "commit-msg",
+      "pre-commit",
+      "prepare-commit-msg"
+    ],
+    "lib": [
+      "agent-model",
+      "bash-targets",
+      "common",
+      "gate-registry",
+      "gate-result",
+      "gates-early",
+      "gates-quality",
+      "git-safety",
+      "layers",
+      "length",
+      "pre-commit-util",
+      "prefix-cache",
+      "record-skills",
+      "review-policy",
+      "secrets",
+      "security-patterns",
+      "security-scan",
+      "sensor-guidance",
+      "sensor-outcomes",
+      "sensor-tier",
+      "tdd",
+      "toolchain",
+      "trust-boundary"
+    ],
+    "script": [
+      "merge-review-verdicts",
+      "review-commit-msg",
+      "review-tier",
+      "security-scan"
+    ]
+  },
+  "packs": {
+    "planning": {
+      "why": "GAN/SDLC pipeline. 0 spawns of generator/evaluator/planner/design-critic in 23d telemetry; no specs/brd|spec|design artifacts ever produced in this repo.",
+      "skill": [
+        "advise",
+        "auto",
+        "brd",
+        "build",
+        "clarify",
+        "deploy",
+        "design",
+        "evaluate",
+        "feature",
+        "implement",
+        "pr-respond",
+        "spec",
+        "sprint",
+        "test",
+        "tracker-publish"
+      ],
+      "agent": [
+        "advisor",
+        "design-critic",
+        "evaluator",
+        "generator",
+        "planner"
+      ],
+      "script": [
+        "amendment-provenance-check",
+        "auto-merge",
+        "brd-taxonomy-check",
+        "budget-state",
+        "build-chain",
+        "build-chain-state",
+        "build-lane",
+        "canvas-semantic-check",
+        "canvas-sync-check",
+        "constraints-extract",
+        "contract-accessibility-default",
+        "cr-index",
+        "env-diff",
+        "feature-lane",
+        "flag-scan",
+        "impact-classifier",
+        "model-tier",
+        "ownership-check",
+        "pipeline-snapshot",
+        "pipeline-state-readers",
+        "pipeline-status",
+        "plan-confidence",
+        "pr-body",
+        "pr-poll",
+        "record-modularity-review",
+        "seam-confidence",
+        "story-clusters",
+        "team-policy",
+        "topologies",
+        "trace-check",
+        "validate-canvas",
+        "validate-contract",
+        "verification-matrix-gate",
+        "vertical-glossary-pack",
+        "vocabulary-check",
+        "wave-plan",
+        "wave-pr"
+      ],
+      "lib": [
+        "canvas",
+        "canvas-sync",
+        "contract-schema",
+        "simulate",
+        "story-graph"
+      ],
+      "hook": [
+        "concurrency-gate"
+      ]
+    },
+    "brownfield": {
+      "why": "Only needed on existing codebases. Includes the 10-control nav/token-governor stack, which false-blocked 3x in one session.",
+      "skill": [
+        "brownfield",
+        "code-map",
+        "context",
+        "seam-finder"
+      ],
+      "agent": [
+        "codebase-explorer",
+        "modularity-reviewer"
+      ],
+      "script": [
+        "ask-codebase",
+        "context-pack",
+        "context-retrieve",
+        "context-store",
+        "coupling-gate",
+        "cycle-gate",
+        "duplication-gate",
+        "human-codebase",
+        "impact-scope",
+        "modularity-pack",
+        "naming-clusters",
+        "nav-bench",
+        "nav-brownfield-maps",
+        "nav-cochange",
+        "nav-concepts",
+        "nav-graph-index",
+        "nav-index",
+        "nav-mcp-server",
+        "nav-query",
+        "nav-telemetry",
+        "navigation-refresh",
+        "run-compact",
+        "search-compact",
+        "tool-output-pack"
+      ],
+      "lib": [
+        "contexts",
+        "coupling-gate",
+        "cycle-gate",
+        "drift",
+        "duplication-gate",
+        "impact-scope",
+        "modularity-pack",
+        "naming-clusters",
+        "verbose-command"
+      ],
+      "hook": [
+        "graph-refresh",
+        "token-advisor"
+      ]
+    },
+    "compliance": {
+      "why": "Client CISO mandate. Real external commitment, but not SDLC - belongs in its own installable pack.",
+      "skill": [
+        "attestation",
+        "fleet-retrofit",
+        "portfolio-rollup",
+        "provision-environments",
+        "provision-protection"
+      ],
+      "agent": [],
+      "script": [
+        "attestation-bundle",
+        "attestation-io",
+        "canonical-json",
+        "fleet-retrofit",
+        "fleet-retrofit-core",
+        "generate-attestation",
+        "generate-codeowners",
+        "portfolio-rollup",
+        "portfolio-rollup-core",
+        "provision-environments",
+        "provision-protection",
+        "ruleset-diff",
+        "scaffold-security-baseline"
+      ],
+      "lib": [
+        "gates-strict",
+        "security-baseline"
+      ],
+      "hook": []
+    },
+    "legacy-discipline": {
+      "why": "Brownfield-editing discipline (coverage/pinning/sprouting/AT-first). Statically required by gate-registry today; that edge is what drags it into the kernel.",
+      "skill": [
+        "checking-coverage-before-change",
+        "checking-migration-safety",
+        "keeping-refactors-pure",
+        "pinning-down-behavior",
+        "reuse-or-justify",
+        "sprouting-instead-of-editing",
+        "upgrading-dependencies",
+        "writing-acceptance-tests-first"
+      ],
+      "agent": [],
+      "script": [
+        "at-first-gate",
+        "legacy-discipline-gate",
+        "record-at-red",
+        "record-coverage-verdict",
+        "record-reuse-decision",
+        "reuse-scout",
+        "sprout-diff-gate"
+      ],
+      "lib": [
+        "constitution-invariants",
+        "coverage-preflight",
+        "gates-legacy",
+        "legacy-bite-check",
+        "legacy-discipline-relatedness",
+        "reuse-scout",
+        "sprout-classify",
+        "sprout-symbol-check"
+      ],
+      "hook": []
+    },
+    "verification": {
+      "why": "Runtime/regression verification beyond the commit gate. Needed for UI products, not for library or CLI work.",
+      "skill": [],
+      "agent": [],
+      "script": [
+        "approve-fixtures",
+        "approved-fixtures-gate",
+        "contract-drift-gate",
+        "coverage-diff",
+        "deep-mutation",
+        "flake-detector",
+        "flake-history",
+        "live-externals-gate",
+        "local-regression-gate",
+        "mutation-gate",
+        "mutation-smoke",
+        "observability-gate",
+        "perf-baseline",
+        "perf-smell-gate",
+        "regression-gate",
+        "slo-check",
+        "stub-smell-gate",
+        "test-deletion-gate"
+      ],
+      "lib": [
+        "diff-hunks",
+        "fixtures",
+        "gates-live-externals",
+        "live-externals-gate",
+        "local-regression-gate",
+        "mutation-gate",
+        "prom-parse",
+        "regression-gate",
+        "stub-smell",
+        "test-deletion-gate"
+      ],
+      "hook": []
+    },
+    "telemetry": {
+      "why": "Observability of the harness itself. Report-only; none of it gates. sensor-outcomes.jsonl was never written, so none of it has ever produced a decision.",
+      "skill": [
+        "agent-readiness",
+        "promote",
+        "retro"
+      ],
+      "agent": [],
+      "script": [
+        "ab-report",
+        "ab-run",
+        "agent-readiness",
+        "archive-state",
+        "assert-readiness-ratchet",
+        "certification-report",
+        "ci-ingest",
+        "control-budget-gate",
+        "cost-per-outcome",
+        "cost-report",
+        "drift-report",
+        "harness-coverage",
+        "loop-health",
+        "pr-walkthrough",
+        "promote-recommendation",
+        "quality-card",
+        "readiness-digest",
+        "replay-telemetry",
+        "run-custom-sensors",
+        "runs-retention",
+        "sensor-value-report",
+        "telemetry-ledger-rotate",
+        "telemetry-memory",
+        "telemetry-phase-eval",
+        "telemetry-pipeline-gauges",
+        "telemetry-skill-helpers",
+        "update-readiness-baseline",
+        "validate-harness-manifest",
+        "validate-recommendations",
+        "validate-sensor-waivers"
+      ],
+      "lib": [
+        "agent-readiness",
+        "agent-readiness-project",
+        "agent-readiness-shared",
+        "control-budget",
+        "loop-health",
+        "sensor-schema",
+        "stale-stamp"
+      ],
+      "hook": [
+        "auto-continue-on-stop",
+        "review-on-stop"
+      ]
+    },
+    "domain": {
+      "why": "Vertical/framework-specific content. Zero coupling to the SDLC machinery.",
+      "skill": [
+        "author-prompt-surface",
+        "deepagents-code",
+        "fastapi-code",
+        "install-framework-packs",
+        "langchain-code",
+        "langgraph-code",
+        "pe-ic-memo",
+        "react-code"
+      ],
+      "agent": [],
+      "script": [],
+      "lib": [],
+      "hook": []
+    },
+    "scaffold": {
+      "why": "Project initialization + harness distribution. Separate lifecycle from the SDLC lanes.",
+      "skill": [
+        "fix-from-diagnostics",
+        "scaffold-upgrade"
+      ],
+      "agent": [],
+      "script": [
+        "diagnostics-shard",
+        "package-sku",
+        "release-skus",
+        "scaffold-apply",
+        "scaffold-copy",
+        "scaffold-encoding",
+        "scaffold-render",
+        "scaffold-upgrade",
+        "scaffold-vertical-status",
+        "upstream-watch"
+      ],
+      "lib": [
+        "diagnostics-parse"
+      ],
+      "hook": [
+        "artifact-guard"
+      ]
+    }
+  },
+  "rule": "A kernel unit may not hard-reference a pack unit. Enforced by tools/check-partition.js --strict.",
+  "resolution_policy": {
+    "move-callee-to-kernel": "the callee is infrastructure the kernel genuinely needs",
+    "move-caller-to-pack": "the caller is pack content that was mis-homed",
+    "make-optional": "the call degrades cleanly when the pack is absent (try/catch + skip, reported not silent)"
+  }
+}
