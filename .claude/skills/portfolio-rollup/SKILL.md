@@ -9,14 +9,15 @@ argument-hint: "<collection-dir> [--target-version X] [--fetch] [--fleet <file>]
 Aggregates a collection of per-repo Increment-4a attestations (`.claude/attestations/<sha>.json`)
 into a single, integrity-hashed portfolio compliance report (Increment 4b). It answers the
 CISO-mandate question the per-repo attestation cannot: *is the whole portfolio compliant, on-version,
-and un-tampered?* Each input attestation's sha256 integrity is verified before it is counted, a repo
+and uncorrupted?* Each input attestation's sha256 integrity is verified before it is counted, a repo
 with no attestation is recorded as a gap, and per-repo harness-version drift is computed.
 
 ## When to use
 
 - To roll up a directory of collected per-repo attestations into one portfolio verdict.
 - With `--fetch` to gather the latest attestation from each fleet repo via `gh api` first, then roll up.
-- To `--verify <file>` a stored rollup's own integrity checksum (tamper/corruption detection).
+- To `--verify <file>` a stored rollup's own integrity checksum (corruption detection — the
+  checksum is stored inside the file it covers, so it is not proof of authenticity; that needs signing).
 
 ## Do not use
 

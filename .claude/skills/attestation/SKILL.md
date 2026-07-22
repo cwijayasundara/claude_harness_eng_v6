@@ -17,7 +17,8 @@ skill aggregates them into one committed record per commit that an auditor can r
 
 - At `/gate` or in CI, after the verify/gate outputs for a commit exist, to write the committed
   evidence record — then commit `.claude/attestations/<sha>.json` and `index.json`.
-- To re-check a stored attestation's integrity with `--verify <file>` (tamper detection).
+- To re-check a stored attestation's integrity with `--verify <file>` (corruption detection —
+  see the **Integrity checksum** bullet under *How it works* for what this does and does not prove).
 - When a project must map the neutral clause taxonomy onto a real external standard.
 
 ## Do not use

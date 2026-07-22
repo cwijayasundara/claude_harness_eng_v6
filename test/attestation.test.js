@@ -1,6 +1,8 @@
 'use strict';
 
-// Increment 4a — per-repo durable, tamper-evident compliance attestation.
+// Increment 4a — per-repo durable compliance attestation with a corruption-detecting
+// sha256 checksum (NOT tamper-proofing: the hash lives inside the file it covers, so
+// an editor who rehashes verifies clean — see the "rehashed edit" test below).
 // These tests round-trip the REAL harness-manifest.json (not a hand-built
 // fixture) so the control_inventory totals and per-control clause resolution are
 // proven against the shipped registry, and drive generate-attestation.js through
@@ -17,6 +19,7 @@ const REPO_ROOT = path.resolve(__dirname, '..');
 const SCRIPTS = path.join(REPO_ROOT, '.claude', 'scripts');
 const { generateAttestation, verifyAttestation } = require(path.join(SCRIPTS, 'generate-attestation'));
 const { validate } = require(path.join(SCRIPTS, 'validate-harness-manifest'));
+const { contentHash } = require(path.join(SCRIPTS, 'canonical-json'));
 const { controlIds, budgetDecision, justifiedIds } = require(path.join(REPO_ROOT, '.claude', 'hooks', 'lib', 'control-budget'));
 
 const NOW = '2026-07-19T00:00:00.000Z';
@@ -106,15 +109,43 @@ test('integrity hash is stable across re-serialization; untampered --verify exit
   assert.strictEqual(res.recomputedHash, bundle.integrity.hash);
 });
 
-test('tamper detection: mutating any field makes --verify exit non-zero', () => {
+test('corruption detection: mutating a field without rehashing makes --verify exit non-zero', () => {
   const root = makeRoot();
   const { path: file } = gen(root);
   const j = JSON.parse(fs.readFileSync(file, 'utf8'));
-  j.repo = 'attacker/repo'; // mutate a field without recomputing the hash
+  j.repo = 'attacker/repo'; // mutate a field WITHOUT recomputing the hash
   fs.writeFileSync(file, JSON.stringify(j, null, 2));
   const res = verifyAttestation(file);
   assert.strictEqual(res.ok, false);
-  assert.match(res.message, /TAMPER DETECTED/);
+  assert.match(res.message, /INTEGRITY MISMATCH/);
+});
+
+// The checksum is stored inside the file it covers, so it cannot survive an
+// adversary who rehashes. This test pins that limit: a --verify PASS must never be
+// read as proof of authenticity. If signing lands (GPG/cosign/Sigstore), this test
+// should start failing — that is the signal the guarantee genuinely got stronger.
+test('a rehashed edit passes --verify: the checksum is not authenticity', () => {
+  const root = makeRoot();
+  const { path: file } = gen(root);
+  const j = JSON.parse(fs.readFileSync(file, 'utf8'));
+  j.repo = 'attacker/repo';
+  delete j.integrity;
+  j.integrity = { algo: 'sha256', hash: contentHash(j) }; // recompute, as any editor could
+  fs.writeFileSync(file, JSON.stringify(j, null, 2));
+  const res = verifyAttestation(file);
+  assert.strictEqual(res.ok, true, 'a rehashed edit verifies clean — corruption detection, not tamper-proofing');
+});
+
+test('the mismatch message does not overstate what the checksum proves', () => {
+  const root = makeRoot();
+  const { path: file } = gen(root);
+  const j = JSON.parse(fs.readFileSync(file, 'utf8'));
+  j.repo = 'attacker/repo';
+  fs.writeFileSync(file, JSON.stringify(j, null, 2));
+  const { message } = verifyAttestation(file);
+  assert.doesNotMatch(message, /TAMPER DETECTED/, 'must not claim tamper detection');
+  assert.match(message, /does NOT prove/i, 'must state the limit of the check');
+  assert.match(message, /signing/i, 'must point at what would give authenticity');
 });
 
 test('both verify shapes ingested: flat branch-protection + nested deploy-gate', () => {

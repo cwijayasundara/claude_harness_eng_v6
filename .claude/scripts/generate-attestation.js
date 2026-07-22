@@ -23,7 +23,7 @@
 // not "authentic". Non-repudiation requires signing (GPG/cosign/Sigstore) — a
 // documented seam, not built here.
 //
-// Exit 0 = attested / already-attested / --verify match; 1 = --verify tamper; 2 = usage/bad-sha.
+// Exit 0 = attested / already-attested / --verify match; 1 = --verify mismatch; 2 = usage/bad-sha.
 
 const fs = require('fs');
 const path = require('path');
@@ -126,11 +126,14 @@ function generateAttestation(opts = {}) {
   return { action: 'written', path: file, bundle, compliant: bundle.compliant };
 }
 
-function tamperMessage(file, stored, recomputed) {
-  return `TAMPER DETECTED: ${file}\n` +
+function integrityMismatchMessage(file, stored, recomputed) {
+  return `INTEGRITY MISMATCH: ${file}\n` +
     `  integrity.hash (stored):  ${stored || '<none>'}\n` +
     `  recomputed over content:  ${recomputed}\n` +
-    'The attestation content no longer matches its sha256 integrity hash.';
+    'The attestation content no longer matches its sha256 integrity hash.\n' +
+    'This detects corruption or a careless edit. It does NOT prove the record was\n' +
+    'never altered: anyone with write access can rewrite the content and its hash.\n' +
+    'Authenticity requires signing (GPG/cosign/Sigstore) — see the INTEGRITY NOTE above.';
 }
 
 // Recompute the hash over the file's canonical content-minus-integrity and
@@ -154,7 +157,7 @@ function verifyAttestation(file) {
     recomputedHash: recomputed,
     message: ok
       ? `OK: ${file} integrity verified (sha256 ${recomputed}). NOTE: checksum detects corruption, not forgery.`
-      : tamperMessage(file, stored, recomputed),
+      : integrityMismatchMessage(file, stored, recomputed),
   };
 }
 
