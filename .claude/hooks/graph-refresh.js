@@ -93,6 +93,20 @@ function renderWiki(projectDir, graph) {
   if (wiki.status !== 0) process.stderr.write(`graph-refresh: wiki render failed: ${(wiki.stderr || '').trim()}\n`);
 }
 
+// Regenerate the interactive single-file graph explorer off the freshly-patched
+// graph. Committed like the wiki (see .gitignore exception), so it ships current;
+// fails open — a render error never blocks the stop.
+function renderExplorer(projectDir, graph) {
+  const viewer = path.join(projectDir, '.claude', 'skills', 'code-map', 'scripts', 'graph_viewer.js');
+  if (!fs.existsSync(viewer)) return;
+  const r = spawnSync('node', [
+    viewer, '--in', graph,
+    '--out', path.join(projectDir, 'specs', 'brownfield', 'graph-explorer.html'),
+    '--repo', path.basename(projectDir),
+  ], { encoding: 'utf8', timeout: 25000 });
+  if (r.status !== 0) process.stderr.write(`graph-refresh: explorer render failed: ${(r.stderr || '').trim()}\n`);
+}
+
 // Fail-open secondary nav artifacts: TF-IDF index, co-change, concept pages
 function runNavScripts(projectDir) {
   const navScripts = [
@@ -130,6 +144,7 @@ function refresh(projectDir, rels) {
   renderSymbolMap(indexer, graph, projectDir);
   renderDerivedDocs(projectDir, graph, rels);
   renderWiki(projectDir, graph);
+  renderExplorer(projectDir, graph);
   runNavScripts(projectDir);
   return true;
 }

@@ -7,13 +7,16 @@ dist/skus/
 # specs/ is pipeline runtime output, not part of the base scaffold — /scaffold only
 # creates empty subfolders; content is produced by running the pipeline against a
 # project. This repo dogfoods /code-map + /brownfield against itself (Project Zero)
-# but that output is local/regenerable, not shipped scaffold content. Exception: the
-# committed DeepWiki under specs/brownfield (its wiki subdirectory) ships in the same
-# PR as the code it documents — see code-map/SKILL.md and feature-wiki-committed-contract.test.js.
+# but that output is local/regenerable, not shipped scaffold content. Exceptions
+# that DO ship (same PR as the code they document, refreshed by the graph-refresh
+# hook): the committed DeepWiki (its wiki subdirectory) and the single-file
+# interactive graph-explorer.html — see code-map/SKILL.md and
+# feature-wiki-committed-contract.test.js.
 /specs/*
 !/specs/brownfield/
 /specs/brownfield/*
 !/specs/brownfield/wiki/
+!/specs/brownfield/graph-explorer.html
 # Local toolchain installs (gitleaks etc.) — CI installs its own copies
 .tools/
 build/
