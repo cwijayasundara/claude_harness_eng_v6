@@ -157,6 +157,7 @@ const CORE_SCRIPTS = [
   'vocabulary-check.js',
   'wave-plan.js',
   'wave-pr.js',
+  'story-clusters.js',
   'quality-card.js',
   'pr-walkthrough.js',
   'pr-body.js',

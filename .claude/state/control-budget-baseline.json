@@ -1,5 +1,5 @@
 {
-  "count": 130,
+  "count": 131,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -119,6 +119,7 @@
     "sensor-value-meter",
     "sensor-waiver-validation",
     "sprout-diff-one-symbol",
+    "story-ownership-clusters",
     "stub-smell-gate",
     "team-policy",
     "test-deletion-guard",
