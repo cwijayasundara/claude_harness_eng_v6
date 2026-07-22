@@ -1,6 +1,6 @@
-# `test/` — 313 module(s)
+# `test/` — 315 module(s)
 
-313 module(s).
+315 module(s).
 
 ## Dependencies
 
@@ -721,4 +721,4 @@ flowchart LR
   - `tmpProject` (function) → js:test/deep-mutation.test.js:13 — `function tmpProject()`
   - `run` (function) → js:test/deep-mutation.test.js:19 — `function run(root, args = [])`
 
-_+ 233 more module(s) not shown (page capped at 80)._
+_+ 235 more module(s) not shown (page capped at 80)._
