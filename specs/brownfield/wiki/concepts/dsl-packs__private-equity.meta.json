@@ -1,0 +1,15 @@
+{
+  "cluster_id": "dsl-packs/private-equity",
+  "member_paths": [
+    "dsl-packs/private-equity/waterfall/compile.js",
+    "dsl-packs/private-equity/waterfall/pack.js",
+    "dsl-packs/private-equity/waterfall/validate.js"
+  ],
+  "content_hashes": {
+    "dsl-packs/private-equity/waterfall/compile.js": "53c8342d254870f1",
+    "dsl-packs/private-equity/waterfall/pack.js": "c9fb82c5fc2f98ff",
+    "dsl-packs/private-equity/waterfall/validate.js": "80514e7a02a24357"
+  },
+  "content_hash": "a210f1cf8c24bd7d",
+  "stale": false
+}

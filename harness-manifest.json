@@ -1005,8 +1005,8 @@
       "status": "active",
       "scope": "artifacts",
       "wired_at": ".claude/scripts/validate-canvas.js",
-      "signal": "REASONS Canvas missing a section or an empty Governs list",
-      "description": "Deterministic structure gate (gap G4) run in /design Step 1.9: the Canvas must carry all seven REASONS sections and a non-empty Governs list. Hard block."
+      "signal": "REASONS Canvas missing a section or an empty Governs list; or a BRD safeguard (SG-n) that the Canvas never cites",
+      "description": "Deterministic structure gate (gap G4) run in /design Step 1.9: the Canvas must carry all seven REASONS sections and a non-empty Governs list. Hard block. Safeguard coverage (D9): when specs/brd/brd-safeguards.json exists, also proves every SG-n invariant/prohibition/limit/norm the BRD recorded is cited in the Canvas Safeguards or Norms section. Structure alone cannot catch a Safeguards section that is present, well-formed, and silently missing a business invariant — which is exactly how a BRD constraint fails to reach the design contract, since those sections were previously authored from the architecture with nothing tying them back. UNCOVERED (a required constraint the design does not carry) and UNKNOWN (an SG-n cited but absent from the spine — a typo or an invented constraint) both BLOCK; a misplaced citation (a norm filed under Safeguards or vice versa) is a warning only, because the constraint did reach the design and only the filing is off. Skipped loudly when the spine file is absent; an EMPTY spine reports empty_spine and FAILS, so creating an empty file cannot be used to silence the gate."
     },
     {
       "id": "drift-design-code",

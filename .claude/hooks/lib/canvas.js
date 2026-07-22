@@ -53,6 +53,76 @@ function canvasMissingPaths(governs, exists) {
   return (governs || []).filter((p) => !p.includes('*') && !exists(p));
 }
 
+// --- safeguard coverage (D9) --------------------------------------------------
+//
+// /brd records invariants, prohibitions, limits and norms as SG-n entries. The
+// Canvas has Safeguards and Norms sections, but they were authored from the
+// architecture with nothing tying them back — so a business invariant could
+// quietly fail to reach the design contract. This closes that link by id.
+//
+// `norm` belongs in Norms; invariant/prohibition/limit belong in Safeguards.
+// A citation in the other section still counts (the constraint did reach the
+// design) but is reported as misplaced — that is an editorial issue, not a
+// missing constraint, and conflating the two would train people to ignore it.
+
+const SG_SECTIONS = ['Safeguards', 'Norms'];
+
+function expectedSection(kind) {
+  return kind === 'norm' ? 'Norms' : 'Safeguards';
+}
+
+// SG id -> the set of Canvas sections citing it. Only Safeguards and Norms are
+// read: a mention in Approach or Requirements is prose, not a design commitment.
+function citedIds(md) {
+  const cited = new Map();
+  for (const section of SG_SECTIONS) {
+    for (const m of sectionBody(md, section).matchAll(/\bSG-\d+\b/g)) {
+      if (!cited.has(m[0])) cited.set(m[0], new Set());
+      cited.get(m[0]).add(section);
+    }
+  }
+  return cited;
+}
+
+function classifyCoverage(spine, cited) {
+  const uncovered = [];
+  const misplaced = [];
+  for (const sg of spine) {
+    const sections = cited.get(sg.id);
+    if (!sections) {
+      uncovered.push({ id: sg.id, kind: sg.kind, text: sg.text || '' });
+    } else if (!sections.has(expectedSection(sg.kind))) {
+      misplaced.push({
+        id: sg.id,
+        note: `a ${sg.kind} belongs under ## ${expectedSection(sg.kind)}, but it is cited under `
+          + `## ${[...sections].sort().join(', ')}`,
+      });
+    }
+  }
+  return { uncovered, misplaced };
+}
+
+function checkSafeguardCoverage(md, safeguards) {
+  const spine = (Array.isArray(safeguards) ? safeguards : []).slice()
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const cited = citedIds(md);
+  const { uncovered, misplaced } = classifyCoverage(spine, cited);
+  const known = new Set(spine.map((s) => s.id));
+  const cited_unknown = [...cited.keys()].filter((id) => !known.has(id)).sort();
+
+  const verdict = {
+    pass: uncovered.length === 0 && cited_unknown.length === 0,
+    required_total: spine.length,
+    covered: spine.length - uncovered.length,
+    uncovered,
+    misplaced,
+    cited_unknown,
+  };
+  // A Canvas checked against no safeguards proves nothing about the design.
+  if (spine.length === 0) return { ...verdict, pass: false, reason: 'empty_spine' };
+  return verdict;
+}
+
 // Structure check used by the validate-canvas gate (sections present + a
 // non-empty Governs list, which drift detection depends on).
 function validateCanvas(md) {
@@ -67,4 +137,5 @@ function validateCanvas(md) {
 module.exports = {
   REQUIRED_SECTIONS, sectionTitles, missingSections, sectionBody,
   extractGoverns, canvasMissingPaths, validateCanvas,
+  checkSafeguardCoverage, SG_SECTIONS,
 };

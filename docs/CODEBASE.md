@@ -13,8 +13,8 @@ _Source: `README.md`_
 
 | Metric | Value |
 |---|---|
-| Indexed files | 444 |
-| Graph edges | 2029 |
+| Indexed files | 462 |
+| Graph edges | 2097 |
 | Concept pages | 20 |
 | Wiki cluster pages | 20 |
 
@@ -33,7 +33,7 @@ npm run ask -- "..."     # ask the codebase
 
 | Module | fan-in | fan-out |
 |---|---|---|
-| `test/helpers/skill-corpus.js` | 34 | 0 |
+| `test/helpers/skill-corpus.js` | 36 | 0 |
 | `test/helpers/hook-fixture.js` | 25 | 0 |
 | `test/e2e/helpers/claude-runner.js` | 17 | 0 |
 | `test/e2e/helpers/project-suite.js` | 9 | 0 |
@@ -43,8 +43,8 @@ npm run ask -- "..."     # ask the codebase
 | `symphony_clone/src/orchestrator/workspace-manager.js` | 5 | 0 |
 | `test/e2e/helpers/fresh-project.js` | 5 | 0 |
 | `test/helpers/record-run-fixture.js` | 5 | 0 |
+| `test/e2e/full-auto-output/src/server.js` | 4 | 1 |
 | `symphony_clone/src/tracker/http.js` | 4 | 0 |
-| `test/e2e/helpers/prometheus-checker.js` | 4 | 0 |
 
 ## Entry points
 
@@ -58,9 +58,13 @@ npm run ask -- "..."     # ask the codebase
 - [test/helpers](specs/brownfield/wiki/concepts/test__helpers.md)
 - [test/e2e](specs/brownfield/wiki/concepts/test__e2e.md)
 - [symphony_clone/src](specs/brownfield/wiki/concepts/symphony_clone__src.md)
+- [dsl-packs/private-equity](specs/brownfield/wiki/concepts/dsl-packs__private-equity.md)
+- [test/fleet-retrofit-helpers.js](specs/brownfield/wiki/concepts/test__fleet-retrofit-helpers.js.md)
+- [test/portfolio-rollup-helpers.js](specs/brownfield/wiki/concepts/test__portfolio-rollup-helpers.js.md)
 - [test/fixtures](specs/brownfield/wiki/concepts/test__fixtures.md)
-- [test/evals](specs/brownfield/wiki/concepts/test__evals.md)
 - [symphony_clone/test](specs/brownfield/wiki/concepts/symphony_clone__test.md)
+- [test/evals](specs/brownfield/wiki/concepts/test__evals.md)
+- [open_wiki/scripts](specs/brownfield/wiki/concepts/open_wiki__scripts.md)
 - [symphony_clone/scripts](specs/brownfield/wiki/concepts/symphony_clone__scripts.md)
 - [eslint.config.js](specs/brownfield/wiki/concepts/eslint.config.js.md)
 - [test/ab-report.test.js](specs/brownfield/wiki/concepts/test__ab-report.test.js.md)
@@ -71,10 +75,6 @@ npm run ask -- "..."     # ask the codebase
 - [test/adversarial-live-e2e-contract.test.js](specs/brownfield/wiki/concepts/test__adversarial-live-e2e-contract.test.js.md)
 - [test/adversarial-review-wiring.test.js](specs/brownfield/wiki/concepts/test__adversarial-review-wiring.test.js.md)
 - [test/agent-readiness-wiring-contract.test.js](specs/brownfield/wiki/concepts/test__agent-readiness-wiring-contract.test.js.md)
-- [test/agent-readiness.test.js](specs/brownfield/wiki/concepts/test__agent-readiness.test.js.md)
-- [test/amendment-provenance-check.test.js](specs/brownfield/wiki/concepts/test__amendment-provenance-check.test.js.md)
-- [test/approve-fixtures.test.js](specs/brownfield/wiki/concepts/test__approve-fixtures.test.js.md)
-- [test/approved-fixtures-gate.test.js](specs/brownfield/wiki/concepts/test__approved-fixtures-gate.test.js.md)
 
 ## DeepWiki cluster pages
 
@@ -85,19 +85,19 @@ npm run ask -- "..."     # ask the codebase
 - [05-symphony_clone-test](specs/brownfield/wiki/pages/05-symphony_clone-test.md)
 - [06-symphony_clone-src-tracker](specs/brownfield/wiki/pages/06-symphony_clone-src-tracker.md)
 - [07-test-helpers](specs/brownfield/wiki/pages/07-test-helpers.md)
-- [08-symphony_clone-src](specs/brownfield/wiki/pages/08-symphony_clone-src.md)
-- [09-test-e2e-full-auto-output-specs-test_artefacts-acceptance](specs/brownfield/wiki/pages/09-test-e2e-full-auto-output-specs-test_artefacts-acceptance.md)
-- [10-test-evals-fixtures-calc-app](specs/brownfield/wiki/pages/10-test-evals-fixtures-calc-app.md)
-- [11-symphony_clone-scripts](specs/brownfield/wiki/pages/11-symphony_clone-scripts.md)
-- [12-symphony_clone-src-observability](specs/brownfield/wiki/pages/12-symphony_clone-src-observability.md)
-- [13-test-e2e-brownfield-run-output](specs/brownfield/wiki/pages/13-test-e2e-brownfield-run-output.md)
-- [14-test-e2e-fixtures-adversarial-brownfield-legacy-expressish-src](specs/brownfield/wiki/pages/14-test-e2e-fixtures-adversarial-brownfield-legacy-expressish-src.md)
-- [15-test-e2e-full-auto-output-tests](specs/brownfield/wiki/pages/15-test-e2e-full-auto-output-tests.md)
-- [16-test-evals-helpers](specs/brownfield/wiki/pages/16-test-evals-helpers.md)
-- [17-test-fixtures-code-index-sample-src](specs/brownfield/wiki/pages/17-test-fixtures-code-index-sample-src.md)
-- [18-test-fixtures-mutation](specs/brownfield/wiki/pages/18-test-fixtures-mutation.md)
-- [19-root](specs/brownfield/wiki/pages/19-root.md)
-- [20-test-e2e-auto-output](specs/brownfield/wiki/pages/20-test-e2e-auto-output.md)
+- [08-open_wiki-scripts](specs/brownfield/wiki/pages/08-open_wiki-scripts.md)
+- [09-symphony_clone-src](specs/brownfield/wiki/pages/09-symphony_clone-src.md)
+- [10-dsl-packs-private-equity-waterfall](specs/brownfield/wiki/pages/10-dsl-packs-private-equity-waterfall.md)
+- [11-test-e2e-full-auto-output-src](specs/brownfield/wiki/pages/11-test-e2e-full-auto-output-src.md)
+- [12-test-e2e-full-auto-output-tests](specs/brownfield/wiki/pages/12-test-e2e-full-auto-output-tests.md)
+- [13-test-evals-fixtures-calc-app](specs/brownfield/wiki/pages/13-test-evals-fixtures-calc-app.md)
+- [14-symphony_clone-scripts](specs/brownfield/wiki/pages/14-symphony_clone-scripts.md)
+- [15-symphony_clone-src-observability](specs/brownfield/wiki/pages/15-symphony_clone-src-observability.md)
+- [16-test-e2e-auto-output](specs/brownfield/wiki/pages/16-test-e2e-auto-output.md)
+- [17-test-e2e-brownfield-run-output](specs/brownfield/wiki/pages/17-test-e2e-brownfield-run-output.md)
+- [18-test-e2e-fixtures-adversarial-brownfield-legacy-expressish-src](specs/brownfield/wiki/pages/18-test-e2e-fixtures-adversarial-brownfield-legacy-expressish-src.md)
+- [19-test-e2e-full-auto-output-specs-test_artefacts-acceptance](specs/brownfield/wiki/pages/19-test-e2e-full-auto-output-specs-test_artefacts-acceptance.md)
+- [20-test-evals-helpers](specs/brownfield/wiki/pages/20-test-evals-helpers.md)
 
 ## Critical paths & debugging
 

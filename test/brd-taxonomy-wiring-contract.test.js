@@ -69,3 +69,36 @@ test('manifest and HARNESS.md register the control with a budget justification',
 test('scaffold-copy propagates the gate to scaffolded projects', () => {
   assert.match(read('.claude/scripts/scaffold-copy.js'), /'brd-taxonomy-check\.js'/);
 });
+
+// --- D9: BRD safeguards must reach the design contract ------------------------
+
+test('validate-canvas checks safeguard coverage, reusing the tested lib', () => {
+  const cli = read('.claude/scripts/validate-canvas.js');
+  assert.match(cli, /checkSafeguardCoverage/, 'CLI must run the coverage check');
+  assert.match(cli, /brd-safeguards\.json/, 'CLI must default to the BRD safeguard spine');
+  assert.match(
+    read('.claude/hooks/lib/canvas.js'),
+    /function checkSafeguardCoverage/,
+    'the logic must live in the tested lib, not the CLI',
+  );
+});
+
+test('/design blocks on uncovered safeguards and states the skip/empty-spine rule', () => {
+  const design = readSkillCorpus('design');
+  assert.match(design, /brd-safeguards\.json/, '/design must reference the safeguard spine');
+  assert.match(design, /empty_spine/, 'an empty spine must not be usable to silence the gate');
+});
+
+test('the Canvas template tells the author to cite SG-n ids in both sections', () => {
+  const tpl = read('.claude/skills/design/references/reasons-canvas-template.md');
+  assert.match(tpl, /`SG-n`/, 'template must require SG-n citations');
+  assert.match(tpl, /## Safeguards/);
+  assert.match(tpl, /## Norms/);
+});
+
+test('the canvas-structure control records the coverage extension', () => {
+  const s = JSON.parse(read('harness-manifest.json')).sensors.find((x) => x.id === 'canvas-structure');
+  assert.ok(s, 'expected the canvas-structure sensor');
+  assert.match(s.description, /brd-safeguards\.json/, 'registry must describe the D9 extension');
+  assert.match(s.signal, /SG-n/, 'the signal must mention the new failure mode');
+});
