@@ -57,7 +57,7 @@
     "regression-gate": "node .claude/scripts/regression-gate.js",
     "impact-scope": "node .claude/scripts/impact-scope.js",
     "local-regression-gate": "node .claude/scripts/local-regression-gate.js",
-    "lint": "eslint .claude/hooks .claude/scripts .claude/git-hooks test eslint.config.js",
+    "lint": "eslint .claude/hooks .claude/scripts .claude/git-hooks dsl-packs test eslint.config.js",
     "test": "node --test test/*.test.js test/e2e/helpers/*.test.js",
     "build:chain": "node .claude/scripts/build-chain.js",
     "test:e2e": "node test/e2e/run-pack.js cert",
