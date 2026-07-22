@@ -1,7 +1,29 @@
 'use strict';
 
 const FILE_HARD_LIMIT = 300;
+// Test files get a higher cap. The 300-line source cap exists because a long
+// source file concentrates change; a test file is read one case at a time and
+// grows table-wise, so that argument is weaker. It is a higher cap, not an
+// exemption — the ratchet below still applies, and the FUNCTION cap is
+// deliberately unchanged, since a 30-line test case is still a smell.
+const TEST_FILE_LIMIT = 500;
 const FUNC_HARD_LIMIT = 30;
+
+// Directory segments (exact match, so `src/testing/` and `src/latest/` are not
+// caught) and filename shapes that mark a file as a test across the stacks the
+// scaffold ships to.
+const TEST_DIR_SEGMENTS = new Set(['test', 'tests', '__tests__', 'e2e', 'spec']);
+const TEST_FILE_RE = /(\.(test|spec)\.[cm]?[jt]sx?|(^|\/)test_[^/]*\.py|_test\.(py|go)|\.spec\.py)$/;
+
+function isTestPath(filePath) {
+  const normalized = String(filePath || '').replace(/\\/g, '/');
+  if (normalized.split('/').some((seg) => TEST_DIR_SEGMENTS.has(seg))) return true;
+  return TEST_FILE_RE.test(normalized);
+}
+
+function fileLimitFor(filePath) {
+  return isTestPath(filePath) ? TEST_FILE_LIMIT : FILE_HARD_LIMIT;
+}
 
 function indentLen(line) {
   let count = 0;
@@ -142,4 +164,7 @@ function newlyOverFileLimit(beforeCount, afterCount, limit = FILE_HARD_LIMIT) {
   return afterCount > beforeCount; // already over — block only if it grew
 }
 
-module.exports = { FILE_HARD_LIMIT, FUNC_HARD_LIMIT, oversizedFunctions, newlyOversized, newlyOverFileLimit };
+module.exports = {
+  FILE_HARD_LIMIT, TEST_FILE_LIMIT, FUNC_HARD_LIMIT,
+  isTestPath, fileLimitFor, oversizedFunctions, newlyOversized, newlyOverFileLimit,
+};

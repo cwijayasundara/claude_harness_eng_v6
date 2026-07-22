@@ -466,7 +466,7 @@
       "scope": "universal",
       "wired_at": ".claude/hooks/lib/length.js",
       "signal": "30-line function / 300-line file violations",
-      "description": "Pre-disk caps enforced by pre-write-gate."
+      "description": "Pre-disk caps enforced by pre-write-gate. Per-path file cap: 300 lines for source, 500 for test files (isTestPath: exact directory segments test/tests/__tests__/e2e/spec, or filename shapes *.test.*, *.spec.*, test_*.py, *_test.py, *_test.go — segment-exact so src/testing/ and src/latest/ are NOT exempt). Rationale: the source cap exists because a long source file concentrates change, which is weaker for a test read one case at a time. It is a higher cap, not an exemption — the newlyOverFileLimit ratchet still applies to test files, and FUNC_HARD_LIMIT stays 30 everywhere since a 30-line test case is still a smell."
     },
     {
       "id": "coverage-preflight",

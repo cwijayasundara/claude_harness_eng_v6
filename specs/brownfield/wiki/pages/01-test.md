@@ -1,6 +1,6 @@
-# `test/` — 323 module(s)
+# `test/` — 324 module(s)
 
-323 module(s).
+324 module(s).
 
 ## Dependencies
 
@@ -45,6 +45,7 @@ flowchart LR
   n_js_test_build_chain_state_test_js["build-chain-state.test.js"]
   n_js_test_build_lane_test_js["build-lane.test.js"]
   n_js_test_canary_rollout_wiring_test_js["canary-rollout-wiring.test.js"]
+  n_js_test_canvas_safeguards_test_js["canvas-safeguards.test.js"]
   n_js_test_canvas_semantic_test_js["canvas-semantic.test.js"]
   n_js_test_canvas_sync_proposal_test_js["canvas-sync-proposal.test.js"]
   n_js_test_canvas_sync_wiring_test_js["canvas-sync-wiring.test.js"]
@@ -85,7 +86,6 @@ flowchart LR
   n_js_test_cr_index_test_js["cr-index.test.js"]
   n_js_test_custom_sensor_commit_test_js["custom-sensor-commit.test.js"]
   n_js_test_cycle_gate_wiring_contract_test_js["cycle-gate-wiring-contract.test.js"]
-  n_js_test_cycle_gate_test_js["cycle-gate.test.js"]
 ```
 
 ## `js:test/ab-report.test.js`
@@ -401,6 +401,13 @@ flowchart LR
 ### Symbols
   - `read` (function) → js:test/canary-rollout-wiring.test.js:15 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
 
+## `js:test/canvas-safeguards.test.js`
+
+- fan-in: 0, fan-out: 3
+
+### Symbols
+  - `canvas` (function) → js:test/canvas-safeguards.test.js:22 — `canvas = (safeguardsBody, normsBody) => '# Canvas`
+
 ## `js:test/canvas-semantic.test.js`
 
 - fan-in: 0, fan-out: 5
@@ -715,11 +722,4 @@ flowchart LR
 ### Symbols
   - `read` (function) → js:test/cycle-gate-wiring-contract.test.js:12 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
 
-## `js:test/cycle-gate.test.js`
-
-- fan-in: 0, fan-out: 3
-
-### Symbols
-  - `graphWith` (function) → js:test/cycle-gate.test.js:11 — `function graphWith(cycles)`
-
-_+ 243 more module(s) not shown (page capped at 80)._
+_+ 244 more module(s) not shown (page capped at 80)._

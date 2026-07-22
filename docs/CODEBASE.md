@@ -13,8 +13,8 @@ _Source: `README.md`_
 
 | Metric | Value |
 |---|---|
-| Indexed files | 462 |
-| Graph edges | 2097 |
+| Indexed files | 463 |
+| Graph edges | 2100 |
 | Concept pages | 20 |
 | Wiki cluster pages | 20 |
 
@@ -60,7 +60,6 @@ npm run ask -- "..."     # ask the codebase
 - [symphony_clone/src](specs/brownfield/wiki/concepts/symphony_clone__src.md)
 - [dsl-packs/private-equity](specs/brownfield/wiki/concepts/dsl-packs__private-equity.md)
 - [test/fleet-retrofit-helpers.js](specs/brownfield/wiki/concepts/test__fleet-retrofit-helpers.js.md)
-- [test/portfolio-rollup-helpers.js](specs/brownfield/wiki/concepts/test__portfolio-rollup-helpers.js.md)
 - [test/fixtures](specs/brownfield/wiki/concepts/test__fixtures.md)
 - [symphony_clone/test](specs/brownfield/wiki/concepts/symphony_clone__test.md)
 - [test/evals](specs/brownfield/wiki/concepts/test__evals.md)
@@ -75,6 +74,7 @@ npm run ask -- "..."     # ask the codebase
 - [test/adversarial-live-e2e-contract.test.js](specs/brownfield/wiki/concepts/test__adversarial-live-e2e-contract.test.js.md)
 - [test/adversarial-review-wiring.test.js](specs/brownfield/wiki/concepts/test__adversarial-review-wiring.test.js.md)
 - [test/agent-readiness-wiring-contract.test.js](specs/brownfield/wiki/concepts/test__agent-readiness-wiring-contract.test.js.md)
+- [test/agent-readiness.test.js](specs/brownfield/wiki/concepts/test__agent-readiness.test.js.md)
 
 ## DeepWiki cluster pages
 

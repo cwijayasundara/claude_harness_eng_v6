@@ -13,7 +13,6 @@ Hash-cached, deterministic cluster summaries. Regenerated when member file hashe
 - [symphony_clone/src](symphony_clone__src.md)
 - [dsl-packs/private-equity](dsl-packs__private-equity.md)
 - [test/fleet-retrofit-helpers.js](test__fleet-retrofit-helpers.js.md)
-- [test/portfolio-rollup-helpers.js](test__portfolio-rollup-helpers.js.md)
 - [test/fixtures](test__fixtures.md)
 - [symphony_clone/test](symphony_clone__test.md)
 - [test/evals](test__evals.md)
@@ -28,3 +27,4 @@ Hash-cached, deterministic cluster summaries. Regenerated when member file hashe
 - [test/adversarial-live-e2e-contract.test.js](test__adversarial-live-e2e-contract.test.js.md)
 - [test/adversarial-review-wiring.test.js](test__adversarial-review-wiring.test.js.md)
 - [test/agent-readiness-wiring-contract.test.js](test__agent-readiness-wiring-contract.test.js.md)
+- [test/agent-readiness.test.js](test__agent-readiness.test.js.md)
