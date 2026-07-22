@@ -62,8 +62,9 @@ _(none)_
 - [test/e2e](concepts/test__e2e.md)
 - [symphony_clone/src](concepts/symphony_clone__src.md)
 - [test/fixtures](concepts/test__fixtures.md)
-- [symphony_clone/test](concepts/symphony_clone__test.md)
 - [test/evals](concepts/test__evals.md)
+- [test/fleet-retrofit-helpers.js](concepts/test__fleet-retrofit-helpers.js.md)
+- [symphony_clone/test](concepts/symphony_clone__test.md)
 - [symphony_clone/scripts](concepts/symphony_clone__scripts.md)
 - [eslint.config.js](concepts/eslint.config.js.md)
 - [test/ab-report.test.js](concepts/test__ab-report.test.js.md)
@@ -77,7 +78,6 @@ _(none)_
 - [test/agent-readiness.test.js](concepts/test__agent-readiness.test.js.md)
 - [test/amendment-provenance-check.test.js](concepts/test__amendment-provenance-check.test.js.md)
 - [test/approve-fixtures.test.js](concepts/test__approve-fixtures.test.js.md)
-- [test/approved-fixtures-gate.test.js](concepts/test__approved-fixtures-gate.test.js.md)
 
 _(Hash-cached concept pages from `nav-concepts.js`.)_
 

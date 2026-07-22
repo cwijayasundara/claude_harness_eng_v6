@@ -1,0 +1,11 @@
+{
+  "cluster_id": "test/portfolio-rollup-helpers.js",
+  "member_paths": [
+    "test/portfolio-rollup-helpers.js"
+  ],
+  "content_hashes": {
+    "test/portfolio-rollup-helpers.js": "676a68294567f693"
+  },
+  "content_hash": "625c459de4c94cc9",
+  "stale": false
+}
