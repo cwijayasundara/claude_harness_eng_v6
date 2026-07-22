@@ -107,6 +107,20 @@ function renderExplorer(projectDir, graph) {
   if (r.status !== 0) process.stderr.write(`graph-refresh: explorer render failed: ${(r.stderr || '').trim()}\n`);
 }
 
+// Regenerate the self-contained wiki browser off the freshly-rendered wiki
+// markdown. Runs after the nav scripts so it captures the latest concept pages.
+// Committed like the wiki; fails open — a render error never blocks the stop.
+function renderWikiBrowser(projectDir) {
+  const viewer = path.join(projectDir, '.claude', 'skills', 'code-map', 'scripts', 'wiki_viewer.js');
+  if (!fs.existsSync(viewer)) return;
+  const r = spawnSync('node', [
+    viewer, '--wiki', path.join(projectDir, 'specs', 'brownfield', 'wiki'),
+    '--out', path.join(projectDir, 'specs', 'brownfield', 'wiki-browser.html'),
+    '--repo', path.basename(projectDir),
+  ], { encoding: 'utf8', timeout: 25000 });
+  if (r.status !== 0) process.stderr.write(`graph-refresh: wiki-browser render failed: ${(r.stderr || '').trim()}\n`);
+}
+
 // Fail-open secondary nav artifacts: TF-IDF index, co-change, concept pages
 function runNavScripts(projectDir) {
   const navScripts = [
@@ -146,6 +160,7 @@ function refresh(projectDir, rels) {
   renderWiki(projectDir, graph);
   renderExplorer(projectDir, graph);
   runNavScripts(projectDir);
+  renderWikiBrowser(projectDir); // after nav-concepts regenerates concept pages
   return true;
 }
 

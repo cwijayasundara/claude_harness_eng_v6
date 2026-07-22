@@ -10,13 +10,14 @@ dist/skus/
 # but that output is local/regenerable, not shipped scaffold content. Exceptions
 # that DO ship (same PR as the code they document, refreshed by the graph-refresh
 # hook): the committed DeepWiki (its wiki subdirectory) and the single-file
-# interactive graph-explorer.html — see code-map/SKILL.md and
+# interactive graph-explorer.html + wiki-browser.html — see code-map/SKILL.md and
 # feature-wiki-committed-contract.test.js.
 /specs/*
 !/specs/brownfield/
 /specs/brownfield/*
 !/specs/brownfield/wiki/
 !/specs/brownfield/graph-explorer.html
+!/specs/brownfield/wiki-browser.html
 # Local toolchain installs (gitleaks etc.) — CI installs its own copies
 .tools/
 build/
