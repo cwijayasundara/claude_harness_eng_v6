@@ -74,6 +74,14 @@ header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 16px
 .b{font-family:var(--mono);font-size:10.5px;padding:1px 5px;border-radius:5px;background:var(--surface-2);border:1px solid var(--line);color:var(--muted)}
 .b.in{color:var(--accent)}
 .star{color:var(--hub);font-size:12px;flex:none}
+.tree-row{display:flex;align-items:center;gap:6px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:7px 14px}
+.tree-row:hover{background:var(--surface-2)}
+.tree-row .caret{width:11px;font-size:10px;color:var(--muted);flex:none}
+.tree-row .folder{flex:1;min-width:0;font-family:var(--mono);font-size:12px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tree-row .fcount{font-family:var(--mono);font-size:10.5px;color:var(--muted);flex:none}
+.viewtoggle{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.viewtoggle button{padding:2px 9px;border:0;background:none;font-size:10.5px;font-family:var(--mono);color:var(--muted)}
+.viewtoggle button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
 .stage{position:relative;background:radial-gradient(circle at 1px 1px,var(--line) 1px,transparent 0) 0 0/22px 22px,var(--bg);min-width:0;overflow:hidden}
 canvas{display:block;width:100%;height:100%;touch-action:none}
 .stage-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;text-align:center;padding:24px;pointer-events:none}
@@ -130,9 +138,9 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
   </header>
   <div class="body">
     <nav class="rail left" aria-label="File index">
-      <div class="rail-head"><h2>Files</h2><span class="mono muted tnum" id="filecount"></span></div>
+      <div class="rail-head"><h2>Files</h2><div class="viewtoggle"><button id="modeTree" aria-pressed="true">tree</button><button id="modeRank" aria-pressed="false">rank</button></div><span class="mono muted tnum" id="filecount"></span></div>
       <div class="langfilter" id="langfilter"></div>
-      <div id="nodelist" role="listbox" aria-label="Files ranked by fan-in"></div>
+      <div id="nodelist" role="tree" aria-label="Source tree"></div>
     </nav>
     <main class="stage" id="stage">
       <div class="controls">
@@ -197,22 +205,74 @@ function matchQuery(i,q){
   if(N[i].p.toLowerCase().indexOf(q)>=0) return true;
   var s=N[i].sym; for(var j=0;j<s.length;j++){ if((s[j].n||"").toLowerCase().indexOf(q)>=0) return true; } return false;
 }
-function row(i){
+function visibleFile(i,q){ return !(activeLangs && !activeLangs.has(N[i].l)) && !(q && !matchQuery(i,q)); }
+
+// directory tree built from file paths — mirrors the real source layout
+var tree=(function(){
+  var root={name:"",path:"",dirs:{},files:[]};
+  N.forEach(function(n,i){
+    var parts=n.p.split("/"), node=root;
+    for(var d=0; d<parts.length-1; d++){
+      var seg=parts[d], np=(node.path?node.path+"/":"")+seg;
+      if(!node.dirs[seg]) node.dirs[seg]={name:seg,path:np,dirs:{},files:[]};
+      node=node.dirs[seg];
+    }
+    node.files.push(i);
+  });
+  return root;
+})();
+var collapsed=new Set();
+(function seed(node){ Object.keys(node.dirs).forEach(function(k){ collapsed.add(node.dirs[k].path); seed(node.dirs[k]); }); })(tree);
+
+var viewMode="tree";
+document.getElementById("modeTree").onclick=function(){ setMode("tree"); };
+document.getElementById("modeRank").onclick=function(){ setMode("rank"); };
+function setMode(m){ viewMode=m;
+  document.getElementById("modeTree").setAttribute("aria-pressed",m==="tree"?"true":"false");
+  document.getElementById("modeRank").setAttribute("aria-pressed",m==="rank"?"true":"false");
+  renderList();
+}
+
+function fileRow(i,depth){
   var n=N[i], b=document.createElement("button");
-  b.className="node-row"; b.setAttribute("role","option"); b.setAttribute("aria-selected",i===selected?"true":"false");
+  b.className="node-row"; b.setAttribute("role","treeitem"); b.setAttribute("aria-selected",i===selected?"true":"false");
+  if(viewMode==="tree") b.style.paddingLeft=(12+depth*15)+"px";
   b.innerHTML='<span class="dot" style="background:'+langVar(n.l)+'"></span>'+
-    '<span class="path"><span class="base">'+esc(basename(n.p))+'</span><span class="dir">'+esc(dirname(n.p)||"·")+'</span></span>'+
+    '<span class="path"><span class="base">'+esc(basename(n.p))+'</span>'+(viewMode==="tree"?'':'<span class="dir">'+esc(dirname(n.p)||"·")+'</span>')+'</span>'+
     (n.hub?'<span class="star" title="hub">&#9733;</span>':'')+
     '<span class="badges"><span class="b in" title="fan-in">&larr;'+n.fin+'</span><span class="b" title="fan-out">'+n.fout+'&rarr;</span></span>';
   b.onclick=function(){ select(i,true); }; return b;
 }
-function renderList(){
-  var q=searchEl.value.trim().toLowerCase(), frag=document.createDocumentFragment(), shown=0;
-  order.forEach(function(i){
-    if(activeLangs && !activeLangs.has(N[i].l)) return;
-    if(q && !matchQuery(i,q)) return;
-    shown++; frag.appendChild(row(i));
+function folderRow(node,depth,count){
+  var b=document.createElement("button"), open=!collapsed.has(node.path);
+  b.className="tree-row"; b.style.paddingLeft=(12+depth*15)+"px"; b.setAttribute("aria-expanded",open?"true":"false");
+  b.innerHTML='<span class="caret">'+(open?"&#9662;":"&#9656;")+'</span><span class="folder">'+esc(node.name)+'/</span><span class="fcount tnum">'+count+'</span>';
+  b.onclick=function(){ if(collapsed.has(node.path)) collapsed.delete(node.path); else collapsed.add(node.path); renderList(); };
+  return b;
+}
+function countVisible(node,q){
+  var c=0; node.files.forEach(function(i){ if(visibleFile(i,q)) c++; });
+  Object.keys(node.dirs).forEach(function(k){ c+=countVisible(node.dirs[k],q); });
+  return c;
+}
+function renderTreeNode(node,depth,q,frag){
+  Object.keys(node.dirs).sort().forEach(function(k){
+    var child=node.dirs[k], vc=countVisible(child,q);
+    if(vc===0) return;
+    frag.appendChild(folderRow(child,depth,vc));
+    if(q || !collapsed.has(child.path)) renderTreeNode(child,depth+1,q,frag); // a search auto-expands matching branches
   });
+  node.files.slice().sort(function(a,b){return N[a].p.localeCompare(N[b].p);}).forEach(function(i){
+    if(visibleFile(i,q)) frag.appendChild(fileRow(i,depth));
+  });
+}
+function renderList(){
+  var q=searchEl.value.trim().toLowerCase(), frag=document.createDocumentFragment(), shown;
+  if(viewMode==="rank"){
+    shown=0; order.forEach(function(i){ if(visibleFile(i,q)){ shown++; frag.appendChild(fileRow(i,0)); } });
+  } else {
+    shown=countVisible(tree,q); renderTreeNode(tree,0,q,frag);
+  }
   listEl.innerHTML=""; listEl.appendChild(frag);
   document.getElementById("filecount").textContent = shown+" / "+N.length;
 }
@@ -382,8 +442,13 @@ document.getElementById("legend").innerHTML='<div class="row"><b>legend</b></div
   langs.map(function(l){return '<div class="row"><span class="dot" style="background:'+langVar(l)+'"></span>'+esc(l)+'</div>';}).join("")+
   '<div class="row"><span class="dot" style="background:transparent;border:2px solid '+cssVar("--hub")+'"></span>hub (fan-in &ge; '+S.hubThreshold+')</div>'+
   '<div class="row muted">arrow: importer &rarr; imported</div>';
+function expandAncestors(i){
+  var parts=N[i].p.split("/"), p="";
+  for(var d=0; d<parts.length-1; d++){ p=(p?p+"/":"")+parts[d]; collapsed.delete(p); }
+}
 function select(i,scrollList){
   selected=i; document.getElementById("stageEmpty").style.display="none";
+  if(viewMode==="tree") expandAncestors(i);
   renderList(); renderInspector(); buildSim(i); loop();
   if(scrollList){ var sel=listEl.querySelector('[aria-selected="true"]'); if(sel) sel.scrollIntoView({block:"nearest"}); }
 }
