@@ -26,8 +26,18 @@ The concrete, testable implementation steps — down to method signatures and ex
 ## Norms
 Cross-cutting engineering standards for this work: naming conventions, annotation/decorator rules, dependency-injection style, logging, error handling, data-type choices.
 
+**Cite the `SG-n` id** of every `kind: "norm"` entry in `specs/brd/brd-safeguards.json` that this design realizes.
+
 ## Safeguards
 Non-negotiable boundaries: invariants, precision/rounding rules, performance budgets, security/authz limits. A reviewer checks the diff against these.
+
+**Cite the `SG-n` id** of every `invariant`, `prohibition`, and `limit` in `specs/brd/brd-safeguards.json`. These come from the *business*, not from the architecture — a Safeguards section can be present, well-formed, and silently missing an invariant the BRD required, which is exactly what `validate-canvas.js` now catches. Write the constraint in design terms and tag it, e.g.:
+
+- **SG-1** — `OrderTotal` is computed, never stored; the aggregate recomputes on every line-item change.
+- **SG-2** — password hashing is `bcrypt` behind `PasswordHasher`; no code path accepts a plaintext field.
+- **SG-3** — checkout p95 budget 400ms, asserted by the perf ratchet.
+
+A citation in the wrong section (a norm under Safeguards, or vice versa) still counts as covered but is reported as a warning — the constraint reached the design, the filing is just off.
 
 ## Governs
 A bullet list of the repo-relative source paths (or globs) this Canvas designs — every file the Operations create or modify. The drift monitor flags a governed path that no longer exists as **design-vs-code drift**. Example:

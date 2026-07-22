@@ -1,6 +1,6 @@
-# `test/` — 315 module(s)
+# `test/` — 324 module(s)
 
-315 module(s).
+324 module(s).
 
 ## Dependencies
 
@@ -35,6 +35,8 @@ flowchart LR
   n_js_test_bash_targets_test_js["bash-targets.test.js"]
   n_js_test_boundary_doubles_roundtrip_test_js["boundary-doubles-roundtrip.test.js"]
   n_js_test_boundary_doubles_ts_roundtrip_test_js["boundary-doubles-ts-roundtrip.test.js"]
+  n_js_test_brd_taxonomy_check_test_js["brd-taxonomy-check.test.js"]
+  n_js_test_brd_taxonomy_wiring_contract_test_js["brd-taxonomy-wiring-contract.test.js"]
   n_js_test_budget_state_test_js["budget-state.test.js"]
   n_js_test_build_auto_merge_contract_test_js["build-auto-merge-contract.test.js"]
   n_js_test_build_chain_contract_test_js["build-chain-contract.test.js"]
@@ -43,6 +45,7 @@ flowchart LR
   n_js_test_build_chain_state_test_js["build-chain-state.test.js"]
   n_js_test_build_lane_test_js["build-lane.test.js"]
   n_js_test_canary_rollout_wiring_test_js["canary-rollout-wiring.test.js"]
+  n_js_test_canvas_safeguards_test_js["canvas-safeguards.test.js"]
   n_js_test_canvas_semantic_test_js["canvas-semantic.test.js"]
   n_js_test_canvas_sync_proposal_test_js["canvas-sync-proposal.test.js"]
   n_js_test_canvas_sync_wiring_test_js["canvas-sync-wiring.test.js"]
@@ -83,9 +86,6 @@ flowchart LR
   n_js_test_cr_index_test_js["cr-index.test.js"]
   n_js_test_custom_sensor_commit_test_js["custom-sensor-commit.test.js"]
   n_js_test_cycle_gate_wiring_contract_test_js["cycle-gate-wiring-contract.test.js"]
-  n_js_test_cycle_gate_test_js["cycle-gate.test.js"]
-  n_js_test_cyclic_prepass_wiring_test_js["cyclic-prepass-wiring.test.js"]
-  n_js_test_deep_mutation_test_js["deep-mutation.test.js"]
 ```
 
 ## `js:test/ab-report.test.js`
@@ -325,6 +325,22 @@ flowchart LR
   - `hasTsx` (function) → js:test/boundary-doubles-ts-roundtrip.test.js:9 — `function hasTsx()`
   - `runTs` (function) → js:test/boundary-doubles-ts-roundtrip.test.js:15 — `function runTs(files, lines)`
 
+## `js:test/brd-taxonomy-check.test.js`
+
+- fan-in: 0, fan-out: 6
+
+### Symbols
+  - `full` (function) → js:test/brd-taxonomy-check.test.js:14 — `full = () => SLOTS.map((slot, i) => (`
+  - `workspace` (function) → js:test/brd-taxonomy-check.test.js:107 — `function workspace(reqs, coverage)`
+  - `run` (function) → js:test/brd-taxonomy-check.test.js:117 — `function run(ws)`
+
+## `js:test/brd-taxonomy-wiring-contract.test.js`
+
+- fan-in: 0, fan-out: 5
+
+### Symbols
+  - `read` (function) → js:test/brd-taxonomy-wiring-contract.test.js:14 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
+
 ## `js:test/budget-state.test.js`
 
 - fan-in: 0, fan-out: 3
@@ -384,6 +400,13 @@ flowchart LR
 
 ### Symbols
   - `read` (function) → js:test/canary-rollout-wiring.test.js:15 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
+
+## `js:test/canvas-safeguards.test.js`
+
+- fan-in: 0, fan-out: 3
+
+### Symbols
+  - `canvas` (function) → js:test/canvas-safeguards.test.js:22 — `canvas = (safeguardsBody, normsBody) => '# Canvas`
 
 ## `js:test/canvas-semantic.test.js`
 
@@ -699,26 +722,4 @@ flowchart LR
 ### Symbols
   - `read` (function) → js:test/cycle-gate-wiring-contract.test.js:12 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
 
-## `js:test/cycle-gate.test.js`
-
-- fan-in: 0, fan-out: 3
-
-### Symbols
-  - `graphWith` (function) → js:test/cycle-gate.test.js:11 — `function graphWith(cycles)`
-
-## `js:test/cyclic-prepass-wiring.test.js`
-
-- fan-in: 0, fan-out: 4
-
-### Symbols
-  - `read` (function) → js:test/cyclic-prepass-wiring.test.js:15 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
-
-## `js:test/deep-mutation.test.js`
-
-- fan-in: 0, fan-out: 6
-
-### Symbols
-  - `tmpProject` (function) → js:test/deep-mutation.test.js:13 — `function tmpProject()`
-  - `run` (function) → js:test/deep-mutation.test.js:19 — `function run(root, args = [])`
-
-_+ 235 more module(s) not shown (page capped at 80)._
+_+ 244 more module(s) not shown (page capped at 80)._

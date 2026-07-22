@@ -305,12 +305,37 @@ After all five dimensions are confirmed, produce a structured BRD with these sec
 Also write the **machine-readable requirement spine** to `specs/brd/brd-requirements.json` — one entry per BRD requirement, each with a stable id and a `traces` array citing the FRD section ids and/or `C-n` clarification ids it derives from:
 ```json
 [
-  { "id": "BR-1", "text": "Password reset via emailed link, token valid 1h", "traces": ["FRD-1", "C1"], "acceptance": "Requesting a reset emails a link that logs the user in once within 1h and is rejected after." },
-  { "id": "BR-2", "text": "Paginated order history (20/page)", "traces": ["FRD-2", "C2"], "acceptance": "Order history returns 20 items/page with working next/prev." }
+  { "id": "BR-1", "text": "Password reset via emailed link, token valid 1h", "traces": ["FRD-1", "C1"], "taxonomy": ["functional", "security_authz"], "acceptance": "Requesting a reset emails a link that logs the user in once within 1h and is rejected after." },
+  { "id": "BR-2", "text": "Paginated order history (20/page)", "traces": ["FRD-2", "C2"], "taxonomy": ["functional"], "acceptance": "Order history returns 20 items/page with working next/prev." }
 ]
 ```
 
 Each BR entry carries an `acceptance` postcondition — an observable end-state the evaluator can verify, not a restatement of the requirement. This gives downstream gates (and any autonomous merge) a concrete pass/fail oracle instead of a self-judged "looks done".
+
+Each BR entry also carries `taxonomy` — one or more of the ten slots Step 4.45 checks. Tag by what the requirement *is*, not by which section it came from; one requirement may legitimately carry several tags (an authenticated endpoint is both `functional` and `security_authz`).
+
+**Also write `specs/brd/brd-acceptance.json`** — the postconditions split into individually traceable ids, one per observable claim:
+
+```json
+[
+  { "id": "BR-1-AC1", "requirement": "BR-1", "text": "A reset request emails a link that logs the user in exactly once" },
+  { "id": "BR-1-AC2", "requirement": "BR-1", "text": "A reset link is rejected after 1 hour" }
+]
+```
+
+A prose `acceptance` sentence usually bundles two or three separate claims, and a story can satisfy one while silently dropping another. Splitting them is what lets `/spec` Step 6.46 prove coverage at criterion granularity instead of at requirement granularity.
+
+**And write `specs/brd/brd-safeguards.json`** — the non-negotiable boundaries the design must honour, a superset of the Forbidden Actions list:
+
+```json
+[
+  { "id": "SG-1", "kind": "invariant", "text": "An order total always equals the sum of its line items", "traces": ["FRD-3"] },
+  { "id": "SG-2", "kind": "prohibition", "text": "Must not store raw passwords", "traces": ["C4"] },
+  { "id": "SG-3", "kind": "limit", "text": "p95 checkout latency stays under 400ms", "traces": ["FRD-7"] }
+]
+```
+
+`kind` is `invariant` | `prohibition` | `limit` | `norm`. These become required trace targets for the REASONS Canvas `Safeguards` and `Norms` sections at `/design`, so a business constraint cannot quietly fail to reach the design contract.
 **Every BR entry must carry at least one valid trace.** If you cannot trace a requirement to an FRD section or a clarification, it is invented — either remove it, or (if the human genuinely wants it) capture the human's confirmation as a new `C-n` entry in `clarification-log.json` first, then trace to it. In interview-from-scratch mode (no FRD), trace BR entries to `INT-n` interview requirements and/or `C-n` clarifications; every `INT-n` must be covered by at least one BR entry.
 
 Create the `specs/brd/` directory if it does not exist.
@@ -344,6 +369,29 @@ The script writes `specs/reviews/brd-grounding.json` (`{ pass, frd_total, frd_co
 - **`dropped` non-empty** → the BRD silently lost a required-spine requirement. Add a BR entry covering it (or, if the human confirms it is intentionally out of scope, record that decision as a `C-n` clarification noting the deferral) and re-run.
 
 Only when `brd-grounding.json#pass === true` may you proceed to Step 4.5. (Skip only when neither `frd-requirements.json` nor `interview-requirements.json` exists — a pre-spine legacy project — and note the skipped gate in the BRD summary. **If you conducted the Step 2 interview in this session, the spine MUST exist** — a missing spine is a Step 2 execution bug, not a legacy project: reconstruct `interview-requirements.json` from the confirmed dimension summaries and re-run the gate. The skip applies only to a pre-existing BRD you did not author in this session.)
+
+### Step 4.45 — Requirement-Taxonomy Floor [HARD BLOCK — all modes]
+
+The grounding gate proves the BRD invented and dropped nothing **relative to its source**. It cannot prove the source asked the right questions: if the FRD never mentions retention, authorization, or failure modes, the BRD is silent on them too and every check above still passes. Comprehensiveness then reduces to "all sections are non-empty", which is a formatting property.
+
+```bash
+node .claude/scripts/brd-taxonomy-check.js \
+  --requirements specs/brd/brd-requirements.json \
+  --coverage specs/brd/taxonomy-coverage.json \
+  --out specs/reviews/brd-taxonomy.json
+```
+
+Every one of the ten slots — `functional`, `data_lifecycle`, `integration`, `performance`, `security_authz`, `privacy_retention`, `observability`, `operability_failure`, `ux_accessibility`, `constraints` — needs either a requirement tagged with it, or an entry in `specs/brd/taxonomy-coverage.json` recording why it does not apply:
+
+```json
+[{ "slot": "privacy_retention", "na_reason": "the system stores no personal data; all records are anonymised aggregates" }]
+```
+
+**A justification must be a real reason.** `"N/A"`, `"none"`, `"TBD"`, and anything under 25 characters are rejected — the gate exists to force the question to be *asked*, and a box-tick means it was not. The reason lands in a committed artifact precisely so a reviewer can disagree with it.
+
+Resolve a failure at the source: a genuinely uncovered slot usually means the interview skipped a dimension. Return to Step 2, ask, capture the answer as a `C-n` clarification, and add the requirement — do not paper over it with an excuse.
+
+**Pre-existing BRD (not authored in this session).** A spine written before this gate existed carries no `taxonomy` field at all, so every requirement reports `UNTAGGED`. That is a migration state, not a quality signal. Tag the existing requirements first — reading each one and assigning its slots is a mechanical pass over an artifact you already have — then re-run. Do **not** record blanket `na_reason` entries to clear it; that converts a one-time migration into a permanently false clean bill of health. If you authored the spine in this session, `UNTAGGED` is a Step 4 execution bug: go back and tag them.
 
 ### Step 4.5 — Phase Evaluation Gate
 
@@ -380,7 +428,11 @@ Display the BRD and ask: "Does this BRD accurately capture the requirements? App
 |------|---------|
 | `specs/brd/brd.md` | Full BRD for a new project |
 | `specs/brd/feature-{name}.md` | BRD for a feature addition |
-| `specs/brd/brd-requirements.json` | Machine-readable requirement spine; each BR carries `traces` to FRD/clarification ids |
+| `specs/brd/brd-requirements.json` | Machine-readable requirement spine; each BR carries `traces` to FRD/clarification ids and `taxonomy` slots |
+| `specs/brd/brd-acceptance.json` | Postconditions split into individually traceable `BR-n-ACm` ids — what `/spec` Step 6.46 checks |
+| `specs/brd/brd-safeguards.json` | Invariants, prohibitions, limits, and norms — required trace targets for the Canvas |
+| `specs/brd/taxonomy-coverage.json` | Recorded `na_reason` for any taxonomy slot no requirement covers |
+| `specs/reviews/brd-taxonomy.json` | Ten-slot comprehensiveness verdict (`pass`, `uncovered[]`, `unjustified[]`) |
 | `specs/brd/source-frd.md` | (FRD mode) immutable copy of the provided FRD — the grounding baseline |
 | `specs/brd/frd-requirements.json` | (FRD mode) extracted `FRD-n` requirements the BRD is checked against |
 | `specs/brd/interview-requirements.json` | (interview mode) confirmed `INT-n` requirement spine — the grounding baseline |
@@ -396,7 +448,9 @@ Display the BRD and ask: "Does this BRD accurately capture the requirements? App
 
 **Grounding gate — hard block (both modes).** `grounding-check.js` proves mechanically that the BRD invented nothing (`net_new`) and dropped nothing (`dropped`) relative to the FRD spine (FRD mode) or the confirmed interview spine (interview mode), plus clarifications. Any violation blocks before the rubric even runs, regardless of quality score — see Step 4.4.
 
-**Phase evaluation gate runs before human approval.** The evaluator agent (artifact mode) scores the BRD against 5 criteria (completeness, traceability, specificity, consistency, actionability). Threshold: average >= 7.0, all criteria >= 5. In both modes the traceability criterion is anchored to the grounding verdict, not free judgement.
+**Taxonomy floor — hard block (both modes).** `brd-taxonomy-check.js` proves every one of the ten requirement slots is either covered by a tagged requirement or excused with a substantive, committed reason — the check the grounding gate structurally cannot make, since grounding is relative to a source that may itself be silent. See Step 4.45.
+
+**Phase evaluation gate runs before human approval.** The evaluator agent (artifact mode) scores the BRD against 5 criteria (completeness, traceability, specificity, consistency, actionability). Threshold: average >= 7.0, all criteria >= 5. In both modes the traceability criterion is anchored to the grounding verdict, and the completeness criterion to the taxonomy verdict, rather than free judgement.
 
 **Human approval is still required before proceeding to `/spec`.** The gates validate quality + grounding; the human validates intent.
 

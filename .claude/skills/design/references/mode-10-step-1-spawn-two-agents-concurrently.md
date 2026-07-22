@@ -90,7 +90,12 @@ Also run the **Canvas structure gate** (deterministic, always — the Canvas shi
 node .claude/scripts/validate-canvas.js specs/design/reasons-canvas.md
 ```
 
-A non-zero exit (a missing REASONS section, or a `Governs` list with no source paths) **BLOCKS** — fix the Canvas before Step 2. The `Governs` list must be non-empty so the drift monitor can detect Canvas↔code drift later.
+A non-zero exit **BLOCKS** — fix the Canvas before Step 2. It covers two things:
+
+- **Structure** — a missing REASONS section, or a `Governs` list with no source paths. The `Governs` list must be non-empty so the drift monitor can detect Canvas↔code drift later.
+- **Safeguard coverage (D9)** — when `specs/brd/brd-safeguards.json` exists, every `SG-n` must be cited in the Canvas's `## Safeguards` or `## Norms` section. Structure alone cannot catch a Safeguards section that is present, well-formed, and silently missing a business invariant, which is how a BRD constraint fails to reach the design contract. `UNCOVERED` means a constraint the business required that this design does not carry; `UNKNOWN` means the Canvas cites an `SG-n` that does not exist (a typo, or an invented constraint). A `misplaced` warning — a norm filed under Safeguards or vice versa — does not block; the constraint reached the design and only the filing is off.
+
+Skipped loudly when `brd-safeguards.json` does not exist (a BRD authored before this gate). Do not create an empty `brd-safeguards.json` to silence it: an empty spine reports `empty_spine` and fails, precisely so a missing input cannot read as a clean bill of health.
 
 Also run the **vocabulary-consistency gate** (deterministic; skip only when `CONTEXT.md` does not exist yet):
 

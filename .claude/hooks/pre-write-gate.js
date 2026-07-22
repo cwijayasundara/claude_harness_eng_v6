@@ -16,7 +16,7 @@ const { TRACKED_EXTS, resolveProjectDir, runHook, isSkippedPath, countLines, rea
 const { finalContent, insertedContent, originalContent } = require('./lib/simulate');
 const { scanSecrets, secretScanExempt, isProtectedEnvFile } = require('./lib/secrets');
 const { blockingHits } = require('./lib/security-patterns');
-const { FILE_HARD_LIMIT, FUNC_HARD_LIMIT, newlyOversized, newlyOverFileLimit } = require('./lib/length');
+const { FUNC_HARD_LIMIT, fileLimitFor, newlyOversized, newlyOverFileLimit } = require('./lib/length');
 const { missingTest } = require('./lib/tdd');
 const { isHarnessRepo, machineryViolation } = require('./lib/trust-boundary');
 const { prefixCacheViolation, prefixCacheBlockMessage } = require('./lib/prefix-cache');
@@ -93,8 +93,9 @@ function checkLength(toolName, ti, filePath, ext) {
   // edit to a large legacy file (or one carrying a legacy oversized function) is
   // not held hostage by it; block only a NEW file over the limit, an edit that
   // newly crosses it, or one that GROWS an already-over file/function further.
-  if (newlyOverFileLimit(beforeCount, count)) {
-    block(`BLOCKED: ${toolName} on ${filePath} would produce ${count} lines (hard limit ${FILE_HARD_LIMIT}).\nFix: Split the file into modules by responsibility BEFORE writing. One file, one responsibility (SRP).\n`);
+  const fileLimit = fileLimitFor(filePath);
+  if (newlyOverFileLimit(beforeCount, count, fileLimit)) {
+    block(`BLOCKED: ${toolName} on ${filePath} would produce ${count} lines (hard limit ${fileLimit}).\nFix: Split the file into modules by responsibility BEFORE writing. One file, one responsibility (SRP).\n`);
   }
   for (const f of newlyOversized(before, final, ext)) {
     block(`BLOCKED: Function ${f.name} in ${filePath}:${f.startLine + 1} would be ${f.length} lines (limit ${FUNC_HARD_LIMIT}).\nFix: Decompose into named sub-functions. Each should be testable in isolation.\n`);

@@ -1,0 +1,17 @@
+{
+  "cluster_id": "open_wiki/scripts",
+  "member_paths": [
+    "open_wiki/scripts/check-config.mjs",
+    "open_wiki/scripts/generate-context-graph.mjs",
+    "open_wiki/scripts/load-env.mjs",
+    "open_wiki/scripts/run-openwiki.mjs"
+  ],
+  "content_hashes": {
+    "open_wiki/scripts/check-config.mjs": "97d616233269db46",
+    "open_wiki/scripts/generate-context-graph.mjs": "704c0df619bb80b9",
+    "open_wiki/scripts/load-env.mjs": "22e5e0e728f71982",
+    "open_wiki/scripts/run-openwiki.mjs": "5e197396b713dad1"
+  },
+  "content_hash": "8d92d7aa65a902a6",
+  "stale": false
+}

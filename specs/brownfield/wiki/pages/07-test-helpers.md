@@ -57,7 +57,7 @@ flowchart LR
 
 ## `js:test/helpers/skill-corpus.js`
 
-- fan-in: 34, fan-out: 2
+- fan-in: 36, fan-out: 2
 
 ### Symbols
   - `readSkillCorpus` (function) → js:test/helpers/skill-corpus.js:12 — `function readSkillCorpus(skillName, root = REPO_ROOT)`

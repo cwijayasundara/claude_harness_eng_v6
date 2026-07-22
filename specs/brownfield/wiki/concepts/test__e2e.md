@@ -4,12 +4,12 @@
 
 ## Summary
 
-Cluster `test/e2e` groups **54** file(s) (hub fan-in hint 17).
+Cluster `test/e2e` groups **57** file(s) (hub fan-in hint 17).
 
 ## Files
 
 - `test/e2e/auto-output/index.js` (hash f24d601ec406c02d)
-- `test/e2e/auto-output/test/index.test.js` (hash n/a)
+- `test/e2e/auto-output/index.test.js` (hash 3c0bebeca67af1a7)
 - `test/e2e/brownfield-run-output/calc.js` (hash f11e571db3e0039a)
 - `test/e2e/brownfield-run-output/main.js` (hash 21667b18f095526f)
 - `test/e2e/feature-output/calc.js` (hash 28bda2e5df3eada9)
@@ -21,11 +21,12 @@ Cluster `test/e2e` groups **54** file(s) (hub fan-in hint 17).
 - `test/e2e/fixtures/adversarial/brownfield/legacy-expressish/test/public-api.test.js` (hash 88a574cd04003f09)
 - `test/e2e/full-auto-output/specs/test_artefacts/acceptance/E1-S1.test.js` (hash a40fe9f9fbaa6f48)
 - `test/e2e/full-auto-output/specs/test_artefacts/acceptance/E1-S2.test.js` (hash 96a445c56ef53e2b)
-- `test/e2e/full-auto-output/specs/test_artefacts/acceptance/E1-S3.test.js` (hash n/a)
-- `test/e2e/full-auto-output/src/config/port.js` (hash n/a)
-- `test/e2e/full-auto-output/src/repository/count-store.js` (hash n/a)
-- `test/e2e/full-auto-output/tests/count-store.test.js` (hash n/a)
-- `test/e2e/full-auto-output/tests/port.test.js` (hash n/a)
+- `test/e2e/full-auto-output/src/counter.js` (hash d5b5e0f7997fccd2)
+- `test/e2e/full-auto-output/src/index.js` (hash 1d93b3b617cd1660)
+- `test/e2e/full-auto-output/src/server.js` (hash 361652f3991ebec9)
+- `test/e2e/full-auto-output/tests/counter.test.js` (hash 0b7600a3460f9fae)
+- `test/e2e/full-auto-output/tests/index.test.js` (hash a6470e3a906cb68d)
+- `test/e2e/full-auto-output/tests/server.test.js` (hash 3e0f78e6952a1bec)
 - `test/e2e/harness-adversarial-fixtures.test.js` (hash cd641cd127b8641b)
 - `test/e2e/harness-adversarial-live.test.js` (hash cca0795a44067809)
 - `test/e2e/harness-auto-run.test.js` (hash 28e42e4b65fadf10)
@@ -47,13 +48,13 @@ Cluster `test/e2e` groups **54** file(s) (hub fan-in hint 17).
 - `test/e2e/helpers/alter-and-verify.test.js` (hash 8524961c99b1933e)
 - `test/e2e/helpers/app-runtime.js` (hash 9eb7dc6f53bbba2c)
 - `test/e2e/helpers/app-runtime.test.js` (hash 3d66ead5dc224dbd)
-- `test/e2e/helpers/claude-runner.js` (hash 74c90dbeb61c9cdc)
 
 ## Symbols
 
+- `parseIntArg`
+- `main`
 - `runCli`
 - `add`
-- `main`
 - `multiply`
 - `parseLine`
 - `loadLedger`
@@ -61,20 +62,19 @@ Cluster `test/e2e` groups **54** file(s) (hub fan-in hint 17).
 - `handle`
 - `json`
 - `route`
-- `resolvePort`
+- `withServer`
+- `request`
 - `getCount`
 - `increment`
+- `resolvePort`
+- `startServer`
+- `createRequestHandler`
+- `sendJson`
+- `startTestServer`
 - `loadManifest`
 - `copyFixture`
 - `readContract`
 - `runFixtureSuite`
-- `assertProtectedFilesStillExist`
-- `assertForbiddenPatternsAbsent`
-- `collectFiles`
-- `logResult`
-- `buildMutationPrompt`
-- `seedExistingProject`
-- `resetExistingProject`
 
 ## Repo notes (steering)
 
