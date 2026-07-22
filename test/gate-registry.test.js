@@ -6,6 +6,35 @@ const { test } = require('node:test');
 const { GATE_CATALOG, selectGates } = require('../.claude/hooks/lib/gate-registry');
 const { GATE_TIERS } = require('../.claude/hooks/lib/sensor-tier');
 
+// The v6 partition rule, enforced at runtime rather than only by tools/check-partition.js:
+// gates-early and gates-quality are kernel; every other gate module belongs to a pack and
+// must not be pulled into the process merely by loading the registry. If this regresses,
+// an uninstalled pack breaks the commit gate for everyone.
+test('loading the registry does not eagerly require any pack gate module', () => {
+  const loaded = Object.keys(require.cache).map((p) => p.replace(/\\/g, '/'));
+  for (const packModule of ['gates-legacy', 'gates-strict', 'gates-live-externals']) {
+    assert.ok(
+      !loaded.some((p) => p.includes(`/hooks/lib/${packModule}.js`)),
+      `${packModule}.js was eagerly loaded — it belongs to a pack and must be lazy (packRun)`
+    );
+  }
+});
+
+test('every pack-owned gate is wired through a lazy runner, not a direct reference', () => {
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '..', '.claude', 'hooks', 'lib', 'gate-registry.js'), 'utf8'
+  );
+  // A top-level require of a pack module defeats the laziness above.
+  for (const packModule of ['gates-legacy', 'gates-strict', 'gates-live-externals']) {
+    assert.doesNotMatch(
+      src,
+      new RegExp(`^const .*require\\(['"]\\./${packModule}['"]\\)`, 'm'),
+      `${packModule} must not be required at module scope`
+    );
+  }
+  assert.match(src, /function packRun\(/, 'the lazy runner must exist');
+});
+
 test('GATE_CATALOG is ordered and has unique ids', () => {
   const ids = GATE_CATALOG.map((g) => g.id);
   assert.strictEqual(new Set(ids).size, ids.length);

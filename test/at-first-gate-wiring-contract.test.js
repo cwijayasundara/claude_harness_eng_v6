@@ -34,7 +34,18 @@ test('pre-commit hard-wires the at-first gate into the registry as a default-on 
 
   const entry = GATE_CATALOG.find((g) => g.id === 'at-first-gate');
   assert.ok(entry, 'GATE_CATALOG must register the at-first-gate');
-  assert.strictEqual(entry.run, legacy.checkAtFirstGate, 'must dispatch to the real gate function, not a copy');
+  // The catalog now dispatches through packRun (gates-legacy is pack-owned and lazily
+  // required), so reference identity no longer holds. Assert the property that identity
+  // was standing in for: invoking entry.run reaches the REAL gate function, not a stub.
+  let reached = false;
+  const original = legacy.checkAtFirstGate;
+  legacy.checkAtFirstGate = () => { reached = true; };
+  try {
+    entry.run({ projectDir: ROOT, stagedSource: [], staged: [] });
+  } finally {
+    legacy.checkAtFirstGate = original;
+  }
+  assert.ok(reached, 'entry.run must dispatch to gates-legacy.checkAtFirstGate, not a copy or a no-op');
   assert.ok(GATE_TIERS['at-first-gate'] && GATE_TIERS['at-first-gate'].has('standard'), 'must be enabled in the default "standard" tier');
 
   const gates = read('.claude/hooks/lib/gates-legacy.js');

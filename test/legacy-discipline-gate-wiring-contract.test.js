@@ -32,7 +32,18 @@ test('pre-commit hard-wires the legacy-discipline gate into the registry as a de
 
   const entry = GATE_CATALOG.find((g) => g.id === 'legacy-discipline-proof');
   assert.ok(entry, 'GATE_CATALOG must register legacy-discipline-proof');
-  assert.strictEqual(entry.run, legacy.checkLegacyDisciplineGate, 'must dispatch to the real gate function, not a copy');
+  // The catalog now dispatches through packRun (gates-legacy is pack-owned and lazily
+  // required), so reference identity no longer holds. Assert the property that identity
+  // was standing in for: invoking entry.run reaches the REAL gate function, not a stub.
+  let reached = false;
+  const original = legacy.checkLegacyDisciplineGate;
+  legacy.checkLegacyDisciplineGate = () => { reached = true; };
+  try {
+    entry.run({ projectDir: ROOT, stagedSource: [], staged: [] });
+  } finally {
+    legacy.checkLegacyDisciplineGate = original;
+  }
+  assert.ok(reached, 'entry.run must dispatch to gates-legacy.checkLegacyDisciplineGate, not a copy or a no-op');
   assert.ok(GATE_TIERS['legacy-discipline-proof'] && GATE_TIERS['legacy-discipline-proof'].has('standard'), 'must be enabled in the default "standard" tier');
 
   const gates = read('.claude/hooks/lib/gates-legacy.js');

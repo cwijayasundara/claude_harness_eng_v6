@@ -6,14 +6,35 @@ const { isGateEnabled, loadSensorTier } = require('./sensor-tier');
 const { buildContext, setFailContext, fail } = require('./pre-commit-util');
 const { recordOutcome } = require('./sensor-outcomes');
 const early = require('./gates-early');
-const legacy = require('./gates-legacy');
 const quality = require('./gates-quality');
-const liveExternals = require('./gates-live-externals');
 
-// Strict gates lazy-loaded so standard/minimal pre-commit never requires
-// coupling-gate → drift.js → code-map scripts (absent in hook fixtures).
-function strictRun(name) {
-  return (ctx) => require('./gates-strict')[name](ctx);
+// gates-early and gates-quality are kernel. Every other gate module belongs to a
+// pack (gates-legacy → legacy-discipline, gates-live-externals → verification,
+// gates-strict → compliance), so it is required lazily, at run time, AFTER tier
+// filtering. Two things follow:
+//
+//   1. A tier that excludes a pack's gates never loads that pack. An uninstalled
+//      pack costs nothing and breaks nothing — which is what makes packs separable.
+//   2. A gate the tier DOES enable whose module is missing is a misconfiguration,
+//      not a pass. It fails loudly. A skipped gate must never be indistinguishable
+//      from a passing one.
+function packRun(moduleName, fnName, pack) {
+  return (ctx) => {
+    let mod;
+    try {
+      mod = require(`./${moduleName}`);
+    } catch (err) {
+      if (err && err.code !== 'MODULE_NOT_FOUND') throw err;
+      fail(
+        `\nBLOCKED: gate "${fnName}" is enabled for this sensor tier, but its module ` +
+        `(${moduleName}.js, from the "${pack}" pack) is not installed.\n` +
+        `Install the "${pack}" pack, or lower quality.sensor_tier so this gate is not selected.\n` +
+        'Refusing to skip an enabled gate — a skipped gate is not a passing gate.\n'
+      );
+      return;
+    }
+    mod[fnName](ctx);
+  };
 }
 
 /**
@@ -27,15 +48,15 @@ const GATE_CATALOG = Object.freeze([
   { id: 'stub-smell-gate', order: 35, runsWithoutSource: true, run: early.checkStubSmellGate },
   // live-externals is runsWithoutSource:true so it fires on a test-only commit
   // (a new tests/integration file with no other source), like test-deletion-guard.
-  { id: 'live-externals', order: 36, runsWithoutSource: true, run: liveExternals.checkLiveExternalsGate },
+  { id: 'live-externals', order: 36, runsWithoutSource: true, run: packRun('gates-live-externals', 'checkLiveExternalsGate', 'verification') },
   // source-only exit sits here in the runner
   { id: 'refactor-purity', order: 40, runsWithoutSource: false, run: early.checkRefactorPurity },
   { id: 'layer-imports', order: 50, runsWithoutSource: false, run: early.checkLayers },
   { id: 'bounded-context-rules', order: 60, runsWithoutSource: false, run: early.checkContexts },
   { id: 'ownership-check', order: 70, runsWithoutSource: false, run: early.checkOwnership },
-  { id: 'legacy-discipline-proof', order: 80, runsWithoutSource: false, run: legacy.checkLegacyDisciplineGate },
-  { id: 'sprout-diff', order: 90, runsWithoutSource: false, run: legacy.checkSproutDiffGate },
-  { id: 'at-first-gate', order: 100, runsWithoutSource: false, run: legacy.checkAtFirstGate },
+  { id: 'legacy-discipline-proof', order: 80, runsWithoutSource: false, run: packRun('gates-legacy', 'checkLegacyDisciplineGate', 'legacy-discipline') },
+  { id: 'sprout-diff', order: 90, runsWithoutSource: false, run: packRun('gates-legacy', 'checkSproutDiffGate', 'legacy-discipline') },
+  { id: 'at-first-gate', order: 100, runsWithoutSource: false, run: packRun('gates-legacy', 'checkAtFirstGate', 'legacy-discipline') },
   { id: 'sprint-contract', order: 110, runsWithoutSource: false, run: quality.checkSprintContract },
   { id: 'type-check', order: 120, runsWithoutSource: false, run: quality.checkTypescript },
   { id: 'coverage-ratchet-py', order: 130, runsWithoutSource: false, run: quality.checkCoverage },
@@ -43,11 +64,11 @@ const GATE_CATALOG = Object.freeze([
   { id: 'mutation-smoke', order: 150, runsWithoutSource: false, run: quality.checkMutation },
   // Secure-repo baseline (strict): secrets must be caught even on a docs/config-only
   // commit, so both run without staged source (Increment 1).
-  { id: 'security-baseline', order: 160, runsWithoutSource: true, run: strictRun('checkSecurityBaseline') },
-  { id: 'secure-baseline-wiring', order: 165, runsWithoutSource: true, run: strictRun('checkSecureBaselineWiring') },
-  { id: 'cycle-detection', order: 200, runsWithoutSource: false, run: strictRun('checkCycleDetection') },
-  { id: 'coupling-ratchet', order: 210, runsWithoutSource: false, run: strictRun('checkCouplingRatchet') },
-  { id: 'duplication-ratchet', order: 220, runsWithoutSource: false, run: strictRun('checkDuplicationRatchet') },
+  { id: 'security-baseline', order: 160, runsWithoutSource: true, run: packRun('gates-strict', 'checkSecurityBaseline', 'compliance') },
+  { id: 'secure-baseline-wiring', order: 165, runsWithoutSource: true, run: packRun('gates-strict', 'checkSecureBaselineWiring', 'compliance') },
+  { id: 'cycle-detection', order: 200, runsWithoutSource: false, run: packRun('gates-strict', 'checkCycleDetection', 'brownfield') },
+  { id: 'coupling-ratchet', order: 210, runsWithoutSource: false, run: packRun('gates-strict', 'checkCouplingRatchet', 'brownfield') },
+  { id: 'duplication-ratchet', order: 220, runsWithoutSource: false, run: packRun('gates-strict', 'checkDuplicationRatchet', 'brownfield') },
 ]);
 
 function selectGates(tier, { withoutSourceOnly = false } = {}) {
