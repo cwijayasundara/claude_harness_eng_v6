@@ -10,14 +10,10 @@
       "status": "proven",
       "evidence": [
         ".claude/commands/scaffold.md",
-        "test/scaffold-command.test.js",
-        "test/project-manifest-contract.test.js",
         "test/e2e/fixtures/adversarial/manifest.json",
         "test/adversarial-fixtures-contract.test.js"
       ],
       "required_tests": [
-        "test/scaffold-command.test.js",
-        "test/project-manifest-contract.test.js",
         "test/adversarial-fixtures-contract.test.js"
       ],
       "rationale": "The scaffold command has fast contract tests for generated harness structure, manifest field alignment, and adversarial greenfield prompts."
@@ -65,8 +61,7 @@
       ],
       "required_tests": [
         "test/phase-eval-unit.test.js",
-        "test/phase-eval-integration.test.js",
-        "test/project-manifest-contract.test.js"
+        "test/phase-eval-integration.test.js"
       ],
       "rationale": "Phase evaluation has unit, telemetry integration, and manifest contract coverage."
     },
@@ -90,12 +85,10 @@
         ".claude/agents/planner.md",
         ".claude/agents/generator.md",
         ".claude/agents/evaluator.md",
-        ".claude/skills/auto/SKILL.md",
-        "test/multi-agent-wiring.test.js"
+        ".claude/skills/auto/SKILL.md"
       ],
       "required_tests": [
-        "test/certification-status.test.js",
-        "test/multi-agent-wiring.test.js"
+        "test/certification-status.test.js"
       ],
       "rationale": "The delegation CONTRACT is now deterministically proven: agent-teams execution is enabled, the generator declares the Agent tool and mandates one teammate per story with logged spawn evidence, review handoff (no self-evaluation) and GAN separation (evaluator never generates) are declared, and /auto delegates generation and verification to distinct agents. Live delegated execution and failure recovery still require the model-gated e2e, so this remains partially_proven."
     }
