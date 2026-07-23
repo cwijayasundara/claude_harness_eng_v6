@@ -19,6 +19,8 @@
 const fs = require('fs');
 const path = require('path');
 
+const { printReport } = require('./partition-report');
+
 const ROOT = path.resolve(__dirname, '..');
 const PARTITION = path.join(ROOT, '.claude', 'config', 'packs.json');
 
@@ -246,62 +248,13 @@ function loadUnitTexts() {
   return { texts, names };
 }
 
-function reportCrossPack(crossPack) {
-  if (!crossPack.length) return;
-  const pairs = {};
-  for (const e of crossPack) {
-    const k = `${e.fromPack} -> ${e.toPack}`;
-    pairs[k] = (pairs[k] || 0) + 1;
-  }
-  console.log(`\ncross-pack edges (allowed, but each is a coupling to retire): ${crossPack.length}`);
-  Object.entries(pairs).sort((a, b) => b[1] - a[1]).forEach(([k, v]) => console.log(`  ${String(v).padStart(4)}  ${k}`));
-}
-
-function reportViolations(violations) {
-  const byPack = {};
-  for (const v of violations) (byPack[v.pack] = byPack[v.pack] || []).push(v);
-  console.log(`\nKERNEL -> PACK violations: ${violations.length}`);
-  for (const [pack, list] of Object.entries(byPack).sort((a, b) => b[1].length - a[1].length)) {
-    console.log(`\n  ${pack} (${list.length})`);
-    for (const v of list) console.log(`    ${v.from}  ->  ${v.to}`);
-  }
-  console.log(
-    '\nEach line is a kernel unit that cannot run without that pack installed.\n' +
-    'Resolve by: moving the caller into the pack, moving the callee into the kernel,\n' +
-    'or making the call optional (degrade when the pack is absent).'
-  );
-}
-
 function main() {
   const partition = JSON.parse(fs.readFileSync(PARTITION, 'utf8'));
   const assign = loadAssignment(partition);
   const { texts, names } = loadUnitTexts();
-  const { violations, crossPack, optional, accepted, staleAccepted, units } =
-    checkPartition({ assign, texts, names, accepted: partition.accepted_edges || [] });
-
-  const counts = {};
-  for (const v of Object.values(assign)) counts[v] = (counts[v] || 0) + 1;
-  console.log(`partition: ${units} units — ` +
-    Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', '));
-
-  if (optional.length) {
-    console.log(`\nkernel -> pack edges already guarded (lazy/try-catch, not violations): ${optional.length}`);
-    for (const e of optional) console.log(`    ${e.from}  ~>  ${e.to}  [${e.pack}]`);
-  }
-  if (accepted.length) {
-    console.log(`\naccepted kernel -> pack edges (declared exceptions, reviewed): ${accepted.length}`);
-    for (const e of accepted) console.log(`    ${e.from}  ->  ${e.to}  [${e.pack}] — ${e.why}`);
-  }
-  if (staleAccepted.length) {
-    console.log(`\nSTALE accepted_edges (no longer a real edge — delete them): ${staleAccepted.join(", ")}`);
-  }
-  reportCrossPack(crossPack);
-  if (!violations.length) {
-    console.log('\nOK: no kernel -> pack hard references.');
-    return 0;
-  }
-  reportViolations(violations);
-  return process.argv.includes('--strict') ? 1 : 0;
+  const result = checkPartition({ assign, texts, names, accepted: partition.accepted_edges || [] });
+  printReport({ partition, assign, result });
+  return result.violations.length && process.argv.includes('--strict') ? 1 : 0;
 }
 
 if (require.main === module) process.exit(main());
