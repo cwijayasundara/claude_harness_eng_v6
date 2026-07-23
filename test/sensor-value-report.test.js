@@ -34,6 +34,30 @@ test('a commit gate absent from the ledger is reported as never fired', () => {
     'a catalogued gate with no outcomes must surface as never-fired, not silently vanish');
 });
 
+test('a strict-tier gate that never ran is dormant-by-tier, not a retire candidate', () => {
+  // security-baseline is strict-only; at standard tier it CORRECTLY never fires.
+  // Telling the operator to "check wiring or retire" it would drop a live control.
+  const c = classify(tally([row('quiet')]), 'standard');
+  assert.ok(c.dormantByTier.includes('security-baseline'),
+    'a gate off at the active tier belongs in dormant, not never-fired');
+  assert.ok(!c.neverRan.includes('security-baseline'),
+    'a tier-dormant gate must not be nominated for retirement');
+});
+
+test('an all-tier gate that never ran is still a real never-fired finding', () => {
+  const c = classify(tally([row('quiet')]), 'standard');
+  assert.ok(c.neverRan.includes('secret-scan'),
+    'secret-scan runs at every tier — never-ran here is a genuine wiring finding');
+  assert.ok(!c.dormantByTier.includes('secret-scan'));
+});
+
+test('without a known tier, nothing is treated as dormant', () => {
+  const c = classify(tally([row('quiet')]));
+  assert.deepStrictEqual(c.dormantByTier, [],
+    'tier splitting is opt-in — synthetic callers keep the tier-blind classification');
+  assert.ok(c.neverRan.includes('security-baseline'));
+});
+
 test('a sensor present only in the ledger still appears', () => {
   // Session-cadence sensors are not in the commit catalog; widening to the ledger is
   // the whole reason the meter can produce a list in this repo at all.

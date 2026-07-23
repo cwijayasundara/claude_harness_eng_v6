@@ -21,6 +21,7 @@
 const path = require('path');
 const { readOutcomes } = require('../hooks/lib/sensor-outcomes');
 const { GATE_CATALOG } = require('../hooks/lib/gate-registry');
+const { loadSensorTier, isGateEnabled } = require('../hooks/lib/sensor-tier');
 
 const REPO = path.resolve(__dirname, '..', '..');
 const SLOW_MS = 500;
@@ -57,11 +58,19 @@ function toRow(id, stats) {
   };
 }
 
-function classify(stats) {
+function classify(stats, tier = null) {
   const rows = sensorIds(stats).map((id) => toRow(id, stats));
+  const neverRanIds = rows.filter((r) => r.ran === 0).map((r) => r.id);
+  // A gate registered only at a tier this repo does not run is dormant by design,
+  // not dead — "check wiring or retire" would drop a live control that is simply not
+  // enabled here (e.g. the strict-tier compliance gates at standard tier). Split it
+  // out only when the tier is known; synthetic callers pass none and stay tier-blind.
+  const dormantByTier = tier ? neverRanIds.filter((id) => !isGateEnabled(tier, id)) : [];
+  const dormant = new Set(dormantByTier);
   return {
     rows,
-    neverRan: rows.filter((r) => r.ran === 0).map((r) => r.id),
+    neverRan: neverRanIds.filter((id) => !dormant.has(id)),
+    dormantByTier,
     neverBlocked: rows.filter((r) => r.ran > 0 && r.blocked === 0).map((r) => r.id),
     slow: rows.filter((r) => r.avg_ms !== null && r.avg_ms >= SLOW_MS).map((r) => `${r.id} (${r.avg_ms}ms)`),
     // A control that blocks on most runs is either catching a real systemic problem
@@ -86,13 +95,18 @@ function renderRows(rows) {
   });
 }
 
-function render(outcomes, minRuns) {
+function render(outcomes, minRuns, tier = null) {
   const totalRuns = outcomes.length;
-  const c = classify(tally(outcomes));
+  const c = classify(tally(outcomes), tier);
   if (totalRuns < minRuns) return insufficient(totalRuns, minRuns);
 
-  const lines = [`sensor-value-report: ${totalRuns} recorded outcomes across ${c.rows.length} sensors.`];
+  const lines = [`sensor-value-report: ${totalRuns} recorded outcomes across ${c.rows.length} sensors` +
+    (tier ? ` (active tier: ${tier}).` : '.')];
   lines.push('', 'NEVER FIRED (never ran — check wiring or retire): ' + (c.neverRan.join(', ') || 'none'));
+  if (tier) {
+    lines.push('DORMANT (off at the ' + tier + ' tier — correctly silent, not a finding): ' +
+      (c.dormantByTier.join(', ') || 'none'));
+  }
   lines.push('NEVER BLOCKED (ran but never caught anything — candidate shelfware): ' + (c.neverBlocked.join(', ') || 'none'));
   lines.push(`SLOW (>=${SLOW_MS}ms average — correct but costly): ` + (c.slow.join(', ') || 'none'));
   lines.push('BLOCKS OFTEN (>50% of runs — real systemic issue, or false-blocking): ' + (c.highBlock.join(', ') || 'none'));
@@ -105,11 +119,12 @@ function main() {
   const minIdx = argv.indexOf('--min-runs');
   const minRuns = minIdx >= 0 ? Number(argv[minIdx + 1]) || 20 : 20;
   const outcomes = readOutcomes(REPO);
+  const tier = loadSensorTier(REPO);
   if (argv.includes('--json')) {
-    process.stdout.write(JSON.stringify(classify(tally(outcomes)), null, 2) + '\n');
+    process.stdout.write(JSON.stringify(classify(tally(outcomes), tier), null, 2) + '\n');
     return;
   }
-  process.stdout.write(render(outcomes, minRuns));
+  process.stdout.write(render(outcomes, minRuns, tier));
 }
 
 if (require.main === module) main();
