@@ -165,8 +165,24 @@ function reportFailure(hookName, err) {
   }
 }
 
+// Load a module that belongs to an optional PACK. Returns null when the pack is not
+// installed, so the caller can skip that feature instead of the hook throwing.
+//
+// A hook runs on every tool call: if it throws because a pack is absent, the session
+// breaks. An uninstalled pack is a legitimate configuration, not a failure — the same
+// stance gate-registry takes. Only a genuine load error (a syntax error in a module
+// that IS present) is re-thrown, so a broken pack never masquerades as a missing one.
+function optionalRequire(spec) {
+  try {
+    return require(spec);
+  } catch (err) {
+    if (err && err.code === 'MODULE_NOT_FOUND' && String(err.message).includes(spec)) return null;
+    throw err;
+  }
+}
+
 module.exports = {
   TRACKED_EXTS, SKIP_DIRS, findProjectDir, resolveProjectDir,
   readHookInput, readHookInputAsync, runHook, isSkippedPath, countLines,
-  realResolve, reportFailure, projectMemoryDir, isWriteInScope,
+  realResolve, reportFailure, projectMemoryDir, isWriteInScope, optionalRequire,
 };

@@ -52,8 +52,19 @@ function triggerFires(when, { hasCodeGraph, changedFiles, projectDir }) {
   return true;
 }
 
+// `only` lets a lane run a named subset (e.g. /vibe and /change run just the fast
+// impact-scoped regression check every iteration) while still going through the
+// registry — so the check's pack ownership and skip-when-absent behaviour apply
+// there too, instead of the lane naming the script directly.
+// lane_only checks are NOT part of the default set: they are the fast per-iteration
+// complement to a heavier check that /gate already runs, so including them by default
+// would run both and blur that split. They are reachable only by naming them in --only.
 function selectChecks(checks, ctx) {
-  return checks.filter((c) => triggerFires(c.when, ctx));
+  const only = (ctx && ctx.only) || [];
+  const scoped = only.length
+    ? checks.filter((c) => only.includes(c.id))
+    : checks.filter((c) => !c.lane_only);
+  return scoped.filter((c) => triggerFires(c.when, ctx));
 }
 
 function defaultRun(scriptPath, args, projectDir) {
@@ -134,10 +145,12 @@ function report(results, summary) {
 function main(argv = process.argv.slice(2)) {
   const root = argValue(argv, '--root') || process.cwd();
   const changedFiles = argList(argv, '--files');
+  const only = argList(argv, '--only');
   const checks = selectChecks(loadRegistry(root), {
     hasCodeGraph: fs.existsSync(path.join(root, GRAPH_REL)),
     changedFiles,
     projectDir: root,
+    only,
   });
   const results = runChecks(checks, root, { changedFiles });
   const summary = summarize(results);

@@ -26,25 +26,59 @@ const KINDS = ['skill', 'agent', 'hook', 'lib', 'script', 'githook'];
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-// The shape of an executable reference, per unit kind. Anything not matched here
-// is a soft edge by construction.
-function hardRefPattern(kind, name) {
+// The test for a HARD reference is: would this break if the target were absent?
+//
+// That distinction matters because the harness is full of references that merely
+// MENTION a pack unit — a remediation string ("Check: node .claude/scripts/x.js"),
+// a doc cross-reference ("see .claude/skills/x/SKILL.md"), a description in prose.
+// If the pack is uninstalled those become a stale message, not a crash, so they are
+// soft. Counting them would force rewriting correct code to satisfy the checker.
+//
+// The shape of a breaking reference differs by who is doing the referencing:
+//
+//   CODE units (lib, script, hook) break on require()/spawn of a missing module.
+//     A path sitting inside a quoted message is inert.
+//   PROSE units (skill, githook) are executed by an agent following instructions,
+//     so a `node .../x.js` command line IS the invocation.
+const CODE_KINDS = new Set(['lib', 'script', 'hook']);
+const EXEC_CALL = '(?:require|spawnSync|spawn|execSync|execFileSync|execFile)\\(';
+
+function scriptPattern(name, fromKind) {
   const n = escapeRe(name);
+  if (CODE_KINDS.has(fromKind)) {
+    return new RegExp(`${EXEC_CALL}[^)]*['"][^'"]*${n}(?:\\.js)?['"]`);
+  }
+  return new RegExp(`scripts/${n}\\.js|npm run [\\w:-]*\\b${n}\\b`);
+}
+
+function libPattern(name, fromKind) {
+  const n = escapeRe(name);
+  if (CODE_KINDS.has(fromKind)) return new RegExp(`${EXEC_CALL}[^)]*['"][^'"]*${n}['"]`);
+  return new RegExp(`lib/${n}\\b`);
+}
+
+// A skill is hard-referenced only by executing something inside it, or by an explicit
+// Skill()/subagent dispatch. A path to its SKILL.md or references/ is documentation.
+function skillPattern(name) {
+  const n = escapeRe(name);
+  return new RegExp(`node[^\\n]*skills/${n}/|Skill\\([^)]*['"]${n}['"]`, 'i');
+}
+
+// An actual dispatch, not the word appearing near "subagent_type" in prose.
+function agentPattern(name) {
+  const n = escapeRe(name);
+  return new RegExp(`subagent_type\\s*[:=]\\s*['"]?${n}\\b|Agent\\([^)]*subagent_type[^)]*${n}\\b`, 'i');
+}
+
+function hardRefPattern(kind, name, fromKind) {
   switch (kind) {
-    case 'script':
-      return new RegExp(`require\\([^)]*['"][^'"]*${n}['"]|scripts/${n}\\.js|npm run [\\w:-]*\\b${n}\\b`);
-    case 'lib':
-      return new RegExp(`require\\([^)]*['"][^'"]*${n}['"]|lib/${n}\\b`);
-    case 'hook':
-      return new RegExp(`hooks/${n}\\.js`);
-    case 'githook':
-      return new RegExp(`git-hooks/${n}\\b`);
-    case 'agent':
-      return new RegExp(`subagent_type[^\\n]{0,60}\\b${n}\\b|agents/${n}\\.md`, 'i');
-    case 'skill':
-      return new RegExp(`skills/${n}[/'"]|Skill\\([^)]*['"]${n}['"]`, 'i');
-    default:
-      return null;
+    case 'script': return scriptPattern(name, fromKind);
+    case 'lib': return libPattern(name, fromKind);
+    case 'hook': return new RegExp(`hooks/${escapeRe(name)}\\.js`);
+    case 'githook': return new RegExp(`git-hooks/${escapeRe(name)}\\b`);
+    case 'agent': return agentPattern(name);
+    case 'skill': return skillPattern(name);
+    default: return null;
   }
 }
 
@@ -94,12 +128,12 @@ function optionalRefs(text) {
   return out;
 }
 
-function hardRefs(text, names, optional = new Set()) {
+function hardRefs(text, names, optional = new Set(), fromKind = null) {
   const found = [];
   for (const kind of KINDS) {
     for (const name of names[kind] || []) {
       if (optional.has(name)) continue;
-      const re = hardRefPattern(kind, name);
+      const re = hardRefPattern(kind, name, fromKind);
       if (re && re.test(text)) found.push(`${kind}:${name}`);
     }
   }
@@ -118,8 +152,25 @@ function guardedEdges(from, optionalNames, ids, assign) {
   return out;
 }
 
+// A justified exception, declared in the partition as accepted_edges[] with a `why`.
+// Kept visible (always printed, never silently dropped) and required to be explicit,
+// so an exception is a decision on the record rather than an erosion of the rule.
+// An entry that no longer corresponds to a real edge is reported as stale, so the
+// list cannot quietly outlive the coupling it excused.
+function partitionAccepted(accepted) {
+  const map = new Map();
+  for (const e of accepted || []) {
+    if (!e || !e.from || !e.to || !e.why) {
+      throw new Error('check-partition: every accepted_edges entry needs from, to and why');
+    }
+    map.set(`${e.from} -> ${e.to}`, e);
+  }
+  return map;
+}
+
 // Pure core, so the rule is testable without touching disk.
-function checkPartition({ assign, texts, names }) {
+function checkPartition({ assign, texts, names, accepted = [] }) {
+  const acceptedMap = partitionAccepted(accepted);
   const ids = Object.keys(assign);
   if (ids.length === 0) {
     // A checker that reports "clean" on empty input is worse than no checker:
@@ -129,19 +180,25 @@ function checkPartition({ assign, texts, names }) {
   const violations = [];
   const crossPack = [];
   const optional = [];
+  const acceptedHits = [];
   for (const from of ids) {
     const home = assign[from];
     if (!texts[from]) continue;
     const opt = optionalRefs(texts[from]);
-    for (const to of hardRefs(texts[from], names, opt)) {
+    for (const to of hardRefs(texts[from], names, opt, from.slice(0, from.indexOf(":")))) {
       const target = assign[to];
       if (to === from || !target || target === home) continue;
-      if (home === 'kernel') violations.push({ from, to, pack: target });
+      if (home === 'kernel') {
+        const key = `${from} -> ${to}`;
+        if (acceptedMap.has(key)) { acceptedMap.get(key).__seen = true; acceptedHits.push({ from, to, pack: target, why: acceptedMap.get(key).why }); }
+        else violations.push({ from, to, pack: target });
+      }
       else if (target !== 'kernel') crossPack.push({ from, fromPack: home, to, toPack: target });
     }
     if (home === 'kernel') optional.push(...guardedEdges(from, opt, ids, assign));
   }
-  return { violations, crossPack, optional, units: ids.length };
+  const staleAccepted = [...acceptedMap.values()].filter((e) => !e.__seen).map((e) => `${e.from} -> ${e.to}`);
+  return { violations, crossPack, optional, accepted: acceptedHits, staleAccepted, units: ids.length };
 }
 
 // ---- disk wiring ----
@@ -219,7 +276,8 @@ function main() {
   const partition = JSON.parse(fs.readFileSync(PARTITION, 'utf8'));
   const assign = loadAssignment(partition);
   const { texts, names } = loadUnitTexts();
-  const { violations, crossPack, optional, units } = checkPartition({ assign, texts, names });
+  const { violations, crossPack, optional, accepted, staleAccepted, units } =
+    checkPartition({ assign, texts, names, accepted: partition.accepted_edges || [] });
 
   const counts = {};
   for (const v of Object.values(assign)) counts[v] = (counts[v] || 0) + 1;
@@ -229,6 +287,13 @@ function main() {
   if (optional.length) {
     console.log(`\nkernel -> pack edges already guarded (lazy/try-catch, not violations): ${optional.length}`);
     for (const e of optional) console.log(`    ${e.from}  ~>  ${e.to}  [${e.pack}]`);
+  }
+  if (accepted.length) {
+    console.log(`\naccepted kernel -> pack edges (declared exceptions, reviewed): ${accepted.length}`);
+    for (const e of accepted) console.log(`    ${e.from}  ->  ${e.to}  [${e.pack}] — ${e.why}`);
+  }
+  if (staleAccepted.length) {
+    console.log(`\nSTALE accepted_edges (no longer a real edge — delete them): ${staleAccepted.join(", ")}`);
   }
   reportCrossPack(crossPack);
   if (!violations.length) {
@@ -241,4 +306,4 @@ function main() {
 
 if (require.main === module) process.exit(main());
 
-module.exports = { hardRefs, checkPartition };
+module.exports = { hardRefs, checkPartition, hardRefPattern, optionalRefs };

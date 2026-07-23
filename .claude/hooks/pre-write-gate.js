@@ -11,7 +11,7 @@
 // Escape hatches: HARNESS_TDD_GATE=off, HARNESS_PATTERN_BLOCK=off.
 
 const path = require('path');
-const { TRACKED_EXTS, resolveProjectDir, runHook, isSkippedPath, countLines, realResolve, isWriteInScope } =
+const { TRACKED_EXTS, resolveProjectDir, runHook, isSkippedPath, countLines, realResolve, isWriteInScope, optionalRequire } =
   require('./lib/common');
 const { finalContent, insertedContent, originalContent } = require('./lib/simulate');
 const { scanSecrets, secretScanExempt, isProtectedEnvFile } = require('./lib/secrets');
@@ -20,7 +20,8 @@ const { FUNC_HARD_LIMIT, fileLimitFor, newlyOversized, newlyOverFileLimit } = re
 const { missingTest } = require('./lib/tdd');
 const { isHarnessRepo, machineryViolation } = require('./lib/trust-boundary');
 const { prefixCacheViolation, prefixCacheBlockMessage } = require('./lib/prefix-cache');
-const { coveragePreflight } = require('./lib/coverage-preflight');
+// legacy-discipline pack: absent = that discipline is not configured here.
+const coveragePreflightMod = optionalRequire(path.join(__dirname, 'lib', 'coverage-preflight.js'));
 
 function block(message) {
   process.stdout.write(message);
@@ -136,8 +137,8 @@ runHook('pre-write-gate', (input) => {
   }
   checkLength(toolName, ti, filePath, ext);
   checkTdd(projectDir, filePath);
-  if (TRACKED_EXTS.has(ext) && !isSkippedPath(filePath)) {
-    const pf = coveragePreflight(projectDir, toolName, ti, path.resolve(filePath));
+  if (coveragePreflightMod && TRACKED_EXTS.has(ext) && !isSkippedPath(filePath)) {
+    const pf = coveragePreflightMod.coveragePreflight(projectDir, toolName, ti, path.resolve(filePath));
     if (pf.decision === 'block') block(pf.message);
     if (pf.decision === 'note') process.stdout.write(pf.message);
   }

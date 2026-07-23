@@ -8,7 +8,6 @@
       "code-gen",
       "gate",
       "refactor",
-      "status",
       "vibe"
     ],
     "agent": [
@@ -32,6 +31,7 @@
       "agent-model",
       "bash-targets",
       "common",
+      "contexts",
       "gate-registry",
       "gate-result",
       "gates-early",
@@ -48,14 +48,19 @@
       "security-scan",
       "sensor-guidance",
       "sensor-outcomes",
+      "sensor-schema",
       "sensor-tier",
+      "simulate",
       "tdd",
       "toolchain",
       "trust-boundary"
     ],
     "script": [
       "context-pack",
+      "human-codebase",
       "merge-review-verdicts",
+      "pr-walkthrough",
+      "quality-card",
       "review-commit-msg",
       "review-tier",
       "run-gate-checks",
@@ -79,6 +84,7 @@
         "pr-respond",
         "spec",
         "sprint",
+        "status",
         "test",
         "tracker-publish"
       ],
@@ -132,7 +138,7 @@
         "canvas",
         "canvas-sync",
         "contract-schema",
-        "simulate",
+        "gates-planning",
         "story-graph"
       ],
       "hook": [
@@ -158,7 +164,6 @@
         "coupling-gate",
         "cycle-gate",
         "duplication-gate",
-        "human-codebase",
         "impact-scope",
         "modularity-pack",
         "naming-clusters",
@@ -177,7 +182,6 @@
         "tool-output-pack"
       ],
       "lib": [
-        "contexts",
         "coupling-gate",
         "cycle-gate",
         "drift",
@@ -285,6 +289,7 @@
         "diff-hunks",
         "fixtures",
         "gates-live-externals",
+        "gates-verification",
         "live-externals-gate",
         "local-regression-gate",
         "mutation-gate",
@@ -317,9 +322,7 @@
         "drift-report",
         "harness-coverage",
         "loop-health",
-        "pr-walkthrough",
         "promote-recommendation",
-        "quality-card",
         "readiness-digest",
         "replay-telemetry",
         "run-custom-sensors",
@@ -341,7 +344,6 @@
         "agent-readiness-shared",
         "control-budget",
         "loop-health",
-        "sensor-schema",
         "stale-stamp"
       ],
       "hook": [
@@ -398,5 +400,12 @@
     "move-callee-to-kernel": "the callee is infrastructure the kernel genuinely needs",
     "move-caller-to-pack": "the caller is pack content that was mis-homed",
     "make-optional": "the call degrades cleanly when the pack is absent (try/catch + skip, reported not silent)"
-  }
+  },
+  "accepted_edges": [
+    {
+      "from": "skill:refactor",
+      "to": "skill:code-map",
+      "why": "Caller lookup for rename/move blast radius. The whole block is already conditional on specs/brownfield/code-graph.json existing, which only happens when the brownfield pack is installed — /refactor works without it. Prose conditionality the checker cannot see."
+    }
+  ]
 }

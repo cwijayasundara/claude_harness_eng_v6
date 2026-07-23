@@ -134,7 +134,7 @@ Run the narrowest useful checks:
 - CV0: parser/format check if applicable
 - CV1: targeted test/lint command
 - CV2: targeted failing-then-passing test, then relevant lint/typecheck if available
-- Always: `node .claude/scripts/local-regression-gate.js` (gap G16). Even a narrowly-scoped `/vibe` edit can silently break an earlier feature — this computes the diff's blast radius over `code-graph.json` and re-runs only the prior story-group(s) it could plausibly affect (plus any `project-manifest.json#verification.golden_paths`), instead of the whole accumulated `e2e/` suite. A `blocked` verdict is a **BLOCK** — fix the regression before Step 7. The full, unabridged regression-suite-full check (gap G15) still runs at `/gate` as the final backstop before merge.
+- Always: `node .claude/scripts/run-gate-checks.js --only local-regression` (gap G16). Even a narrowly-scoped `/vibe` edit can silently break an earlier feature — this computes the diff's blast radius over `code-graph.json` and re-runs only the prior story-group(s) it could plausibly affect (plus any `project-manifest.json#verification.golden_paths`), instead of the whole accumulated `e2e/` suite. A `blocked` verdict is a **BLOCK** — fix the regression before Step 7. The full, unabridged regression-suite-full check (gap G15) still runs at `/gate` as the final backstop before merge.
 
 If verification fails, fix within the micro-contract. If the fix expands beyond the eligibility rules, stop and escalate.
 

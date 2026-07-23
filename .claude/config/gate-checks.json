@@ -7,7 +7,7 @@
     "exists:<path>": "only when that path exists in the project",
     "changed:<glob>": "only when a changed file matches the glob"
   },
-  "semantics": "blocking:true means a non-zero exit is a BLOCK. blocking:false means a non-zero exit is a WARN that appears on the quality card. A script that is absent because its pack is not installed is recorded as skipped — reported, never silently passed.",
+  "semantics": "blocking:true means a non-zero exit is a BLOCK. blocking:false means a non-zero exit is a WARN that appears on the quality card. A script that is absent because its pack is not installed is recorded as skipped — reported, never silently passed. lane_only:true keeps a check out of the default /gate set; it runs only when named in --only.",
   "checks": [
     {
       "id": "approved-fixtures",
@@ -135,6 +135,16 @@
       "blocking": true,
       "summary": "Validates waiver fields and expiry against .claude/templates/sensor-waivers.schema.json.",
       "remediation": "Fix or remove the invalid waiver. A malformed waiver must never silently suppress a finding."
+    },
+    {
+      "id": "local-regression",
+      "pack": "verification",
+      "script": "local-regression-gate.js",
+      "when": "always",
+      "blocking": true,
+      "summary": "Impact-scoped regression (G16): deterministic TIA over code-graph.json selects only the affected prior group's e2e/contract checks. LANE-ONLY — the fast per-iteration complement to regression-suite-full, which /gate runs unabridged. Reached via --only local-regression from /change and /vibe.",
+      "remediation": "An earlier story's behaviour regressed. Fix the regression — do not narrow the scope. Run the full sweep (regression-suite-full) before merge.",
+      "lane_only": true
     }
   ]
 }

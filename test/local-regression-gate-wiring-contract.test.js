@@ -39,13 +39,15 @@ test('/change Step S5 runs local-regression-gate.js in addition to (not instead 
   const s5Start = skill.indexOf('### Step S5');
   const s5End = skill.indexOf('### Step S6');
   const s5 = skill.slice(s5Start, s5End);
-  assert.match(s5, /local-regression-gate\.js/, 'Step S5 must run the impact-scoped gate');
+  // The lanes now invoke the check through the registry runner (--only local-regression)
+  // so the verification pack's absence is handled the same way it is at /gate.
+  assert.match(s5, /run-gate-checks\.js --only local-regression/, 'Step S5 must run the impact-scoped gate');
   assert.match(s5, /full test suite/, 'Step S5 must still run the full unit suite');
 });
 
-test('/vibe Step 6 runs local-regression-gate.js', () => {
+test('/vibe Step 6 runs the impact-scoped gate', () => {
   const skill = read('.claude/skills/vibe/SKILL.md');
-  assert.match(skill, /local-regression-gate\.js/, '/vibe must run the impact-scoped gate');
+  assert.match(skill, /run-gate-checks\.js --only local-regression/, '/vibe must run the impact-scoped gate');
 });
 
 test('/gate and /auto keep running the FULL regression-gate.js sweep unchanged (G15 is not replaced)', () => {
@@ -59,9 +61,12 @@ test('/gate and /auto keep running the FULL regression-gate.js sweep unchanged (
   // /gate now runs the check registry rather than naming scripts, so assert there:
   // the FULL sweep must be registered and the scoped local gate must NOT be.
   const { loadRegistry } = require('../.claude/scripts/run-gate-checks.js');
-  const scripts = loadRegistry(process.cwd()).map((c) => c.script);
-  assert.ok(scripts.includes('regression-gate.js'), '/gate must still run the FULL regression sweep');
-  assert.ok(!scripts.includes('local-regression-gate.js'), '/gate must not have been rewired to the local/scoped gate');
+  const registry = loadRegistry(process.cwd());
+  const full = registry.find((c) => c.script === 'regression-gate.js');
+  assert.ok(full && !full.lane_only, '/gate must still run the FULL regression sweep by default');
+  const scoped = registry.find((c) => c.script === 'local-regression-gate.js');
+  assert.ok(scoped && scoped.lane_only === true,
+    'the scoped gate must be lane_only so /gate is not rewired to it — the lanes reach it via --only');
 });
 
 test('manifest registers impact-scoped-regression active, behaviour axis, diff scope, G16', () => {

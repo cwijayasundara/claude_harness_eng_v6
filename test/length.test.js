@@ -23,6 +23,49 @@
     a.deepStrictEqual(oversizedFunctions(SHORT_FN_WITH_IIFE, '.js'), []);
   });
 
+  t('braces inside string literals are not counted as code', () => {
+    const src = [
+      'function small() {',
+      "  const open = '{';",
+      '  const close = "}";',
+      '  return open + close;',
+      '}',
+      '',
+    ].join('\n');
+    a.deepStrictEqual(oversizedFunctions(src, '.js'), []);
+  });
+
+  t('a comment containing example code is not parsed as a declaration', () => {
+    // This is the case that made writing a comment ABOUT the parser trip the parser.
+    const src = [
+      'function small() {',
+      '  // example: function inner() { return 1; }',
+      '  /* also: const f = (() => {})(); */',
+      '  return 1;',
+      '}',
+      '',
+    ].join('\n');
+    a.deepStrictEqual(oversizedFunctions(src, '.js'), []);
+  });
+
+  t('braces inside a template literal are not counted as code', () => {
+    const src = [
+      'function small(x) {',
+      '  return `a ${x} b {{ c`;',
+      '}',
+      '',
+    ].join('\n');
+    a.deepStrictEqual(oversizedFunctions(src, '.js'), []);
+  });
+
+  t('a genuinely oversized function is still reported', () => {
+    const body = Array.from({ length: 40 }, (_, i) => `  const v${i} = ${i};`).join('\n');
+    const src = `function big() {\n${body}\n  return 0;\n}\n`;
+    const over = oversizedFunctions(src, '.js');
+    a.strictEqual(over.length, 1, 'the cap must still bite on real length');
+    a.strictEqual(over[0].name, 'big');
+  });
+
   t('its measured length does not change when unrelated code is appended', () => {
     const filler = Array.from({ length: 40 }, (_, i) => `function pad${i}() {\n  return ${i};\n}\n`).join('\n');
     a.deepStrictEqual(

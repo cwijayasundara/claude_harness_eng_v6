@@ -57,11 +57,11 @@ const GATE_CATALOG = Object.freeze([
   { id: 'legacy-discipline-proof', order: 80, runsWithoutSource: false, run: packRun('gates-legacy', 'checkLegacyDisciplineGate', 'legacy-discipline') },
   { id: 'sprout-diff', order: 90, runsWithoutSource: false, run: packRun('gates-legacy', 'checkSproutDiffGate', 'legacy-discipline') },
   { id: 'at-first-gate', order: 100, runsWithoutSource: false, run: packRun('gates-legacy', 'checkAtFirstGate', 'legacy-discipline') },
-  { id: 'sprint-contract', order: 110, runsWithoutSource: false, run: quality.checkSprintContract },
+  { id: 'sprint-contract', order: 110, runsWithoutSource: false, run: packRun('gates-planning', 'checkSprintContract', 'planning') },
   { id: 'type-check', order: 120, runsWithoutSource: false, run: quality.checkTypescript },
   { id: 'coverage-ratchet-py', order: 130, runsWithoutSource: false, run: quality.checkCoverage },
   { id: 'coverage-ratchet-js', order: 140, runsWithoutSource: false, run: quality.checkCoverageJs },
-  { id: 'mutation-smoke', order: 150, runsWithoutSource: false, run: quality.checkMutation },
+  { id: 'mutation-smoke', order: 150, runsWithoutSource: false, run: packRun('gates-verification', 'checkMutation', 'verification') },
   // Secure-repo baseline (strict): secrets must be caught even on a docs/config-only
   // commit, so both run without staged source (Increment 1).
   { id: 'security-baseline', order: 160, runsWithoutSource: true, run: packRun('gates-strict', 'checkSecurityBaseline', 'compliance') },

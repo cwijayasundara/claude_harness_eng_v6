@@ -15,13 +15,15 @@ const ROOT = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 test('pre-commit wires the mutation gate, scoped to /auto builds', () => {
-  // PR3: thin pre-commit dispatches via gate-registry; mutation lives in gates-quality.js
+  // PR3: thin pre-commit dispatches via gate-registry. v6: mutation-smoke moved to
+  // gates-verification.js (verification pack), reached via packRun so an uninstalled
+  // pack is a reported skip rather than a crash.
   const hook = read('.claude/git-hooks/pre-commit');
   assert.match(hook, /gate-registry/, 'pre-commit must dispatch through gate-registry');
   const registry = read('.claude/hooks/lib/gate-registry.js');
   assert.match(registry, /mutation-smoke/, 'catalog must register mutation-smoke');
-  assert.match(registry, /checkMutation/, 'catalog must bind quality.checkMutation');
-  const quality = read('.claude/hooks/lib/gates-quality.js');
+  assert.match(registry, /packRun\('gates-verification', 'checkMutation'/, 'catalog must bind checkMutation via packRun');
+  const quality = read('.claude/hooks/lib/gates-verification.js');
   assert.match(quality, /runMutationOnFiles/, 'must import the mutation orchestrator');
   assert.match(quality, /inAutoBuild/, 'mutation gate must be scoped to active /auto builds');
   assert.match(quality, /HARNESS_MUTATION_GATE/, 'must honor the off switch');

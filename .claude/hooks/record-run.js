@@ -6,9 +6,10 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { execFileSync } = require('child_process');
-const { appendLedger, pushSnapshot, readSkillCatalog, seedLedgerFromRuns } = require('../scripts/telemetry-memory');
-const { parseBuildInvocation } = require('../scripts/build-lane');
-const { readHookInputAsync, reportFailure } = require('./lib/common');
+const { readHookInputAsync, reportFailure, optionalRequire } = require('./lib/common');
+// telemetry + planning packs. Recording must never break a session: absent = skip.
+const telemetry = optionalRequire(path.join(__dirname, '..', 'scripts', 'telemetry-memory.js'));
+const buildLane = optionalRequire(path.join(__dirname, '..', 'scripts', 'build-lane.js'));
 const { inferSkills } = require('./lib/record-skills');
 const { resolveAgentModel, extractUsageFields } = require('./lib/agent-model');
 
@@ -67,10 +68,10 @@ function append(receiptPath, obj) {
 }
 
 async function persistAndPush(receiptPath, stateDir, projectDir, record) {
-  seedLedgerFromRuns(projectDir, stateDir);
+  if (telemetry) telemetry.seedLedgerFromRuns(projectDir, stateDir);
   append(receiptPath, record);
-  appendLedger(stateDir, record);
-  await pushSnapshot({ projectDir, stateDir });
+  if (telemetry) telemetry.appendLedger(stateDir, record);
+  if (telemetry) await telemetry.pushSnapshot({ projectDir, stateDir });
 }
 
 function stableLabelValue(value, fallback) {
@@ -85,8 +86,11 @@ function inferCommand(prompt) {
 
 function inferLane(prompt, command) {
   if (command !== 'build') return command || null;
-  const parsed = parseBuildInvocation(prompt);
-  return parsed.valid === false ? command : parsed.lane;
+  // Without the planning pack there is no /build lane to resolve — the command name
+  // is the honest answer, not a crash.
+  const parsed = buildLane ? buildLane.parseBuildInvocation(prompt) : null;
+  if (!parsed || parsed.valid === false) return command;
+  return parsed.lane;
 }
 
 function shouldSkipCommandTelemetry(command) {
@@ -114,7 +118,7 @@ function shouldSkipCommandTelemetry(command) {
     const iteration = readMarker(stateDir, 'current-iteration');
     const groupId = readMarker(stateDir, 'current-group');
     const storyId = readMarker(stateDir, 'current-story');
-    const skillInventory = readSkillCatalog(projectDir);
+    const skillInventory = (telemetry ? telemetry.readSkillCatalog(projectDir) : null) || [];
 
     if (eventKind === 'UserPromptSubmit') {
       const command = inferCommand(input.prompt);
@@ -235,9 +239,9 @@ function shouldSkipCommandTelemetry(command) {
         skill_count: skillInventory.length,
         host: os.hostname(),
       };
-      seedLedgerFromRuns(projectDir, stateDir);
+      if (telemetry) telemetry.seedLedgerFromRuns(projectDir, stateDir);
       append(receiptPath, toolRecord);
-      appendLedger(stateDir, toolRecord);
+      if (telemetry) telemetry.appendLedger(stateDir, toolRecord);
       process.exit(0);
     }
 

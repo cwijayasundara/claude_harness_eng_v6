@@ -52,6 +52,83 @@ function netBraces(line) {
   return net;
 }
 
+// Blank out everything that is not executable code — quoted strings, template
+// literals, and comments — replacing each with spaces so column positions and line
+// count are preserved. Everything downstream (brace depth AND the function-name
+// regexes) then sees code only.
+//
+// Without this the parser reads braces inside literals and prose: a regex such as
+// the try-block matcher carries an unmatched opening brace, and a comment holding a
+// code example is parsed as a real declaration. Both produce phantom function
+// lengths, which is a block the author cannot act on.
+//
+// Regex literals are NOT stripped (telling them from division needs real lexing), so
+// a brace inside one is still miscounted; that is a narrower residue than before and
+// is called out here rather than hidden.
+function stripNonCode(lines) {
+  const state = { inBlockComment: false, inTemplate: false };
+  return lines.map((line) => stripLine(line, state));
+}
+
+const BLOCK_OPEN = '/*';
+const BLOCK_CLOSE = '*/';
+const LINE_COMMENT = '//';
+
+// Consume whatever multi-line construct is open; returns the index to resume at,
+// or the line length if the construct runs past this line.
+function skipOpenConstruct(line, i, state) {
+  if (state.inBlockComment) {
+    const end = line.indexOf(BLOCK_CLOSE, i);
+    if (end === -1) return line.length;
+    state.inBlockComment = false;
+    return end + BLOCK_CLOSE.length;
+  }
+  const end = line.indexOf('`', i);
+  if (end === -1) return line.length;
+  state.inTemplate = false;
+  return end + 1;
+}
+
+// Consume a single-quoted or double-quoted string starting at i (honouring
+// backslash escapes); returns the index just past the closing quote.
+function skipQuoted(line, i) {
+  const quote = line[i];
+  let j = i + 1;
+  while (j < line.length) {
+    if (line[j] === '\\') { j += 2; continue; }
+    if (line[j] === quote) return j + 1;
+    j++;
+  }
+  return line.length;
+}
+
+function stripLine(line, state) {
+  let out = '';
+  let i = 0;
+  while (i < line.length) {
+    if (state.inBlockComment || state.inTemplate) {
+      const resume = skipOpenConstruct(line, i, state);
+      out += ' '.repeat(resume - i);
+      i = resume;
+      continue;
+    }
+    const two = line.slice(i, i + 2);
+    if (two === LINE_COMMENT) { out += ' '.repeat(line.length - i); break; }
+    if (two === BLOCK_OPEN) { state.inBlockComment = true; out += '  '; i += 2; continue; }
+    const ch = line[i];
+    if (ch === '`') { state.inTemplate = true; out += ' '; i += 1; continue; }
+    if (ch === '"' || ch === "'") {
+      const end = skipQuoted(line, i);
+      out += ' '.repeat(end - i);
+      i = end;
+      continue;
+    }
+    out += ch;
+    i += 1;
+  }
+  return out;
+}
+
 function flushPython(funcStack, untilIndent, curLine, out, lines) {
   while (funcStack.length > 0 && funcStack[funcStack.length - 1].indent >= untilIndent) {
     const fn = funcStack.pop();
@@ -110,7 +187,8 @@ function flushBraceStack(funcStack, depth, i, out) {
   }
 }
 
-function functionsBraceLang(lines) {
+function functionsBraceLang(rawLines) {
+  const lines = stripNonCode(rawLines);
   const out = [];
   const funcStack = [];
   let depth = 0;

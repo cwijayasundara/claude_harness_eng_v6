@@ -49,7 +49,9 @@ test('/change Step S5 no longer requires the full regression-gate.js sweep (move
   const s5End = skill.indexOf('### Step S6');
   assert.ok(s5Start !== -1 && s5End !== -1 && s5End > s5Start, 'Step S5/S6 headings must exist');
   const s5 = skill.slice(s5Start, s5End);
-  assert.match(s5, /local-regression-gate\.js/, 'Step S5 must run the fast impact-scoped gate (G16)');
+  // The lanes now invoke the check through the registry runner (--only local-regression)
+  // so the verification pack's absence is handled the same way it is at /gate.
+  assert.match(s5, /run-gate-checks\.js --only local-regression/, 'Step S5 must run the fast impact-scoped gate (G16)');
   assert.match(s5, /full test suite/, 'Step S5 must still run the full unit suite');
 });
 
