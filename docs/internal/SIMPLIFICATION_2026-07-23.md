@@ -37,7 +37,20 @@ So "simplify" is three problems, in priority order:
 
 ## The three priorities being worked (this increment)
 
-### P1 — Close the 15 profile-breaking edges → ship kernel-only/core as real installs
+> **Status (2026-07-23):** P1 ✅ done (edges 15 → 0, `--strict` enforced by the suite).
+> P3 ✅ done (canary mechanism live; the value meter is now decisive). P2 re-scoped after
+> direct inspection — see its section: the "safe deletions" turned out **not** to be dead
+> code, the `graph-refresh` unwiring is blocked mid-session, and the skill consolidations
+> are a 40+-file refactor deferred to their own reviewed increment.
+
+### P1 — Close the 15 profile-breaking edges → ship kernel-only/core as real installs ✅ DONE
+
+Resolved and committed. drift cluster (3) guarded; impact-scope (6) moved down to
+`legacy-discipline` (pure callee, monotonically safe); nav-bench (1) guarded; modularity
+(2, prose) + scaffold-apply (3, full-source-only installer) declared as `accepted_edges`
+— which required generalizing the accepted-edges mechanism to profile-breaks (it was
+kernel-only). Profile-closure is now enforced: `check-partition.js --strict` fails on a
+profile break, and `pack-install-smoke` asserts it exits 0 so a regression fails the suite.
 
 This is *the* simplification: it makes the modularization already paid for deliver a smaller
 bootable install. Established pattern (proven by commit `d76d8eb`): guard the top-level `require`
@@ -63,24 +76,28 @@ Worklist by cluster:
 Each fix needs a caller-guards-first check to avoid vacuous-green (a lazy `require` inside a fn
 fixes the crash but not the checker — must use `try/catch` or `packRun` so the edge drops).
 
-### P2 — Tier-1 quick wins (no capability loss)
+### P2 — Tier-1 quick wins — RE-SCOPED after direct inspection
 
-- **Unwire `graph-refresh.js` from `SubagentStop`** — the script already `return`s before any work
-  on that event; the wiring just spawns a no-op Node process per teammate per turn.
-  *(Note: this edits `.claude/settings.json`, which the prefix-cache gate blocks mid-session — an
-  inter-session change requiring `HARNESS_PREFIX_EDIT=1`.)*
-- **Delete/archive** the never-executed A/B island (`ab-run.js`, `ab-report.js`) and
-  `replay-telemetry.js` (~800 lines incl. tests).
-- **8 legacy-discipline `SKILL.md` → 1 routing skill** — they form one decision tree; each section
-  still names its own backing gate script. **Gates untouched.** (51 → 44 skills.)
-- **3 provisioning skills → 1 `provision` skill with modes** — `fleet-retrofit` already wraps
-  `provision-protection` + `provision-environments`; scripts are pre-factored (`*-core.js`). Only
-  the SKILL.md surface is triplicated. (44 → 42 skills.)
+The survey's "safe deletions" did not survive direct tracing — a reminder that this
+harness's layers are genuinely tight (the scripts survey itself found **0 true orphans**):
+
+- **`replay-telemetry.js` — KEEP.** Not an island: it backs `test/helpers/record-run-fixture.js`
+  and two test files. It is load-bearing replay-mode regression-test infrastructure.
+- **`ab-run.js` / `ab-report.js` — do NOT delete without a product call.** They have a JS caller
+  (`cost-per-outcome.js`), a PRD, a runbook, and a README section — dormant but *complete* A/B
+  infrastructure awaiting a billed execution, not dead code. Surface for an explicit decision.
+- **Unwire `graph-refresh.js` from `SubagentStop`** — still valid (the script already no-ops
+  there) but **blocked mid-session**: it edits `.claude/settings.json`, which the prefix-cache
+  gate blocks. Apply between sessions with `HARNESS_PREFIX_EDIT=1`.
+- **8 legacy-discipline `SKILL.md` → 1** and **3 provisioning skills → 1** — still the real
+  skill-count wins, but each of the 8 discipline names is referenced from 12–34 files. That is a
+  40+-file, wide-ripple refactor needing the `author-prompt-surface` discipline and its own
+  whole-branch review — deferred to a dedicated increment, not rushed here.
 - (Lower priority, not this increment) single `gate.js <name>` dispatcher for the ~19 gate npm
   scripts; fold 4 `record-*` verdict writers → 1; merge `env-diff`/`ruleset-diff`; split
   `context-pack.js` (855 lines) and `scaffold-render.js`.
 
-### P3 — Canary tests for preventive gates → make the value meter decisive
+### P3 — Canary tests for preventive gates → make the value meter decisive ✅ DONE
 
 The `control-budget` ratchet stops *net* growth, but the removal half is blind: the meter cannot
 distinguish a preventive gate that is a working deterrent (blocks 0 because nothing bad reached it)
