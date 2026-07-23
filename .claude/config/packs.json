@@ -161,7 +161,6 @@
         "ask-codebase",
         "context-retrieve",
         "context-store",
-        "impact-scope",
         "modularity-pack",
         "naming-clusters",
         "nav-brownfield-maps",
@@ -179,7 +178,6 @@
       ],
       "lib": [
         "drift",
-        "impact-scope",
         "modularity-pack",
         "naming-clusters",
         "verbose-command"
@@ -238,6 +236,7 @@
       "agent": [],
       "script": [
         "at-first-gate",
+        "impact-scope",
         "legacy-discipline-gate",
         "record-at-red",
         "record-coverage-verdict",
@@ -249,6 +248,7 @@
         "constitution-invariants",
         "coverage-preflight",
         "gates-legacy",
+        "impact-scope",
         "legacy-bite-check",
         "legacy-discipline-relatedness",
         "reuse-scout",
