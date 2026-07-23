@@ -26,6 +26,54 @@ function srcFile(projectDir, rel, content) {
   return p;
 }
 
+// --- bite ledger ---
+// Every session-cadence check records ran/blocked/elapsed. The BLOCK path is the one
+// that matters and the one that is easy to get wrong: block() exits the process
+// instead of throwing, so the outcome has to be written on the way out.
+
+function ledger(projectDir) {
+  const { readOutcomes } = require('../.claude/hooks/lib/sensor-outcomes');
+  return readOutcomes(projectDir);
+}
+
+test('a passing write records one non-blocked outcome per check', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  const file = srcFile(projectDir, 'src/ok.py', 'x = 1\n');
+  const res = await runHook(projectDir, HOOK, {
+    tool_name: 'Write', tool_input: { file_path: file, content: 'x = 2\n' },
+  }, ENV);
+  assert.strictEqual(res.status, 0, res.stdout);
+  const rows = ledger(projectDir);
+  assert.ok(rows.length > 0, 'the ledger must fill on an ordinary write');
+  assert.ok(rows.every((r) => r.ran === true && r.blocked === false));
+  assert.ok(rows.every((r) => r.surface === 'session'), 'session cadence must be attributed');
+  assert.ok(rows.every((r) => Number.isFinite(r.elapsed_ms)), 'cost must be recorded');
+});
+
+test('a BLOCKED write records blocked=true against the check that blocked', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  const file = srcFile(projectDir, 'src/secret.py', '');
+  const res = await runHook(projectDir, HOOK, {
+    tool_name: 'Write', tool_input: { file_path: file, content: `KEY = "${FAKE_AWS_KEY}"\n` },
+  }, ENV);
+  assert.strictEqual(res.status, 2, 'the write must be blocked');
+  const blocked = ledger(projectDir).filter((r) => r.blocked);
+  assert.strictEqual(blocked.length, 1, 'exactly the blocking check is recorded as blocked');
+  assert.strictEqual(blocked[0].sensor, 'secret-scan-write');
+  assert.strictEqual(blocked[0].surface, 'session');
+});
+
+test('checks that ran before the blocking one are still recorded as passing', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  const file = srcFile(projectDir, 'src/secret.py', '');
+  await runHook(projectDir, HOOK, {
+    tool_name: 'Write', tool_input: { file_path: file, content: `KEY = "${FAKE_AWS_KEY}"\n` },
+  }, ENV);
+  const rows = ledger(projectDir);
+  assert.ok(rows.some((r) => r.sensor === 'write-scope' && r.blocked === false),
+    'an early passing check must not be lost when a later one blocks');
+});
+
 // --- scope ---
 
 test('blocks a write outside the project directory', async () => {

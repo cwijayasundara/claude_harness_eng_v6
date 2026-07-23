@@ -20,10 +20,36 @@ const { FUNC_HARD_LIMIT, fileLimitFor, newlyOversized, newlyOverFileLimit } = re
 const { missingTest } = require('./lib/tdd');
 const { isHarnessRepo, machineryViolation } = require('./lib/trust-boundary');
 const { prefixCacheViolation, prefixCacheBlockMessage } = require('./lib/prefix-cache');
+const { recordOutcome } = require('./lib/sensor-outcomes');
 // legacy-discipline pack: absent = that discipline is not configured here.
 const coveragePreflightMod = optionalRequire(path.join(__dirname, 'lib', 'coverage-preflight.js'));
 
+// Which check is running, so block() can attribute the block to it. block() exits
+// the process rather than throwing, so the outcome has to be written on the way out —
+// a try/catch around the check would never see it.
+let current = { sensor: null, projectDir: null, target: null, started: 0 };
+
+// Run one named check with bite-ledger instrumentation. Every session-cadence check
+// records ran/blocked/elapsed, which is what makes the control set subtractable: a
+// check that never fires, or fires constantly without catching anything, becomes
+// visible rather than assumed useful.
+function runCheck(sensor, projectDir, target, fn) {
+  current = { sensor, projectDir, target, started: Date.now() };
+  fn();
+  recordOutcome(projectDir, {
+    sensor, ran: true, blocked: false, surface: 'session', target,
+    elapsedMs: Date.now() - current.started,
+  });
+  current = { sensor: null, projectDir: null, target: null, started: 0 };
+}
+
 function block(message) {
+  if (current.sensor) {
+    recordOutcome(current.projectDir, {
+      sensor: current.sensor, ran: true, blocked: true, surface: 'session',
+      target: current.target, elapsedMs: Date.now() - current.started,
+    });
+  }
   process.stdout.write(message);
   process.stderr.write(message); // exit-2 feedback channel for Claude Code
   process.exit(2);
@@ -125,21 +151,26 @@ runHook('pre-write-gate', (input) => {
   const ext = path.extname(filePath).toLowerCase();
   const inserted = insertedContent(toolName, ti);
 
-  checkScope(projectDir, path.resolve(filePath));
-  checkTrustBoundary(realResolve(projectDir), realResolve(filePath));
-  checkPrefixCache(realResolve(projectDir), realResolve(filePath));
-  if (isProtectedEnvFile(filePath)) {
-    block(`BLOCKED: Cannot modify ${path.basename(filePath)} — environment files contain real secrets. Edit manually.\nFix: Edit .env.example instead for documentation, or edit .env manually outside Claude.\n`);
-  }
+  const rel = path.relative(projectDir, path.resolve(filePath));
+  runCheck('write-scope', projectDir, rel, () => checkScope(projectDir, path.resolve(filePath)));
+  runCheck('trust-boundary', projectDir, rel, () => checkTrustBoundary(realResolve(projectDir), realResolve(filePath)));
+  runCheck('prefix-cache', projectDir, rel, () => checkPrefixCache(realResolve(projectDir), realResolve(filePath)));
+  runCheck('protected-env-file', projectDir, rel, () => {
+    if (isProtectedEnvFile(filePath)) {
+      block(`BLOCKED: Cannot modify ${path.basename(filePath)} — environment files contain real secrets. Edit manually.\nFix: Edit .env.example instead for documentation, or edit .env manually outside Claude.\n`);
+    }
+  });
   if (inserted) {
-    checkSecrets(filePath, inserted, projectDir);
-    checkPatterns(projectDir, filePath.replace(/\\/g, '/'), inserted);
+    runCheck('secret-scan-write', projectDir, rel, () => checkSecrets(filePath, inserted, projectDir));
+    runCheck('security-patterns', projectDir, rel, () => checkPatterns(projectDir, filePath.replace(/\\/g, '/'), inserted));
   }
-  checkLength(toolName, ti, filePath, ext);
-  checkTdd(projectDir, filePath);
+  runCheck('length-caps', projectDir, rel, () => checkLength(toolName, ti, filePath, ext));
+  runCheck('tdd-test-first', projectDir, rel, () => checkTdd(projectDir, filePath));
   if (coveragePreflightMod && TRACKED_EXTS.has(ext) && !isSkippedPath(filePath)) {
-    const pf = coveragePreflightMod.coveragePreflight(projectDir, toolName, ti, path.resolve(filePath));
-    if (pf.decision === 'block') block(pf.message);
-    if (pf.decision === 'note') process.stdout.write(pf.message);
+    runCheck('coverage-preflight', projectDir, rel, () => {
+      const pf = coveragePreflightMod.coveragePreflight(projectDir, toolName, ti, path.resolve(filePath));
+      if (pf.decision === 'block') block(pf.message);
+      if (pf.decision === 'note') process.stdout.write(pf.message);
+    });
   }
 });

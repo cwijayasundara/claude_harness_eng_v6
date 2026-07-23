@@ -18,6 +18,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const { recordOutcome } = require('../hooks/lib/sensor-outcomes');
 
 const REGISTRY_REL = path.join('.claude', 'config', 'gate-checks.json');
 const GRAPH_REL = path.join('specs', 'brownfield', 'code-graph.json');
@@ -95,8 +96,15 @@ function runChecks(checks, projectDir, { run = null, changedFiles = [] } = {}) {
     if (!fs.existsSync(scriptPath)) {
       return { ...base, status: 'skipped', detail: `"${c.pack}" pack not installed (${c.script} absent)` };
     }
+    const started = Date.now();
     const { code, output } = exec(scriptPath, argvFor(c, changedFiles));
     const status = statusFor(code, c.blocking);
+    // Bite ledger: every check records ran/blocked/elapsed so a check that never
+    // fires — or fires constantly without catching anything — becomes visible.
+    recordOutcome(projectDir, {
+      sensor: c.id, ran: true, blocked: status === 'blocked',
+      surface: 'integration', elapsedMs: Date.now() - started,
+    });
     const detail = status === 'passed' ? '' : (c.remediation || output.slice(0, 400));
     return { ...base, status, detail };
   });

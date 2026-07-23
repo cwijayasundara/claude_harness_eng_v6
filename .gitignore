@@ -83,3 +83,6 @@ test/e2e/screenshots/
 # Superpowers SDD execution scratch (task briefs/reports, progress, review diffs)
 # generated while implementing a plan. The durable design lives in docs/superpowers/.
 .superpowers/
+
+# Bite ledger: per-machine sensor outcomes, regenerated continuously.
+.claude/state/sensor-outcomes.jsonl

@@ -6,6 +6,31 @@ const { recordOutcome, readOutcomes, OUTCOMES_REL } = require('../.claude/hooks/
 
 function tmp() { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'so-')); fs.mkdirSync(path.join(d, '.claude/state'), { recursive: true }); return d; }
 
+// The ledger is what makes the control set subtractable, so the fields the value
+// meter depends on — surface and cost — have to survive a round-trip.
+test('recordOutcome persists surface, elapsed_ms and target', () => {
+  const d = tmp();
+  recordOutcome(d, { sensor: 'length-caps', ran: true, blocked: true, surface: 'session', elapsedMs: 12.6, target: 'src/a.js' });
+  const [row] = readOutcomes(d);
+  assert.strictEqual(row.surface, 'session');
+  assert.strictEqual(row.elapsed_ms, 13, 'elapsed is rounded, not dropped');
+  assert.strictEqual(row.target, 'src/a.js');
+  assert.strictEqual(row.blocked, true);
+});
+
+test('recordOutcome omits optional fields rather than writing nulls', () => {
+  const d = tmp();
+  recordOutcome(d, { sensor: 'x', ran: true, blocked: false });
+  const [row] = readOutcomes(d);
+  assert.ok(!('surface' in row) && !('elapsed_ms' in row) && !('target' in row));
+});
+
+test('a logging failure never propagates to the caller', () => {
+  // The ledger must not be able to break a gate: a sensor failing because its
+  // telemetry failed would be strictly worse than having no telemetry.
+  assert.doesNotThrow(() => recordOutcome('/nonexistent/path/that/cannot/be/made', { sensor: 'x', ran: true, blocked: false }));
+});
+
 test('recordOutcome appends a JSONL line readable by readOutcomes', () => {
   const d = tmp();
   recordOutcome(d, { sensor: 'layer-imports', ran: true, blocked: false });

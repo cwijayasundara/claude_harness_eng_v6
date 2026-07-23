@@ -3,13 +3,19 @@
 'use strict';
 
 // CLI: node .claude/scripts/sensor-value-report.js [--min-runs N] [--json]
-// Makes the biting-meta value meter CONSUMABLE (harness-simplification P0 rec #2).
-// recordOutcome already fills .claude/state/sensor-outcomes.jsonl at every
-// commit-gate run (gate-registry.js), but nothing turned that into a cut list.
-// This ranks each catalogued commit gate by how often it RAN and how often it
-// BLOCKED, and names the ones that have never blocked (candidate shelfware) so
-// /retro can propose retiring them — the counter-force to accretion needs a
-// nomination surface, not just a budget ceiling.
+//
+// The value meter: turns the bite ledger into a ranked cut list. A control set can
+// only shrink if there is evidence about which controls earn their place, and the
+// two facts that matter are whether a control ever FIRES and whether it ever CATCHES
+// anything. A third — how long it takes — is what makes "correct but not worth it"
+// visible.
+//
+// It reports every sensor that appears in the ledger, not only the commit-gate
+// catalog. That widening is the point: the commit hook is deliberately not installed
+// in the harness's own repo (see check-git-hooks.js), so for three months the ledger
+// stayed empty and this report could never produce a list. The session-cadence gates
+// are the ones that actually fire — and the ones that produce false blocks.
+//
 // Report-only: never blocks, never exits non-zero on findings.
 
 const path = require('path');
@@ -17,42 +23,80 @@ const { readOutcomes } = require('../hooks/lib/sensor-outcomes');
 const { GATE_CATALOG } = require('../hooks/lib/gate-registry');
 
 const REPO = path.resolve(__dirname, '..', '..');
+const SLOW_MS = 500;
 
 function tally(outcomes) {
   const stats = new Map();
   for (const o of outcomes) {
-    const s = stats.get(o.sensor) || { ran: 0, blocked: 0 };
+    const s = stats.get(o.sensor) || { ran: 0, blocked: 0, totalMs: 0, timed: 0, surfaces: new Set() };
     if (o.ran) s.ran += 1;
     if (o.blocked) s.blocked += 1;
+    if (Number.isFinite(o.elapsed_ms)) { s.totalMs += o.elapsed_ms; s.timed += 1; }
+    if (o.surface) s.surfaces.add(o.surface);
     stats.set(o.sensor, s);
   }
   return stats;
 }
 
+// Union of the commit catalog and everything the ledger has seen, so a sensor that
+// never ran is still listed — never-ran is a finding, not an absence.
+function sensorIds(stats) {
+  const ids = new Set(GATE_CATALOG.map((g) => g.id));
+  for (const id of stats.keys()) ids.add(id);
+  return [...ids].sort();
+}
+
+function toRow(id, stats) {
+  const s = stats.get(id) || { ran: 0, blocked: 0, totalMs: 0, timed: 0, surfaces: new Set() };
+  return {
+    id,
+    ran: s.ran,
+    blocked: s.blocked,
+    avg_ms: s.timed ? Math.round(s.totalMs / s.timed) : null,
+    surfaces: [...s.surfaces].sort(),
+  };
+}
+
 function classify(stats) {
-  const rows = GATE_CATALOG.map((g) => {
-    const s = stats.get(g.id) || { ran: 0, blocked: 0 };
-    return { id: g.id, ran: s.ran, blocked: s.blocked };
-  });
+  const rows = sensorIds(stats).map((id) => toRow(id, stats));
   return {
     rows,
     neverRan: rows.filter((r) => r.ran === 0).map((r) => r.id),
     neverBlocked: rows.filter((r) => r.ran > 0 && r.blocked === 0).map((r) => r.id),
+    slow: rows.filter((r) => r.avg_ms !== null && r.avg_ms >= SLOW_MS).map((r) => `${r.id} (${r.avg_ms}ms)`),
+    // A control that blocks on most runs is either catching a real systemic problem
+    // or false-blocking. The ledger cannot tell a correct block from a wrong one, so
+    // this is surfaced for a human rather than inferred.
+    highBlock: rows.filter((r) => r.ran >= 5 && r.blocked / r.ran > 0.5)
+      .map((r) => `${r.id} (${r.blocked}/${r.ran})`),
   };
+}
+
+function insufficient(totalRuns, minRuns) {
+  return `sensor-value-report: INSUFFICIENT DATA — ${totalRuns} recorded outcome(s), need >= ${minRuns}.\n` +
+    'Sensors record at every write (pre-write-gate), every /gate check run, and every\n' +
+    'commit where the git hook is installed. No cut list yet.\n';
+}
+
+function renderRows(rows) {
+  return rows.map((r) => {
+    const where = r.surfaces.length ? ` [${r.surfaces.join(',')}]` : '';
+    const cost = r.avg_ms === null ? '' : ` avg=${r.avg_ms}ms`;
+    return `  ${r.id}: ran=${r.ran} blocked=${r.blocked}${cost}${where}`;
+  });
 }
 
 function render(outcomes, minRuns) {
   const totalRuns = outcomes.length;
-  const { rows, neverRan, neverBlocked } = classify(tally(outcomes));
-  if (totalRuns < minRuns) {
-    return `sensor-value-report: INSUFFICIENT DATA — ${totalRuns} recorded outcome(s), need >= ${minRuns}.\n` +
-      'The commit gate must run over real history (git pre-commit -> runPreCommit) before\n' +
-      'idle-sensor nominations are trustworthy. No cut list yet.\n';
-  }
-  const lines = [`sensor-value-report: ${totalRuns} recorded outcomes across ${GATE_CATALOG.length} commit gates.`];
-  lines.push('', 'NEVER FIRED (never ran — check wiring or retire): ' + (neverRan.join(', ') || 'none'));
-  lines.push('NEVER BLOCKED (ran but never caught anything — candidate shelfware for /retro): ' + (neverBlocked.join(', ') || 'none'));
-  lines.push('', ...rows.map((r) => `  ${r.id}: ran=${r.ran} blocked=${r.blocked}`));
+  const c = classify(tally(outcomes));
+  if (totalRuns < minRuns) return insufficient(totalRuns, minRuns);
+
+  const lines = [`sensor-value-report: ${totalRuns} recorded outcomes across ${c.rows.length} sensors.`];
+  lines.push('', 'NEVER FIRED (never ran — check wiring or retire): ' + (c.neverRan.join(', ') || 'none'));
+  lines.push('NEVER BLOCKED (ran but never caught anything — candidate shelfware): ' + (c.neverBlocked.join(', ') || 'none'));
+  lines.push(`SLOW (>=${SLOW_MS}ms average — correct but costly): ` + (c.slow.join(', ') || 'none'));
+  lines.push('BLOCKS OFTEN (>50% of runs — real systemic issue, or false-blocking): ' + (c.highBlock.join(', ') || 'none'));
+  lines.push('', ...renderRows(c.rows));
   return lines.join('\n') + '\n';
 }
 
