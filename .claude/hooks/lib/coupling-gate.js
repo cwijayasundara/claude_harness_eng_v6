@@ -23,7 +23,7 @@
 // so a core install has nothing to rank and a guarded load degrades to "no unstable hubs"
 // (the empty, non-blocking result) instead of crashing at require.
 let driftLib = null;
-try { driftLib = require('./drift'); } catch (_) { /* brownfield pack not installed */ }
+try { driftLib = require('./drift'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; /* else: brownfield pack absent */ }
 const { gateDecision } = require('./cycle-gate');
 
 function unstableHubKeys(graph) {

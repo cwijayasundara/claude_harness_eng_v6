@@ -31,7 +31,7 @@ const path = require('path');
 // be in — so a guarded load keeps this script importable there, and buildMarker degrades
 // to an empty unstable set if ever reached without it.
 let driftLib = null;
-try { driftLib = require('../hooks/lib/drift'); } catch (_) { /* brownfield pack not installed */ }
+try { driftLib = require('../hooks/lib/drift'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; /* else: brownfield pack absent */ }
 
 const DEFAULT_GRAPH = path.join('specs', 'brownfield', 'code-graph.json');
 const DEFAULT_OUT = path.join('.claude', 'state', 'modularity-review-marker.json');

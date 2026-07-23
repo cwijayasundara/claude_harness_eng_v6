@@ -19,7 +19,7 @@ const path = require('path');
 // install has no code-graph to drift against, and dependency-CVE drift is still covered by
 // /gate's security scan.
 let drift = null;
-try { drift = require('../hooks/lib/drift'); } catch (_) { /* brownfield pack not installed */ }
+try { drift = require('../hooks/lib/drift'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; /* else: brownfield pack absent */ }
 const canvas = require('../hooks/lib/canvas');
 const { runDeps } = require('./security-scan');
 

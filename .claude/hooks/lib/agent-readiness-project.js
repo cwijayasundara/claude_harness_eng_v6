@@ -19,7 +19,7 @@ const { STALE_MARK } = require('./stale-stamp');
 // code-graph, the only state a brownfield-less install can be in, so a guarded load keeps
 // this module importable there instead of crashing at require.
 let driftLib = null;
-try { driftLib = require('./drift'); } catch (_) { /* brownfield pack not installed */ }
+try { driftLib = require('./drift'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; /* else: brownfield pack absent */ }
 
 // --- Code Quality / Modularity freshness (G19) ----------------------------
 

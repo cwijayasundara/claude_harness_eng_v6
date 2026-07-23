@@ -28,7 +28,7 @@ const { buildMaps } = require('./nav-brownfield-maps');
 // but not it. It backs only the `bench` subcommand, so guard the load and degrade just that
 // one command instead of crashing nav-query's whole dispatch at require.
 let navBench = null;
-try { navBench = require('./nav-bench'); } catch (_) { /* dist pack not installed */ }
+try { navBench = require('./nav-bench'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; /* else: dist pack absent */ }
 
 function parseArgs(argv) {
   const out = { _: [], flags: {} };
