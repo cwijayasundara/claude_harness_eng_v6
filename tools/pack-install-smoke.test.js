@@ -33,7 +33,37 @@ function kernelOnly() {
   return out;
 }
 
+const CORE_PACKS = ['planning', 'verification', 'legacy-discipline', 'telemetry', 'scaffold'];
+let coreTree = null;
+function coreProfile() {
+  if (coreTree) return coreTree;
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'core-profile-'));
+  const sel = resolveSelection(loadPartition(), CORE_PACKS);
+  materialize(out, [...ALWAYS, ...filesFor(sel)]);
+  coreTree = out;
+  return out;
+}
+
 const node = (args, opts = {}) => spawnSync('node', args, { encoding: 'utf8', timeout: 60000, ...opts });
+
+// A composed `core` install (no brownfield pack) must still load its own modules. These
+// core-profile units degrade when the code-graph is absent, but they hard-required the
+// brownfield code that computes over it at module top-level — so the install crashed on
+// require() before the degradation could run. Each entry here is a resolved profile-break
+// (see tools/check-partition.js PROFILE-BREAKING); grow the list as more are fixed.
+const CORE_MODULES_THAT_MUST_LOAD = [
+  ['hooks', 'lib', 'agent-readiness-project.js'],
+];
+
+test('every fixed core-profile module loads without the brownfield pack', () => {
+  const out = coreProfile();
+  for (const parts of CORE_MODULES_THAT_MUST_LOAD) {
+    const p = path.join(out, '.claude', ...parts);
+    const r = node(['-e', `require(${JSON.stringify(p)})`]);
+    assert.strictEqual(r.status, 0,
+      `${parts.join('/')} must load in a core install: ${(r.stderr || '').split('\n').find((l) => l.includes('Error')) || ''}`);
+  }
+});
 
 test('every kernel hook loads with no pack installed', () => {
   const out = kernelOnly();

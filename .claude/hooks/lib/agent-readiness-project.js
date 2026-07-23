@@ -12,8 +12,14 @@
 const fs = require('fs');
 const path = require('path');
 const { readJsonSafe, pillar, bool, defaultToolCheck } = require('./agent-readiness-shared');
-const { hubsForStabilityCheck, withModularityStaleness } = require('./drift');
 const { STALE_MARK } = require('./stale-stamp');
+
+// drift.js ships in the brownfield pack; a core (greenfield) install omits it. The only
+// consumer here — modularityFreshnessPillar — already returns early when there is no
+// code-graph, the only state a brownfield-less install can be in, so a guarded load keeps
+// this module importable there instead of crashing at require.
+let driftLib = null;
+try { driftLib = require('./drift'); } catch (_) { /* brownfield pack not installed */ }
 
 // --- Code Quality / Modularity freshness (G19) ----------------------------
 
@@ -36,11 +42,13 @@ function noMarkerModularity(currentHubs) {
 
 function modularityFreshnessPillar(root) {
   const graph = readJsonSafe(path.join(root, 'specs', 'brownfield', 'code-graph.json'));
-  if (!graph) return noGraphModularity();
-  const currentHubs = hubsForStabilityCheck(graph);
+  // No graph is the only state a core install reaches; !driftLib is its impossible
+  // sibling (a graph but no brownfield code) — both degrade to the same "no baseline yet".
+  if (!graph || !driftLib) return noGraphModularity();
+  const currentHubs = driftLib.hubsForStabilityCheck(graph);
   const marker = readJsonSafe(path.join(root, '.claude', 'state', 'modularity-review-marker.json'));
   if (!marker) return noMarkerModularity(currentHubs);
-  const stale = withModularityStaleness({}, marker.unstableHubIds, currentHubs).modularityStaleHubs;
+  const stale = driftLib.withModularityStaleness({}, marker.unstableHubIds, currentHubs).modularityStaleHubs;
   if (stale.length > 0) {
     return pillar('modularity-freshness', 'Code Quality / Modularity Freshness', 'partial',
       `${stale.length} hub(s) went unstable since the last review: ${stale.join(', ')}.`,
