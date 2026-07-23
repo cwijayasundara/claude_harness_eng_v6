@@ -139,8 +139,20 @@ test('hasSymbolRecords is true only for an ast-producer graph with real symbols'
 
 // --- run() CLI (injected root/exec, no subprocess) ----------------------------
 
-function makeProject({ graph, receipts } = {}) {
+// coverageTooling declares whether the project could produce a coverage verdict at all.
+// The gate skips when it could not — demanding proof of a discipline the project cannot
+// perform is incoherent — so the fixtures that test the BLOCK path must declare a runner
+// explicitly, rather than depending on what the machine running the suite has installed.
+function makeProject({ graph, receipts, coverageTooling = true } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'legacy-discipline-'));
+  if (coverageTooling) {
+    fs.writeFileSync(
+      path.join(dir, 'package.json'),
+      JSON.stringify({ name: 'fixture', devDependencies: { nyc: '^15.0.0' } })
+    );
+    // fixtures stage .py files, so the python side must be declared too
+    fs.writeFileSync(path.join(dir, 'requirements.txt'), 'pytest-cov==5.0.0\n');
+  }
   if (graph !== null) {
     const p = path.join(dir, 'specs', 'brownfield', 'code-graph.json');
     fs.mkdirSync(path.dirname(p), { recursive: true });

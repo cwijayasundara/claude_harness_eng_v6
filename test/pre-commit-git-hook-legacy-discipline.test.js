@@ -32,6 +32,14 @@ function installLegacyDisciplineScripts(projectDir) {
       path.join(dir, name)
     );
   }
+  // The gate demands a coverage verdict, so it skips a project that could never
+  // produce one. These fixtures exercise the BLOCK path, so they must declare a
+  // coverage runner — stated explicitly rather than inherited from the machine.
+  fs.writeFileSync(path.join(projectDir, 'requirements.txt'), 'pytest-cov==5.0.0\n');
+  fs.writeFileSync(
+    path.join(projectDir, 'package.json'),
+    JSON.stringify({ name: 'fixture', devDependencies: { nyc: '^15.0.0' } })
+  );
 }
 
 function writeGraph(projectDir, graph) {

@@ -177,6 +177,22 @@ function noGraphVerdict(root, note) {
   return 0;
 }
 
+// The receipt this gate demands comes from coverage_map.py, which needs coverage data.
+// A project with no coverage runner for the edited language cannot produce that data,
+// so the discipline cannot be PERFORMED — and demanding proof it ran is incoherent,
+// not strict. Same reasoning as coverage-preflight's tooling check; blocking on
+// evidence the project cannot generate is an unsatisfiable wall, not a gate.
+function coverageToolingMissing(root, modified) {
+  if (modified.length === 0) return false;
+  let canProduceCoverage;
+  try {
+    ({ canProduceCoverage } = require(path.join(__dirname, '..', 'hooks', 'lib', 'coverage-preflight')));
+  } catch (_) {
+    return false; // probe unavailable -> keep the historical strict behaviour
+  }
+  return !modified.some((f) => canProduceCoverage(root, f));
+}
+
 // Returns {modified, allStaged, changedRanges} from CLI args, or null on a
 // usage error. --files has no git diff plumbing, so changedRanges is null
 // (unknown -> whole-file fallback, disclosed in the file header).
@@ -237,6 +253,16 @@ function run(argv, root, deps) {
     return 2;
   }
 
+  return evaluate(root, sets, deps);
+}
+
+function evaluate(root, sets, deps) {
+  if (coverageToolingMissing(root, sets.modified)) {
+    return noGraphVerdict(root,
+      'no coverage runner in this project for the staged language(s) — the coverage ' +
+      'verdict this gate requires cannot be produced, so the discipline is not checked. ' +
+      'Add a coverage runner to enforce it.');
+  }
   const verdict = checkLegacyDiscipline(
     sets.modified,
     readReceipts(root),
@@ -250,6 +276,7 @@ function run(argv, root, deps) {
 }
 
 module.exports = {
+  coverageToolingMissing,
   checkLegacyDiscipline,
   verdictsByFile,
   readReceipts,

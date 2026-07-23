@@ -94,7 +94,7 @@ function runPreCommit(projectDir, opts = {}) {
   for (const g of selectGates(tier, { withoutSourceOnly: true })) {
     setFailContext({ tier, currentSensor: g.id, projectDir });
     g.run(ctx);
-    recordOutcome(projectDir, { sensor: g.id, ran: true, blocked: false });
+    recordOutcome(projectDir, { sensor: g.id, ran: true, blocked: false, surface: 'commit' });
   }
 
   // Historical source-only exit (after secrets / amendment / test-deletion)
@@ -105,7 +105,7 @@ function runPreCommit(projectDir, opts = {}) {
     if (g.runsWithoutSource) continue;
     setFailContext({ tier, currentSensor: g.id, projectDir });
     g.run(ctx);
-    recordOutcome(projectDir, { sensor: g.id, ran: true, blocked: false });
+    recordOutcome(projectDir, { sensor: g.id, ran: true, blocked: false, surface: 'commit' });
   }
 
   runCommitCustomSensors(projectDir);
@@ -130,7 +130,7 @@ function runCommitCustomSensors(projectDir) {
       // so it is the sole recorder on the block path (no double-write).
       fail(`\nBLOCKED: custom sensor "${s.id}" — ${s.result.summary}\n`);
     } else {
-      recordOutcome(projectDir, { sensor: `custom:${s.id}`, ran: true, blocked: false });
+      recordOutcome(projectDir, { sensor: `custom:${s.id}`, ran: true, blocked: false, surface: 'commit' });
     }
   }
 }

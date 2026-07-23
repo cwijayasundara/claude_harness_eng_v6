@@ -86,6 +86,13 @@ function checkLegacyDisciplineGate(ctx) {
   }
   if (!gate.hasSymbolRecords(graph)) return;
   const { modified, changedRanges, mapText } = computeLegacyDisciplineInputs(projectDir, gate);
+  // Same guard the CLI applies: this gate demands a coverage verdict, so a project
+  // that cannot produce coverage for the staged language cannot satisfy it. Both
+  // entry points share one implementation rather than drifting apart.
+  if (gate.coverageToolingMissing && gate.coverageToolingMissing(projectDir, modified)) {
+    noteSkip('legacy-discipline', 'no coverage runner for the staged language — the required verdict cannot be produced');
+    return;
+  }
   const verdict = gate.checkLegacyDiscipline(modified, gate.readReceipts(projectDir), staged, changedRanges, mapText);
   if (!verdict.pass) { reportLegacyDisciplineFailure(verdict); return; }
   for (const n of verdict.relatednessNotes || []) process.stdout.write(`note: legacy-discipline — ${n}\n`);

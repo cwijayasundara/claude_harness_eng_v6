@@ -114,10 +114,21 @@ function hasJsCoverageTooling(projectDir) {
   return JS_COVERAGE_BINS.some((bin) => Object.prototype.hasOwnProperty.call(deps, bin));
 }
 
+// Declaration-based, not a subprocess probe: "does this project declare a coverage
+// runner", answered from files. Executing `python3 -c "import coverage"` made the
+// answer depend on what the machine happened to have installed, which is both
+// non-deterministic across environments and wrong — a globally-importable coverage
+// module says nothing about whether THIS project is set up to produce coverage.
+const PY_COVERAGE_MANIFESTS = ['pyproject.toml', 'requirements.txt', 'requirements-dev.txt', 'setup.cfg', 'tox.ini'];
+const PY_COVERAGE_RE = /\b(pytest-cov|coverage)\b/;
+
 function hasPyCoverageTooling(projectDir) {
-  if (!fs.existsSync(path.join(projectDir, SCRIPT_REL))) return false;
-  const probe = spawnSync('python3', ['-c', 'import coverage'], { encoding: 'utf8', timeout: 5000 });
-  return !probe.error && probe.status === 0;
+  for (const rel of PY_COVERAGE_MANIFESTS) {
+    try {
+      if (PY_COVERAGE_RE.test(fs.readFileSync(path.join(projectDir, rel), 'utf8'))) return true;
+    } catch (_) { /* absent manifest is not a declaration */ }
+  }
+  return false;
 }
 
 // Can this project produce coverage FOR THIS FILE? A hard block is only fair when the

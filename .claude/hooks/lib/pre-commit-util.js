@@ -24,7 +24,7 @@ function getFailContext() {
 
 function fail(message) {
   if (failContext.currentSensor && failContext.projectDir) {
-    recordOutcome(failContext.projectDir, { sensor: failContext.currentSensor, ran: true, blocked: true });
+    recordOutcome(failContext.projectDir, { sensor: failContext.currentSensor, ran: true, blocked: true, surface: 'commit' });
   }
   const msg = ensureTierFooter(message, failContext.tier);
   process.stdout.write(msg);
