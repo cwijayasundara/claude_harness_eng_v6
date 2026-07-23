@@ -13,7 +13,13 @@
 
 const fs = require('fs');
 const path = require('path');
-const drift = require('../hooks/lib/drift');
+// drift.js ships in the brownfield pack (it reaches into code-map to compute over the
+// code-graph). A core install ships this monitor but not that pack; guard the load so the
+// script is importable, and degrade the whole run when it is absent — a greenfield core
+// install has no code-graph to drift against, and dependency-CVE drift is still covered by
+// /gate's security scan.
+let drift = null;
+try { drift = require('../hooks/lib/drift'); } catch (_) { /* brownfield pack not installed */ }
 const canvas = require('../hooks/lib/canvas');
 const { runDeps } = require('./security-scan');
 
@@ -80,6 +86,13 @@ function currentMetrics(graph, prev) {
 }
 
 function main() {
+  if (!drift) {
+    process.stderr.write(
+      'drift monitor: the brownfield pack (code-graph tooling) is not installed — ' +
+      'nothing to monitor. Run from a brownfield/full install to enable drift tracking.\n'
+    );
+    process.exit(0);
+  }
   const graph = readJson(GRAPH);
   if (!graph) {
     process.stderr.write(

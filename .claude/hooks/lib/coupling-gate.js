@@ -18,11 +18,16 @@
 // fan-in in the top-25-truncated metrics.hubs list is still caught by this
 // ratchet, falling back to the prior capped-hubs behavior when absent.
 
-const { hubsForStabilityCheck } = require('./drift');
+// drift.js ships in the brownfield pack; a core install omits it. The coupling ratchet
+// reads unstable hubs from the code-graph, which only exists once brownfield has run —
+// so a core install has nothing to rank and a guarded load degrades to "no unstable hubs"
+// (the empty, non-blocking result) instead of crashing at require.
+let driftLib = null;
+try { driftLib = require('./drift'); } catch (_) { /* brownfield pack not installed */ }
 const { gateDecision } = require('./cycle-gate');
 
 function unstableHubKeys(graph) {
-  return hubsForStabilityCheck(graph);
+  return driftLib ? driftLib.hubsForStabilityCheck(graph) : [];
 }
 
 module.exports = { unstableHubKeys, gateDecision };

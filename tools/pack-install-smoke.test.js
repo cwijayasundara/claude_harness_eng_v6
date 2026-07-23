@@ -53,6 +53,9 @@ const node = (args, opts = {}) => spawnSync('node', args, { encoding: 'utf8', ti
 // (see tools/check-partition.js PROFILE-BREAKING); grow the list as more are fixed.
 const CORE_MODULES_THAT_MUST_LOAD = [
   ['hooks', 'lib', 'agent-readiness-project.js'],
+  ['hooks', 'lib', 'coupling-gate.js'],
+  ['scripts', 'record-modularity-review.js'],
+  ['scripts', 'drift-report.js'],
 ];
 
 test('every fixed core-profile module loads without the brownfield pack', () => {
@@ -62,6 +65,34 @@ test('every fixed core-profile module loads without the brownfield pack', () => 
     const r = node(['-e', `require(${JSON.stringify(p)})`]);
     assert.strictEqual(r.status, 0,
       `${parts.join('/')} must load in a core install: ${(r.stderr || '').split('\n').find((l) => l.includes('Error')) || ''}`);
+  }
+});
+
+// nav-query ships in the brownfield pack and hard-loaded nav-bench, which ships in dist.
+// A brownfield install (core + brownfield, no dist) must still load nav-query's dispatch;
+// only the `bench` subcommand degrades when dist is absent.
+const BROWNFIELD_PACKS = [...CORE_PACKS, 'brownfield'];
+let brownfieldTree = null;
+function brownfieldProfile() {
+  if (brownfieldTree) return brownfieldTree;
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'brownfield-profile-'));
+  const sel = resolveSelection(loadPartition(), BROWNFIELD_PACKS);
+  materialize(out, [...ALWAYS, ...filesFor(sel)]);
+  brownfieldTree = out;
+  return out;
+}
+
+const BROWNFIELD_MODULES_THAT_MUST_LOAD = [
+  ['scripts', 'nav-query.js'],
+];
+
+test('every fixed brownfield-profile module loads without the dist pack', () => {
+  const out = brownfieldProfile();
+  for (const parts of BROWNFIELD_MODULES_THAT_MUST_LOAD) {
+    const p = path.join(out, '.claude', ...parts);
+    const r = node(['-e', `require(${JSON.stringify(p)})`]);
+    assert.strictEqual(r.status, 0,
+      `${parts.join('/')} must load in a brownfield install: ${(r.stderr || '').split('\n').find((l) => l.includes('Error')) || ''}`);
   }
 });
 

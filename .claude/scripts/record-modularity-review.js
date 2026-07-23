@@ -26,7 +26,12 @@
 
 const fs = require('fs');
 const path = require('path');
-const { hubsForStabilityCheck } = require('../hooks/lib/drift');
+// drift.js ships in the brownfield pack; a core install omits it. run() already exits
+// before buildMarker whenever there is no code-graph — the only state a core install can
+// be in — so a guarded load keeps this script importable there, and buildMarker degrades
+// to an empty unstable set if ever reached without it.
+let driftLib = null;
+try { driftLib = require('../hooks/lib/drift'); } catch (_) { /* brownfield pack not installed */ }
 
 const DEFAULT_GRAPH = path.join('specs', 'brownfield', 'code-graph.json');
 const DEFAULT_OUT = path.join('.claude', 'state', 'modularity-review-marker.json');
@@ -75,7 +80,7 @@ function reviewedHubIds(graph, currentUnstableIds, scopePaths) {
 // overwrite, since "reviewed" then covers every currently-unstable hub.
 function buildMarker(graph, now, opts) {
   const o = opts || {};
-  const currentUnstable = hubsForStabilityCheck(graph);
+  const currentUnstable = driftLib ? driftLib.hubsForStabilityCheck(graph) : [];
   const reviewed = reviewedHubIds(graph, currentUnstable, o.scopePaths);
   const prevIds = new Set((o.prevMarker && o.prevMarker.unstableHubIds) || []);
   const survivors = currentUnstable.filter((id) => reviewed.has(id) || prevIds.has(id));

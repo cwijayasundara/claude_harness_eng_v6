@@ -24,7 +24,11 @@ const { cochangeNeighbors, buildCochange } = require('./nav-cochange');
 const { buildConceptPages } = require('./nav-concepts');
 const { buildGraphIndex, lookupSymbol } = require('./nav-graph-index');
 const { buildMaps } = require('./nav-brownfield-maps');
-const { runBench } = require('./nav-bench');
+// nav-bench ships in the dist pack (self-benchmarking); a brownfield install has nav-query
+// but not it. It backs only the `bench` subcommand, so guard the load and degrade just that
+// one command instead of crashing nav-query's whole dispatch at require.
+let navBench = null;
+try { navBench = require('./nav-bench'); } catch (_) { /* dist pack not installed */ }
 
 function parseArgs(argv) {
   const out = { _: [], flags: {} };
@@ -181,11 +185,9 @@ function run(argv = process.argv.slice(2)) {
       result = buildMaps({ projectDir: root, goal: rest.join(' ') || flags.goal || null });
       break;
     case 'bench':
-      result = runBench({
-        projectDir: root,
-        goldenPath: flags.golden || null,
-        budgetTokens: parseInt(flags.budget || '1600', 10) || 1600,
-      });
+      result = navBench
+        ? navBench.runBench({ projectDir: root, goldenPath: flags.golden || null, budgetTokens: parseInt(flags.budget || '1600', 10) || 1600 })
+        : { error: 'bench requires the dist pack (nav-bench), which is not installed.' };
       break;
     case 'clarify': {
       const pack = buildContextPack({
