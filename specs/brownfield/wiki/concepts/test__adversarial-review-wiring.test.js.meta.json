@@ -3,9 +3,7 @@
   "member_paths": [
     "test/adversarial-review-wiring.test.js"
   ],
-  "content_hashes": {
-    "test/adversarial-review-wiring.test.js": "fe5bb3c2fe2a7bf3"
-  },
-  "content_hash": "3c8f180d26de903b",
+  "content_hashes": {},
+  "content_hash": "e3b0c44298fc1c14",
   "stale": false
 }

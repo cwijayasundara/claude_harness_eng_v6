@@ -18,172 +18,42 @@ const path = require('path');
 
 const SCAFFOLD_PROFILES = new Set(['core', 'brownfield', 'full']);
 
-const CORE_AGENTS = [
-  'code-reviewer.md', 'design-critic.md',
-  'evaluator.md', 'generator.md', 'implementer.md', 'planner.md', 'security-reviewer.md',
-  'codebase-explorer.md',
-];
-const BROWNFIELD_AGENTS = [...CORE_AGENTS];
+// Install contents come from .claude/config/packs.json — the same partition that
+// tools/check-partition.js enforces and tools/pack-install.js composes from. They used
+// to be 158 hand-maintained names here, which drifted: run-gate-checks.js had to be
+// added by hand, and .claude/config/ was missed entirely (a core scaffold shipped a
+// runner with no registry). Deriving them means the lists cannot disagree with reality.
+//
+// A profile is a union of packs, each a strict superset of the previous one. The
+// exported CORE_* names are kept so package-sku.js and the scaffold tests keep working.
+const PACKS_CONFIG = path.join(__dirname, '..', 'config', 'packs.json');
 
-// Product spine — user-facing routes and pipeline stages the lean install needs.
-// Discipline — REQUIRED SUB-SKILLs and legacy-preservation micro-skills.
-// Keep both as flat string entries in CORE_SKILLS so G22 completeness scanning
-// (test/scaffold-copy-completeness.test.js) can parse the array literally.
-const CORE_SKILLS = [
-  // --- product ---
-  'auto', 'brd', 'build', 'clarify', 'code-gen', 'deploy', 'design',
-  'context', 'evaluate', 'gate', 'implement', 'spec', 'status', 'test',
-  'feature', 'brownfield', 'change', 'code-map', 'pr-respond', 'refactor',
-  'seam-finder', 'sprint', 'tracker-publish', 'vibe', 'agent-readiness', 'retro', 'promote',
-  'reuse-or-justify', 'provision-protection', 'provision-environments', 'attestation',
-  'portfolio-rollup', 'fleet-retrofit',
-  // --- discipline ---
-  'checking-coverage-before-change',
-  'checking-migration-safety',
-  'keeping-refactors-pure',
-  'pinning-down-behavior',
-  'sprouting-instead-of-editing',
-  'upgrading-dependencies',
-  'writing-acceptance-tests-first',
-  'fix-from-diagnostics',
-  'scaffold-upgrade',
-];
-const BROWNFIELD_SKILLS = [
-  ...CORE_SKILLS,
-];
+function loadPacks() {
+  return JSON.parse(fs.readFileSync(PACKS_CONFIG, 'utf8'));
+}
 
-// Optional surface: profile `full` copies the whole skills/ tree (see
-// selectedCopySet null path). Framework packs may also be copied selectively
-// via copyFrameworkPackSkills. These names must NOT appear in CORE_SKILLS.
-const OPTIONAL_SKILLS = [
-  'pe-ic-memo',
-  'fastapi-code',
-  'react-code',
-  'langchain-code',
-  'langgraph-code',
-  'deepagents-code',
-  'install-framework-packs',
-];
+// Unit names of one kind for a profile: the kernel plus every pack the profile names.
+function profileUnits(profileName, kind) {
+  const cfg = loadPacks();
+  const profile = cfg.profiles[profileName];
+  if (!profile) fail(`unknown scaffold profile: ${profileName}`);
+  const names = new Set(cfg.kernel[kind] || []);
+  for (const pack of profile.packs) {
+    for (const n of (cfg.packs[pack] || {})[kind] || []) names.add(n);
+  }
+  return [...names].sort();
+}
 
-const CORE_SCRIPTS = [
-  'amendment-provenance-check.js',
-  'archive-state.js',
-  'budget-state.js',
-  'build-chain-state.js',
-  'build-chain.js',
-  'canvas-sync-check.js',
-  'canvas-semantic-check.js',
-  'ownership-check.js',
-  'build-lane.js',
-  'loop-health.js',
-  'validate-recommendations.js',
-  'promote-recommendation.js',
-  'ci-ingest.js',
-  'constraints-extract.js',
-  'coverage-diff.js',
-  'cr-index.js',
-  'context-pack.js',
-  'context-retrieve.js',
-  'context-store.js',
-  'nav-index.js',
-  'nav-graph-index.js',
-  'nav-cochange.js',
-  'nav-concepts.js',
-  'nav-brownfield-maps.js',
-  'nav-bench.js',
-  'nav-query.js',
-  'nav-telemetry.js',
-  'nav-mcp-server.js',
-  'deep-mutation.js',
-  'flag-scan.js',
-  'flake-history.js',
-  'impact-classifier.js',
-  'model-tier.js',
-  'mutation-smoke.js',
-  'navigation-refresh.js',
-  'perf-baseline.js',
-  'pipeline-snapshot.js',
-  'pipeline-state-readers.js',
-  'pipeline-status.js',
-  'plan-confidence.js',
-  'pr-poll.js',
-  'run-compact.js',
-  'search-compact.js',
-  'telemetry-ledger-rotate.js',
-  'telemetry-memory.js',
-  'telemetry-phase-eval.js',
-  'telemetry-pipeline-gauges.js',
-  'telemetry-skill-helpers.js',
-  'tool-output-pack.js',
-  'trace-check.js',
-  'validate-sensor-waivers.js',
-  'validate-contract.js',
-  'verification-matrix-gate.js',
-  'cycle-gate.js',
-  'coupling-gate.js',
-  'duplication-gate.js',
-  'regression-gate.js',
-  'impact-scope.js',
-  'local-regression-gate.js',
-  'legacy-discipline-gate.js',
-  'sprout-diff-gate.js',
-  'record-coverage-verdict.js',
-  'at-first-gate.js',
-  'record-at-red.js',
-  'record-modularity-review.js',
-  'agent-readiness.js',
-  'approved-fixtures-gate.js',
-  'auto-merge.js',
-  'contract-accessibility-default.js',
-  'contract-drift-gate.js',
-  'feature-lane.js',
-  'modularity-pack.js',
-  'mutation-gate.js',
-  'test-deletion-gate.js',
-  'live-externals-gate.js',
-  'stub-smell-gate.js',
-  'merge-review-verdicts.js',
-  'review-tier.js',
-  'diagnostics-shard.js',
-  'review-commit-msg.js',
-  'naming-clusters.js',
-  'seam-confidence.js',
-  'reuse-scout.js',
-  'record-reuse-decision.js',
-  'security-scan.js',
-  'slo-check.js',
-  'validate-canvas.js',
-  'vertical-glossary-pack.js',
-  'vocabulary-check.js',
-  'wave-plan.js',
-  'wave-pr.js',
-  'story-clusters.js',
-  'brd-taxonomy-check.js',
-  'quality-card.js',
-  'pr-walkthrough.js',
-  'pr-body.js',
-  'human-codebase.js',
-  'observability-gate.js', 'run-gate-checks.js',
-  'perf-smell-gate.js',
-  'ask-codebase.js',
-  'readiness-digest.js',
-  'provision-protection.js',
-  'ruleset-diff.js',
-  'generate-codeowners.js',
-  'provision-environments.js',
-  'env-diff.js',
-  'generate-attestation.js',
-  'attestation-bundle.js',
-  'attestation-io.js',
-  'canonical-json.js',
-  'portfolio-rollup.js',
-  'portfolio-rollup-core.js',
-  'fleet-retrofit.js',
-  'fleet-retrofit-core.js',
-];
-const BROWNFIELD_SCRIPTS = [
-  ...CORE_SCRIPTS,
-];
+const withExt = (names, ext) => names.map((n) => n + ext);
+
+const CORE_AGENTS = withExt(profileUnits('core', 'agent'), '.md');
+const CORE_SKILLS = profileUnits('core', 'skill');
+const CORE_SCRIPTS = withExt(profileUnits('core', 'script'), '.js');
+const BROWNFIELD_AGENTS = withExt(profileUnits('brownfield', 'agent'), '.md');
+const BROWNFIELD_SKILLS = profileUnits('brownfield', 'skill');
+const BROWNFIELD_SCRIPTS = withExt(profileUnits('brownfield', 'script'), '.js');
+// Skills no profile below `full` installs — the vertical/framework packs.
+const OPTIONAL_SKILLS = profileUnits('full', 'skill').filter((s) => !BROWNFIELD_SKILLS.includes(s));
 
 const LEAN_PLUGIN_ALLOWLIST = {
   'playwright@claude-plugins-official': true,

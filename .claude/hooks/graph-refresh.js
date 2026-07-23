@@ -12,7 +12,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { resolveProjectDir, readHookInput, reportFailure } = require('./lib/common');
+const { resolveProjectDir, readHookInput, reportFailure, optionalRequire } = require('./lib/common');
 const { stampDerived } = require('./lib/stale-stamp');
 
 const LOCK_TTL_MS = 60000;
@@ -187,8 +187,12 @@ function producerIsPlaceholder(projectDir) {
 }
 
 function bootstrapPlaceholder(projectDir, dirtyFile) {
-  const { refreshNavigation } = require('../scripts/navigation-refresh');
-  const status = refreshNavigation({ projectDir, mode: 'first-source' });
+  // navigation-refresh belongs to the brownfield pack, but hooks/ ships in every
+  // profile — so without this guard a core install carries a hook that throws on
+  // first use. Absent pack = nothing to bootstrap.
+  const nav = optionalRequire(path.join(__dirname, '..', 'scripts', 'navigation-refresh.js'));
+  if (!nav) return;
+  const status = nav.refreshNavigation({ projectDir, mode: 'first-source' });
   if (status.status === 'fresh') fs.writeFileSync(dirtyFile, '');
 }
 

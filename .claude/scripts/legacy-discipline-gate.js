@@ -239,7 +239,7 @@ function readMapText(root, deps) {
 }
 
 function run(argv, root, deps) {
-  const exec = (deps && deps.exec) || ((cmd, args) => execFileSync(cmd, args, { cwd: root, encoding: 'utf8' }));
+  const exec = (deps && deps.exec) || ((cmd, args) => execFileSync(cmd, args, { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }));
   const graphPath = path.join(root, GRAPH_REL);
   if (!fs.existsSync(graphPath)) return noGraphVerdict(root, `${GRAPH_REL} not found — legacy-discipline not checked`);
   const graph = readJson(graphPath);

@@ -299,7 +299,7 @@ test('scaffold round-trip: generator script, attestation skill, and standard-map
     projectType: 'D', verificationMode: 'C', modelTier: 'balanced',
     tracker: 'A', frameworkPacks: [], lsp: [],
   }));
-  applyScaffold({ profile: profilePath, pluginSource: path.join(REPO_ROOT, '.claude'), target, scaffoldProfile: 'core' });
+  applyScaffold({ profile: profilePath, pluginSource: path.join(REPO_ROOT, '.claude'), target, scaffoldProfile: 'full' });
   const dc = path.join(target, '.claude');
   for (const rel of [
     path.join('scripts', 'generate-attestation.js'),

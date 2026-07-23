@@ -48,18 +48,24 @@ function collectReferences() {
   return { scripts, skills };
 }
 
-// Reads scaffold-copy.js's own CORE_SCRIPTS/CORE_SKILLS arrays by parsing the
-// source, so this test can never drift from what the copy step actually does
-// (the same technique test/pe-ic-memo-skill.test.js already uses).
+// The copy lists are no longer literals in scaffold-copy.js — they are derived from
+// .claude/config/packs.json. Reading the exported arrays tests what the copy step
+// ACTUALLY does, rather than what its source text looks like; the old source-parsing
+// version silently matched nothing once the literals went away.
+//
+// A skill or hook may reference a script from any profile, so completeness is checked
+// against the widest install (`full`), not `core` — a brownfield-only script referenced
+// by a brownfield skill is correct, not missing.
 function copyListNames(arrayName) {
-  const source = fs.readFileSync(
-    path.join(REPO_ROOT, '.claude', 'scripts', 'scaffold-copy.js'), 'utf8',
-  );
-  const match = source.match(new RegExp(`const ${arrayName} = \\[([\\s\\S]*?)\\];`));
-  assert.ok(match, `could not find ${arrayName} array in scaffold-copy.js`);
-  const names = new Set();
-  for (const m of match[1].matchAll(/'([^']+)'/g)) names.add(m[1]);
-  return names;
+  const copy = require(path.join(REPO_ROOT, '.claude', 'scripts', 'scaffold-copy.js'));
+  const profileOf = { CORE_SCRIPTS: 'script', CORE_SKILLS: 'skill' };
+  const kind = profileOf[arrayName];
+  assert.ok(kind, `unsupported list: ${arrayName}`);
+  const packs = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, '.claude', 'config', 'packs.json'), 'utf8'));
+  const names = new Set(packs.kernel[kind] || []);
+  for (const spec of Object.values(packs.packs)) for (const n of spec[kind] || []) names.add(n);
+  // keep the historical shape: script names carry their extension
+  return kind === 'script' ? new Set([...names].map((n) => `${n}.js`)) : names;
 }
 
 test('every "node .claude/scripts/X.js" reference in a skill or pre-commit is in CORE_SCRIPTS', () => {

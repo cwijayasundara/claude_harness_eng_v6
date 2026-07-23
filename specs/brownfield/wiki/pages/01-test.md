@@ -1,6 +1,6 @@
-# `test/` — 324 module(s)
+# `test/` — 327 module(s)
 
-324 module(s).
+327 module(s).
 
 ## Dependencies
 
@@ -242,11 +242,11 @@ flowchart LR
 - fan-in: 0, fan-out: 5
 
 ### Symbols
-  - `runner` (function) → js:test/attestation.test.js:24 — `runner = (_cmd, args) =>`
-  - `shaRunner` (function) → js:test/attestation.test.js:29 — `shaRunner = (sha) => (_cmd, args) => (args[0] === 'rev-parse' ? '${sha}\n' : 'git@github.com:acme/widgets.git\n')`
-  - `makeRoot` (function) → js:test/attestation.test.js:35 — `function makeRoot(opts = {})`
-  - `readTemplateStandardMap` (function) → js:test/attestation.test.js:54 — `function readTemplateStandardMap()`
-  - `gen` (function) → js:test/attestation.test.js:58 — `function gen(root, extra = {})`
+  - `runner` (function) → js:test/attestation.test.js:27 — `runner = (_cmd, args) =>`
+  - `shaRunner` (function) → js:test/attestation.test.js:32 — `shaRunner = (sha) => (_cmd, args) => (args[0] === 'rev-parse' ? '${sha}\n' : 'git@github.com:acme/widgets.git\n')`
+  - `makeRoot` (function) → js:test/attestation.test.js:38 — `function makeRoot(opts = {})`
+  - `readTemplateStandardMap` (function) → js:test/attestation.test.js:57 — `function readTemplateStandardMap()`
+  - `gen` (function) → js:test/attestation.test.js:61 — `function gen(root, extra = {})`
 
 ## `js:test/auto-continue-on-stop.test.js`
 
@@ -654,7 +654,7 @@ flowchart LR
 
 ## `js:test/coupling-gate-wiring-contract.test.js`
 
-- fan-in: 0, fan-out: 5
+- fan-in: 0, fan-out: 6
 
 ### Symbols
   - `read` (function) → js:test/coupling-gate-wiring-contract.test.js:12 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
@@ -692,14 +692,14 @@ flowchart LR
 
 ## `js:test/coverage-preflight.test.js`
 
-- fan-in: 0, fan-out: 5
+- fan-in: 0, fan-out: 7
 
 ### Symbols
   - `writeGraph` (function) → js:test/coverage-preflight.test.js:28 — `function writeGraph(projectDir)`
   - `writeCoverage` (function) → js:test/coverage-preflight.test.js:43 — `function writeCoverage(projectDir, srcPath)`
   - `installCoverageMapScript` (function) → js:test/coverage-preflight.test.js:52 — `function installCoverageMapScript(projectDir)`
-  - `makeBrownfieldProject` (function) → js:test/coverage-preflight.test.js:61 — `function makeBrownfieldProject({ withCoverage = true } = {})`
-  - `editInput` (function) → js:test/coverage-preflight.test.js:72 — `function editInput(srcPath, oldString)`
+  - `makeBrownfieldProject` (function) → js:test/coverage-preflight.test.js:65 — `function makeBrownfieldProject({ withCoverage = true, withCoverageTooling = true } = {})`
+  - `editInput` (function) → js:test/coverage-preflight.test.js:83 — `function editInput(srcPath, oldString)`
 
 ## `js:test/cr-index.test.js`
 
@@ -722,4 +722,4 @@ flowchart LR
 ### Symbols
   - `read` (function) → js:test/cycle-gate-wiring-contract.test.js:12 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
 
-_+ 244 more module(s) not shown (page capped at 80)._
+_+ 247 more module(s) not shown (page capped at 80)._

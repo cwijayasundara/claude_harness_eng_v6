@@ -3,6 +3,7 @@
 // Bun Phase C wiring: semantic divergence, review commit msgs, workflow exemplar.
 
 const { test } = require('node:test');
+const { shipsIn } = require('./helpers/pack-membership');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
@@ -46,10 +47,11 @@ test('formatReviewSubject attributes review metadata', () => {
   assert.match(s, /blocks=2/);
 });
 
-test('review-commit-msg is on CORE_SCRIPTS', () => {
-  const copy = read('.claude/scripts/scaffold-copy.js');
-  assert.match(copy, /'review-commit-msg\.js'/);
-  assert.match(copy, /workflows/, 'core scaffold must copy workflows for fix-diagnostics');
+test('review-commit-msg ships to a scaffolded project', () => {
+  assert.ok(shipsIn('review-commit-msg', 'script').includes('core'),
+    'review-commit-msg must ship in the core profile');
+  assert.match(read('.claude/scripts/scaffold-copy.js'), /workflows/,
+    'core scaffold must copy workflows for fix-diagnostics');
 });
 
 test('fix-diagnostics workflow exists and is not a /gate clone', () => {

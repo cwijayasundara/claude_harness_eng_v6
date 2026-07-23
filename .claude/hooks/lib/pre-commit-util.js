@@ -45,10 +45,24 @@ function noteSkip(gate, reason) {
   process.stdout.write(formatSkip(gate, reason, failContext.tier));
 }
 
+// Node's default subprocess buffer is 1MB. A staged `git diff` can exceed that on a
+// large commit, and the failure mode was the worst possible one: ENOBUFS crashed the
+// gate runner, and the pre-commit wrapper reported "gates SKIPPED — this commit is NOT
+// gated". A gate that dies on big diffs stops working exactly when there is most to
+// check, so every git call in the commit path goes through here.
+const GIT_MAX_BUFFER = 64 * 1024 * 1024;
+
+function gitExec(projectDir) {
+  return (cmd, args) => execFileSync(cmd, args, {
+    cwd: projectDir, encoding: 'utf8', maxBuffer: GIT_MAX_BUFFER,
+  });
+}
+
 function stagedFiles(projectDir) {
   const out = execFileSync('git', ['diff', '--cached', '--name-only', '--diff-filter=ACMR'], {
     cwd: projectDir,
     encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
   });
   return out.split('\n').filter(Boolean);
 }
@@ -82,6 +96,8 @@ function buildContext(projectDir) {
 }
 
 module.exports = {
+  gitExec,
+  GIT_MAX_BUFFER,
   SOURCE_EXTS,
   FLOOR,
   fail,

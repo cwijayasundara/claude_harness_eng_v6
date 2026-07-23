@@ -3,7 +3,7 @@
 > Deterministic, always-current map rendered from `code-graph.json`. No LLM — re-rendered on graph change.
 
 - Producer: `vendored-ast`  ·  Language: `mixed`
-- Modules: 463  ·  Edges: 2100  ·  Clusters: 49
+- Modules: 471  ·  Edges: 2144  ·  Clusters: 50
 
 ## Hubs (most-depended-on)
 
@@ -62,9 +62,8 @@ _(none)_
 - [test/e2e](concepts/test__e2e.md)
 - [symphony_clone/src](concepts/symphony_clone__src.md)
 - [dsl-packs/private-equity](concepts/dsl-packs__private-equity.md)
-- [test/fleet-retrofit-helpers.js](concepts/test__fleet-retrofit-helpers.js.md)
-- [test/portfolio-rollup-helpers.js](concepts/test__portfolio-rollup-helpers.js.md)
 - [test/fixtures](concepts/test__fixtures.md)
+- [test/portfolio-rollup-helpers.js](concepts/test__portfolio-rollup-helpers.js.md)
 - [symphony_clone/test](concepts/symphony_clone__test.md)
 - [test/evals](concepts/test__evals.md)
 - [open_wiki/scripts](concepts/open_wiki__scripts.md)
@@ -78,35 +77,36 @@ _(none)_
 - [test/adversarial-live-e2e-contract.test.js](concepts/test__adversarial-live-e2e-contract.test.js.md)
 - [test/adversarial-review-wiring.test.js](concepts/test__adversarial-review-wiring.test.js.md)
 - [test/agent-readiness-wiring-contract.test.js](concepts/test__agent-readiness-wiring-contract.test.js.md)
+- [test/agent-readiness.test.js](concepts/test__agent-readiness.test.js.md)
 
 _(Hash-cached concept pages from `nav-concepts.js`.)_
 
 ## Pages
 
-- [`test/` — 324 module(s)](pages/01-test.md) — 324 module(s)
+- [`test/` — 327 module(s)](pages/01-test.md) — 327 module(s)
 - [`test/e2e/` — 18 module(s)](pages/02-test-e2e.md) — 18 module(s)
 - [`symphony_clone/src/orchestrator/` — 16 module(s)](pages/03-symphony_clone-src-orchestrator.md) — 16 module(s)
 - [`test/e2e/helpers/` — 14 module(s)](pages/04-test-e2e-helpers.md) — 14 module(s)
 - [`symphony_clone/test/` — 13 module(s)](pages/05-symphony_clone-test.md) — 13 module(s)
 - [`symphony_clone/src/tracker/` — 8 module(s)](pages/06-symphony_clone-src-tracker.md) — 8 module(s)
 - [`test/helpers/` — 5 module(s)](pages/07-test-helpers.md) — 5 module(s)
-- [`open_wiki/scripts/` — 4 module(s)](pages/08-open_wiki-scripts.md) — 4 module(s)
-- [`symphony_clone/src/` — 4 module(s)](pages/09-symphony_clone-src.md) — 4 module(s)
-- [`dsl-packs/private-equity/waterfall/` — 3 module(s)](pages/10-dsl-packs-private-equity-waterfall.md) — 3 module(s)
-- [`test/e2e/full-auto-output/src/` — 3 module(s)](pages/11-test-e2e-full-auto-output-src.md) — 3 module(s)
-- [`test/e2e/full-auto-output/tests/` — 3 module(s)](pages/12-test-e2e-full-auto-output-tests.md) — 3 module(s)
-- [`test/evals/fixtures/calc-app/` — 3 module(s)](pages/13-test-evals-fixtures-calc-app.md) — 3 module(s)
-- [`symphony_clone/scripts/` — 2 module(s)](pages/14-symphony_clone-scripts.md) — 2 module(s)
-- [`symphony_clone/src/observability/` — 2 module(s)](pages/15-symphony_clone-src-observability.md) — 2 module(s)
-- [`test/e2e/auto-output/` — 2 module(s)](pages/16-test-e2e-auto-output.md) — 2 module(s)
-- [`test/e2e/brownfield-run-output/` — 2 module(s)](pages/17-test-e2e-brownfield-run-output.md) — 2 module(s)
-- [`test/e2e/fixtures/adversarial/brownfield/legacy-expressish/src/` — 2 module(s)](pages/18-test-e2e-fixtures-adversarial-brownfield-legacy-expressish-src.md) — 2 module(s)
-- [`test/e2e/full-auto-output/specs/test_artefacts/acceptance/` — 2 module(s)](pages/19-test-e2e-full-auto-output-specs-test_artefacts-acceptance.md) — 2 module(s)
-- [`test/evals/helpers/` — 2 module(s)](pages/20-test-evals-helpers.md) — 2 module(s)
+- [`tools/` — 5 module(s)](pages/08-tools.md) — 5 module(s)
+- [`open_wiki/scripts/` — 4 module(s)](pages/09-open_wiki-scripts.md) — 4 module(s)
+- [`symphony_clone/src/` — 4 module(s)](pages/10-symphony_clone-src.md) — 4 module(s)
+- [`dsl-packs/private-equity/waterfall/` — 3 module(s)](pages/11-dsl-packs-private-equity-waterfall.md) — 3 module(s)
+- [`test/e2e/full-auto-output/src/` — 3 module(s)](pages/12-test-e2e-full-auto-output-src.md) — 3 module(s)
+- [`test/e2e/full-auto-output/tests/` — 3 module(s)](pages/13-test-e2e-full-auto-output-tests.md) — 3 module(s)
+- [`test/evals/fixtures/calc-app/` — 3 module(s)](pages/14-test-evals-fixtures-calc-app.md) — 3 module(s)
+- [`symphony_clone/scripts/` — 2 module(s)](pages/15-symphony_clone-scripts.md) — 2 module(s)
+- [`symphony_clone/src/observability/` — 2 module(s)](pages/16-symphony_clone-src-observability.md) — 2 module(s)
+- [`test/e2e/auto-output/` — 2 module(s)](pages/17-test-e2e-auto-output.md) — 2 module(s)
+- [`test/e2e/brownfield-run-output/` — 2 module(s)](pages/18-test-e2e-brownfield-run-output.md) — 2 module(s)
+- [`test/e2e/fixtures/adversarial/brownfield/legacy-expressish/src/` — 2 module(s)](pages/19-test-e2e-fixtures-adversarial-brownfield-legacy-expressish-src.md) — 2 module(s)
+- [`test/e2e/full-auto-output/specs/test_artefacts/acceptance/` — 2 module(s)](pages/20-test-e2e-full-auto-output-specs-test_artefacts-acceptance.md) — 2 module(s)
 
 ## Agent navigation
 
 - Context pack: `node .claude/scripts/nav-query.js pack --budget 1600 "<question>"`
 - Refresh secondary indexes: `node .claude/scripts/nav-query.js refresh`
 
-_+ 29 smaller cluster(s) not paged (raise --max-pages)._
+_+ 30 smaller cluster(s) not paged (raise --max-pages)._

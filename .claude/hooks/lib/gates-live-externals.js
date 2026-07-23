@@ -6,7 +6,7 @@
 // in gate-registry.js. Pure classification lives in hooks/lib/live-externals-gate.js.
 
 const { execFileSync } = require('child_process');
-const { failBlock, noteSkip, requireScript } = require('./pre-commit-util');
+const { failBlock, noteSkip, requireScript, gitExec } = require('./pre-commit-util');
 
 function checkLiveExternalsGate(ctx) {
   const { projectDir } = ctx;
@@ -21,7 +21,7 @@ function checkLiveExternalsGate(ctx) {
     noteSkip('live-externals', 'sensor script missing or unloadable from .claude/scripts');
     return;
   }
-  const exec = (cmd, args) => execFileSync(cmd, args, { cwd: projectDir, encoding: 'utf8' });
+  const exec = gitExec(projectDir);
   const verdict = gate.checkStaged(exec);
   if (!verdict.pass) {
     failBlock({

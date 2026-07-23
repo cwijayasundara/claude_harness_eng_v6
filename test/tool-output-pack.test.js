@@ -90,7 +90,7 @@ test('tool output pack CLI writes --out pack json while preserving raw output', 
   }
 });
 
-test('core scaffold copies tool-output-pack script', () => {
+test('brownfield scaffold copies the tool-output-pack script', () => {
   const dir = tempProject();
   try {
     const profile = path.join(dir, 'profile.json');
@@ -101,7 +101,7 @@ test('core scaffold copies tool-output-pack script', () => {
       verificationMode: 'C',
       stack: { backend: null, frontend: null, database: null },
     }));
-    applyScaffold({ profile, pluginSource: PLUGIN_SOURCE, target: path.join(dir, 'project') });
+    applyScaffold({ profile, pluginSource: PLUGIN_SOURCE, target: path.join(dir, 'project'), scaffoldProfile: 'brownfield' });
 
     assert.ok(fs.existsSync(path.join(dir, 'project', '.claude', 'scripts', 'tool-output-pack.js')));
   } finally {

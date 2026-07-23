@@ -5,6 +5,7 @@
 // here is about the seam, not the algorithm.
 
 const { test } = require('node:test');
+const { shipsIn } = require('./helpers/pack-membership');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
@@ -75,5 +76,6 @@ test('HARNESS.md registers the control so it is not orphaned from the registry',
 });
 
 test('scaffold-copy propagates the script to scaffolded projects', () => {
-  assert.match(read('.claude/scripts/scaffold-copy.js'), /'story-clusters\.js'/);
+  assert.ok(shipsIn('story-clusters', 'script').includes('core'),
+    'story-clusters must ship in the core profile');
 });

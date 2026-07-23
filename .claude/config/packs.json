@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "purpose": "v6 reduction partition. Assigns every harness unit to the kernel or exactly one pack. The single structural rule: a kernel unit may not hard-reference a pack unit. Checked by tools/check-partition.js.",
+  "purpose": "Kernel/pack partition: the single source of truth for what a harness install contains. tools/check-partition.js enforces that no kernel unit hard-references a pack; tools/pack-install.js and .claude/scripts/scaffold-copy.js both compose installs from it. Lives in .claude/config/ (not docs/) because shipped machinery reads it.",
   "baseline_tag": "v5-preserve",
   "kernel": {
     "skill": [
@@ -161,13 +161,9 @@
         "ask-codebase",
         "context-retrieve",
         "context-store",
-        "coupling-gate",
-        "cycle-gate",
-        "duplication-gate",
         "impact-scope",
         "modularity-pack",
         "naming-clusters",
-        "nav-bench",
         "nav-brownfield-maps",
         "nav-cochange",
         "nav-concepts",
@@ -182,10 +178,7 @@
         "tool-output-pack"
       ],
       "lib": [
-        "coupling-gate",
-        "cycle-gate",
         "drift",
-        "duplication-gate",
         "impact-scope",
         "modularity-pack",
         "naming-clusters",
@@ -269,8 +262,11 @@
         "approve-fixtures",
         "approved-fixtures-gate",
         "contract-drift-gate",
+        "coupling-gate",
         "coverage-diff",
+        "cycle-gate",
         "deep-mutation",
+        "duplication-gate",
         "flake-detector",
         "flake-history",
         "live-externals-gate",
@@ -286,7 +282,10 @@
         "test-deletion-gate"
       ],
       "lib": [
+        "coupling-gate",
+        "cycle-gate",
         "diff-hunks",
+        "duplication-gate",
         "fixtures",
         "gates-live-externals",
         "gates-verification",
@@ -309,8 +308,6 @@
       ],
       "agent": [],
       "script": [
-        "ab-report",
-        "ab-run",
         "agent-readiness",
         "archive-state",
         "assert-readiness-ratchet",
@@ -324,7 +321,6 @@
         "loop-health",
         "promote-recommendation",
         "readiness-digest",
-        "replay-telemetry",
         "run-custom-sensors",
         "runs-retention",
         "sensor-value-report",
@@ -377,15 +373,12 @@
       "agent": [],
       "script": [
         "diagnostics-shard",
-        "package-sku",
-        "release-skus",
         "scaffold-apply",
         "scaffold-copy",
         "scaffold-encoding",
         "scaffold-render",
         "scaffold-upgrade",
-        "scaffold-vertical-status",
-        "upstream-watch"
+        "scaffold-vertical-status"
       ],
       "lib": [
         "diagnostics-parse"
@@ -393,6 +386,22 @@
       "hook": [
         "artifact-guard"
       ]
+    },
+    "dist": {
+      "why": "Harness distribution and self-benchmarking: packaging SKUs, cutting releases, watching upstream, replaying the harness's own telemetry. Maintainer-only — a scaffolded product never runs these.",
+      "skill": [],
+      "agent": [],
+      "script": [
+        "ab-report",
+        "ab-run",
+        "nav-bench",
+        "package-sku",
+        "release-skus",
+        "replay-telemetry",
+        "upstream-watch"
+      ],
+      "lib": [],
+      "hook": []
     }
   },
   "rule": "A kernel unit may not hard-reference a pack unit. Enforced by tools/check-partition.js --strict.",
@@ -407,5 +416,46 @@
       "to": "skill:code-map",
       "why": "Caller lookup for rename/move blast radius. The whole block is already conditional on specs/brownfield/code-graph.json existing, which only happens when the brownfield pack is installed — /refactor works without it. Prose conditionality the checker cannot see."
     }
-  ]
+  ],
+  "profiles": {
+    "kernel": {
+      "packs": [],
+      "why": "The three lanes and the commit gate. Nothing that assumes a pipeline, an existing codebase, or a client mandate."
+    },
+    "core": {
+      "packs": [
+        "planning",
+        "verification",
+        "legacy-discipline",
+        "telemetry",
+        "scaffold"
+      ],
+      "why": "Greenfield product work: the SDLC pipeline, runtime verification, and the disciplines around editing code."
+    },
+    "brownfield": {
+      "packs": [
+        "planning",
+        "verification",
+        "legacy-discipline",
+        "telemetry",
+        "scaffold",
+        "brownfield"
+      ],
+      "why": "Existing-code work: core plus the code-graph, nav and seam tooling."
+    },
+    "full": {
+      "packs": [
+        "planning",
+        "verification",
+        "legacy-discipline",
+        "telemetry",
+        "scaffold",
+        "brownfield",
+        "compliance",
+        "domain",
+        "dist"
+      ],
+      "why": "Everything, including the client compliance stack and the vertical/framework packs."
+    }
+  }
 }

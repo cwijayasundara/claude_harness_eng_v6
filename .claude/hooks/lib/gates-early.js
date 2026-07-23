@@ -10,7 +10,7 @@ const { checkContextContent, loadContextConfig } = require('./contexts');
 const { findImpureFiles } = require(path.join(__dirname, '..', '..', 'git-hooks', 'lib', 'refactor-purity'));
 const { baselineSecretFindings } = require('./security-scan');
 const { secretScanExempt } = require('./secrets');
-const { failBlock, noteSkip, requireScript } = require('./pre-commit-util');
+const { failBlock, noteSkip, requireScript, gitExec } = require('./pre-commit-util');
 
 function checkSecrets(ctx) {
   const { projectDir, staged } = ctx;
@@ -43,7 +43,7 @@ function checkAmendmentProvenance(ctx) {
   }
   let baselineExists = false;
   try {
-    execFileSync('git', ['show', 'HEAD:specs/design/architecture.md'], { cwd: projectDir, encoding: 'utf8' });
+    gitExec(projectDir)('git', ['show', 'HEAD:specs/design/architecture.md']);
     baselineExists = true;
   } catch (_) {
     baselineExists = false;
@@ -73,7 +73,7 @@ function checkTestDeletionGate(ctx) {
     noteSkip('test-deletion-guard', 'sensor script missing or unloadable from .claude/scripts');
     return;
   }
-  const exec = (cmd, args) => execFileSync(cmd, args, { cwd: projectDir, encoding: 'utf8' });
+  const exec = gitExec(projectDir);
   const verdict = gate.checkStaged(exec);
   if (!verdict.pass) {
     failBlock({
@@ -101,7 +101,7 @@ function checkStubSmellGate(ctx) {
     noteSkip('stub-smell-gate', 'sensor script missing or unloadable from .claude/scripts');
     return;
   }
-  const exec = (cmd, args) => execFileSync(cmd, args, { cwd: projectDir, encoding: 'utf8' });
+  const exec = gitExec(projectDir);
   const verdict = gate.checkStaged(exec);
   if (!verdict.pass) {
     failBlock({

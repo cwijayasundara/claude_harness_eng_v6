@@ -48,11 +48,14 @@ test('pre-commit hard-wires the legacy-discipline gate into the registry as a de
 
   const gates = read('.claude/hooks/lib/gates-legacy.js');
   assert.match(gates, /HARNESS_LEGACY_DISCIPLINE_GATE/, 'must expose the documented escape hatch');
-  assert.doesNotMatch(
-    gates.slice(0, gates.indexOf('function checkLegacyDisciplineGate')),
-    /legacy-discipline-gate/,
-    'must NOT eagerly require the sensor script at module load (would crash the hook if the script is absent, unlike the lazy requireScript pattern)'
-  );
+  // The property that matters is that the sensor script is NOT required at MODULE
+  // SCOPE — a top-level require would crash the whole hook when the script is absent.
+  // Asserted directly: the previous version checked that the name did not appear
+  // before a given function, which broke the moment a helper was extracted even
+  // though the loading behaviour was unchanged.
+  const topLevel = gates.split('\n').filter((l) => /^const .*require\(/.test(l)).join('\n');
+  assert.doesNotMatch(topLevel, /legacy-discipline-gate/,
+    'must NOT eagerly require the sensor script at module load — requireScript is called lazily inside the gate');
 });
 
 test('checking-coverage-before-change Step 2 pipes coverage_map.py through the recorder', () => {

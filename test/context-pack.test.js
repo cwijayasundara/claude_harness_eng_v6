@@ -292,7 +292,7 @@ test('estimateTextTokens uses the same cheap deterministic approximation as navi
   assert.strictEqual(estimateTextTokens('one two three four'), 5);
 });
 
-test('core scaffold copies context skill and context-pack script', () => {
+test('brownfield scaffold copies the context skill; context-pack is kernel', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'context-pack-scaffold-'));
   try {
     const profile = path.join(dir, 'profile.json');
@@ -303,7 +303,7 @@ test('core scaffold copies context skill and context-pack script', () => {
       verificationMode: 'C',
       stack: { backend: null, frontend: null, database: null },
     }));
-    applyScaffold({ profile, pluginSource: PLUGIN_SOURCE, target: path.join(dir, 'project') });
+    applyScaffold({ profile, pluginSource: PLUGIN_SOURCE, target: path.join(dir, 'project'), scaffoldProfile: 'brownfield' });
 
     assert.ok(fs.existsSync(path.join(dir, 'project', '.claude', 'scripts', 'context-pack.js')));
     assert.ok(fs.existsSync(path.join(dir, 'project', '.claude', 'skills', 'context', 'SKILL.md')));

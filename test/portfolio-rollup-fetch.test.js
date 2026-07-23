@@ -146,7 +146,7 @@ test('8b: scaffold round-trip stamps harness_version + ships the rollup script/s
     stack: { backend: null, frontend: null, database: null },
     projectType: 'D', verificationMode: 'C', modelTier: 'balanced', tracker: 'A', frameworkPacks: [], lsp: [],
   }));
-  applyScaffold({ profile: profilePath, pluginSource: path.join(REPO_ROOT, '.claude'), target, scaffoldProfile: 'core' });
+  applyScaffold({ profile: profilePath, pluginSource: path.join(REPO_ROOT, '.claude'), target, scaffoldProfile: 'full' });
   const manifest = JSON.parse(fs.readFileSync(path.join(target, 'project-manifest.json'), 'utf8'));
   const harnessPkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
   assert.strictEqual(manifest.harness_version, harnessPkg.version);

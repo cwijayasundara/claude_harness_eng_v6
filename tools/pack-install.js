@@ -22,7 +22,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
-const PARTITION = path.join(ROOT, 'docs', 'internal', 'v6-partition.json');
+const PARTITION = path.join(ROOT, '.claude', 'config', 'packs.json');
 
 // Where each unit kind lives, and how its name maps to a path. Directories (skills)
 // copy whole; everything else is a single file.

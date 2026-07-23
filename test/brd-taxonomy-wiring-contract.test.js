@@ -5,6 +5,7 @@
 // about the slot logic, which brd-taxonomy-check.test.js covers.
 
 const { test } = require('node:test');
+const { shipsIn } = require('./helpers/pack-membership');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
@@ -67,7 +68,8 @@ test('manifest and HARNESS.md register the control with a budget justification',
 });
 
 test('scaffold-copy propagates the gate to scaffolded projects', () => {
-  assert.match(read('.claude/scripts/scaffold-copy.js'), /'brd-taxonomy-check\.js'/);
+  assert.ok(shipsIn('brd-taxonomy-check', 'script').includes('core'),
+    'brd-taxonomy-check must ship in the core profile');
 });
 
 // --- D9: BRD safeguards must reach the design contract ------------------------

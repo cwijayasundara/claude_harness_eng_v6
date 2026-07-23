@@ -80,7 +80,7 @@ test('context retrieve CLI returns cached content by hash', () => {
   }
 });
 
-test('core scaffold copies context compression scripts', () => {
+test('brownfield scaffold copies the context compression scripts', () => {
   const dir = tempProject();
   try {
     const profile = path.join(dir, 'profile.json');
@@ -91,7 +91,7 @@ test('core scaffold copies context compression scripts', () => {
       verificationMode: 'C',
       stack: { backend: null, frontend: null, database: null },
     }));
-    applyScaffold({ profile, pluginSource: PLUGIN_SOURCE, target: path.join(dir, 'project') });
+    applyScaffold({ profile, pluginSource: PLUGIN_SOURCE, target: path.join(dir, 'project'), scaffoldProfile: 'brownfield' });
 
     for (const script of ['context-store.js', 'context-retrieve.js', 'run-compact.js', 'search-compact.js']) {
       assert.ok(fs.existsSync(path.join(dir, 'project', '.claude', 'scripts', script)), script);

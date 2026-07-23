@@ -3,9 +3,7 @@
   "member_paths": [
     "test/adherence-critic-contract.test.js"
   ],
-  "content_hashes": {
-    "test/adherence-critic-contract.test.js": "ffb4801f617f61e9"
-  },
-  "content_hash": "ce7cbf8cb1172e94",
+  "content_hashes": {},
+  "content_hash": "e3b0c44298fc1c14",
   "stale": false
 }

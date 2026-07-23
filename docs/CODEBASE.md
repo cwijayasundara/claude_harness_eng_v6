@@ -13,8 +13,8 @@ _Source: `README.md`_
 
 | Metric | Value |
 |---|---|
-| Indexed files | 463 |
-| Graph edges | 2100 |
+| Indexed files | 471 |
+| Graph edges | 2144 |
 | Concept pages | 20 |
 | Wiki cluster pages | 20 |
 
@@ -59,8 +59,8 @@ npm run ask -- "..."     # ask the codebase
 - [test/e2e](specs/brownfield/wiki/concepts/test__e2e.md)
 - [symphony_clone/src](specs/brownfield/wiki/concepts/symphony_clone__src.md)
 - [dsl-packs/private-equity](specs/brownfield/wiki/concepts/dsl-packs__private-equity.md)
-- [test/fleet-retrofit-helpers.js](specs/brownfield/wiki/concepts/test__fleet-retrofit-helpers.js.md)
 - [test/fixtures](specs/brownfield/wiki/concepts/test__fixtures.md)
+- [test/fleet-retrofit-helpers.js](specs/brownfield/wiki/concepts/test__fleet-retrofit-helpers.js.md)
 - [symphony_clone/test](specs/brownfield/wiki/concepts/symphony_clone__test.md)
 - [test/evals](specs/brownfield/wiki/concepts/test__evals.md)
 - [open_wiki/scripts](specs/brownfield/wiki/concepts/open_wiki__scripts.md)
@@ -85,19 +85,19 @@ npm run ask -- "..."     # ask the codebase
 - [05-symphony_clone-test](specs/brownfield/wiki/pages/05-symphony_clone-test.md)
 - [06-symphony_clone-src-tracker](specs/brownfield/wiki/pages/06-symphony_clone-src-tracker.md)
 - [07-test-helpers](specs/brownfield/wiki/pages/07-test-helpers.md)
-- [08-open_wiki-scripts](specs/brownfield/wiki/pages/08-open_wiki-scripts.md)
-- [09-symphony_clone-src](specs/brownfield/wiki/pages/09-symphony_clone-src.md)
-- [10-dsl-packs-private-equity-waterfall](specs/brownfield/wiki/pages/10-dsl-packs-private-equity-waterfall.md)
-- [11-test-e2e-full-auto-output-src](specs/brownfield/wiki/pages/11-test-e2e-full-auto-output-src.md)
-- [12-test-e2e-full-auto-output-tests](specs/brownfield/wiki/pages/12-test-e2e-full-auto-output-tests.md)
-- [13-test-evals-fixtures-calc-app](specs/brownfield/wiki/pages/13-test-evals-fixtures-calc-app.md)
-- [14-symphony_clone-scripts](specs/brownfield/wiki/pages/14-symphony_clone-scripts.md)
-- [15-symphony_clone-src-observability](specs/brownfield/wiki/pages/15-symphony_clone-src-observability.md)
-- [16-test-e2e-auto-output](specs/brownfield/wiki/pages/16-test-e2e-auto-output.md)
-- [17-test-e2e-brownfield-run-output](specs/brownfield/wiki/pages/17-test-e2e-brownfield-run-output.md)
-- [18-test-e2e-fixtures-adversarial-brownfield-legacy-expressish-src](specs/brownfield/wiki/pages/18-test-e2e-fixtures-adversarial-brownfield-legacy-expressish-src.md)
-- [19-test-e2e-full-auto-output-specs-test_artefacts-acceptance](specs/brownfield/wiki/pages/19-test-e2e-full-auto-output-specs-test_artefacts-acceptance.md)
-- [20-test-evals-helpers](specs/brownfield/wiki/pages/20-test-evals-helpers.md)
+- [08-tools](specs/brownfield/wiki/pages/08-tools.md)
+- [09-open_wiki-scripts](specs/brownfield/wiki/pages/09-open_wiki-scripts.md)
+- [10-symphony_clone-src](specs/brownfield/wiki/pages/10-symphony_clone-src.md)
+- [11-dsl-packs-private-equity-waterfall](specs/brownfield/wiki/pages/11-dsl-packs-private-equity-waterfall.md)
+- [12-test-e2e-full-auto-output-src](specs/brownfield/wiki/pages/12-test-e2e-full-auto-output-src.md)
+- [13-test-e2e-full-auto-output-tests](specs/brownfield/wiki/pages/13-test-e2e-full-auto-output-tests.md)
+- [14-test-evals-fixtures-calc-app](specs/brownfield/wiki/pages/14-test-evals-fixtures-calc-app.md)
+- [15-symphony_clone-scripts](specs/brownfield/wiki/pages/15-symphony_clone-scripts.md)
+- [16-symphony_clone-src-observability](specs/brownfield/wiki/pages/16-symphony_clone-src-observability.md)
+- [17-test-e2e-auto-output](specs/brownfield/wiki/pages/17-test-e2e-auto-output.md)
+- [18-test-e2e-brownfield-run-output](specs/brownfield/wiki/pages/18-test-e2e-brownfield-run-output.md)
+- [19-test-e2e-fixtures-adversarial-brownfield-legacy-expressish-src](specs/brownfield/wiki/pages/19-test-e2e-fixtures-adversarial-brownfield-legacy-expressish-src.md)
+- [20-test-e2e-full-auto-output-specs-test_artefacts-acceptance](specs/brownfield/wiki/pages/20-test-e2e-full-auto-output-specs-test_artefacts-acceptance.md)
 
 ## Critical paths & debugging
 

@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('assert');
+const { shipsIn } = require('./helpers/pack-membership');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -210,12 +211,14 @@ test('build Phase 11 requires pr-body.js', () => {
   assert.match(auto, /pr-body\.js/);
 });
 
-test('CORE_SCRIPTS includes new human-trust scripts', () => {
-  const src = fs.readFileSync(path.join(__dirname, '../.claude/scripts/scaffold-copy.js'), 'utf8');
-  for (const name of [
-    'quality-card.js', 'pr-walkthrough.js', 'pr-body.js', 'human-codebase.js',
-    'observability-gate.js', 'perf-smell-gate.js', 'ask-codebase.js', 'readiness-digest.js',
-  ]) {
-    assert.match(src, new RegExp(name.replace('.', '\\.')));
+test('the human-trust scripts ship to a scaffolded project', () => {
+  // Each must reach a real install. ask-codebase belongs to the brownfield pack, so
+  // it ships in the brownfield/full profiles rather than core — asserted where it
+  // actually lands rather than assuming everything is core.
+  for (const name of ['quality-card', 'pr-walkthrough', 'pr-body', 'human-codebase',
+    'observability-gate', 'perf-smell-gate', 'readiness-digest']) {
+    assert.ok(shipsIn(name, 'script').includes('core'), `${name} must ship in the core profile`);
   }
+  assert.ok(shipsIn('ask-codebase', 'script').includes('brownfield'),
+    'ask-codebase must ship wherever the brownfield pack does');
 });

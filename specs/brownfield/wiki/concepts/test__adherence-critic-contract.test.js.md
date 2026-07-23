@@ -8,7 +8,7 @@ Cluster `test/adherence-critic-contract.test.js` groups **1** file(s).
 
 ## Files
 
-- `test/adherence-critic-contract.test.js` (hash ffb4801f617f61e9)
+- `test/adherence-critic-contract.test.js` (hash n/a)
 
 ## Symbols
 

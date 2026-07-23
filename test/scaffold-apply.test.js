@@ -147,7 +147,7 @@ test('applyScaffold produces a real scaffold from a Minimal Node profile', () =>
   }
 });
 
-test('applyScaffold bootstraps code-map and wiki immediately for source-bearing repos', () => {
+test('a brownfield scaffold bootstraps code-map and wiki immediately for source-bearing repos', () => {
   const workDir = makeTempDir();
   const target = path.join(workDir, 'project');
   try {
@@ -155,7 +155,9 @@ test('applyScaffold bootstraps code-map and wiki immediately for source-bearing 
     fs.writeFileSync(path.join(target, 'package.json'), JSON.stringify({ scripts: { test: 'node --test' } }));
     fs.writeFileSync(path.join(target, 'src', 'index.py'), 'def greet(name: str) -> str:\n    return f"hello {name}"\n');
     const profilePath = writeProfile(workDir, MINIMAL_NODE_PROFILE);
-    const result = applyScaffold({ profile: profilePath, pluginSource: PLUGIN_SOURCE, target });
+    // code-map and navigation-refresh are brownfield-pack, so the bootstrap they drive
+    // only runs when that pack is installed.
+    const result = applyScaffold({ profile: profilePath, pluginSource: PLUGIN_SOURCE, target, scaffoldProfile: 'brownfield' });
 
     assert.strictEqual(result.navigation.status, 'fresh');
     assert.strictEqual(result.navigation.mode, 'bootstrap');
@@ -206,21 +208,23 @@ test('core scaffold profile ships the lean product-development spine by default'
     assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'auto', 'SKILL.md')));
     assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'gate', 'SKILL.md')));
     assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'feature', 'SKILL.md')));
-    assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'brownfield', 'SKILL.md')));
-    assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'code-map', 'SKILL.md')));
+    assert.ok(!fs.existsSync(path.join(target, '.claude', 'skills', 'brownfield', 'SKILL.md')),
+      'core is greenfield product work — the brownfield pack is not part of it');
+    assert.ok(!fs.existsSync(path.join(target, '.claude', 'skills', 'code-map', 'SKILL.md')),
+      'code-map belongs to the brownfield pack');
     assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'change', 'SKILL.md')));
     assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'refactor', 'SKILL.md')));
     assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'vibe', 'SKILL.md')));
     assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'tracker-publish', 'SKILL.md')));
     assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'build-chain.js')));
-    assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'navigation-refresh.js')),
-      'core must copy living navigation refresh because graph-refresh depends on it');
+    assert.ok(!fs.existsSync(path.join(target, '.claude', 'scripts', 'navigation-refresh.js')),
+      'navigation-refresh is brownfield-pack; graph-refresh degrades without it rather than requiring it');
     assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'ci-ingest.js')));
     assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'flag-scan.js')));
     assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'telemetry-memory.js')),
       'record-run dependency stays copied even when telemetry export is off');
-    assert.ok(fs.existsSync(path.join(target, '.claude', 'agents', 'codebase-explorer.md')),
-      'core keeps the read-only explorer because Sprint 2+ is brownfield');
+    assert.ok(!fs.existsSync(path.join(target, '.claude', 'agents', 'codebase-explorer.md')),
+      'codebase-explorer hard-references code-map and nav-query, so it ships with the brownfield pack');
 
     assert.ok(!fs.existsSync(path.join(target, '.claude', 'skills', 'install-framework-packs')),
       'core should not ship framework-pack installer');
@@ -240,7 +244,7 @@ test('core scaffold profile ships the lean product-development spine by default'
   }
 });
 
-test('brownfield scaffold profile is a backward-compatible alias for core product development', () => {
+test('brownfield scaffold profile is core plus the brownfield pack, not an alias for it', () => {
   const workDir = makeTempDir();
   const target = path.join(workDir, 'project');
   try {
@@ -249,8 +253,12 @@ test('brownfield scaffold profile is a backward-compatible alias for core produc
     const result = applyScaffold({ profile: profilePath, pluginSource: PLUGIN_SOURCE, target });
 
     assert.strictEqual(result.scaffoldProfile, 'brownfield');
-    for (const skill of ['feature', 'brownfield', 'change', 'refactor', 'vibe', 'code-map', 'seam-finder', 'tracker-publish']) {
-      assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', skill, 'SKILL.md')), `${skill} should be copied`);
+    // Strict superset of core: everything core ships, plus the brownfield tooling.
+    for (const skill of ['feature', 'change', 'refactor', 'vibe', 'tracker-publish']) {
+      assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', skill, 'SKILL.md')), `${skill} (core) should be copied`);
+    }
+    for (const skill of ['brownfield', 'code-map', 'seam-finder', 'context']) {
+      assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', skill, 'SKILL.md')), `${skill} (brownfield pack) should be copied`);
     }
     assert.ok(fs.existsSync(path.join(target, '.claude', 'agents', 'codebase-explorer.md')));
     assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'ci-ingest.js')));
@@ -281,7 +289,8 @@ test('full-stack projects also default to core; full is explicit only', () => {
 
     assert.strictEqual(result.scaffoldProfile, 'core');
     assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'feature', 'SKILL.md')));
-    assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'brownfield', 'SKILL.md')));
+    assert.ok(!fs.existsSync(path.join(target, '.claude', 'skills', 'brownfield', 'SKILL.md')),
+      'defaulting to core means the brownfield pack is not installed');
     assert.ok(!fs.existsSync(path.join(target, '.claude', 'scripts', 'upstream-watch.js')));
   } finally {
     fs.rmSync(workDir, { recursive: true, force: true });

@@ -4,13 +4,12 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
 const { runMutationOnFiles, renderSurvivors } = require('./mutation-gate');
 const { biteCheckFiles } = require('./legacy-bite-check');
-const { failBlock, noteSkip, inAutoBuild, requireScript } = require('./pre-commit-util');
+const { failBlock, noteSkip, inAutoBuild, requireScript, gitExec } = require('./pre-commit-util');
 
 function computeLegacyDisciplineInputs(projectDir, gate) {
-  const execFn = (cmd, args) => execFileSync(cmd, args, { cwd: projectDir, encoding: 'utf8' });
+  const execFn = gitExec(projectDir);
   const modified = execFn('git', ['diff', '--cached', '--name-only', '--diff-filter=MR'])
     .split('\n')
     .filter(Boolean)
@@ -63,36 +62,48 @@ function checkLegacyBiteBackstop(projectDir, files) {
   });
 }
 
-function checkLegacyDisciplineGate(ctx) {
-  const { projectDir, staged } = ctx;
+// Everything that decides whether this gate CAN run, before any expensive work.
+// Returns the loaded gate module, or null when the gate should skip.
+//
+// The coverage-tooling check sits here, ahead of computeLegacyDisciplineInputs, which
+// shells out to a full `git diff -U0`: running that only to discard the result is
+// waste, and on a large commit it is what overflowed the subprocess buffer.
+function resolveLegacyGate(ctx) {
+  const { projectDir } = ctx;
   if (process.env.HARNESS_LEGACY_DISCIPLINE_GATE === 'off') {
     noteSkip('legacy-discipline', 'HARNESS_LEGACY_DISCIPLINE_GATE=off');
-    return;
+    return null;
   }
   let gate;
   try {
     gate = requireScript('legacy-discipline-gate');
   } catch (_) {
     noteSkip('legacy-discipline', 'sensor script missing or unloadable from .claude/scripts');
-    return;
+    return null;
   }
   const graphPath = path.join(projectDir, 'specs', 'brownfield', 'code-graph.json');
-  if (!fs.existsSync(graphPath)) return;
+  if (!fs.existsSync(graphPath)) return null;
   let graph;
   try {
     graph = JSON.parse(fs.readFileSync(graphPath, 'utf8'));
   } catch (_) {
-    return;
+    return null;
   }
-  if (!gate.hasSymbolRecords(graph)) return;
-  const { modified, changedRanges, mapText } = computeLegacyDisciplineInputs(projectDir, gate);
-  // Same guard the CLI applies: this gate demands a coverage verdict, so a project
-  // that cannot produce coverage for the staged language cannot satisfy it. Both
-  // entry points share one implementation rather than drifting apart.
-  if (gate.coverageToolingMissing && gate.coverageToolingMissing(projectDir, modified)) {
+  if (!gate.hasSymbolRecords(graph)) return null;
+
+  const stagedProd = (ctx.stagedSource || []).filter((f) => gate.isSource(f) && !gate.isTestFile(f));
+  if (gate.coverageToolingMissing && gate.coverageToolingMissing(projectDir, stagedProd)) {
     noteSkip('legacy-discipline', 'no coverage runner for the staged language — the required verdict cannot be produced');
-    return;
+    return null;
   }
+  return gate;
+}
+
+function checkLegacyDisciplineGate(ctx) {
+  const { projectDir, staged } = ctx;
+  const gate = resolveLegacyGate(ctx);
+  if (!gate) return;
+  const { modified, changedRanges, mapText } = computeLegacyDisciplineInputs(projectDir, gate);
   const verdict = gate.checkLegacyDiscipline(modified, gate.readReceipts(projectDir), staged, changedRanges, mapText);
   if (!verdict.pass) { reportLegacyDisciplineFailure(verdict); return; }
   for (const n of verdict.relatednessNotes || []) process.stdout.write(`note: legacy-discipline — ${n}\n`);
@@ -100,9 +111,7 @@ function checkLegacyDisciplineGate(ctx) {
 }
 
 function gateAddedProdFiles(projectDir, gateModule) {
-  return execFileSync('git', ['diff', '--cached', '--name-only', '--diff-filter=A'], {
-    cwd: projectDir, encoding: 'utf8',
-  })
+  return gitExec(projectDir)('git', ['diff', '--cached', '--name-only', '--diff-filter=A'])
     .split('\n')
     .filter(Boolean)
     .filter((f) => gateModule.isSource(f) && !gateModule.isTestFile(f));
@@ -184,10 +193,7 @@ function checkAtFirstGate(ctx) {
   }
   const mapPath = path.join(projectDir, 'specs', 'design', 'component-map.md');
   if (!fs.existsSync(mapPath)) return;
-  const added = execFileSync('git', ['diff', '--cached', '--name-only', '--diff-filter=A'], {
-    cwd: projectDir,
-    encoding: 'utf8',
-  })
+  const added = gitExec(projectDir)('git', ['diff', '--cached', '--name-only', '--diff-filter=A'])
     .split('\n')
     .filter(Boolean)
     .filter((f) => gate.isSource(f) && !gate.isTestFile(f));

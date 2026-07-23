@@ -9,6 +9,7 @@
 // Mirrors test/legacy-discipline-gate-wiring-contract.test.js (G17).
 
 const { test } = require('node:test');
+const { shipsIn } = require('./helpers/pack-membership');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
@@ -50,11 +51,14 @@ test('pre-commit hard-wires the at-first gate into the registry as a default-on 
 
   const gates = read('.claude/hooks/lib/gates-legacy.js');
   assert.match(gates, /HARNESS_AT_FIRST_GATE/, 'must expose the documented escape hatch');
-  assert.doesNotMatch(
-    gates.slice(0, gates.indexOf('function checkAtFirstGate')),
-    /at-first-gate/,
-    'must NOT eagerly require the sensor script at module load (would crash the hook if the script is absent, unlike the lazy requireScript pattern)'
-  );
+  // The property that matters is that the sensor script is NOT required at MODULE
+  // SCOPE — a top-level require would crash the whole hook when the script is absent.
+  // Asserted directly: the previous version checked that the name did not appear
+  // before a given function, which broke the moment a helper was extracted even
+  // though the loading behaviour was unchanged.
+  const topLevel = gates.split('\n').filter((l) => /^const .*require\(/.test(l)).join('\n');
+  assert.doesNotMatch(topLevel, /at-first-gate/,
+    'must NOT eagerly require the sensor script at module load — requireScript is called lazily inside the gate');
 });
 
 test('writing-acceptance-tests-first Process step 5 pipes the AT run through the recorder', () => {
@@ -96,10 +100,10 @@ test('sensor-arbitration.md classifies at-first-proof as hard-block with waiver 
   assert.match(section, /sensor-waivers\.json/);
 });
 
-test('scaffold-copy.js CORE_SCRIPTS includes both new scripts', () => {
-  const source = read('.claude/scripts/scaffold-copy.js');
-  assert.match(source, /'at-first-gate\.js'/);
-  assert.match(source, /'record-at-red\.js'/);
+test('both scripts ship to a scaffolded project', () => {
+  for (const name of ['at-first-gate', 'record-at-red']) {
+    assert.ok(shipsIn(name, 'script').includes('core'), `${name} must ship in the core profile`);
+  }
 });
 
 test('harness-manifest.json itself remains internally valid (honesty invariant)', () => {
