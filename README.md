@@ -324,10 +324,7 @@ Model choice is a **measured** decision, not a vibe: a per-token-cheaper worker 
 | `max-quality` | Opus 4.8 | Opus 4.8 | Sonnet 5 | Opus 4.8 |
 | **`fusion`** | Sonnet 5 | **Haiku 4.5** | Sonnet 5 | Opus 4.8 |
 
-`fusion` is the only preset where the per-story **worker is cheaper than the lead** ("cheap worker under a smart lead"). Whether it actually lowers cost is proven, not assumed:
-
-- `node .claude/scripts/cost-per-outcome.js --json` — **cost-per-passed-story** (Σ receipts ÷ evaluator-passed stories), the metric that matters instead of tokens burned.
-- `node .claude/scripts/ab-run.js <PRD> <balanced-dir> <fusion-dir>` — dry-run by default; `--execute --budget <usd>` runs both arms serially and `ab-report.js` returns a verdict. The cheaper arm wins **only if** its pass-rate holds equal-or-better; cheaper-but-worse is "no clear winner". Full protocol: [docs/fusion-ab-runbook.md](docs/fusion-ab-runbook.md).
+`fusion` is the only preset where the per-story **worker is cheaper than the lead** ("cheap worker under a smart lead"). The lead keeps judgment on Opus while the per-story worker runs on Haiku.
 
 ## Existing-Code Flow
 
@@ -498,7 +495,6 @@ E2E logs land in `test/e2e/results/logs/`; summary JSON lands at `test/e2e/resul
 | Control-system registry | [HARNESS.md](HARNESS.md) · [harness-manifest.json](harness-manifest.json) |
 | PRD format | [docs/prd-format.md](docs/prd-format.md) |
 | Model/cost posture | [docs/model-allocation.md](docs/model-allocation.md) |
-| Cost-per-outcome A/B (`fusion` preset) | [docs/fusion-ab-runbook.md](docs/fusion-ab-runbook.md) |
 | Turning the security-compliance gates ON (org-admin) | [docs/operator-apply-runbook.md](docs/operator-apply-runbook.md) |
 | Remediating a leaked credential (rotate → scrub → prevent) | [docs/credential-remediation-runbook.md](docs/credential-remediation-runbook.md) |
 | Enterprise token cost | [docs/token-cost-playbook.md](docs/token-cost-playbook.md) |

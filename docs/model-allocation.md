@@ -23,7 +23,7 @@ The harness runs a **GAN**: the generator produces, the evaluator judges. Cost f
 - **Judgment is low-volume** — planner, evaluator, reviewers, **advisor**: **Opus 4.8** on every tier.
 - **Session / orchestrator** — recommend **Opus 4.8** even on cost (conductor reliability); not an agent pin (`/model`).
 
-> **Lead vs worker.** In solo / solo_sequential mode the `generator` implements in its own context and no `implementer` is spawned. In team mode the `generator` is the lead dispatcher+integrator and spawns one `implementer` teammate per story. On every preset except `fusion` the worker pins to the *same* model as the lead, so the split is behaviour-neutral. `record-run` stamps each teammate receipt with the spawned agent's own frontmatter model, so the distinct `implementer` identity is what lets `cost-per-outcome.js` measure a cheaper worker.
+> **Lead vs worker.** In solo / solo_sequential mode the `generator` implements in its own context and no `implementer` is spawned. In team mode the `generator` is the lead dispatcher+integrator and spawns one `implementer` teammate per story. On every preset except `fusion` the worker pins to the *same* model as the lead, so the split is behaviour-neutral. `record-run` stamps each teammate receipt with the spawned agent's own frontmatter model, so the distinct `implementer` identity is what makes a cheaper worker measurable from the per-story receipts.
 
 ## The presets (`execution.model_tier`)
 

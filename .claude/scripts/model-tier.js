@@ -24,7 +24,7 @@
 // model as the lead, so introducing the role changes no behaviour unless fusion
 // is selected. record-run keys a receipt's model off the spawned agent's own
 // frontmatter, so a distinct implementer identity is what makes a cheaper-worker
-// experiment measurable by cost-per-outcome.js.
+// preset measurable from the per-story receipts.
 
 const fs = require('fs');
 const path = require('path');

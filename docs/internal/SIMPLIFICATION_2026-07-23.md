@@ -83,9 +83,14 @@ harness's layers are genuinely tight (the scripts survey itself found **0 true o
 
 - **`replay-telemetry.js` — KEEP.** Not an island: it backs `test/helpers/record-run-fixture.js`
   and two test files. It is load-bearing replay-mode regression-test infrastructure.
-- **`ab-run.js` / `ab-report.js` — do NOT delete without a product call.** They have a JS caller
-  (`cost-per-outcome.js`), a PRD, a runbook, and a README section — dormant but *complete* A/B
-  infrastructure awaiting a billed execution, not dead code. Surface for an explicit decision.
+- **`ab-run.js` / `ab-report.js` / `cost-per-outcome.js` — REMOVED** (product call made). The
+  whole dormant A/B fusion measurement feature: `ab-run`/`ab-report` are leaf nodes (nothing
+  requires them) and both require `cost-per-outcome`, whose only non-test dependents were those
+  two (`model-tier.js` merely mentioned it in a comment). Deleted the 3 scripts, their 3 tests,
+  the PRD + runbook, the packs.json entries, and the README/prose references. NOT touched:
+  `cost-report.js` (live — `loop-health`/`budget-state`/`advisor`, in the manifest) and
+  `model-tier.js` (live — `scaffold-apply`/`scaffold-render`/`cost-report`); the `fusion` preset
+  itself stays, as it is entangled with live model-tier/scaffold code.
 - **Unwire `graph-refresh.js` from `SubagentStop`** — still valid (the script already no-ops
   there) but **blocked mid-session**: it edits `.claude/settings.json`, which the prefix-cache
   gate blocks. Apply between sessions with `HARNESS_PREFIX_EDIT=1`.

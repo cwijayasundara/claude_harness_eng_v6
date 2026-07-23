@@ -317,7 +317,6 @@
         "certification-report",
         "ci-ingest",
         "control-budget-gate",
-        "cost-per-outcome",
         "cost-report",
         "drift-report",
         "harness-coverage",
@@ -396,8 +395,6 @@
       "skill": [],
       "agent": [],
       "script": [
-        "ab-report",
-        "ab-run",
         "nav-bench",
         "package-sku",
         "release-skus",
