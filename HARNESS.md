@@ -104,6 +104,14 @@ Its companion `sensor-value-meter` (`npm run sensor-value`, report-only) supplie
 block — the shelfware `/retro` should propose retiring. Budget ceiling + shelfware
 nominations together make subtraction a standing force, not an occasional cleanup.
 
+A preventive gate that blocks 0, though, is ambiguous: a working deterrent looks
+identical to shelfware, and the ledger cannot tell them apart. `sensor-canary`
+(`npm run sensor-canary`) resolves it — each canary feeds a gate's REAL detector a
+known-bad input it must catch and a known-good input it must ignore; only a gate that
+discriminates is PROVEN-LIVE. The value meter reads that set, so "never blocked" splits
+into proven-live (kept) vs no-canary-yet (still a candidate). A canary that stops biting
+fails the suite, so this is also a liveness ratchet on the preventive gates themselves.
+
 > **When you add a control**, register it in `harness-manifest.json` as before — then
 > either retire one to stay net-flat, or add a one-line `net_add_justification` saying
 > why it earns its keep, and run `npm run control-budget` to re-ratchet the baseline.

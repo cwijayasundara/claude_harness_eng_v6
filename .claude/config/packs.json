@@ -326,6 +326,7 @@
         "readiness-digest",
         "run-custom-sensors",
         "runs-retention",
+        "sensor-canary",
         "sensor-value-report",
         "telemetry-ledger-rotate",
         "telemetry-memory",

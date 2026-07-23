@@ -22,6 +22,7 @@ const path = require('path');
 const { readOutcomes } = require('../hooks/lib/sensor-outcomes');
 const { GATE_CATALOG } = require('../hooks/lib/gate-registry');
 const { loadSensorTier, isGateEnabled } = require('../hooks/lib/sensor-tier');
+const { provenLiveSensors } = require('./sensor-canary');
 
 const REPO = path.resolve(__dirname, '..', '..');
 const SLOW_MS = 500;
@@ -58,7 +59,7 @@ function toRow(id, stats) {
   };
 }
 
-function classify(stats, tier = null) {
+function classify(stats, tier = null, provenLive = new Set()) {
   const rows = sensorIds(stats).map((id) => toRow(id, stats));
   const neverRanIds = rows.filter((r) => r.ran === 0).map((r) => r.id);
   // A gate registered only at a tier this repo does not run is dormant by design,
@@ -67,11 +68,16 @@ function classify(stats, tier = null) {
   // out only when the tier is known; synthetic callers pass none and stay tier-blind.
   const dormantByTier = tier ? neverRanIds.filter((id) => !isGateEnabled(tier, id)) : [];
   const dormant = new Set(dormantByTier);
+  // "Never blocked" is ambiguous — a working deterrent looks identical to shelfware.
+  // A canary (sensor-canary.js) resolves it: a proven-live gate leaves the shelfware
+  // bucket, so only gates with no canary AND no block remain genuinely ambiguous.
+  const neverBlockedAll = rows.filter((r) => r.ran > 0 && r.blocked === 0).map((r) => r.id);
   return {
     rows,
     neverRan: neverRanIds.filter((id) => !dormant.has(id)),
     dormantByTier,
-    neverBlocked: rows.filter((r) => r.ran > 0 && r.blocked === 0).map((r) => r.id),
+    provenLive: neverBlockedAll.filter((id) => provenLive.has(id)),
+    neverBlocked: neverBlockedAll.filter((id) => !provenLive.has(id)),
     slow: rows.filter((r) => r.avg_ms !== null && r.avg_ms >= SLOW_MS).map((r) => `${r.id} (${r.avg_ms}ms)`),
     // A control that blocks on most runs is either catching a real systemic problem
     // or false-blocking. The ledger cannot tell a correct block from a wrong one, so
@@ -95,9 +101,9 @@ function renderRows(rows) {
   });
 }
 
-function render(outcomes, minRuns, tier = null) {
+function render(outcomes, minRuns, tier = null, provenLive = new Set()) {
   const totalRuns = outcomes.length;
-  const c = classify(tally(outcomes), tier);
+  const c = classify(tally(outcomes), tier, provenLive);
   if (totalRuns < minRuns) return insufficient(totalRuns, minRuns);
 
   const lines = [`sensor-value-report: ${totalRuns} recorded outcomes across ${c.rows.length} sensors` +
@@ -107,7 +113,8 @@ function render(outcomes, minRuns, tier = null) {
     lines.push('DORMANT (off at the ' + tier + ' tier — correctly silent, not a finding): ' +
       (c.dormantByTier.join(', ') || 'none'));
   }
-  lines.push('NEVER BLOCKED (ran but never caught anything — candidate shelfware): ' + (c.neverBlocked.join(', ') || 'none'));
+  lines.push('PROVEN-LIVE (never blocked, but a canary proves the gate still bites — NOT shelfware): ' + (c.provenLive.join(', ') || 'none'));
+  lines.push('NEVER BLOCKED (ran, never caught anything, no canary — candidate shelfware): ' + (c.neverBlocked.join(', ') || 'none'));
   lines.push(`SLOW (>=${SLOW_MS}ms average — correct but costly): ` + (c.slow.join(', ') || 'none'));
   lines.push('BLOCKS OFTEN (>50% of runs — real systemic issue, or false-blocking): ' + (c.highBlock.join(', ') || 'none'));
   lines.push('', ...renderRows(c.rows));
@@ -120,11 +127,12 @@ function main() {
   const minRuns = minIdx >= 0 ? Number(argv[minIdx + 1]) || 20 : 20;
   const outcomes = readOutcomes(REPO);
   const tier = loadSensorTier(REPO);
+  const provenLive = provenLiveSensors();
   if (argv.includes('--json')) {
-    process.stdout.write(JSON.stringify(classify(tally(outcomes), tier), null, 2) + '\n');
+    process.stdout.write(JSON.stringify(classify(tally(outcomes), tier, provenLive), null, 2) + '\n');
     return;
   }
-  process.stdout.write(render(outcomes, minRuns, tier));
+  process.stdout.write(render(outcomes, minRuns, tier, provenLive));
 }
 
 if (require.main === module) main();
