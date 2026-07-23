@@ -3,7 +3,7 @@
 Separate from the v6 reduction. This touches a **live customer commitment**, so it is
 scoped, sequenced and reviewed on its own rather than folded into Phase 3.
 
-Status: **scoped, not started.** One item (C1) is a correctness fix that should land
+Status: **C1, C2, C3, C4 all implemented.** Remaining: land signing (C2), bind the customer catalog (C3), retire the imperative apply paths (C4) — each an operational or customer-input decision, not code.
 independently of everything else here.
 
 ## Position
@@ -87,37 +87,46 @@ step is a CI step running `cosign attest` (or `actions/attest`) over the Stateme
 which point the "rehashed edit verifies clean" test in `test/attestation.test.js` should
 start failing — which is the signal the guarantee genuinely got stronger.
 
-## C3 — Replace `standard-map.json` with OSCAL
+## C3 — Replace `standard-map.json` with OSCAL — **DONE** (emitter), catalog is a 1-file answer
 
-The shipped map contains four invented clause ids (`SDL-secure-development`,
-`AUD-audit-traceability`, `ARC-architecture-integrity`, `MNT-maintainability`) and an empty
-`by_id: {}`. The abstraction is right; the target is not real — it maps to nothing an
-auditor recognises.
+The shipped map had four invented clause ids and an empty `by_id` — it resolved to nothing
+an auditor recognises.
 
-NIST **OSCAL** now does this job, and the timing is the point:
+`oscal-emit.js` now emits the control inventory as an **OSCAL component-definition**
+(`oscal-version 1.1.2`), one `implemented-requirement` per control.
 
-- OSCAL **v1.2.1 Control Mapping Model** shipped March 2026 — machine-readable, computable
-  mappings between frameworks, turning multi-framework compliance from O(N²) to O(N).
-- **AWS** began publishing SOC 1/2 reports in OSCAL in Spring 2026 (first major cloud provider).
-- **FedRAMP** requires machine-readable authorization data by **30 September 2026**.
+The "which standard?" question turned out **not to block the mechanism**, only the catalog.
+OSCAL identifies a control by (source catalog, control-id), so the catalog is a parameter:
+`.claude/config/oscal-catalog.json` (`by_id` wins over `by_axis`). The customer's answer —
+SOC 2 / ISO 27001 / FedRAMP — becomes a **data file, not a code change**.
+`oscal-catalog.example.json` ships with SOC 2 TSC ids as a starting point.
 
-**Blocking question for the customer:** which evidence standard are their auditors on
-(SOC 2 / ISO 27001 / FedRAMP)? That answer decides whether OSCAL is a nice-to-have or a
-near-term requirement, and it is the one input this increment cannot supply itself.
+Until a catalog is bound, every control is emitted **UNMAPPED** under an explicit
+`urn:harness:unmapped` source — a visible, countable gap rather than the old confident
+fiction. Bind the example and the same 132 controls resolve to real SOC 2 criteria.
 
-## C4 — Move provisioning to Terraform, keep fleet discovery
+## C4 — Move provisioning to Terraform, keep fleet discovery — **DONE** (both parts)
 
-`provision-protection.js` (279 lines) and `provision-environments.js` (291 lines) hand-roll
-what `github_organization_ruleset` / `github_repository_ruleset` do declaratively — including
-drift detection, which `terraform plan` provides natively and which our `--verify` modes
-re-implement by hand.
+**Part 1 — emit (`terraform-emit.js`).** Generates `github_organization_ruleset` /
+`github_repository_ruleset` / `github_repository_environment` from the SAME
+`project-manifest.json#github` spec the imperative provisioners read, so the two cannot
+disagree about intent while both exist. Two safety properties enforced at emit time: an
+environment with no reviewer throws (not an approval gate), and an empty `org` throws (a
+ruleset that targets nothing). The gitleaks + sast required-check floor is applied here too.
 
-**But `fleet-retrofit.js` + `fleet.json` is not re-invention.** The recognised pattern is
-exactly this hybrid: Terraform for ruleset definitions, plus scripts and scheduled workflows
-for dynamic repository discovery and metadata. Keep that half unchanged.
+**Part 2 — verify (`terraform-verify.js`).** Drift now comes from
+`terraform plan -detailed-exitcode` (0 = match, 2 = drift, 1 = error) instead of the
+hand-rolled GET-and-diff in `provision-*.js --verify`. It keeps the SAME output contract
+(`{ compliant: boolean, drift: [] }`) that `attestation-io#classifyVerify` and
+fleet-retrofit consume, and every non-success path (terraform absent, plan error,
+uninitialised dir) is reported `compliant:false` — never a vacuous pass.
 
-**Action:** ruleset/environment definitions move to Terraform; `--verify` becomes a thin
-drift reporter over `terraform plan`; fleet discovery stays as-is.
+**Kept, not replaced:** fleet discovery. Terraform owns the policy; `fleet.json` still owns
+which repos exist. Declarative rulesets + scripted enumeration is the recognised hybrid.
+
+**Deliberately staged:** the imperative `provision-*.js` apply paths are NOT retired yet, so
+the declarative and imperative routes can be compared on a real fleet before either is
+removed. That is the one remaining C4 step, and it is an operational decision, not code.
 
 ## Sequence and effect
 

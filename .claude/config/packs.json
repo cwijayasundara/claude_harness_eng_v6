@@ -207,13 +207,15 @@
         "fleet-retrofit-core",
         "generate-attestation",
         "generate-codeowners",
+        "oscal-emit",
         "portfolio-rollup",
         "portfolio-rollup-core",
         "provision-environments",
         "provision-protection",
         "ruleset-diff",
         "scaffold-security-baseline",
-        "terraform-emit"
+        "terraform-emit",
+        "terraform-verify"
       ],
       "lib": [
         "gates-strict",

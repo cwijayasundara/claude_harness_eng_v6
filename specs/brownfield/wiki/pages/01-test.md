@@ -1,6 +1,6 @@
-# `test/` — 329 module(s)
+# `test/` — 330 module(s)
 
-329 module(s).
+330 module(s).
 
 ## Dependencies
 
@@ -722,4 +722,4 @@ flowchart LR
 ### Symbols
   - `proj` (function) → js:test/custom-sensor-commit.test.js:7 — `function proj(cs)`
 
-_+ 249 more module(s) not shown (page capped at 80)._
+_+ 250 more module(s) not shown (page capped at 80)._

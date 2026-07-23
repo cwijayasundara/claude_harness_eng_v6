@@ -1,0 +1,25 @@
+{
+  "_comment": "C3 — bind the harness controls to a real OSCAL catalog. Copy to oscal-catalog.json and fill in once the auditors' standard is known. This example uses SOC 2 Trust Services Criteria ids; swap for ISO 27001 (A.x.x) or FedRAMP (NIST 800-53 AC-x etc.) as needed. Precedence: by_id wins over by_axis; a control in neither is emitted UNMAPPED, never invented.",
+  "catalog": {
+    "id": "soc2-tsc-2017",
+    "title": "SOC 2 Trust Services Criteria (2017)",
+    "href": "https://www.aicpa.org/soc4so"
+  },
+  "by_axis": {
+    "behaviour": ["CC8.1"],
+    "traceability": ["CC7.2"],
+    "architecture": ["CC8.1"],
+    "maintainability": ["CC8.1"]
+  },
+  "by_id": {
+    "secret-scan": ["CC6.1", "CC6.6"],
+    "sast": ["CC7.1"],
+    "dep-audit": ["CC7.1"],
+    "security-review": ["CC8.1"],
+    "branch-protection-verify": ["CC8.1"],
+    "deploy-gate-verify": ["CC8.1"],
+    "compliance-attestation": ["CC4.1", "CC7.2"],
+    "trace-check": ["CC7.2"],
+    "grounding-check": ["CC7.2"]
+  }
+}
