@@ -48,15 +48,74 @@ function hardRefPattern(kind, name) {
   }
 }
 
-function hardRefs(text, names) {
+// An OPTIONAL reference is one the caller already survives the absence of. Two forms:
+//
+//   packRun('<module>', fn, '<pack>')    an explicit lazy-dispatch declaration
+//   try ... require(...) ... catch       a guarded load whose failure is handled
+//
+// Both mean "this dependency may be missing at runtime", which is exactly what an
+// uninstalled pack looks like. Counting them as violations would force rewriting code
+// that is already correct — context-pack.js, for instance, already loads the whole nav
+// stack through a guarded loader that returns null, with every call site checking.
+//
+// Deliberately narrow: a bare top-level require() is never optional, so the exemption
+// cannot be claimed by accident.
+const OPEN_BRACE = '{';
+const CLOSE_BRACE = '}';
+const PACKRUN_DECL = /packRun\(\s*['"]([^'"]+)['"]/g;
+const REQUIRE_SPEC = /require\(\s*['"]([^'"]+)['"]/g;
+const TRY_OPEN = new RegExp('\\btry\\s*\\' + OPEN_BRACE, 'g');
+
+const specName = (spec) => String(spec).replace(/\.js$/, '').split('/').pop();
+
+// Spans of try-block bodies, located by brace matching from each try.
+function tryBlockSpans(text) {
+  const spans = [];
+  let m;
+  TRY_OPEN.lastIndex = 0;
+  while ((m = TRY_OPEN.exec(text)) !== null) {
+    let depth = 0;
+    let i = m.index + m[0].length - 1;
+    for (; i < text.length; i++) {
+      if (text[i] === OPEN_BRACE) depth++;
+      else if (text[i] === CLOSE_BRACE && --depth === 0) break;
+    }
+    spans.push([m.index, i]);
+  }
+  return spans;
+}
+
+function optionalRefs(text) {
+  const out = new Set();
+  for (const m of text.matchAll(PACKRUN_DECL)) out.add(specName(m[1]));
+  for (const [start, end] of tryBlockSpans(text)) {
+    for (const m of text.slice(start, end).matchAll(REQUIRE_SPEC)) out.add(specName(m[1]));
+  }
+  return out;
+}
+
+function hardRefs(text, names, optional = new Set()) {
   const found = [];
   for (const kind of KINDS) {
     for (const name of names[kind] || []) {
+      if (optional.has(name)) continue;
       const re = hardRefPattern(kind, name);
       if (re && re.test(text)) found.push(`${kind}:${name}`);
     }
   }
   return found;
+}
+
+// Kernel -> pack edges that ARE guarded. Not violations, but still worth showing:
+// each one is a pack the kernel knows about, and the count should trend to zero.
+function guardedEdges(from, optionalNames, ids, assign) {
+  const out = [];
+  for (const name of optionalNames) {
+    const to = ids.find((id) => id.endsWith(`:${name}`));
+    const target = to && assign[to];
+    if (target && target !== 'kernel') out.push({ from, to, pack: target });
+  }
+  return out;
 }
 
 // Pure core, so the rule is testable without touching disk.
@@ -69,17 +128,20 @@ function checkPartition({ assign, texts, names }) {
   }
   const violations = [];
   const crossPack = [];
+  const optional = [];
   for (const from of ids) {
     const home = assign[from];
     if (!texts[from]) continue;
-    for (const to of hardRefs(texts[from], names)) {
+    const opt = optionalRefs(texts[from]);
+    for (const to of hardRefs(texts[from], names, opt)) {
       const target = assign[to];
       if (to === from || !target || target === home) continue;
       if (home === 'kernel') violations.push({ from, to, pack: target });
       else if (target !== 'kernel') crossPack.push({ from, fromPack: home, to, toPack: target });
     }
+    if (home === 'kernel') optional.push(...guardedEdges(from, opt, ids, assign));
   }
-  return { violations, crossPack, units: ids.length };
+  return { violations, crossPack, optional, units: ids.length };
 }
 
 // ---- disk wiring ----
@@ -157,13 +219,17 @@ function main() {
   const partition = JSON.parse(fs.readFileSync(PARTITION, 'utf8'));
   const assign = loadAssignment(partition);
   const { texts, names } = loadUnitTexts();
-  const { violations, crossPack, units } = checkPartition({ assign, texts, names });
+  const { violations, crossPack, optional, units } = checkPartition({ assign, texts, names });
 
   const counts = {};
   for (const v of Object.values(assign)) counts[v] = (counts[v] || 0) + 1;
   console.log(`partition: ${units} units — ` +
     Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', '));
 
+  if (optional.length) {
+    console.log(`\nkernel -> pack edges already guarded (lazy/try-catch, not violations): ${optional.length}`);
+    for (const e of optional) console.log(`    ${e.from}  ~>  ${e.to}  [${e.pack}]`);
+  }
   reportCrossPack(crossPack);
   if (!violations.length) {
     console.log('\nOK: no kernel -> pack hard references.');

@@ -54,6 +54,7 @@
       "trust-boundary"
     ],
     "script": [
+      "context-pack",
       "merge-review-verdicts",
       "review-commit-msg",
       "review-tier",
@@ -151,7 +152,6 @@
       ],
       "script": [
         "ask-codebase",
-        "context-pack",
         "context-retrieve",
         "context-store",
         "coupling-gate",

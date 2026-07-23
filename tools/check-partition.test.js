@@ -37,6 +37,52 @@ test('hardRefs ignores a bare agent name in prose', () => {
   assert.deepStrictEqual(refs, []);
 });
 
+test('a require guarded by try/catch is optional, not a violation', () => {
+  const res = checkPartition({
+    assign: { 'skill:change': 'kernel', 'script:nav-index': 'brownfield' },
+    texts: {
+      'skill:change':
+        'function load() {\n  try {\n    return require("./nav-index").loadNavIndex;\n  } catch (_) {\n    return null;\n  }\n}',
+    },
+    names: { script: ['nav-index'] },
+  });
+  assert.deepStrictEqual(res.violations, [], 'a guarded load survives the pack being absent');
+  assert.strictEqual(res.optional.length, 1);
+  assert.strictEqual(res.optional[0].to, 'script:nav-index');
+});
+
+test('a packRun declaration is optional, not a violation', () => {
+  const res = checkPartition({
+    assign: { 'lib:gate-registry': 'kernel', 'lib:gates-legacy': 'legacy-discipline' },
+    texts: { 'lib:gate-registry': "run: packRun('gates-legacy', 'checkAtFirstGate', 'legacy-discipline')" },
+    names: { lib: ['gates-legacy'] },
+  });
+  assert.deepStrictEqual(res.violations, []);
+  assert.strictEqual(res.optional.length, 1);
+});
+
+test('an UNGUARDED require of the same module is still a violation', () => {
+  const res = checkPartition({
+    assign: { 'skill:change': 'kernel', 'script:nav-index': 'brownfield' },
+    texts: { 'skill:change': 'const nav = require("./nav-index");' },
+    names: { script: ['nav-index'] },
+  });
+  assert.strictEqual(res.violations.length, 1, 'a bare top-level require is never optional');
+});
+
+test('a guard elsewhere in the file does not exempt an unguarded require', () => {
+  const res = checkPartition({
+    assign: { 'skill:change': 'kernel', 'script:nav-index': 'brownfield', 'script:context-pack': 'brownfield' },
+    texts: {
+      'skill:change':
+        'try {\n  require("./context-pack");\n} catch (_) {}\nconst nav = require("./nav-index");',
+    },
+    names: { script: ['nav-index', 'context-pack'] },
+  });
+  assert.deepStrictEqual(res.violations.map((v) => v.to), ['script:nav-index'],
+    'only the module inside the try block is exempt');
+});
+
 test('checkPartition reports a kernel -> pack edge as a violation', () => {
   const res = checkPartition({
     assign: { 'skill:change': 'kernel', 'script:context-pack': 'brownfield' },
