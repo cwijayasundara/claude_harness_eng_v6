@@ -170,6 +170,32 @@ test('an accepted entry that no longer matches a real edge is reported stale', (
     'the allowlist must not outlive the coupling it excused');
 });
 
+test('an accepted CROSS-PACK edge (non-kernel caller) is exempted, not just a kernel one', () => {
+  // A conditional prose step the checker cannot see is the same problem wherever the
+  // caller lives: skill:design (planning) invokes a brownfield script only in delta
+  // mode. accepted_edges must exempt this profile-breaking edge the way it exempts a
+  // kernel edge — there is no try/catch to add to a markdown step.
+  const res = checkPartition({
+    assign: { 'skill:design': 'planning', 'script:modularity-pack': 'brownfield' },
+    texts: { 'skill:design': 'node .claude/scripts/modularity-pack.js' },
+    names: { script: ['modularity-pack'] },
+    accepted: [{ from: 'skill:design', to: 'script:modularity-pack', why: 'delta-only, conditional on the code graph' }],
+  });
+  assert.deepStrictEqual(res.crossPack, [], 'an accepted cross-pack edge must not remain a coupling/break');
+  assert.strictEqual(res.accepted.length, 1, 'the exception must stay visible');
+  assert.strictEqual(res.accepted[0].to, 'script:modularity-pack');
+});
+
+test('an UNaccepted cross-pack edge is still reported as a coupling', () => {
+  const res = checkPartition({
+    assign: { 'skill:design': 'planning', 'script:modularity-pack': 'brownfield' },
+    texts: { 'skill:design': 'node .claude/scripts/modularity-pack.js' },
+    names: { script: ['modularity-pack'] },
+  });
+  assert.strictEqual(res.crossPack.length, 1, 'without an exception the edge remains visible');
+  assert.deepStrictEqual(res.accepted, []);
+});
+
 test('an accepted edge does not exempt a DIFFERENT edge', () => {
   const res = checkPartition({
     assign: { 'lib:common': 'kernel', 'script:a': 'brownfield', 'script:b': 'brownfield' },

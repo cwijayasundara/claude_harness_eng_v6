@@ -19,7 +19,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const { printReport } = require('./partition-report');
+const { printReport, computeProfileBreaks } = require('./partition-report');
 
 const ROOT = path.resolve(__dirname, '..');
 const PARTITION = path.join(ROOT, '.claude', 'config', 'packs.json');
@@ -170,6 +170,18 @@ function partitionAccepted(accepted) {
   return map;
 }
 
+// Classify one hard edge into the right bucket. A declared exception (accepted_edges)
+// wins wherever the caller lives: a kernel -> pack edge and a cross-pack profile-breaking
+// edge are the same problem — a coupling the checker cannot see is safe (e.g. a
+// conditional prose step, or an installer that only runs from the full source tree).
+// Kept visible in every case; never silently dropped.
+function recordEdge(from, to, home, target, acceptedMap, sink) {
+  const accepted = acceptedMap.get(`${from} -> ${to}`);
+  if (accepted) { accepted.__seen = true; sink.accepted.push({ from, to, pack: target, why: accepted.why }); }
+  else if (home === 'kernel') sink.violations.push({ from, to, pack: target });
+  else sink.crossPack.push({ from, fromPack: home, to, toPack: target });
+}
+
 // Pure core, so the rule is testable without touching disk.
 function checkPartition({ assign, texts, names, accepted = [] }) {
   const acceptedMap = partitionAccepted(accepted);
@@ -179,10 +191,7 @@ function checkPartition({ assign, texts, names, accepted = [] }) {
     // a mis-wired path would read as a passing gate.
     throw new Error('check-partition: no units to check — refusing to report a vacuous pass');
   }
-  const violations = [];
-  const crossPack = [];
-  const optional = [];
-  const acceptedHits = [];
+  const sink = { violations: [], crossPack: [], optional: [], accepted: [] };
   for (const from of ids) {
     const home = assign[from];
     if (!texts[from]) continue;
@@ -190,17 +199,14 @@ function checkPartition({ assign, texts, names, accepted = [] }) {
     for (const to of hardRefs(texts[from], names, opt, from.slice(0, from.indexOf(":")))) {
       const target = assign[to];
       if (to === from || !target || target === home) continue;
-      if (home === 'kernel') {
-        const key = `${from} -> ${to}`;
-        if (acceptedMap.has(key)) { acceptedMap.get(key).__seen = true; acceptedHits.push({ from, to, pack: target, why: acceptedMap.get(key).why }); }
-        else violations.push({ from, to, pack: target });
-      }
-      else if (target !== 'kernel') crossPack.push({ from, fromPack: home, to, toPack: target });
+      // pack -> kernel is always safe (the kernel ships in every profile); everything
+      // else is classified, so accepted_edges can excuse a cross-pack coupling too.
+      if (home === 'kernel' || target !== 'kernel') recordEdge(from, to, home, target, acceptedMap, sink);
     }
-    if (home === 'kernel') optional.push(...guardedEdges(from, opt, ids, assign));
+    if (home === 'kernel') sink.optional.push(...guardedEdges(from, opt, ids, assign));
   }
   const staleAccepted = [...acceptedMap.values()].filter((e) => !e.__seen).map((e) => `${e.from} -> ${e.to}`);
-  return { violations, crossPack, optional, accepted: acceptedHits, staleAccepted, units: ids.length };
+  return { ...sink, staleAccepted, units: ids.length };
 }
 
 // ---- disk wiring ----
@@ -254,7 +260,11 @@ function main() {
   const { texts, names } = loadUnitTexts();
   const result = checkPartition({ assign, texts, names, accepted: partition.accepted_edges || [] });
   printReport({ partition, assign, result });
-  return result.violations.length && process.argv.includes('--strict') ? 1 : 0;
+  // --strict now fails on a profile-breaking edge too, not only a kernel violation: a
+  // composed profile that crashes on a require it did not ship is as broken as a kernel
+  // that cannot stand alone. Report-only until the count reached zero (it now has).
+  const breaks = computeProfileBreaks(result.crossPack, partition.profiles || {});
+  return process.argv.includes('--strict') && (result.violations.length || breaks.length) ? 1 : 0;
 }
 
 if (require.main === module) process.exit(main());

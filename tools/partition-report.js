@@ -80,7 +80,7 @@ function printReport({ partition, assign, result }) {
     for (const e of optional) console.log(`    ${e.from}  ~>  ${e.to}  [${e.pack}]`);
   }
   if (accepted.length) {
-    console.log(`\naccepted kernel -> pack edges (declared exceptions, reviewed): ${accepted.length}`);
+    console.log(`\naccepted cross-pack edges (declared exceptions, reviewed): ${accepted.length}`);
     for (const e of accepted) console.log(`    ${e.from}  ->  ${e.to}  [${e.pack}] — ${e.why}`);
   }
   if (staleAccepted.length) {
