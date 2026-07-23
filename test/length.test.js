@@ -1,4 +1,36 @@
 'use strict';
+
+// Regression: an immediately-invoked arrow bound to a const is matched by
+// ARROW_FUNC_RE but never opens a body at a deeper level. Before the flush fix it
+// stayed on the stack and blocked its ENCLOSING function from ever being popped, so
+// that function measured to an arbitrary later brace. The symptom was a phantom
+// length that changed depending on what was appended AFTER the function — a 16-line
+// function reported as 31 because unrelated code followed it.
+{
+  const { oversizedFunctions } = require('../.claude/hooks/lib/length.js');
+  const { test: t } = require('node:test');
+  const a = require('assert');
+
+  const SHORT_FN_WITH_IIFE = [
+    'function small(x) {',
+    "  const parsed = (() => { try { return JSON.parse(x); } catch (_) { return null; } })();",
+    '  return parsed;',
+    '}',
+    '',
+  ].join('\n');
+
+  t('a function containing an IIFE arrow is not reported oversized', () => {
+    a.deepStrictEqual(oversizedFunctions(SHORT_FN_WITH_IIFE, '.js'), []);
+  });
+
+  t('its measured length does not change when unrelated code is appended', () => {
+    const filler = Array.from({ length: 40 }, (_, i) => `function pad${i}() {\n  return ${i};\n}\n`).join('\n');
+    a.deepStrictEqual(
+      oversizedFunctions(SHORT_FN_WITH_IIFE + filler, '.js'), [],
+      'appending code after a function must not inflate that function\'s measured length'
+    );
+  });
+}
 const { test } = require('node:test');
 const assert = require('node:assert');
 const { oversizedFunctions, newlyOversized, newlyOverFileLimit, FILE_HARD_LIMIT } = require('../.claude/hooks/lib/length');

@@ -6,15 +6,19 @@
 // Verdicts come from coverage_map.py; results are cached per file against the
 // graph/coverage mtimes so python runs only when something changed.
 // UNCOVERED symbols in the edited range block with a route to pin-down or
-// sprout. Missing coverage data blocks with the scoped-regen command. Tooling
-// gaps (no python3, regex-fallback graph) degrade to a non-blocking note —
-// never silently. Escape hatch: HARNESS_COVERAGE_PREFLIGHT=off.
+// sprout. Missing coverage data blocks with the scoped-regen command ONLY when
+// the project has tooling that could produce it; a project with no coverage
+// runner at all gets a loud note instead, because a block it cannot satisfy is
+// an unsatisfiable wall, not a gate. Tooling gaps (no python3, regex-fallback
+// graph) degrade the same way — reported, never silent. Escape hatch:
+// HARNESS_COVERAGE_PREFLIGHT=off.
 
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
 const TEST_PATH_RE = /(^|\/)(tests?|__tests__)\/|\.(test|spec)\.[^/]+$|(^|\/)test_[^/]+\.py$|_test\.py$/;
+const JS_COVERAGE_BINS = ['nyc', 'c8', 'vitest', 'jest'];
 const COVERAGE_CANDIDATES = ['.coverage', 'coverage/coverage-final.json', 'coverage-final.json'];
 const SCRIPT_REL = path.join('.claude', 'skills', 'code-map', 'scripts', 'code_index', 'coverage_map.py');
 const CACHE_REL = path.join('.claude', 'state', 'coverage-preflight-cache.json');
@@ -100,7 +104,49 @@ function runCoverageMap(projectDir, graphPath, coveragePath, rel) {
   return { status: 'ok', results: report.results };
 }
 
-function noCoverageBlock(rel) {
+function hasJsCoverageTooling(projectDir) {
+  for (const bin of JS_COVERAGE_BINS) {
+    if (fs.existsSync(path.join(projectDir, 'node_modules', '.bin', bin))) return true;
+  }
+  const pkg = readJson(path.join(projectDir, 'package.json'));
+  if (!pkg) return false;
+  const deps = Object.assign({}, pkg.dependencies || {}, pkg.devDependencies || {});
+  return JS_COVERAGE_BINS.some((bin) => Object.prototype.hasOwnProperty.call(deps, bin));
+}
+
+function hasPyCoverageTooling(projectDir) {
+  if (!fs.existsSync(path.join(projectDir, SCRIPT_REL))) return false;
+  const probe = spawnSync('python3', ['-c', 'import coverage'], { encoding: 'utf8', timeout: 5000 });
+  return !probe.error && probe.status === 0;
+}
+
+// Can this project produce coverage FOR THIS FILE? A hard block is only fair when the
+// developer has a way to satisfy it — and the tooling has to match the file's language.
+// Python's coverage cannot produce a verdict for a .js file, so a repo that has
+// coverage.py installed must not be treated as able to cover its JavaScript.
+function canProduceCoverage(projectDir, rel) {
+  const ext = path.extname(rel).toLowerCase();
+  if (ext === '.py') return hasPyCoverageTooling(projectDir);
+  return hasJsCoverageTooling(projectDir);
+}
+
+// No coverage data. If the project HAS tooling, block — the developer can generate it.
+// If it has none, blocking demands evidence the project cannot produce, so degrade to
+// a loud note instead. This is how the gate already treats a missing python3 or a
+// missing coverage_map.py: a tooling gap is reported, never silently passed, and never
+// turned into an unsatisfiable wall.
+function noCoverage(projectDir, rel) {
+  if (!canProduceCoverage(projectDir, rel)) {
+    const looked = path.extname(rel).toLowerCase() === '.py' ? 'python3 coverage' : JS_COVERAGE_BINS.join(', ');
+    return {
+      decision: 'note',
+      message:
+        `note: coverage preflight cannot run for ${rel} — no coverage data (.coverage / coverage-final.json), ` +
+        `and no tooling in this project could produce it for a ${path.extname(rel) || 'source'} file (looked for ${looked}).\n` +
+        `Treat the edited symbols as UNCOVERED and pin them down first (skill: pinning-down-behavior).\n` +
+        `To enforce this gate here, add a coverage runner; to silence it, HARNESS_COVERAGE_PREFLIGHT=off.\n`,
+    };
+  }
   return {
     decision: 'block',
     message:
@@ -143,12 +189,12 @@ function coveragePreflight(projectDir, toolName, ti, filePath) {
   if (!ctx) return { decision: 'allow' };
 
   const coveragePath = findCoverage(projectDir);
-  if (!coveragePath) return noCoverageBlock(ctx.rel);
+  if (!coveragePath) return noCoverage(projectDir, ctx.rel);
 
   let results = cachedResults(projectDir, ctx.rel, ctx.graphPath, coveragePath);
   if (!results) {
     const run = runCoverageMap(projectDir, ctx.graphPath, coveragePath, ctx.rel);
-    if (run.status === 'no-coverage') return noCoverageBlock(ctx.rel);
+    if (run.status === 'no-coverage') return noCoverage(projectDir, ctx.rel);
     if (run.status !== 'ok') {
       return { decision: 'note', message: `note: coverage preflight could not run (${run.status}${run.detail ? `: ${run.detail}` : ''}) — treat edited symbols in ${ctx.rel} as UNCOVERED and pin them down first.\n` };
     }
@@ -161,4 +207,4 @@ function coveragePreflight(projectDir, toolName, ti, filePath) {
   return hits.length > 0 ? uncoveredBlock(ctx.rel, hits) : { decision: 'allow' };
 }
 
-module.exports = { coveragePreflight };
+module.exports = { coveragePreflight, canProduceCoverage };

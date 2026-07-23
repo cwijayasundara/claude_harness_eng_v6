@@ -58,12 +58,23 @@ function installCoverageMapScript(projectDir) {
   );
 }
 
-function makeBrownfieldProject({ withCoverage = true } = {}) {
+// withCoverageTooling controls whether the project could POSSIBLY produce coverage.
+// It is declared explicitly rather than inferred, so the block-vs-note decision does
+// not depend on whether the machine running the suite happens to have python3
+// `coverage` importable.
+function makeBrownfieldProject({ withCoverage = true, withCoverageTooling = true } = {}) {
   const projectDir = makeHookProject([HOOK]);
   const srcPath = path.join(projectDir, 'src', 'svc.js');
   fs.mkdirSync(path.dirname(srcPath), { recursive: true });
   fs.writeFileSync(srcPath, SRC);
-  installCoverageMapScript(projectDir);
+  if (withCoverageTooling) {
+    installCoverageMapScript(projectDir);
+    // A declared devDependency is enough for the tooling probe — no install needed.
+    fs.writeFileSync(
+      path.join(projectDir, 'package.json'),
+      JSON.stringify({ name: 'fixture', devDependencies: { nyc: '^15.0.0' } }, null, 2)
+    );
+  }
   writeGraph(projectDir);
   if (withCoverage) writeCoverage(projectDir, srcPath);
   return { projectDir, srcPath };
@@ -87,12 +98,54 @@ test('allows an edit confined to a COVERED symbol', async () => {
   assert.strictEqual(result.status, 0, result.stdout);
 });
 
-test('blocks when the file is graph-mapped but no coverage data exists', async () => {
+test('blocks when the file is graph-mapped, coverage is absent, but tooling could produce it', async () => {
   const { projectDir, srcPath } = makeBrownfieldProject({ withCoverage: false });
   const result = await runHook(projectDir, HOOK, editInput(srcPath, '  return 1;'), ENV);
   assert.strictEqual(result.status, 2, result.stdout);
   assert.ok(/coverage/i.test(result.stdout), result.stdout);
   assert.ok(result.stdout.includes('--cov'), result.stdout);
+});
+
+// A block the developer cannot satisfy is an unsatisfiable wall, not a gate. This is
+// the case that made the gate fire on this very repo: no nyc/c8/vitest/jest, tests run
+// under `node --test`, so no command exists that would produce coverage-final.json.
+test('degrades to a note when no coverage data exists AND no tooling could produce it', async () => {
+  const { projectDir, srcPath } = makeBrownfieldProject({ withCoverage: false, withCoverageTooling: false });
+  const result = await runHook(projectDir, HOOK, editInput(srcPath, '  return 1;'), ENV);
+  assert.strictEqual(result.status, 0, `must not block: ${result.stdout}`);
+});
+
+// The tooling probe must match the edited file's language. This repo has coverage.py
+// importable and ships coverage_map.py, but tests JS under `node --test` — so python
+// tooling must not be read as "can cover this .js file". Asserted on the pure function
+// so it does not depend on what the machine has installed.
+test('python coverage tooling does not count as coverage tooling for a .js file', () => {
+  const { canProduceCoverage } = require('../.claude/hooks/lib/coverage-preflight.js');
+  const projectDir = makeHookProject([HOOK]);
+  installCoverageMapScript(projectDir); // python side present
+  fs.writeFileSync(path.join(projectDir, 'package.json'), JSON.stringify({ name: 'fixture' }));
+  assert.strictEqual(canProduceCoverage(projectDir, 'src/svc.js'), false,
+    'a .js file needs a JS coverage runner; coverage.py cannot produce it');
+});
+
+test('a JS runner does not count as coverage tooling for a .py file', () => {
+  const { canProduceCoverage } = require('../.claude/hooks/lib/coverage-preflight.js');
+  const projectDir = makeHookProject([HOOK]);
+  fs.writeFileSync(
+    path.join(projectDir, 'package.json'),
+    JSON.stringify({ name: 'fixture', devDependencies: { nyc: '^15.0.0' } })
+  );
+  assert.strictEqual(canProduceCoverage(projectDir, 'src/svc.py'), false,
+    'a .py file needs coverage.py; nyc cannot produce it');
+});
+
+test('the degraded note is loud — it names the gap and stays on the UNCOVERED side', async () => {
+  const { projectDir, srcPath } = makeBrownfieldProject({ withCoverage: false, withCoverageTooling: false });
+  const result = await runHook(projectDir, HOOK, editInput(srcPath, '  return 1;'), ENV);
+  const out = result.stdout + result.stderr;
+  assert.match(out, /coverage preflight cannot run/i, 'must say it could not run, not stay silent');
+  assert.match(out, /UNCOVERED/, 'must keep treating the symbols as uncovered');
+  assert.match(out, /nyc|c8|vitest|jest/, 'must name what it looked for, so the gap is actionable');
 });
 
 test('inactive without a brownfield code graph', async () => {

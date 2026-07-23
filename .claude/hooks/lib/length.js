@@ -90,6 +90,26 @@ function functionsPython(lines) {
   return out;
 }
 
+// Pop everything the current depth has closed. Two cases, and the second one is
+// load-bearing:
+//   opened   — a real block-bodied function; record its measured length.
+//   !opened  — declared, but it never opened a body deeper than where it was seen,
+//              and we are back at that depth. It was not a block-bodied function.
+//              The regexes over-match on purpose; an immediately-invoked arrow bound
+//              to a const opens and closes its braces on one line, so it is matched
+//              but never opens. Discarding it is what stops it poisoning the stack:
+//              left in place it blocks every ENCLOSING function from being popped,
+//              and those then measure to an arbitrary later brace — which reported a
+//              16-line function as 31 purely because of what was appended after it.
+function flushBraceStack(funcStack, depth, i, out) {
+  while (funcStack.length > 0) {
+    const top = funcStack[funcStack.length - 1];
+    if (depth > top.surroundDepth) break;
+    funcStack.pop();
+    if (top.opened) out.push({ name: top.name, startLine: top.startLine, length: i - top.startLine + 1 });
+  }
+}
+
 function functionsBraceLang(lines) {
   const out = [];
   const funcStack = [];
@@ -104,13 +124,7 @@ function functionsBraceLang(lines) {
     for (const fn of funcStack) {
       if (!fn.opened && depth > fn.surroundDepth) fn.opened = true;
     }
-    while (funcStack.length > 0) {
-      const top = funcStack[funcStack.length - 1];
-      if (top.opened && depth <= top.surroundDepth) {
-        funcStack.pop();
-        out.push({ name: top.name, startLine: top.startLine, length: i - top.startLine + 1 });
-      } else break;
-    }
+    flushBraceStack(funcStack, depth, i, out);
   }
   while (funcStack.length > 0) {
     const fn = funcStack.pop();
