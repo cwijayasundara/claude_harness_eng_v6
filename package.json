@@ -1,6 +1,6 @@
 {
   "name": "claude-harness-eng-v5",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "private": true,
   "description": "Claude Code plugin scaffold for autonomous long-running application development.",
   "scripts": {

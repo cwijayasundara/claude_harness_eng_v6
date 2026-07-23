@@ -1,8 +1,17 @@
-# Claude Harness Engine v5
+# Claude Harness Engine v6
 
 A Claude Code plugin for building and changing software with a generator/evaluator loop, ratcheting quality gates, and explicit human review before merge.
 
-Current version: `2.5.0`
+Current version: `3.0.0`
+
+> **v6 is a descendant of v5, not a rewrite.** It carries the full history (`v5-preserve` is an
+> ancestor of `main`), so every change is reviewable against a real baseline. What changed is
+> structural: the harness is now a **51-unit kernel plus nine opt-in packs**, the boundary
+> between them is mechanically enforced, and every control records whether it actually fires.
+> See [Kernel and packs](#kernel-and-packs) and [Does a control earn its place?](#does-a-control-earn-its-place).
+>
+> **Breaking:** scaffold profiles changed meaning — `core` no longer installs the brownfield,
+> compliance or vertical packs. See the profile table below before upgrading a project.
 
 **Field guide (navigable HTML):** open [docs/harness-guide.html](docs/harness-guide.html) in a browser — architecture diagrams, lane picker, GAN/ratchet under the covers, multi-dimension **vs Devin** comparison, playbooks, and glossary. Offline; no build step.
 
@@ -15,11 +24,11 @@ Current version: `2.5.0`
 This repo ships a **local marketplace** (`.claude-plugin/marketplace.json`), so you can install the harness as a persistent Claude Code plugin — it stays loaded across sessions with no `--plugin-dir` flag to retype:
 
 ```bash
-git clone https://github.com/cwijayasundara/claude_harness_eng_v5.git ~/claude_harness_eng_v5
+git clone https://github.com/cwijayasundara/claude_harness_eng_v6.git ~/claude_harness_eng_v6
 
 # Register the local marketplace (points at your clone), then install the plugin
-claude plugin marketplace add ~/claude_harness_eng_v5
-claude plugin install claude_harness_eng_v5@claude-harness-local
+claude plugin marketplace add ~/claude_harness_eng_v6
+claude plugin install claude_harness_eng_v6@claude-harness-local
 ```
 
 `claude plugin install` defaults to `--scope user` (available in every project). Use `--scope project` to write it into a specific project's `.claude/settings.json` (shared with everyone who clones that project), or `--scope local` for a gitignored per-project install. After pulling new commits, refresh with `claude plugin marketplace update claude-harness-local`.
@@ -30,7 +39,7 @@ Then inside Claude Code:
 /scaffold
 ```
 
-If your Claude Code UI shows a namespaced command, use `/claude_harness_eng_v5:scaffold`.
+If your Claude Code UI shows a namespaced command, use `/claude_harness_eng_v6:scaffold`.
 
 Installing gives you every harness *command*; `/scaffold` still installs the lean `core` surface into your project by default (`/scaffold --full` for the full set). The deterministic gate hooks wire up when `/scaffold` copies `.claude/` into a target project.
 
@@ -39,7 +48,7 @@ Installing gives you every harness *command*; `/scaffold` still installs the lea
 To try it without installing, point `--plugin-dir` at the checked-in `.claude/` directory — the plugin root that holds `.claude-plugin/plugin.json`. Per the [plugins reference](https://code.claude.com/docs/en/plugins-reference#plugin-caching-and-file-resolution), this loads the plugin for the current session only:
 
 ```bash
-claude --plugin-dir ~/claude_harness_eng_v5/.claude
+claude --plugin-dir ~/claude_harness_eng_v6/.claude
 ```
 
 #### Optional: start in auto mode
@@ -72,7 +81,7 @@ cd ~/my-project
 # Point at the packaged SKU root itself — NOT a .claude/ subfolder.
 # package:skus flattens .claude/* up to the package root (plugin.json lives at
 # harness-core/.claude-plugin/), so do NOT append /.claude here.
-claude --plugin-dir /path/to/claude_harness_eng_v5/dist/skus/harness-core
+claude --plugin-dir /path/to/claude_harness_eng_v6/dist/skus/harness-core
 ```
 
 | SKU | Load (`--plugin-dir`) | Use when |
@@ -84,7 +93,73 @@ claude --plugin-dir /path/to/claude_harness_eng_v5/dist/skus/harness-core
 SKU vocabulary: [docs/product-skus-and-tiers.md](docs/product-skus-and-tiers.md).  
 Publish process (marketplace / tarball / interim): [docs/marketplace-publish.md](docs/marketplace-publish.md).
 
-Every project gets the lean `core` scaffold by default: `/build`, `/auto`, `/gate`, plus the minimal brownfield spine (`/feature`, `/brownfield`, `/code-map`, `/change`, `/refactor`, `/vibe`, tracker publishing). Use `/scaffold --full` only when you explicitly want the optional harness surface.
+For an arbitrary selection — including **kernel-only** — compose one directly instead:
+
+```bash
+node tools/pack-install.js --list                          # what each pack adds
+node tools/pack-install.js --out ~/lean                    # kernel only: 51 units, 79 files
+node tools/pack-install.js --out ~/bf --packs brownfield   # kernel + one pack
+```
+
+Both paths read the same `.claude/config/packs.json`, so a SKU and a composed install can
+never disagree about what a profile contains.
+
+## Kernel and packs
+
+The harness is a **kernel** plus nine opt-in **packs**. The kernel is what has usage evidence:
+the three lanes (`/vibe`, `/change`, `/gate`), `/refactor`, `code-gen`, the `implementer` /
+`code-reviewer` / `security-reviewer` agents, the five session hooks, and the commit gate.
+
+| Profile | Units | Adds |
+|---|---:|---|
+| `kernel` | 51 | the lanes and the commit gate — nothing that assumes a pipeline, an existing codebase, or a client mandate |
+| `core` | 220 | planning, verification, legacy-discipline, telemetry, scaffold |
+| `brownfield` | 251 | + brownfield (code-graph, nav, seams) |
+| `full` | 286 | + compliance, domain, dist |
+
+**One structural rule holds it together:** *a kernel unit may not hard-reference a pack unit.*
+
+```bash
+node tools/check-partition.js --strict     # exit 1 on any violation
+```
+
+"Hard" means it would break if the target were gone — `require()`, `node .claude/scripts/x.js`,
+a `subagent_type` dispatch. A remediation string that names a script, or a doc link to another
+skill, is **soft**: uninstalling the pack makes it a stale message, not a crash. Guarded loads
+(`packRun(...)`, `try { require(...) } catch`) are reported as optional edges rather than
+violations, so correct code is never rewritten just to satisfy the checker.
+
+A pack that is not installed is *reported*, never silently dropped:
+
+```
+skip  duplication-ratchet  [brownfield] — "brownfield" pack not installed
+gate-checks: 0 passed, 0 blocked, 0 warn, 3 skipped (pack not installed)
+```
+
+Justified exceptions live in `accepted_edges[]` in `packs.json`, each requiring a written
+reason, printed on every run, and reported **STALE** once the edge disappears.
+
+## Does a control earn its place?
+
+Every control now records whether it **ran**, whether it **blocked**, and how long it took —
+across session (every write), commit, and integration (`/gate`) cadences.
+
+```bash
+npm run sensor-value
+```
+
+```
+NEVER FIRED (never ran — check wiring or retire): …
+NEVER BLOCKED (ran but never caught anything — candidate shelfware): …
+SLOW (>=500ms average — correct but costly): …
+BLOCKS OFTEN (>50% of runs — real systemic issue, or false-blocking): …
+```
+
+This is the subtractive half of the loop: without it, no control can ever be removed, because
+nothing shows which ones are inert. The report refuses to nominate anything below its evidence
+threshold, and **BLOCKS OFTEN is surfaced for a human rather than auto-judged** — the ledger
+cannot tell a correct block from a wrong one, and pretending otherwise is how a meter starts
+lying.
 
 ### Upgrading an already-scaffolded project
 
@@ -99,9 +174,9 @@ Or from a shell — refresh hooks/scripts/git-hooks/agents without wiping `proje
 
 ```bash
 # dry-run (default)
-node /path/to/claude_harness_eng_v5/.claude/scripts/scaffold-upgrade.js --target ~/my-project
+node /path/to/claude_harness_eng_v6/.claude/scripts/scaffold-upgrade.js --target ~/my-project
 # apply
-node /path/to/claude_harness_eng_v5/.claude/scripts/scaffold-upgrade.js --target ~/my-project --apply
+node /path/to/claude_harness_eng_v6/.claude/scripts/scaffold-upgrade.js --target ~/my-project --apply
 # also refresh skills (larger prompt surface change)
 node …/scaffold-upgrade.js --target ~/my-project --apply --include-skills
 ```
@@ -112,14 +187,19 @@ node …/scaffold-upgrade.js --target ~/my-project --apply --include-skills
 
 ```
 What are you installing into?
-├── Normal product repo / app / service / CLI       → /scaffold
-├── Existing repo that will keep receiving changes  → /scaffold
-├── You want the old brownfield profile name        → /scaffold --brownfield
-├── You want optional ops/extras copied too         → /scaffold --full
-└── You want telemetry env + dashboard files        → /scaffold --telemetry
+├── New product repo / app / service / CLI          → /scaffold            (core)
+├── Existing codebase you will keep changing        → /scaffold --brownfield
+├── Need the compliance or vertical packs too       → /scaffold --full
+└── Want telemetry env + dashboard files            → /scaffold --telemetry
 ```
 
-Default answer: use `/scaffold`. Sprint 2+ is brownfield, so the lean core already includes the existing-code route.
+Default answer: `/scaffold` (core). **Changed in v6:** `core` is greenfield product work and no
+longer ships the brownfield pack — pick `--brownfield` when you are working in an existing
+codebase and want the code-graph, nav and seam tooling.
+
+In v5 these profiles had drifted into near-synonyms: `core` spanned all eight packs, so
+`brownfield` added a single skill and its own test described it as "a backward-compatible alias
+for core". They are distinguishable again, and negative assertions keep them that way.
 
 ### 2. Pick The Work Route
 

@@ -5,15 +5,17 @@
     "test/helpers/pipeline-status-fixtures.js",
     "test/helpers/pre-commit-fixtures.js",
     "test/helpers/record-run-fixture.js",
-    "test/helpers/skill-corpus.js"
+    "test/helpers/skill-corpus.js",
+    "test/helpers/pack-membership.js"
   ],
   "content_hashes": {
     "test/helpers/hook-fixture.js": "d2bff8c6a7516435",
     "test/helpers/pipeline-status-fixtures.js": "aef89497cb41d312",
     "test/helpers/pre-commit-fixtures.js": "a5714f16842662e2",
     "test/helpers/record-run-fixture.js": "82ee1e77fbf922f4",
-    "test/helpers/skill-corpus.js": "3610a6955dc068ab"
+    "test/helpers/skill-corpus.js": "3610a6955dc068ab",
+    "test/helpers/pack-membership.js": "3eeba718efbfbeb9"
   },
-  "content_hash": "e6cbe476bab93228",
+  "content_hash": "bc196be7dab1d764",
   "stale": false
 }

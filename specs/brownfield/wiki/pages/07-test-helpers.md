@@ -1,12 +1,13 @@
-# `test/helpers/` — 5 module(s)
+# `test/helpers/` — 6 module(s)
 
-5 module(s).
+6 module(s).
 
 ## Dependencies
 
 ```mermaid
 flowchart LR
   n_js_test_helpers_hook_fixture_js["hook-fixture.js"]
+  n_js_test_helpers_pack_membership_js["pack-membership.js"]
   n_js_test_helpers_pipeline_status_fixtures_js["pipeline-status-fixtures.js"]
   n_js_test_helpers_pre_commit_fixtures_js["pre-commit-fixtures.js"]
   n_js_test_helpers_record_run_fixture_js["record-run-fixture.js"]
@@ -22,6 +23,15 @@ flowchart LR
   - `makeGitProject` (function) → js:test/helpers/hook-fixture.js:46 — `function makeGitProject()`
   - `runGitHook` (function) → js:test/helpers/hook-fixture.js:59 — `function runGitHook(projectDir, hookName, env, args)`
   - `runHook` (function) → js:test/helpers/hook-fixture.js:79 — `function runHook(projectDir, hookName, input, env)`
+
+## `js:test/helpers/pack-membership.js`
+
+- fan-in: 0, fan-out: 2
+
+### Symbols
+  - `loadPacks` (function) → js:test/helpers/pack-membership.js:16 — `function loadPacks()`
+  - `packOf` (function) → js:test/helpers/pack-membership.js:21 — `function packOf(name, kind)`
+  - `shipsIn` (function) → js:test/helpers/pack-membership.js:31 — `function shipsIn(name, kind)`
 
 ## `js:test/helpers/pipeline-status-fixtures.js`
 

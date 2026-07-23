@@ -4,7 +4,7 @@
 
 ## Summary
 
-Cluster `test/helpers` groups **5** file(s) (hub fan-in hint 31).
+Cluster `test/helpers` groups **6** file(s) (hub fan-in hint 36).
 
 ## Files
 
@@ -13,6 +13,7 @@ Cluster `test/helpers` groups **5** file(s) (hub fan-in hint 31).
 - `test/helpers/pre-commit-fixtures.js` (hash a5714f16842662e2)
 - `test/helpers/record-run-fixture.js` (hash 82ee1e77fbf922f4)
 - `test/helpers/skill-corpus.js` (hash 3610a6955dc068ab)
+- `test/helpers/pack-membership.js` (hash 3eeba718efbfbeb9)
 
 ## Symbols
 
@@ -34,6 +35,9 @@ Cluster `test/helpers` groups **5** file(s) (hub fan-in hint 31).
 - `writeSkills`
 - `readSkillCorpus`
 - `skillEntryLineCount`
+- `loadPacks`
+- `packOf`
+- `shipsIn`
 
 ## Repo notes (steering)
 
@@ -53,9 +57,9 @@ Cluster `test/helpers` groups **5** file(s) (hub fan-in hint 31).
 - test/commit-msg-git-hook.test.js → test/helpers/hook-fixture.js (imports)
 - test/concurrency-gate-doc-contract.test.js → test/helpers/skill-corpus.js (imports)
 - test/contract-accessibility-default.test.js → test/helpers/skill-corpus.js (imports)
-- test/coupling-gate-wiring-contract.test.js → test/helpers/skill-corpus.js (imports)
-- test/coverage-preflight.test.js → test/helpers/hook-fixture.js (imports)
 - test/cycle-gate-wiring-contract.test.js → test/helpers/skill-corpus.js (imports)
+- test/e2e-workflow-template.test.js → test/helpers/skill-corpus.js (imports)
+- test/e2e/harness-framework.test.js → test/helpers/skill-corpus.js (imports)
 
 ## Citations
 
