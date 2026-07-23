@@ -140,6 +140,14 @@ test('no pack unit leaks into a kernel-only tree', () => {
   }
 });
 
+test('check-partition --strict passes: no kernel violations and no profile-breaking edges', () => {
+  // The ratchet that keeps the profiles installable: a kernel unit may not hard-reference
+  // a pack, AND no composed profile may hard-reference a pack it does not install. Enforced
+  // here (not only by a manual CLI run) so a regression fails the suite.
+  const r = node([path.join(ROOT, 'tools', 'check-partition.js'), '--strict']);
+  assert.strictEqual(r.status, 0, `the partition must stay closed under hard references:\n${r.stdout}`);
+});
+
 test('every file in the accounted directories is claimed by some pack', () => {
   // A file no pack declares ships in NO install. check-partition cannot see this —
   // it reports edges between declared units, not units nobody declared.

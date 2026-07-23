@@ -117,10 +117,12 @@ the three lanes (`/vibe`, `/change`, `/gate`), `/refactor`, `code-gen`, the `imp
 | `brownfield` | 251 | + brownfield (code-graph, nav, seams) |
 | `full` | 286 | + compliance, domain, dist |
 
-**One structural rule holds it together:** *a kernel unit may not hard-reference a pack unit.*
+**One structural rule holds it together:** *a kernel unit may not hard-reference a pack
+unit — and, more generally, no composed profile may hard-reference a pack it does not
+install (profile-closure).* Both are enforced; declared exceptions live in `accepted_edges`.
 
 ```bash
-node tools/check-partition.js --strict     # exit 1 on any violation
+node tools/check-partition.js --strict     # exit 1 on a kernel violation OR a profile break
 ```
 
 "Hard" means it would break if the target were gone — `require()`, `node .claude/scripts/x.js`,

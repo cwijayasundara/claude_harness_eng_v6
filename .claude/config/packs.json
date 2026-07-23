@@ -407,7 +407,7 @@
       "hook": []
     }
   },
-  "rule": "A kernel unit may not hard-reference a pack unit. Enforced by tools/check-partition.js --strict.",
+  "rule": "A kernel unit may not hard-reference a pack unit, AND no composed profile may hard-reference a pack it does not install (profile-closure). Declared exceptions live in accepted_edges. Enforced by tools/check-partition.js --strict.",
   "resolution_policy": {
     "move-callee-to-kernel": "the callee is infrastructure the kernel genuinely needs",
     "move-caller-to-pack": "the caller is pack content that was mis-homed",
@@ -418,6 +418,31 @@
       "from": "skill:refactor",
       "to": "skill:code-map",
       "why": "Caller lookup for rename/move blast radius. The whole block is already conditional on specs/brownfield/code-graph.json existing, which only happens when the brownfield pack is installed — /refactor works without it. Prose conditionality the checker cannot see."
+    },
+    {
+      "from": "skill:design",
+      "to": "script:modularity-pack",
+      "why": "/design --delta Step D3.5 refreshes the modularity pack ONLY if specs/brownfield/ already exists ('If it exists, refresh the pack') — i.e. when brownfield has run. A greenfield/core install never reaches this conditional step. Prose conditionality the checker cannot see, same case as skill:refactor -> skill:code-map."
+    },
+    {
+      "from": "skill:design",
+      "to": "agent:modularity-reviewer",
+      "why": "Spawned in the same conditional /design --delta Step D3.5 as script:modularity-pack, only when a code-graph exists (brownfield installed). Greenfield delta reviews skip it. Prose conditionality the checker cannot see."
+    },
+    {
+      "from": "script:scaffold-apply",
+      "to": "script:navigation-refresh",
+      "why": "scaffold-apply is the distribution installer; it only ever executes from the full harness source via `node $CLAUDE_PLUGIN_ROOT/scripts/scaffold-apply.js` (never from a downstream install against itself), where every pack is present. A composed core install ships this file as inert reference content and never runs it, so the require is always satisfied at the point of execution."
+    },
+    {
+      "from": "script:scaffold-apply",
+      "to": "script:scaffold-security-baseline",
+      "why": "Same as scaffold-apply -> navigation-refresh: the installer runs only from the full harness source ($CLAUDE_PLUGIN_ROOT), where the compliance pack is present. Guarding the require instead would add a silent-skip path to a security-baseline install step — worse than a declared, reviewed exception."
+    },
+    {
+      "from": "script:scaffold-apply",
+      "to": "lib:security-baseline",
+      "why": "Pulled in transitively by scaffold-security-baseline during the same installer run. scaffold-apply executes only from the full harness source ($CLAUDE_PLUGIN_ROOT), where the compliance pack is present."
     }
   ],
   "profiles": {
