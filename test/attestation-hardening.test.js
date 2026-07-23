@@ -106,7 +106,7 @@ test('tamper detection catches a NESTED field mutation', () => {
   });
   const { path: file } = gen(root);
   const j = JSON.parse(fs.readFileSync(file, 'utf8'));
-  j.verify.deploy_gate.environments[0].compliant = false; // nested flip, no hash recompute
+  (j.predicate || j).verify.deploy_gate.environments[0].compliant = false; // nested flip, no hash recompute
   fs.writeFileSync(file, JSON.stringify(j, null, 2));
   assert.strictEqual(verifyAttestation(file).ok, false);
 });
@@ -114,7 +114,7 @@ test('tamper detection catches a NESTED field mutation', () => {
 test('--verify rejects a non-sha256 integrity algo', () => {
   const { path: file } = gen(makeRoot());
   const j = JSON.parse(fs.readFileSync(file, 'utf8'));
-  j.integrity.algo = 'md5';
+  (j.predicate || j).integrity.algo = 'md5';
   fs.writeFileSync(file, JSON.stringify(j, null, 2));
   const res = verifyAttestation(file);
   assert.strictEqual(res.ok, false);

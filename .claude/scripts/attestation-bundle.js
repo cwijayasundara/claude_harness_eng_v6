@@ -118,7 +118,65 @@ function buildBundle(parts) {
   return bundle;
 }
 
+
+// ---- in-toto Statement envelope (C2) ----
+//
+// The bundle is wrapped in an in-toto Statement rather than shipped as a bespoke JSON
+// shape. in-toto defines the envelope and is what cosign/Sigstore sign, so adopting it
+// makes the evidence recognisable to standard tooling instead of only to this harness.
+//
+// The predicateType is OURS on purpose. SLSA provenance describes how an ARTIFACT was
+// built by a trusted builder; this is control evidence about a COMMIT. Borrowing
+// slsa.dev/provenance for it would be a category error that reads as a stronger claim
+// than we make. in-toto exists to carry custom predicates — this is that case.
+const IN_TOTO_STATEMENT_TYPE = 'https://in-toto.io/Statement/v1';
+const PREDICATE_TYPE = 'https://claude-harness.dev/attestation/control-evidence/v1';
+
+function subjectFor(bundle) {
+  const repo = bundle && bundle.repo;
+  return [{
+    name: repo ? `git+https://github.com/${repo}` : 'git+unknown',
+    digest: { gitCommit: (bundle && bundle.commit_sha) || 'unknown' },
+  }];
+}
+
+function toInTotoStatement(bundle) {
+  return {
+    _type: IN_TOTO_STATEMENT_TYPE,
+    subject: subjectFor(bundle),
+    predicateType: PREDICATE_TYPE,
+    predicate: bundle,
+  };
+}
+
+function isInTotoStatement(doc) {
+  return !!(doc && doc._type === IN_TOTO_STATEMENT_TYPE);
+}
+
+// Accepts either shape. A pre-C2 bundle passes through unchanged so evidence written
+// before this change stays readable — an auditor holding last quarter's attestation
+// should not need this quarter's tooling. Anything malformed throws rather than
+// returning an empty object, which would read downstream as "no findings".
+function fromInTotoStatement(doc) {
+  if (!isInTotoStatement(doc)) return doc;
+  if (doc.predicateType !== PREDICATE_TYPE) {
+    throw new Error(
+      `attestation: unexpected predicateType ${doc.predicateType} — expected ${PREDICATE_TYPE}. ` +
+      'Reading another predicate as our control evidence would be a silent category error.'
+    );
+  }
+  if (!doc.predicate || typeof doc.predicate !== 'object') {
+    throw new Error('attestation: in-toto statement has no predicate — it carries no evidence');
+  }
+  return doc.predicate;
+}
+
 module.exports = {
+  toInTotoStatement,
+  fromInTotoStatement,
+  isInTotoStatement,
+  IN_TOTO_STATEMENT_TYPE,
+  PREDICATE_TYPE,
   buildBundle,
   buildInventory,
   buildControls,

@@ -28,7 +28,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { buildBundle } = require('./attestation-bundle');
+const { buildBundle, toInTotoStatement, fromInTotoStatement, isInTotoStatement } = require('./attestation-bundle');
 const { contentHash } = require('./canonical-json');
 const io = require('./attestation-io');
 
@@ -115,15 +115,31 @@ function generateAttestation(opts = {}) {
   // Stored <sha>.json is authoritative: re-run is a no-op unless force, but still
   // self-heal a missing index entry (idempotent) and return STORED compliance.
   if (fs.existsSync(file) && !opts.force) {
-    const stored = io.readJson(file);
+    const raw = io.readJson(file);
+    const stored = raw ? fromInTotoStatement(raw) : null;
     if (stored) io.appendIndex(attestDir, root, stored, file);
     return { action: 'already-attested', path: file, bundle: stored, compliant: stored ? stored.compliant : null };
   }
 
   const bundle = assembleBundle(root, identity);
-  io.writeBundle(file, bundle);
+  // Written as an in-toto Statement (C2). The integrity hash still covers the bundle
+  // body, so the stored hash means the same thing before and after this change.
+  io.writeBundle(file, toInTotoStatement(bundle));
   io.appendIndex(attestDir, root, bundle, file);
   return { action: 'written', path: file, bundle, compliant: bundle.compliant };
+}
+
+// The statement's subject must agree with the predicate it carries. Without this the
+// hash (which covers only the predicate) would leave repo/commit in the envelope
+// editable without detection.
+function envelopeMismatch(statement, bundle) {
+  const subject = Array.isArray(statement.subject) ? statement.subject[0] : null;
+  if (!subject) return 'statement has no subject';
+  const sha = subject.digest && subject.digest.gitCommit;
+  if (sha !== bundle.commit_sha) return `subject commit ${sha} != evidence commit ${bundle.commit_sha}`;
+  const expected = bundle.repo ? `git+https://github.com/${bundle.repo}` : 'git+unknown';
+  if (subject.name !== expected) return `subject name ${subject.name} != ${expected}`;
+  return null;
 }
 
 function integrityMismatchMessage(file, stored, recomputed) {
@@ -141,8 +157,19 @@ function integrityMismatchMessage(file, stored, recomputed) {
 // claiming a non-sha256 algo fails, so the displayed algo cannot mislead a
 // reader). Never mutates.
 function verifyAttestation(file) {
-  const bundle = io.readJson(file);
-  if (!bundle) return { ok: false, storedHash: null, recomputedHash: null, message: `cannot read attestation: ${file}` };
+  const raw = io.readJson(file);
+  if (!raw) return { ok: false, storedHash: null, recomputedHash: null, message: `cannot read attestation: ${file}` };
+  // Accepts an in-toto Statement or a pre-C2 bare bundle: evidence written before the
+  // envelope change must stay verifiable with current tooling.
+  const bundle = fromInTotoStatement(raw);
+  // The integrity hash covers the PREDICATE, so envelope fields are outside it. Rather
+  // than leave the subject unprotected, cross-check it against the predicate: the
+  // statement must describe the same repo and commit as the evidence it wraps.
+  const envelope = isInTotoStatement(raw) ? envelopeMismatch(raw, bundle) : null;
+  if (envelope) {
+    return { ok: false, storedHash: (bundle.integrity && bundle.integrity.hash) || null, recomputedHash: null,
+      message: `ENVELOPE MISMATCH: ${file}\n  ${envelope}\nThe in-toto subject does not describe the evidence it wraps.` };
+  }
   const algo = bundle.integrity && bundle.integrity.algo;
   if (algo !== 'sha256') {
     return { ok: false, storedHash: (bundle.integrity && bundle.integrity.hash) || null, recomputedHash: null,

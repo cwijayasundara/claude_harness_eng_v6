@@ -48,21 +48,44 @@ derives from the committed git history plus branch protection until signing land
 auditor asking "what stops someone editing this file?" must not get an answer the code
 cannot support.
 
-## C2 — Adopt in-toto / SLSA for the evidence format
+## C2 — Adopt in-toto for the evidence format — **DONE** (envelope), signing outstanding
 
-Replace the bespoke `harness-attestation/1` schema with the **in-toto attestation format**
-carrying a **SLSA provenance** predicate. in-toto defines the data format and signing;
-SLSA defines what provenance must contain and what assurance level it buys.
+**Correction to this increment's original framing.** It said "in-toto attestation format
+carrying a **SLSA provenance** predicate". That conflated two different claims. SLSA
+provenance describes how an **artifact** was built by a trusted builder; this bundle is
+control evidence about a **commit**. Borrowing `slsa.dev/provenance` for it would assert
+something stronger and different from what we actually verify.
 
-GitHub's `actions/attest-build-provenance` emits exactly this, signed with a short-lived
-Sigstore certificate, and yields **SLSA v1.0 Build Level 2** with no schema of our own.
+What shipped instead is the part that was right: the **in-toto Statement envelope**, which
+exists precisely to carry custom predicates and is what cosign/Sigstore sign.
 
-This subsumes C1: Sigstore signing is real tamper-evidence, so the claim we currently
-cannot support becomes one we can.
+```json
+{
+  "_type": "https://in-toto.io/Statement/v1",
+  "subject": [{ "name": "git+https://github.com/<org>/<repo>",
+                "digest": { "gitCommit": "<sha>" } }],
+  "predicateType": "https://claude-harness.dev/attestation/control-evidence/v1",
+  "predicate": { ...the existing bundle: control inventory, verify outputs, gate verdict... }
+}
+```
 
-Keep: the *aggregation* logic (`attestation-bundle.js` assembling control inventory + verify
-outputs + gate verdict). That part is genuinely ours and has no standard equivalent — it
-becomes the predicate body rather than the whole envelope.
+- The aggregation logic is unchanged — it became the predicate body, as planned.
+- The integrity hash still covers the **predicate**, so a stored hash means the same thing
+  before and after the change, and pre-C2 attestations stay readable and verifiable
+  (`fromInTotoStatement` passes a bare bundle through).
+- Because the hash covers only the predicate, the envelope would otherwise be editable
+  without detection. `--verify` now cross-checks that the subject's repo and gitCommit
+  match the evidence it wraps, so **repo and commit are bound** even against a re-hash.
+  That closes part of the C1 gap without signing.
+- A foreign `predicateType`, or a statement with no predicate, is **rejected** rather than
+  read as empty evidence.
+
+**Still outstanding — the part that makes C1 fully true:** signing. The envelope is now a
+shape cosign can sign, but nothing signs it yet. Until then the honest claim remains
+corruption-detection plus git history and branch protection, exactly as C1 states. The next
+step is a CI step running `cosign attest` (or `actions/attest`) over the Statement, at
+which point the "rehashed edit verifies clean" test in `test/attestation.test.js` should
+start failing — which is the signal the guarantee genuinely got stronger.
 
 ## C3 — Replace `standard-map.json` with OSCAL
 

@@ -113,7 +113,7 @@ test('corruption detection: mutating a field without rehashing makes --verify ex
   const root = makeRoot();
   const { path: file } = gen(root);
   const j = JSON.parse(fs.readFileSync(file, 'utf8'));
-  j.repo = 'attacker/repo'; // mutate a field WITHOUT recomputing the hash
+  (j.predicate || j).harness_version = '0.0.0-tampered'; // a field the envelope does not mirror
   fs.writeFileSync(file, JSON.stringify(j, null, 2));
   const res = verifyAttestation(file);
   assert.strictEqual(res.ok, false);
@@ -128,9 +128,10 @@ test('a rehashed edit passes --verify: the checksum is not authenticity', () => 
   const root = makeRoot();
   const { path: file } = gen(root);
   const j = JSON.parse(fs.readFileSync(file, 'utf8'));
-  j.repo = 'attacker/repo';
-  delete j.integrity;
-  j.integrity = { algo: 'sha256', hash: contentHash(j) }; // recompute, as any editor could
+  (j.predicate || j).harness_version = '0.0.0-tampered'; // a field the envelope does not mirror
+  const body = j.predicate || j;
+  delete body.integrity;
+  body.integrity = { algo: 'sha256', hash: contentHash(body) }; // recompute, as any editor could
   fs.writeFileSync(file, JSON.stringify(j, null, 2));
   const res = verifyAttestation(file);
   assert.strictEqual(res.ok, true, 'a rehashed edit verifies clean — corruption detection, not tamper-proofing');
@@ -140,7 +141,7 @@ test('the mismatch message does not overstate what the checksum proves', () => {
   const root = makeRoot();
   const { path: file } = gen(root);
   const j = JSON.parse(fs.readFileSync(file, 'utf8'));
-  j.repo = 'attacker/repo';
+  (j.predicate || j).harness_version = '0.0.0-tampered'; // a field the envelope does not mirror
   fs.writeFileSync(file, JSON.stringify(j, null, 2));
   const { message } = verifyAttestation(file);
   assert.doesNotMatch(message, /TAMPER DETECTED/, 'must not claim tamper detection');

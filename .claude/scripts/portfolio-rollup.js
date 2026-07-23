@@ -28,6 +28,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { readJson } = require('./attestation-io');
+const { fromInTotoStatement } = require('./attestation-bundle');
 const { contentHash } = require('./canonical-json');
 const core = require('./portfolio-rollup-core');
 
@@ -150,7 +151,15 @@ function collect(dir, fleetEntries, target, exclude) {
   const byRepo = new Map();
   const seenSlugs = new Set();
   for (const { repo: nameSlug, file } of enumerateAttestations(dir, exclude)) {
-    const att = readJson(file);
+    // Attestations are in-toto Statements as of C2; pre-C2 bare bundles pass through
+    // unchanged. A malformed statement throws rather than reading as empty evidence,
+    // which would otherwise count a broken input as an uninteresting non-finding.
+    let att;
+    try {
+      att = fromInTotoStatement(readJson(file));
+    } catch (_) {
+      att = null;
+    }
     const row = core.buildRow(att, nameSlug, target);
     seenSlugs.add(nameSlug);
     seenSlugs.add(row.repo);

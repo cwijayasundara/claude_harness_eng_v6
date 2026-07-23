@@ -48,7 +48,9 @@ test('2: a tampered attestation => integrity_failed, excluded, portfolio false',
   const gen = genInto(dir, 'acme', 'beta', 'b'.repeat(40), '2.5.0', 'compliant');
   // Mutate a field WITHOUT recomputing the integrity hash (real tamper).
   const j = JSON.parse(fs.readFileSync(gen.file, 'utf8'));
-  j.status = 'compliant'; j.repo = 'attacker/beta';
+  // The file is an in-toto Statement as of C2 — mutate the EVIDENCE it carries.
+  const body = j.predicate || j;
+  body.status = 'compliant'; body.repo = 'attacker/beta';
   fs.writeFileSync(gen.file, JSON.stringify(j, null, 2));
   const { report } = rollup(dir);
   const tampered = report.repos.find((r) => r.repo === 'attacker/beta');
