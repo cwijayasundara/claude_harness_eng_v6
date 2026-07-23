@@ -212,7 +212,8 @@
         "provision-environments",
         "provision-protection",
         "ruleset-diff",
-        "scaffold-security-baseline"
+        "scaffold-security-baseline",
+        "terraform-emit"
       ],
       "lib": [
         "gates-strict",

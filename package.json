@@ -79,7 +79,8 @@
     "test:all": "node --test --test-force-exit test/*.test.js test/e2e/helpers/*.test.js tools/*.test.js",
     "test:symphony": "cd symphony_clone && npm ci --silent && npm test",
     "story-clusters": "node .claude/scripts/story-clusters.js",
-    "brd-taxonomy": "node .claude/scripts/brd-taxonomy-check.js"
+    "brd-taxonomy": "node .claude/scripts/brd-taxonomy-check.js",
+    "terraform-emit": "node .claude/scripts/terraform-emit.js"
   },
   "devDependencies": {
     "eslint": "^9.28.0",
