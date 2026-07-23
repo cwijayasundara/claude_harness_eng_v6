@@ -56,8 +56,7 @@ test('6: an all-gated fleet => fleet_gated:true, exit 0, report at --out and def
   assert.strictEqual(res.code, 0, res.stderr);
   assert.strictEqual(report.fleet_gated, true);
   assert.strictEqual(report.summary.gated, 2);
-  // default path is written too
-  assert.ok(fs.existsSync(path.join(cwd, 'specs', 'reviews', 'fleet-retrofit.json')) || true);
+  // the default --out path is asserted for real in test 6b below.
 });
 
 test('6b: default --out is specs/reviews/fleet-retrofit.json', () => {

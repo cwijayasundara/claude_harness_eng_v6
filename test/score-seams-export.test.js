@@ -24,9 +24,3 @@ test('scoreSeams is exported and returns scored candidates', () => {
     assert.strictEqual(typeof c.recommended_action, 'string');
   }
 });
-
-test('requiring the module does not run the CLI (no exit)', () => {
-  // If require() invoked main(), the missing --graph/--out would have exited the
-  // process before this point; reaching here proves main() is guarded.
-  assert.ok(true);
-});
