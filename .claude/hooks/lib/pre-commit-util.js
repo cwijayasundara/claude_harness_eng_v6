@@ -32,8 +32,64 @@ function fail(message) {
   process.exit(1);
 }
 
+
+// ---- reviewed waivers ----
+//
+// specs/reviews/sensor-waivers.json had a schema, a validator, a documented policy and a
+// "Waive:" line in every gate's failure message — but nothing read it for enforcement.
+// The mechanism was inert, so the only real escape was the blunt HARNESS_*_GATE=off that
+// docs/sensor-arbitration.md explicitly calls "not a substitute for a reviewed waiver".
+//
+// A waiver is narrow, reviewed and expiring. It fails CLOSED at every step: no file, a
+// malformed file, a missing field, a placeholder reason, or a past expiry all mean NO
+// waiver. And a waived gate is announced loudly — a suppression nobody can see is worse
+// than no gate at all.
+const WAIVERS_REL = path.join('specs', 'reviews', 'sensor-waivers.json');
+const REQUIRED_WAIVER_FIELDS = ['sensor_id', 'scope', 'reason', 'expires', 'approved_by'];
+const MIN_REASON_LEN = 12; // mirrors sensor-waivers.schema.json
+
+function waiverUsable(w, sensorId, today) {
+  if (!w || w.sensor_id !== sensorId) return false;
+  for (const f of REQUIRED_WAIVER_FIELDS) {
+    if (typeof w[f] !== 'string' || !w[f].trim()) return false;
+  }
+  if (w.reason.trim().length < MIN_REASON_LEN) return false;
+  // Date-only compare; an expiry of today is still valid, tomorrow is not.
+  return String(w.expires) >= String(today);
+}
+
+function findWaiver(projectDir, sensorId, today = new Date().toISOString().slice(0, 10)) {
+  let doc;
+  try {
+    doc = JSON.parse(fs.readFileSync(path.join(projectDir, WAIVERS_REL), 'utf8'));
+  } catch (_) {
+    return null; // absent or unparseable => fail closed
+  }
+  const list = Array.isArray(doc && doc.waivers) ? doc.waivers : [];
+  return list.find((w) => waiverUsable(w, sensorId, today)) || null;
+}
+
+function formatWaived(sensorId, waiver) {
+  return `WAIVED [${sensorId}]: this gate would have BLOCKED, but a reviewed waiver applies.\n` +
+    `         scope:    ${waiver.scope}\n` +
+    `         approved: ${waiver.approved_by}   expires: ${waiver.expires}\n` +
+    `         reason:   ${String(waiver.reason).slice(0, 200)}\n` +
+    `         The finding is NOT fixed — it is accepted, on the record, until the expiry.\n`;
+}
+
 /** BLOCKED message via formatBlock (Fix / Waive / Tier). */
 function failBlock(opts) {
+  const projectDir = failContext.projectDir;
+  const waiver = projectDir && opts.id ? findWaiver(projectDir, opts.id) : null;
+  if (waiver) {
+    // Loud, and recorded as a run that did NOT block, so the bite ledger shows the gate
+    // fired rather than pretending it was never reached.
+    process.stdout.write(formatWaived(opts.id, waiver));
+    if (failContext.currentSensor) {
+      recordOutcome(projectDir, { sensor: opts.id, ran: true, blocked: false, surface: 'commit' });
+    }
+    return;
+  }
   fail(formatBlock({
     ...opts,
     tier: opts.tier != null ? opts.tier : failContext.tier,
@@ -96,6 +152,8 @@ function buildContext(projectDir) {
 }
 
 module.exports = {
+  findWaiver,
+  formatWaived,
   gitExec,
   GIT_MAX_BUFFER,
   SOURCE_EXTS,

@@ -13,8 +13,8 @@ _Source: `README.md`_
 
 | Metric | Value |
 |---|---|
-| Indexed files | 472 |
-| Graph edges | 2146 |
+| Indexed files | 474 |
+| Graph edges | 2152 |
 | Concept pages | 20 |
 | Wiki cluster pages | 20 |
 
@@ -59,11 +59,10 @@ npm run ask -- "..."     # ask the codebase
 - [test/e2e](specs/brownfield/wiki/concepts/test__e2e.md)
 - [symphony_clone/src](specs/brownfield/wiki/concepts/symphony_clone__src.md)
 - [dsl-packs/private-equity](specs/brownfield/wiki/concepts/dsl-packs__private-equity.md)
-- [tools/pack-install.js](specs/brownfield/wiki/concepts/tools__pack-install.js.md)
+- [open_wiki/scripts](specs/brownfield/wiki/concepts/open_wiki__scripts.md)
 - [test/fixtures](specs/brownfield/wiki/concepts/test__fixtures.md)
 - [symphony_clone/test](specs/brownfield/wiki/concepts/symphony_clone__test.md)
 - [test/evals](specs/brownfield/wiki/concepts/test__evals.md)
-- [open_wiki/scripts](specs/brownfield/wiki/concepts/open_wiki__scripts.md)
 - [symphony_clone/scripts](specs/brownfield/wiki/concepts/symphony_clone__scripts.md)
 - [eslint.config.js](specs/brownfield/wiki/concepts/eslint.config.js.md)
 - [test/ab-report.test.js](specs/brownfield/wiki/concepts/test__ab-report.test.js.md)
@@ -75,6 +74,7 @@ npm run ask -- "..."     # ask the codebase
 - [test/adversarial-review-wiring.test.js](specs/brownfield/wiki/concepts/test__adversarial-review-wiring.test.js.md)
 - [test/agent-readiness-wiring-contract.test.js](specs/brownfield/wiki/concepts/test__agent-readiness-wiring-contract.test.js.md)
 - [test/agent-readiness.test.js](specs/brownfield/wiki/concepts/test__agent-readiness.test.js.md)
+- [test/amendment-provenance-check.test.js](specs/brownfield/wiki/concepts/test__amendment-provenance-check.test.js.md)
 
 ## DeepWiki cluster pages
 

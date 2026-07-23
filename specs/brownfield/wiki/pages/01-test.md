@@ -1,6 +1,6 @@
-# `test/` — 327 module(s)
+# `test/` — 329 module(s)
 
-327 module(s).
+329 module(s).
 
 ## Dependencies
 
@@ -24,6 +24,7 @@ flowchart LR
   n_js_test_at_first_gate_wiring_contract_test_js["at-first-gate-wiring-contract.test.js"]
   n_js_test_at_first_gate_test_js["at-first-gate.test.js"]
   n_js_test_attestation_hardening_test_js["attestation-hardening.test.js"]
+  n_js_test_attestation_intoto_test_js["attestation-intoto.test.js"]
   n_js_test_attestation_test_js["attestation.test.js"]
   n_js_test_auto_continue_on_stop_test_js["auto-continue-on-stop.test.js"]
   n_js_test_auto_merge_test_js["auto-merge.test.js"]
@@ -85,7 +86,6 @@ flowchart LR
   n_js_test_coverage_preflight_test_js["coverage-preflight.test.js"]
   n_js_test_cr_index_test_js["cr-index.test.js"]
   n_js_test_custom_sensor_commit_test_js["custom-sensor-commit.test.js"]
-  n_js_test_cycle_gate_wiring_contract_test_js["cycle-gate-wiring-contract.test.js"]
 ```
 
 ## `js:test/ab-report.test.js`
@@ -236,6 +236,13 @@ flowchart LR
   - `makeRoot` (function) → js:test/attestation-hardening.test.js:23 — `function makeRoot(reviews = {})`
   - `gen` (function) → js:test/attestation-hardening.test.js:39 — `function gen(root, extra = {})`
   - `reorderKeysDeep` (function) → js:test/attestation-hardening.test.js:43 — `function reorderKeysDeep(v)`
+
+## `js:test/attestation-intoto.test.js`
+
+- fan-in: 0, fan-out: 3
+
+### Symbols
+  _(no extracted symbols)_
 
 ## `js:test/attestation.test.js`
 
@@ -715,11 +722,4 @@ flowchart LR
 ### Symbols
   - `proj` (function) → js:test/custom-sensor-commit.test.js:7 — `function proj(cs)`
 
-## `js:test/cycle-gate-wiring-contract.test.js`
-
-- fan-in: 0, fan-out: 5
-
-### Symbols
-  - `read` (function) → js:test/cycle-gate-wiring-contract.test.js:12 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
-
-_+ 247 more module(s) not shown (page capped at 80)._
+_+ 249 more module(s) not shown (page capped at 80)._
