@@ -43,5 +43,9 @@ test('/auto Gate 4 runs the duplication ratchet', () => {
 });
 
 test('/gate runs the duplication ratchet', () => {
-  assert.match(readSkillCorpus('gate'), /duplication-gate\.js/, '/gate must run the duplication ratchet');
+  // Registry membership, not skill prose: /gate runs the pack-contributed check set.
+  const { loadRegistry } = require('../.claude/scripts/run-gate-checks.js');
+  const entry = loadRegistry(process.cwd()).find((c) => c.script === 'duplication-gate.js');
+  assert.ok(entry, '/gate must run the duplication ratchet (via .claude/config/gate-checks.json)');
+  assert.strictEqual(entry.blocking, true, 'the duplication ratchet must block, not warn');
 });

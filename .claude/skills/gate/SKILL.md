@@ -57,23 +57,27 @@ Use the Agent tool to spawn the selected agents **in a single call**:
   ```
   This file is an audit trail only — no existing gate logic reads it. Scoped to `/gate` only; `/auto`'s per-group Gate 7 keeps its existing single-pass security review unchanged.
 
-- **Approved-fixtures (G12):** when the changed files include any snapshot file (path contains `__snapshots__/` or ends with `.snap`/`.ambr`/`.approved.*`), run `node .claude/scripts/approved-fixtures-gate.js`. It checksums every snapshot against the approved baseline (`specs/test_artefacts/approved-snapshots.json`); a `blocked` verdict (a modified approved snapshot or a new unapproved one, exit 1) is a **BLOCK** (writes `specs/reviews/approved-fixtures-verdict.json`). After reviewing the change, re-bless with `npm run approve-fixtures -- --all` (or `-- --snapshots <files>`). `no-snapshots` / `pass` (removed-only WARN) are non-blocking. When the diff touches no snapshot files, skip.
+- **Pack-contributed deterministic checks — run them all with one command:**
 
-- **Contract-drift (G12):** when the changed files include the project's OpenAPI spec (the same changed-files boundary used for security-scan), run `node .claude/scripts/contract-drift-gate.js`. It runs `oasdiff breaking` between the spec at the git base and the working tree; a `breaking` verdict (exit 1) is a **BLOCK** (writes `specs/reviews/contract-drift-verdict.json`). `no-spec` / `new-spec` / `unprovisioned` (oasdiff not installed) are non-blocking notes. When the diff does not touch an OpenAPI spec, skip it.
+  ```bash
+  node .claude/scripts/run-gate-checks.js --files <changed files>
+  ```
 
-- **Architecture ratchets (G8, G18):** always, when a code-graph exists (`specs/brownfield/code-graph.json`, kept fresh by `/code-map` or the graph-refresh hook). Run `node .claude/scripts/cycle-gate.js` and `node .claude/scripts/coupling-gate.js`. Both compare the current code-graph to a monotonic baseline under `.claude/state/` — a new import cycle or a new unstable hub (fan_in >= 5, instability >= 0.8) is a **BLOCK**; the coupling gate additionally names the specific new hub(s) with fan-in/instability numbers and remediation (extract a narrower interface or split responsibilities). Removing a cycle or an unstable hub ratchets its baseline down. No code-graph → both skip loudly (exit 0), never silently. `cycle-gate.js` (G8) was previously wired only into `/auto` Gate 4, not `/gate` — its presence here is an intentional G8 coverage expansion bundled with G18 (the two ratchets share one invocation site and code-graph read; splitting them would mean reading the graph twice for no benefit), not an accidental scope creep. It is low-risk: the gate degrades loudly to a no-op on any project without a code-graph yet.
+  The check set is **data**, not prose: `.claude/config/gate-checks.json` declares each check,
+  the pack that owns it, when it fires, whether it blocks, and the remediation to print when it
+  does. The runner writes `specs/reviews/gate-checks.json` and exits non-zero if any blocking
+  check blocked — that is a **BLOCK** under the usual semantics.
 
-- **Duplication ratchet:** always, independent of the code-graph. Run `node .claude/scripts/duplication-gate.js`. It wraps `jscpd` directly over the changed source and compares clone occurrences to a monotonic baseline under `.claude/state/duplication-baseline.txt` — a new code-clone occurrence is a **BLOCK**, naming the offending file(s); removing duplication ratchets the baseline down. `jscpd` not installed → skips loudly (exit 0), never silently.
+  Today that covers approved-fixtures and contract-drift (verification), cycle / coupling /
+  duplication ratchets (brownfield), canvas-sync, canvas-semantic and ownership (planning),
+  the full regression suite, observability and perf-smell (verification), deep-mutation, and
+  sensor-waiver validation (telemetry).
 
-- **Canvas sync:** when changed source files exist and `specs/design/reasons-canvas.md` exists, run `npm run canvas-sync`. A non-zero result means changed files are missing from the REASONS Canvas `Governs` or `Operations` sections; that is a **BLOCK** unless a valid `specs/reviews/sensor-waivers.json` explicitly covers the mismatch. Fix by updating the Canvas first, then rerun.
-
-- **Canvas semantic sync (agent-judged):** additionally, under the same trigger, run `node .claude/scripts/canvas-semantic-check.js --files <changed files>` (advisory, exit 0). It writes `specs/reviews/canvas-semantic-review.md` pairing the changed governed files with the Canvas narrative claims a diff can falsify (Approach/Structure/Norms/Safeguards + the Operations steps naming them). Dispatch the **code-reviewer**, passing that packet plus the changed-file diff in its spawn prompt, to judge each claim against the diff; a claim the code no longer satisfies is a **WARN** resolved by fixing the Canvas prose first (fix-the-prompt-first), never a silent skip. This is the semantic complement to the path-level Canvas sync above.
-
-- **Ownership:** when changed source files exist and `specs/design/component-map.md` exists, run `node .claude/scripts/ownership-check.js --files <changed files>` (or `--staged` pre-commit-side). It writes `specs/reviews/ownership-check.json`; a non-zero exit means changed source files are owned by no story in the component map (or the map parsed to zero entries — `empty_map`); that is a **BLOCK** unless a valid `specs/reviews/sensor-waivers.json` entry (`sensor_id: "ownership-check"`) explicitly covers the file. Fix by assigning the file to its owning story in component-map.md first, then rerun.
-
-- **Regression-suite-full (G15):** always, when the project has an `e2e/` directory or a `sprint-contracts/` directory. Run `node .claude/scripts/regression-gate.js --replay --exclude-group <current group, if any>` with the app-under-test booted under `HARNESS_TEST_REPLAY=1` so its DB/HTTP/LLM resolve to the recorded boundary-doubles (G34); a missing fixture under forced replay is a hard fail, meaning the test would have reached a live external. It re-runs every accumulated Playwright spec under `e2e/` (not just the current story's spec) and re-executes every prior story-group's sprint-contract `api_checks` as live HTTP requests against the running app, first re-validating each contract against `contract-schema.json` via the same machinery `validate-contract.js` uses. It writes `specs/reviews/regression-gate-verdict.json`; a `blocked` verdict (a previously-passing e2e spec or prior contract API check now fails, exit 1) is a **BLOCK** with file:line detail per finding. Tests already quarantined in `specs/drift/flake-history.jsonl` are excluded so a known flake cannot false-block. `no-baseline` (neither `e2e/` nor `sprint-contracts/` exists yet — nothing to regress against) is a loud, non-blocking note, never a silent skip.
-
-- **Deep mutation (optional):** for release gates or critical modules configured in `project-manifest.json#quality.mutation.critical_globs`, run `npm run deep-mutation -- --critical-only`. This invokes Stryker or mutmut only when already provisioned; `unprovisioned` is a non-blocking note, while an explicitly requested failing deep mutation run is a **BLOCK**.
+  **Do not name these scripts individually here.** A check whose pack is not installed is
+  reported as `skipped: pack not installed` — visible and attributable, never silently dropped
+  and never counted as a pass. That is the whole point of the registry: uninstalling a pack
+  removes its checks, instead of leaving this skill instructing you to run a script that is gone.
+  To add or change a check, edit the registry, not this file.
 
 If any finding is being suppressed or threshold-bumped via `specs/reviews/sensor-waivers.json`, first run `npm run sensor-waivers`. It validates required waiver fields and expiry rules against `.claude/templates/sensor-waivers.schema.json`; an `invalid` verdict is a **BLOCK** until the waiver is fixed or removed. Missing waiver file is `no-waivers` and passes.
 
@@ -81,14 +85,15 @@ When a security trigger fires, also run the **computational security scan** (gap
 
 If no security trigger fired, run neither `security-reviewer` nor the computational scan; record `security_review: skipped_no_boundary` in the context pack instead.
 
-### Step 2.5 — Static production-readiness gates (always, when production source changed)
+### Step 2.5 — Static production-readiness gates
 
-When the changed-file set includes any production source (not only docs/tests):
+The observability ratchet (BLOCK-level swallowed exceptions / empty catches) and the
+perf-smell gate (N+1-in-loop, sync-in-async) are registry checks — Step 2's runner already
+executed them and recorded their verdicts. They are listed here only so the sequence reads
+completely; do **not** invoke them separately.
 
-1. **Observability ratchet:** `node .claude/scripts/observability-gate.js --files <changed production files>` (or `--staged` / `--diff-base <base>`). Writes `specs/reviews/observability-verdict.json`. A `pass: false` (BLOCK-level swallowed exceptions / empty catches) is a **BLOCK**.
-2. **Perf-smell gate:** `node .claude/scripts/perf-smell-gate.js --files <changed production files>` (or `--staged` / `--diff-base <base>`). Writes `specs/reviews/perf-smell-verdict.json`. N+1-in-loop / sync-in-async BLOCKs are a **BLOCK**; unbounded-load WARNs are non-blocking but appear on the quality card.
-
-Skip both only when the diff has zero production source files (docs-only / pure test). Record the skip in the context pack.
+Pass only production source in `--files`. When the diff has zero production source files
+(docs-only / pure test), pass none and record the skip in the context pack.
 
 ### Step 3 — Apply the Canonical Gate Semantics
 

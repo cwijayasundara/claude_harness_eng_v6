@@ -27,7 +27,13 @@ test('package.json exposes the coupling-gate script; /auto Gate 4 and /gate run 
   const pkg = JSON.parse(read('package.json'));
   assert.strictEqual(pkg.scripts['coupling-gate'], 'node .claude/scripts/coupling-gate.js');
   assert.match(readSkillCorpus('auto'), /coupling-gate\.js/, 'Gate 4 must run the coupling ratchet');
-  assert.match(read('.claude/skills/gate/SKILL.md'), /coupling-gate\.js/, '/gate must run the coupling ratchet');
+  // /gate no longer names checks inline — it runs the pack-contributed registry.
+  // Registry membership is the stronger assertion: prose could mention the script
+  // without it ever running.
+  const { loadRegistry } = require('../.claude/scripts/run-gate-checks.js');
+  const entry = loadRegistry(process.cwd()).find((c) => c.script === 'coupling-gate.js');
+  assert.ok(entry, '/gate must run the coupling ratchet (via .claude/config/gate-checks.json)');
+  assert.strictEqual(entry.blocking, true, 'the coupling ratchet must block, not warn');
 });
 
 test('manifest marks the coupling ratchet active and enforced on the architecture axis', () => {

@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "purpose": "Deterministic checks contributed to /gate. Each entry names its owning PACK, so uninstalling a pack removes its checks instead of leaving the kernel skill instructing an agent to run a script that is gone. Run by .claude/scripts/run-gate-checks.js; the kernel /gate skill invokes the runner rather than naming these scripts inline.",
+  "triggers": {
+    "always": "run every time",
+    "code-graph": "only when specs/brownfield/code-graph.json exists",
+    "exists:<path>": "only when that path exists in the project",
+    "changed:<glob>": "only when a changed file matches the glob"
+  },
+  "semantics": "blocking:true means a non-zero exit is a BLOCK. blocking:false means a non-zero exit is a WARN that appears on the quality card. A script that is absent because its pack is not installed is recorded as skipped — reported, never silently passed.",
+  "checks": [
+    {
+      "id": "approved-fixtures",
+      "pack": "verification",
+      "script": "approved-fixtures-gate.js",
+      "when": "changed:*.snap",
+      "blocking": true,
+      "summary": "Checksums every snapshot against the approved baseline (specs/test_artefacts/approved-snapshots.json).",
+      "remediation": "A modified approved snapshot or a new unapproved one. Review the change, then re-bless with: npm run approve-fixtures -- --all (or -- --snapshots <files>)."
+    },
+    {
+      "id": "contract-drift",
+      "pack": "verification",
+      "script": "contract-drift-gate.js",
+      "when": "changed:openapi*.{yaml,yml,json}",
+      "blocking": true,
+      "summary": "Runs oasdiff breaking between the OpenAPI spec at the git base and the working tree.",
+      "remediation": "A breaking API change. Either make the change backward-compatible, or version the endpoint. oasdiff not installed is a non-blocking note."
+    },
+    {
+      "id": "cycle-detection",
+      "pack": "brownfield",
+      "script": "cycle-gate.js",
+      "when": "code-graph",
+      "blocking": true,
+      "summary": "New import cycle vs the monotonic baseline in .claude/state/.",
+      "remediation": "Break the new cycle, or invert the dependency. Removing a cycle ratchets the baseline down."
+    },
+    {
+      "id": "coupling-ratchet",
+      "pack": "brownfield",
+      "script": "coupling-gate.js",
+      "when": "code-graph",
+      "blocking": true,
+      "summary": "New unstable hub (fan_in >= 5, instability >= 0.8) vs the monotonic baseline.",
+      "remediation": "Extract a narrower interface, or split the module's responsibilities. The gate names the specific hub with its fan-in/instability numbers."
+    },
+    {
+      "id": "duplication-ratchet",
+      "pack": "brownfield",
+      "script": "duplication-gate.js",
+      "when": "always",
+      "blocking": true,
+      "summary": "Wraps jscpd over changed source; compares clone occurrences to .claude/state/duplication-baseline.txt.",
+      "remediation": "Extract the duplicated block to a shared unit, or justify it. jscpd not installed skips loudly."
+    },
+    {
+      "id": "canvas-sync",
+      "pack": "planning",
+      "script": "canvas-sync-check.js",
+      "when": "exists:specs/design/reasons-canvas.md",
+      "blocking": true,
+      "summary": "Changed files must appear in the REASONS Canvas Governs or Operations sections.",
+      "remediation": "Update the Canvas first (fix-the-prompt-first), then rerun. A valid specs/reviews/sensor-waivers.json entry can cover a deliberate mismatch."
+    },
+    {
+      "id": "canvas-semantic",
+      "pack": "planning",
+      "script": "canvas-semantic-check.js",
+      "when": "exists:specs/design/reasons-canvas.md",
+      "blocking": false,
+      "summary": "Pairs changed governed files with the Canvas narrative claims a diff can falsify; the code-reviewer judges each claim.",
+      "remediation": "A claim the code no longer satisfies is a WARN. Fix the Canvas prose first, never silently.",
+      "accepts_files": true
+    },
+    {
+      "id": "ownership-check",
+      "pack": "planning",
+      "script": "ownership-check.js",
+      "when": "exists:specs/design/component-map.md",
+      "blocking": true,
+      "summary": "Every changed source file must be owned by a story in the component map.",
+      "remediation": "Assign the file to its owning story in component-map.md, then rerun. empty_map (the map parsed to zero entries) also blocks.",
+      "accepts_files": true
+    },
+    {
+      "id": "regression-suite-full",
+      "pack": "verification",
+      "script": "regression-gate.js",
+      "args": [
+        "--replay"
+      ],
+      "when": "exists:e2e",
+      "blocking": true,
+      "summary": "Re-runs every accumulated e2e spec and every prior group's sprint-contract api_checks under HARNESS_TEST_REPLAY=1.",
+      "remediation": "A previously-passing e2e spec or prior contract check now fails — this is a regression, not a flake (quarantined flakes are excluded). Fix the regression."
+    },
+    {
+      "id": "observability-gate",
+      "pack": "verification",
+      "script": "observability-gate.js",
+      "when": "always",
+      "blocking": true,
+      "summary": "BLOCK-level swallowed exceptions and empty catch blocks in changed production source.",
+      "remediation": "Handle or propagate the error. A swallowed exception makes a production failure invisible.",
+      "accepts_files": true
+    },
+    {
+      "id": "perf-smell",
+      "pack": "verification",
+      "script": "perf-smell-gate.js",
+      "when": "always",
+      "blocking": true,
+      "summary": "N+1-in-loop and sync-in-async patterns in changed production source.",
+      "remediation": "Batch the query, or move the sync call off the async path. Unbounded-load findings are WARN only.",
+      "accepts_files": true
+    },
+    {
+      "id": "deep-mutation",
+      "pack": "verification",
+      "script": "deep-mutation.js",
+      "args": [
+        "--critical-only"
+      ],
+      "when": "exists:.claude/state/mutation-critical.flag",
+      "blocking": false,
+      "summary": "Stryker/mutmut over modules in project-manifest.json#quality.mutation.critical_globs.",
+      "remediation": "Surviving mutants in a critical module mean the tests do not actually constrain it. unprovisioned is a non-blocking note."
+    },
+    {
+      "id": "sensor-waivers",
+      "pack": "telemetry",
+      "script": "validate-sensor-waivers.js",
+      "when": "exists:specs/reviews/sensor-waivers.json",
+      "blocking": true,
+      "summary": "Validates waiver fields and expiry against .claude/templates/sensor-waivers.schema.json.",
+      "remediation": "Fix or remove the invalid waiver. A malformed waiver must never silently suppress a finding."
+    }
+  ]
+}

@@ -182,12 +182,18 @@ test('perf-smell-gate flags query inside loop', () => {
 
 test('gate skill wires quality-card and observability steps', () => {
   const skill = fs.readFileSync(path.join(__dirname, '../.claude/skills/gate/SKILL.md'), 'utf8');
+  // Step 4 receipts are still invoked directly by the skill (kernel-owned).
   assert.match(skill, /quality-card\.js/);
   assert.match(skill, /pr-walkthrough\.js/);
-  assert.match(skill, /observability-gate\.js/);
-  assert.match(skill, /perf-smell-gate\.js/);
   assert.match(skill, /human-codebase\.js/);
   assert.match(skill, /Step 4/);
+
+  // The static production-readiness ratchets moved into the pack-contributed check
+  // registry, so assert membership there rather than a name in the prose.
+  const { loadRegistry } = require('../.claude/scripts/run-gate-checks.js');
+  const scripts = loadRegistry(path.join(__dirname, '..')).map((c) => c.script);
+  assert.ok(scripts.includes('observability-gate.js'), '/gate must run the observability ratchet');
+  assert.ok(scripts.includes('perf-smell-gate.js'), '/gate must run the perf-smell ratchet');
 });
 
 test('build Phase 11 requires pr-body.js', () => {

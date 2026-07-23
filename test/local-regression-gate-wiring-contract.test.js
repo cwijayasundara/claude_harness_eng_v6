@@ -52,12 +52,16 @@ test('/gate and /auto keep running the FULL regression-gate.js sweep unchanged (
   // (?<!local-) so this doesn't false-pass on "local-regression-gate.js" —
   // that substring also matches a bare /regression-gate\.js/ check.
   const fullGateRe = /(?<!local-)regression-gate\.js/;
-  const gate = read('.claude/skills/gate/SKILL.md');
   const auto = readSkillCorpus('auto');
-  assert.match(gate, fullGateRe, '/gate must still run the FULL regression-gate.js sweep');
   assert.match(auto, fullGateRe, '/auto must still run the FULL regression-gate.js sweep');
-  assert.doesNotMatch(gate, /local-regression-gate\.js/, '/gate must not have been rewired to the local/scoped gate');
   assert.doesNotMatch(auto, /local-regression-gate\.js/, '/auto must not have been rewired to the local/scoped gate');
+
+  // /gate now runs the check registry rather than naming scripts, so assert there:
+  // the FULL sweep must be registered and the scoped local gate must NOT be.
+  const { loadRegistry } = require('../.claude/scripts/run-gate-checks.js');
+  const scripts = loadRegistry(process.cwd()).map((c) => c.script);
+  assert.ok(scripts.includes('regression-gate.js'), '/gate must still run the FULL regression sweep');
+  assert.ok(!scripts.includes('local-regression-gate.js'), '/gate must not have been rewired to the local/scoped gate');
 });
 
 test('manifest registers impact-scoped-regression active, behaviour axis, diff scope, G16', () => {

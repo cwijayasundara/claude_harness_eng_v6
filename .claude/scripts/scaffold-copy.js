@@ -163,7 +163,7 @@ const CORE_SCRIPTS = [
   'pr-walkthrough.js',
   'pr-body.js',
   'human-codebase.js',
-  'observability-gate.js',
+  'observability-gate.js', 'run-gate-checks.js',
   'perf-smell-gate.js',
   'ask-codebase.js',
   'readiness-digest.js',
@@ -254,11 +254,12 @@ function copyScaffoldTree(src, target, profileName) {
     copyNamedFiles(path.join(src, 'agents'), path.join(dotClaude, 'agents'), selected.agents);
     copyNamedFiles(path.join(src, 'skills'), path.join(dotClaude, 'skills'), selected.skills);
     copyNamedFiles(path.join(src, 'scripts'), path.join(dotClaude, 'scripts'), selected.scripts);
-    copyTree(path.join(src, 'hooks'), path.join(dotClaude, 'hooks'));
-    copyTree(path.join(src, 'templates'), path.join(dotClaude, 'templates'));
-    copyTree(path.join(src, 'git-hooks'), path.join(dotClaude, 'git-hooks'));
-    // Bun Phase C: ship fix-diagnostics workflow exemplar (not a skill clone of /gate)
-    copyTree(path.join(src, 'workflows'), path.join(dotClaude, 'workflows'));
+    // These ship whole even under a profile: machinery, plus the DATA the selected
+    // scripts read (run-gate-checks.js cannot run without config/gate-checks.json).
+    // workflows/ carries the fix-diagnostics exemplar (Bun Phase C).
+    for (const dir of ['hooks', 'templates', 'git-hooks', 'workflows', 'config']) {
+      copyTree(path.join(src, dir), path.join(dotClaude, dir));
+    }
   }
   for (const file of ['architecture.md', 'program.md', 'settings.json', 'settings.auto.json', 'package.json']) {
     copyTree(path.join(src, file), path.join(dotClaude, file));

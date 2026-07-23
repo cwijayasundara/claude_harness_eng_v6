@@ -58,6 +58,7 @@
       "merge-review-verdicts",
       "review-commit-msg",
       "review-tier",
+      "run-gate-checks",
       "security-scan"
     ]
   },

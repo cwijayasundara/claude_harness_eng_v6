@@ -35,8 +35,12 @@ test('package.json exposes the regression-gate script', () => {
 });
 
 test('/gate runs regression-gate.js as a pre-merge hard block', () => {
-  const skill = read('.claude/skills/gate/SKILL.md');
-  assert.match(skill, /regression-gate\.js/, '/gate must run the regression-suite-full gate');
+  // Registry membership, not skill prose: /gate runs the pack-contributed check set.
+  const { loadRegistry } = require('../.claude/scripts/run-gate-checks.js');
+  const entry = loadRegistry(process.cwd()).find((c) => c.script === 'regression-gate.js');
+  assert.ok(entry, '/gate must run the regression-suite-full gate (via .claude/config/gate-checks.json)');
+  assert.strictEqual(entry.blocking, true, 'the full regression sweep must be a hard block');
+  assert.ok((entry.args || []).includes('--replay'), 'the sweep must run under forced replay');
 });
 
 test('/change Step S5 no longer requires the full regression-gate.js sweep (moved to G16 for local iteration)', () => {
