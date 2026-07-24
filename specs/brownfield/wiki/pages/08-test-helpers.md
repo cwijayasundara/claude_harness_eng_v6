@@ -26,7 +26,7 @@ flowchart LR
 
 ## `js:test/helpers/pack-membership.js`
 
-- fan-in: 0, fan-out: 2
+- fan-in: 5, fan-out: 2
 
 ### Symbols
   - `loadPacks` (function) → js:test/helpers/pack-membership.js:16 — `function loadPacks()`
@@ -67,7 +67,7 @@ flowchart LR
 
 ## `js:test/helpers/skill-corpus.js`
 
-- fan-in: 36, fan-out: 2
+- fan-in: 22, fan-out: 2
 
 ### Symbols
   - `readSkillCorpus` (function) → js:test/helpers/skill-corpus.js:12 — `function readSkillCorpus(skillName, root = REPO_ROOT)`

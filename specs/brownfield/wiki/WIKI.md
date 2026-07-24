@@ -3,14 +3,14 @@
 > Deterministic, always-current map rendered from `code-graph.json`. No LLM — re-rendered on graph change.
 
 - Producer: `vendored-ast`  ·  Language: `mixed`
-- Modules: 475  ·  Edges: 2158  ·  Clusters: 50
+- Modules: 439  ·  Edges: 1999  ·  Clusters: 50
 
 ## Hubs (most-depended-on)
 
 | Module | fan-in | fan-out |
 |---|---|---|
-| `js:test/helpers/skill-corpus.js` | 36 | 2 |
 | `js:test/helpers/hook-fixture.js` | 25 | 5 |
+| `js:test/helpers/skill-corpus.js` | 22 | 2 |
 | `js:test/e2e/helpers/claude-runner.js` | 17 | 4 |
 | `js:test/e2e/helpers/project-suite.js` | 9 | 3 |
 | `js:test/helpers/pre-commit-fixtures.js` | 9 | 3 |
@@ -62,35 +62,35 @@ _(none)_
 - [test/e2e](concepts/test__e2e.md)
 - [symphony_clone/src](concepts/symphony_clone__src.md)
 - [dsl-packs/private-equity](concepts/dsl-packs__private-equity.md)
-- [open_wiki/scripts](concepts/open_wiki__scripts.md)
 - [test/fixtures](concepts/test__fixtures.md)
 - [symphony_clone/test](concepts/symphony_clone__test.md)
 - [test/evals](concepts/test__evals.md)
+- [open_wiki/scripts](concepts/open_wiki__scripts.md)
 - [symphony_clone/scripts](concepts/symphony_clone__scripts.md)
 - [eslint.config.js](concepts/eslint.config.js.md)
-- [test/ab-report.test.js](concepts/test__ab-report.test.js.md)
-- [test/ab-run.test.js](concepts/test__ab-run.test.js.md)
 - [test/accessibility-contract.test.js](concepts/test__accessibility-contract.test.js.md)
-- [test/adherence-critic-contract.test.js](concepts/test__adherence-critic-contract.test.js.md)
 - [test/adversarial-fixtures-contract.test.js](concepts/test__adversarial-fixtures-contract.test.js.md)
 - [test/adversarial-live-e2e-contract.test.js](concepts/test__adversarial-live-e2e-contract.test.js.md)
-- [test/adversarial-review-wiring.test.js](concepts/test__adversarial-review-wiring.test.js.md)
 - [test/agent-readiness-wiring-contract.test.js](concepts/test__agent-readiness-wiring-contract.test.js.md)
 - [test/agent-readiness.test.js](concepts/test__agent-readiness.test.js.md)
 - [test/amendment-provenance-check.test.js](concepts/test__amendment-provenance-check.test.js.md)
+- [test/approve-fixtures.test.js](concepts/test__approve-fixtures.test.js.md)
+- [test/approved-fixtures-gate.test.js](concepts/test__approved-fixtures-gate.test.js.md)
+- [test/archive-state.test.js](concepts/test__archive-state.test.js.md)
+- [test/ask-codebase-readiness-digest.test.js](concepts/test__ask-codebase-readiness-digest.test.js.md)
 
 _(Hash-cached concept pages from `nav-concepts.js`.)_
 
 ## Pages
 
-- [`test/` — 330 module(s)](pages/01-test.md) — 330 module(s)
+- [`test/` — 292 module(s)](pages/01-test.md) — 292 module(s)
 - [`test/e2e/` — 18 module(s)](pages/02-test-e2e.md) — 18 module(s)
 - [`symphony_clone/src/orchestrator/` — 16 module(s)](pages/03-symphony_clone-src-orchestrator.md) — 16 module(s)
 - [`test/e2e/helpers/` — 14 module(s)](pages/04-test-e2e-helpers.md) — 14 module(s)
 - [`symphony_clone/test/` — 13 module(s)](pages/05-symphony_clone-test.md) — 13 module(s)
 - [`symphony_clone/src/tracker/` — 8 module(s)](pages/06-symphony_clone-src-tracker.md) — 8 module(s)
-- [`test/helpers/` — 6 module(s)](pages/07-test-helpers.md) — 6 module(s)
-- [`tools/` — 5 module(s)](pages/08-tools.md) — 5 module(s)
+- [`tools/` — 7 module(s)](pages/07-tools.md) — 7 module(s)
+- [`test/helpers/` — 6 module(s)](pages/08-test-helpers.md) — 6 module(s)
 - [`open_wiki/scripts/` — 4 module(s)](pages/09-open_wiki-scripts.md) — 4 module(s)
 - [`symphony_clone/src/` — 4 module(s)](pages/10-symphony_clone-src.md) — 4 module(s)
 - [`dsl-packs/private-equity/waterfall/` — 3 module(s)](pages/11-dsl-packs-private-equity-waterfall.md) — 3 module(s)

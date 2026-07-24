@@ -13,8 +13,8 @@ _Source: `README.md`_
 
 | Metric | Value |
 |---|---|
-| Indexed files | 475 |
-| Graph edges | 2158 |
+| Indexed files | 439 |
+| Graph edges | 1999 |
 | Concept pages | 20 |
 | Wiki cluster pages | 20 |
 
@@ -33,8 +33,8 @@ npm run ask -- "..."     # ask the codebase
 
 | Module | fan-in | fan-out |
 |---|---|---|
-| `test/helpers/skill-corpus.js` | 36 | 0 |
 | `test/helpers/hook-fixture.js` | 25 | 0 |
+| `test/helpers/skill-corpus.js` | 22 | 0 |
 | `test/e2e/helpers/claude-runner.js` | 17 | 0 |
 | `test/e2e/helpers/project-suite.js` | 9 | 0 |
 | `test/helpers/pre-commit-fixtures.js` | 9 | 0 |
@@ -42,9 +42,9 @@ npm run ask -- "..."     # ask the codebase
 | `symphony_clone/src/config.js` | 5 | 0 |
 | `symphony_clone/src/orchestrator/workspace-manager.js` | 5 | 0 |
 | `test/e2e/helpers/fresh-project.js` | 5 | 0 |
+| `test/helpers/pack-membership.js` | 5 | 0 |
 | `test/helpers/record-run-fixture.js` | 5 | 0 |
 | `test/e2e/full-auto-output/src/server.js` | 4 | 1 |
-| `symphony_clone/src/tracker/http.js` | 4 | 0 |
 
 ## Entry points
 
@@ -65,16 +65,16 @@ npm run ask -- "..."     # ask the codebase
 - [open_wiki/scripts](specs/brownfield/wiki/concepts/open_wiki__scripts.md)
 - [symphony_clone/scripts](specs/brownfield/wiki/concepts/symphony_clone__scripts.md)
 - [eslint.config.js](specs/brownfield/wiki/concepts/eslint.config.js.md)
-- [test/ab-report.test.js](specs/brownfield/wiki/concepts/test__ab-report.test.js.md)
-- [test/ab-run.test.js](specs/brownfield/wiki/concepts/test__ab-run.test.js.md)
 - [test/accessibility-contract.test.js](specs/brownfield/wiki/concepts/test__accessibility-contract.test.js.md)
-- [test/adherence-critic-contract.test.js](specs/brownfield/wiki/concepts/test__adherence-critic-contract.test.js.md)
 - [test/adversarial-fixtures-contract.test.js](specs/brownfield/wiki/concepts/test__adversarial-fixtures-contract.test.js.md)
 - [test/adversarial-live-e2e-contract.test.js](specs/brownfield/wiki/concepts/test__adversarial-live-e2e-contract.test.js.md)
-- [test/adversarial-review-wiring.test.js](specs/brownfield/wiki/concepts/test__adversarial-review-wiring.test.js.md)
 - [test/agent-readiness-wiring-contract.test.js](specs/brownfield/wiki/concepts/test__agent-readiness-wiring-contract.test.js.md)
 - [test/agent-readiness.test.js](specs/brownfield/wiki/concepts/test__agent-readiness.test.js.md)
 - [test/amendment-provenance-check.test.js](specs/brownfield/wiki/concepts/test__amendment-provenance-check.test.js.md)
+- [test/approve-fixtures.test.js](specs/brownfield/wiki/concepts/test__approve-fixtures.test.js.md)
+- [test/approved-fixtures-gate.test.js](specs/brownfield/wiki/concepts/test__approved-fixtures-gate.test.js.md)
+- [test/archive-state.test.js](specs/brownfield/wiki/concepts/test__archive-state.test.js.md)
+- [test/ask-codebase-readiness-digest.test.js](specs/brownfield/wiki/concepts/test__ask-codebase-readiness-digest.test.js.md)
 
 ## DeepWiki cluster pages
 
@@ -84,8 +84,8 @@ npm run ask -- "..."     # ask the codebase
 - [04-test-e2e-helpers](specs/brownfield/wiki/pages/04-test-e2e-helpers.md)
 - [05-symphony_clone-test](specs/brownfield/wiki/pages/05-symphony_clone-test.md)
 - [06-symphony_clone-src-tracker](specs/brownfield/wiki/pages/06-symphony_clone-src-tracker.md)
-- [07-test-helpers](specs/brownfield/wiki/pages/07-test-helpers.md)
-- [08-tools](specs/brownfield/wiki/pages/08-tools.md)
+- [07-tools](specs/brownfield/wiki/pages/07-tools.md)
+- [08-test-helpers](specs/brownfield/wiki/pages/08-test-helpers.md)
 - [09-open_wiki-scripts](specs/brownfield/wiki/pages/09-open_wiki-scripts.md)
 - [10-symphony_clone-src](specs/brownfield/wiki/pages/10-symphony_clone-src.md)
 - [11-dsl-packs-private-equity-waterfall](specs/brownfield/wiki/pages/11-dsl-packs-private-equity-waterfall.md)

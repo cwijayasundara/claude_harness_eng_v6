@@ -1,18 +1,14 @@
-# `test/` — 330 module(s)
+# `test/` — 292 module(s)
 
-330 module(s).
+292 module(s).
 
 ## Dependencies
 
 ```mermaid
 flowchart LR
-  n_js_test_ab_report_test_js["ab-report.test.js"]
-  n_js_test_ab_run_test_js["ab-run.test.js"]
   n_js_test_accessibility_contract_test_js["accessibility-contract.test.js"]
-  n_js_test_adherence_critic_contract_test_js["adherence-critic-contract.test.js"]
   n_js_test_adversarial_fixtures_contract_test_js["adversarial-fixtures-contract.test.js"]
   n_js_test_adversarial_live_e2e_contract_test_js["adversarial-live-e2e-contract.test.js"]
-  n_js_test_adversarial_review_wiring_test_js["adversarial-review-wiring.test.js"]
   n_js_test_agent_readiness_wiring_contract_test_js["agent-readiness-wiring-contract.test.js"]
   n_js_test_agent_readiness_test_js["agent-readiness.test.js"]
   n_js_test_amendment_provenance_check_test_js["amendment-provenance-check.test.js"]
@@ -30,26 +26,20 @@ flowchart LR
   n_js_test_auto_merge_test_js["auto-merge.test.js"]
   n_js_test_auto_multi_context_window_test_js["auto-multi-context-window.test.js"]
   n_js_test_auto_per_cluster_contract_test_js["auto-per-cluster-contract.test.js"]
-  n_js_test_auto_semi_contract_test_js["auto-semi-contract.test.js"]
   n_js_test_automated_e2e_contract_test_js["automated-e2e-contract.test.js"]
-  n_js_test_autonomous_build_contract_test_js["autonomous-build-contract.test.js"]
   n_js_test_bash_targets_test_js["bash-targets.test.js"]
   n_js_test_boundary_doubles_roundtrip_test_js["boundary-doubles-roundtrip.test.js"]
   n_js_test_boundary_doubles_ts_roundtrip_test_js["boundary-doubles-ts-roundtrip.test.js"]
   n_js_test_brd_taxonomy_check_test_js["brd-taxonomy-check.test.js"]
   n_js_test_brd_taxonomy_wiring_contract_test_js["brd-taxonomy-wiring-contract.test.js"]
   n_js_test_budget_state_test_js["budget-state.test.js"]
-  n_js_test_build_auto_merge_contract_test_js["build-auto-merge-contract.test.js"]
-  n_js_test_build_chain_contract_test_js["build-chain-contract.test.js"]
   n_js_test_build_chain_loop_test_js["build-chain-loop.test.js"]
   n_js_test_build_chain_single_pr_test_js["build-chain-single-pr.test.js"]
   n_js_test_build_chain_state_test_js["build-chain-state.test.js"]
   n_js_test_build_lane_test_js["build-lane.test.js"]
-  n_js_test_canary_rollout_wiring_test_js["canary-rollout-wiring.test.js"]
   n_js_test_canvas_safeguards_test_js["canvas-safeguards.test.js"]
   n_js_test_canvas_semantic_test_js["canvas-semantic.test.js"]
   n_js_test_canvas_sync_proposal_test_js["canvas-sync-proposal.test.js"]
-  n_js_test_canvas_sync_wiring_test_js["canvas-sync-wiring.test.js"]
   n_js_test_canvas_wiring_contract_test_js["canvas-wiring-contract.test.js"]
   n_js_test_canvas_test_js["canvas.test.js"]
   n_js_test_certification_status_test_js["certification-status.test.js"]
@@ -62,7 +52,6 @@ flowchart LR
   n_js_test_code_wiki_test_js["code-wiki.test.js"]
   n_js_test_codeowners_scaffold_hardening_test_js["codeowners-scaffold-hardening.test.js"]
   n_js_test_commit_msg_git_hook_test_js["commit-msg-git-hook.test.js"]
-  n_js_test_concurrency_gate_doc_contract_test_js["concurrency-gate-doc-contract.test.js"]
   n_js_test_concurrency_gate_wiring_contract_test_js["concurrency-gate-wiring-contract.test.js"]
   n_js_test_concurrency_gate_test_js["concurrency-gate.test.js"]
   n_js_test_constitution_invariants_test_js["constitution-invariants.test.js"]
@@ -76,7 +65,6 @@ flowchart LR
   n_js_test_contract_drift_gate_test_js["contract-drift-gate.test.js"]
   n_js_test_contract_validate_test_js["contract-validate.test.js"]
   n_js_test_control_budget_test_js["control-budget.test.js"]
-  n_js_test_cost_per_outcome_test_js["cost-per-outcome.test.js"]
   n_js_test_cost_report_test_js["cost-report.test.js"]
   n_js_test_coupling_gate_wiring_contract_test_js["coupling-gate-wiring-contract.test.js"]
   n_js_test_coupling_gate_test_js["coupling-gate.test.js"]
@@ -86,27 +74,19 @@ flowchart LR
   n_js_test_coverage_preflight_test_js["coverage-preflight.test.js"]
   n_js_test_cr_index_test_js["cr-index.test.js"]
   n_js_test_custom_sensor_commit_test_js["custom-sensor-commit.test.js"]
+  n_js_test_cycle_gate_wiring_contract_test_js["cycle-gate-wiring-contract.test.js"]
+  n_js_test_cycle_gate_test_js["cycle-gate.test.js"]
+  n_js_test_deep_mutation_test_js["deep-mutation.test.js"]
+  n_js_test_deepwiki_determinism_test_js["deepwiki-determinism.test.js"]
+  n_js_test_diagnostics_parse_test_js["diagnostics-parse.test.js"]
+  n_js_test_diff_hunks_test_js["diff-hunks.test.js"]
+  n_js_test_dogfood_manifest_test_js["dogfood-manifest.test.js"]
+  n_js_test_drift_wiring_contract_test_js["drift-wiring-contract.test.js"]
+  n_js_test_drift_test_js["drift.test.js"]
+  n_js_test_duplication_gate_wiring_contract_test_js["duplication-gate-wiring-contract.test.js"]
+  n_js_test_duplication_gate_test_js["duplication-gate.test.js"]
+  n_js_test_e2e_no_hang_contract_test_js["e2e-no-hang-contract.test.js"]
 ```
-
-## `js:test/ab-report.test.js`
-
-- fan-in: 0, fan-out: 6
-
-### Symbols
-  - `costObj` (function) → js:test/ab-report.test.js:21 — `function costObj(label, est, passed, total)`
-  - `mkArm` (function) → js:test/ab-report.test.js:35 — `function mkArm(cost, telemetry)`
-
-## `js:test/ab-run.test.js`
-
-- fan-in: 0, fan-out: 4
-
-### Symbols
-  - `agents` (function) → js:test/ab-run.test.js:12 — `agents = (dir) => path.join(dir, '.claude', 'agents')`
-  - `costArtifact` (function) → js:test/ab-run.test.js:13 — `costArtifact = (dir) => path.join(path.resolve(dir), '.claude', 'state', 'cost-per-outcome.json')`
-  - `makeDeps` (function) → js:test/ab-run.test.js:19 — `function makeDeps(opts = {})`
-  - `baseCfg` (function) → js:test/ab-run.test.js:36 — `baseCfg = (over = {}) => (`
-  - `executeSpawn` (function) → js:test/ab-run.test.js:146 — `function executeSpawn(rec, buildStatus = 0)`
-  - `stampFailSpawn` (function) → js:test/ab-run.test.js:200 — `function stampFailSpawn(rec)`
 
 ## `js:test/accessibility-contract.test.js`
 
@@ -114,13 +94,6 @@ flowchart LR
 
 ### Symbols
   - `withContract` (function) → js:test/accessibility-contract.test.js:16 — `function withContract(contract)`
-
-## `js:test/adherence-critic-contract.test.js`
-
-- fan-in: 0, fan-out: 4
-
-### Symbols
-  - `read` (function) → js:test/adherence-critic-contract.test.js:8 — `read = (rel) => fs.readFileSync(path.join(__dirname, '..', rel), 'utf8')`
 
 ## `js:test/adversarial-fixtures-contract.test.js`
 
@@ -136,13 +109,6 @@ flowchart LR
 
 ### Symbols
   - `read` (function) → js:test/adversarial-live-e2e-contract.test.js:11 — `function read(relPath)`
-
-## `js:test/adversarial-review-wiring.test.js`
-
-- fan-in: 0, fan-out: 4
-
-### Symbols
-  - `read` (function) → js:test/adversarial-review-wiring.test.js:12 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
 
 ## `js:test/agent-readiness-wiring-contract.test.js`
 
@@ -215,10 +181,10 @@ flowchart LR
 
 ## `js:test/at-first-gate-wiring-contract.test.js`
 
-- fan-in: 0, fan-out: 8
+- fan-in: 0, fan-out: 9
 
 ### Symbols
-  - `read` (function) → js:test/at-first-gate-wiring-contract.test.js:17 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
+  - `read` (function) → js:test/at-first-gate-wiring-contract.test.js:18 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
 
 ## `js:test/at-first-gate.test.js`
 
@@ -287,27 +253,12 @@ flowchart LR
 ### Symbols
   _(no extracted symbols)_
 
-## `js:test/auto-semi-contract.test.js`
-
-- fan-in: 0, fan-out: 4
-
-### Symbols
-  - `read` (function) → js:test/auto-semi-contract.test.js:12 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
-
 ## `js:test/automated-e2e-contract.test.js`
 
 - fan-in: 0, fan-out: 4
 
 ### Symbols
   - `read` (function) → js:test/automated-e2e-contract.test.js:18 — `function read(p) { return fs.readFileSync(p, 'utf8'); }`
-
-## `js:test/autonomous-build-contract.test.js`
-
-- fan-in: 0, fan-out: 5
-
-### Symbols
-  - `read` (function) → js:test/autonomous-build-contract.test.js:14 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
-  - `BUILD_CORPUS` (function) → js:test/autonomous-build-contract.test.js:16 — `BUILD_CORPUS = () => readSkillCorpus('build')`
 
 ## `js:test/bash-targets.test.js`
 
@@ -343,10 +294,10 @@ flowchart LR
 
 ## `js:test/brd-taxonomy-wiring-contract.test.js`
 
-- fan-in: 0, fan-out: 5
+- fan-in: 0, fan-out: 6
 
 ### Symbols
-  - `read` (function) → js:test/brd-taxonomy-wiring-contract.test.js:14 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
+  - `read` (function) → js:test/brd-taxonomy-wiring-contract.test.js:15 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
 
 ## `js:test/budget-state.test.js`
 
@@ -355,22 +306,6 @@ flowchart LR
 ### Symbols
   - `cfg` (function) → js:test/budget-state.test.js:7 — `cfg = (dims, warn) => ({ warn_at_pct: warn || 80, dimensions: dims })`
   - `sub` (function) → js:test/budget-state.test.js:55 — `sub = (agent, extra) => ({ kind: 'subagent', agent, ...extra })`
-
-## `js:test/build-auto-merge-contract.test.js`
-
-- fan-in: 0, fan-out: 3
-
-### Symbols
-  _(no extracted symbols)_
-
-## `js:test/build-chain-contract.test.js`
-
-- fan-in: 0, fan-out: 5
-
-### Symbols
-  - `read` (function) → js:test/build-chain-contract.test.js:11 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
-  - `AUTO_CORPUS` (function) → js:test/build-chain-contract.test.js:13 — `AUTO_CORPUS = () => readSkillCorpus('auto')`
-  - `BUILD_CORPUS` (function) → js:test/build-chain-contract.test.js:14 — `BUILD_CORPUS = () => readSkillCorpus('build')`
 
 ## `js:test/build-chain-loop.test.js`
 
@@ -401,13 +336,6 @@ flowchart LR
 ### Symbols
   _(no extracted symbols)_
 
-## `js:test/canary-rollout-wiring.test.js`
-
-- fan-in: 0, fan-out: 4
-
-### Symbols
-  - `read` (function) → js:test/canary-rollout-wiring.test.js:15 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
-
 ## `js:test/canvas-safeguards.test.js`
 
 - fan-in: 0, fan-out: 3
@@ -430,13 +358,6 @@ flowchart LR
   - `tmpProject` (function) → js:test/canvas-sync-proposal.test.js:45 — `function tmpProject(canvasText)`
   - `readReport` (function) → js:test/canvas-sync-proposal.test.js:52 — `readReport = (p) => fs.readFileSync(p.outPath, 'utf8')`
   - `readCanvas` (function) → js:test/canvas-sync-proposal.test.js:53 — `readCanvas = (p) => fs.readFileSync(p.canvasPath, 'utf8')`
-
-## `js:test/canvas-sync-wiring.test.js`
-
-- fan-in: 0, fan-out: 4
-
-### Symbols
-  - `read` (function) → js:test/canvas-sync-wiring.test.js:9 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
 
 ## `js:test/canvas-wiring-contract.test.js`
 
@@ -535,13 +456,6 @@ flowchart LR
 ### Symbols
   - `stage` (function) → js:test/commit-msg-git-hook.test.js:11 — `function stage(projectDir, rel, content)`
   - `writeMsgFile` (function) → js:test/commit-msg-git-hook.test.js:19 — `function writeMsgFile(projectDir, message)`
-
-## `js:test/concurrency-gate-doc-contract.test.js`
-
-- fan-in: 0, fan-out: 3
-
-### Symbols
-  _(no extracted symbols)_
 
 ## `js:test/concurrency-gate-wiring-contract.test.js`
 
@@ -643,15 +557,6 @@ flowchart LR
 ### Symbols
   - `base` (function) → js:test/control-budget.test.js:25 — `function base(ids)`
 
-## `js:test/cost-per-outcome.test.js`
-
-- fan-in: 0, fan-out: 5
-
-### Symbols
-  - `mkRoot` (function) → js:test/cost-per-outcome.test.js:14 — `function mkRoot(features, receipts)`
-  - `sub` (function) → js:test/cost-per-outcome.test.js:27 — `sub = (group, extra = {}) => (`
-  - `tok` (function) → js:test/cost-per-outcome.test.js:31 — `tok = (group, model, input, output) => (`
-
 ## `js:test/cost-report.test.js`
 
 - fan-in: 0, fan-out: 6
@@ -722,4 +627,89 @@ flowchart LR
 ### Symbols
   - `proj` (function) → js:test/custom-sensor-commit.test.js:7 — `function proj(cs)`
 
-_+ 250 more module(s) not shown (page capped at 80)._
+## `js:test/cycle-gate-wiring-contract.test.js`
+
+- fan-in: 0, fan-out: 5
+
+### Symbols
+  - `read` (function) → js:test/cycle-gate-wiring-contract.test.js:12 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
+
+## `js:test/cycle-gate.test.js`
+
+- fan-in: 0, fan-out: 3
+
+### Symbols
+  - `graphWith` (function) → js:test/cycle-gate.test.js:11 — `function graphWith(cycles)`
+
+## `js:test/deep-mutation.test.js`
+
+- fan-in: 0, fan-out: 6
+
+### Symbols
+  - `tmpProject` (function) → js:test/deep-mutation.test.js:13 — `function tmpProject()`
+  - `run` (function) → js:test/deep-mutation.test.js:19 — `function run(root, args = [])`
+
+## `js:test/deepwiki-determinism.test.js`
+
+- fan-in: 0, fan-out: 7
+
+### Symbols
+  - `tempProjectWithGraph` (function) → js:test/deepwiki-determinism.test.js:37 — `function tempProjectWithGraph()`
+
+## `js:test/diagnostics-parse.test.js`
+
+- fan-in: 0, fan-out: 7
+
+### Symbols
+  _(no extracted symbols)_
+
+## `js:test/diff-hunks.test.js`
+
+- fan-in: 0, fan-out: 3
+
+### Symbols
+  _(no extracted symbols)_
+
+## `js:test/dogfood-manifest.test.js`
+
+- fan-in: 0, fan-out: 4
+
+### Symbols
+  _(no extracted symbols)_
+
+## `js:test/drift-wiring-contract.test.js`
+
+- fan-in: 0, fan-out: 4
+
+### Symbols
+  - `read` (function) → js:test/drift-wiring-contract.test.js:13 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
+
+## `js:test/drift.test.js`
+
+- fan-in: 0, fan-out: 3
+
+### Symbols
+  - `graph` (function) → js:test/drift.test.js:10 — `function graph()`
+
+## `js:test/duplication-gate-wiring-contract.test.js`
+
+- fan-in: 0, fan-out: 7
+
+### Symbols
+  - `read` (function) → js:test/duplication-gate-wiring-contract.test.js:9 — `read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8')`
+
+## `js:test/duplication-gate.test.js`
+
+- fan-in: 0, fan-out: 3
+
+### Symbols
+  _(no extracted symbols)_
+
+## `js:test/e2e-no-hang-contract.test.js`
+
+- fan-in: 0, fan-out: 4
+
+### Symbols
+  - `read` (function) → js:test/e2e-no-hang-contract.test.js:17 — `read = (...p) => fs.readFileSync(path.join(ROOT, ...p), 'utf8')`
+
+_+ 212 more module(s) not shown (page capped at 80)._
