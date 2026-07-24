@@ -23,7 +23,7 @@ with no attestation is recorded as a gap, and per-repo harness-version drift is 
 
 - To generate a single repo's attestation — that is `/attestation` (`generate-attestation.js`). This
   skill only reads and aggregates 4a attestations; it never mutates them.
-- To provision branch protection or deploy environments (`/provision-protection`, `/provision-environments`).
+- To provision branch protection or deploy environments (`/provision`, its `protection`/`environments` modes).
 
 ## How it works
 

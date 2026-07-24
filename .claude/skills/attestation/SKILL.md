@@ -23,8 +23,8 @@ skill aggregates them into one committed record per commit that an auditor can r
 
 ## Do not use
 
-- To provision branch protection or deploy environments — that is `/provision-protection`
-  (Increment 2) and `/provision-environments` (Increment 3). This skill only *reads* their outputs.
+- To provision branch protection or deploy environments — that is `/provision` (its `protection`
+  and `environments` modes, Increments 2/3). This skill only *reads* their outputs.
 - To change gate behavior. It is purely additive read-and-record; it never mutates `gate-receipt`,
   `quality-card`, or the verify outputs.
 

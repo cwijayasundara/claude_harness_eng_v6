@@ -158,5 +158,5 @@ and un-drifted); this incident report is the *remediation* record that complemen
 
 ## 7. Out of scope
 
-- Turning the gates on across the org (operator apply-runbook + `fleet-retrofit`).
+- Turning the gates on across the org (operator apply-runbook + `/provision` fleet mode).
 - Cryptographic signing of the incident report / attestation (documented signing seam).

@@ -191,10 +191,8 @@
       "why": "Client CISO mandate. Real external commitment, but not SDLC - belongs in its own installable pack.",
       "skill": [
         "attestation",
-        "fleet-retrofit",
         "portfolio-rollup",
-        "provision-environments",
-        "provision-protection"
+        "provision"
       ],
       "agent": [],
       "script": [
