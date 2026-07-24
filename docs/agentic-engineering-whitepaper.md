@@ -5,8 +5,8 @@
 **Version:** 1.2 · **Date:** 2026-07-15  
 **Preferred format:** open [`docs/agentic-engineering-whitepaper.html`](./agentic-engineering-whitepaper.html) in a browser (navigable, offline).  
 **Audience:** Engineering leaders, staff/principal engineers, and teams rolling out Claude Code, Codex, Grok CLI, or similar agentic coding tools in production environments  
-**Companion materials:** [`docs/harness-guide.html`](./harness-guide.html) · [`docs/zl-continuum-rubric.md`](./zl-continuum-rubric.md) · [`docs/proposals/bun-adversarial-mechanical-loops.md`](./proposals/bun-adversarial-mechanical-loops.md) · [`docs/fusion-ab-runbook.md`](./fusion-ab-runbook.md) · [Harness Engineering (Latent Space)](https://www.latent.space/p/harness-eng)  
-**Harness companion version:** Claude Harness Engine **v5 / 2.5.0** (product line v5; Bun-inspired dual review + mechanical loops shipped as minors 2.2–2.4; cost-per-outcome benchmark + `fusion` cheap-worker preset + A/B harness shipped as 2.5)
+**Companion materials:** [`docs/harness-guide.html`](./harness-guide.html) · [`docs/zl-continuum-rubric.md`](./zl-continuum-rubric.md) · [`docs/proposals/bun-adversarial-mechanical-loops.md`](./proposals/bun-adversarial-mechanical-loops.md) · [Harness Engineering (Latent Space)](https://www.latent.space/p/harness-eng)  
+**Harness companion version:** Claude Harness Engine **v5 / 2.5.0** (product line v5; Bun-inspired dual review + mechanical loops shipped as minors 2.2–2.4; the `fusion` cheap-worker preset shipped as 2.5)
 
 ---
 
@@ -278,9 +278,7 @@ A per-token-cheaper model can be *dearer per shipped outcome* if it spends the s
 
 | Instrument | What it does | Where |
 |-----------|--------------|-------|
-| **Cost-per-passed-story benchmark** | Σ per-spawn receipts ÷ evaluator-passed stories — cost per *outcome*, not tokens burned | `cost-per-outcome.js` |
 | **`fusion` model-tier preset** | “Cheap worker under a smart lead”: Sonnet 5 generator lead, **Haiku 4.5** per-story `implementer` worker, Opus judgment — the only preset where the teammate is cheaper than the lead | `model-tier.js` |
-| **A/B harness + verdict rule** | Runs `balanced` vs `fusion` on the same PRD in isolated arms; the cheaper arm wins *only if* its pass-rate holds equal-or-better — cheaper-but-worse is “no clear winner” | `ab-run.js` / `ab-report.js` · [runbook](./fusion-ab-runbook.md) |
 | **Lead-turn efficiency signal** | Turns-per-dispatch — surfaces a lead that thrashes instead of delegating, which erases any cheap-worker saving | loop-health |
 
 The same 2.5 wave hardened two other instruments in the same spirit—a sensor or budget lever that never bites is theater:

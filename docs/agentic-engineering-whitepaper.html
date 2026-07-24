@@ -1185,9 +1185,7 @@
             <tr><th>Instrument</th><th>What it does</th><th>Where</th></tr>
           </thead>
           <tbody>
-            <tr><td><strong>Cost-per-passed-story benchmark</strong></td><td>Σ per-spawn receipts ÷ evaluator-passed stories — cost per <em>outcome</em>, not tokens burned</td><td><code>cost-per-outcome.js</code></td></tr>
             <tr><td><strong><code>fusion</code> model-tier preset</strong></td><td>“Cheap worker under a smart lead”: Sonnet 5 generator lead, <strong>Haiku 4.5</strong> per-story <code>implementer</code> worker, Opus judgment — the only preset where the teammate is cheaper than the lead</td><td><code>model-tier.js</code></td></tr>
-            <tr><td><strong>A/B harness + verdict rule</strong></td><td>Runs <code>balanced</code> vs <code>fusion</code> on the same PRD in isolated arms; the cheaper arm wins <em>only if</em> its pass-rate holds equal-or-better — cheaper-but-worse is “no clear winner”</td><td><code>ab-run.js</code> / <code>ab-report.js</code> · <a href="./fusion-ab-runbook.md">runbook</a></td></tr>
             <tr><td><strong>Lead-turn efficiency signal</strong></td><td>Turns-per-dispatch — surfaces a lead that thrashes instead of delegating, which erases any cheap-worker saving</td><td>loop-health</td></tr>
           </tbody>
         </table>
