@@ -425,6 +425,14 @@
       "wired_at": ".claude/scripts/promote-recommendation.js",
       "status": "active",
       "description": "Agentic-flywheel Phase B (§4.3, docs/agentic-flywheel-design.md): the /promote skill's deterministic, non-negotiable guardrail — a recommendation whose class is gate-loosen or security is PERMANENTLY ineligible for automated promotion regardless of status/confidence/any other field, enforced in code (checkPromotionEligible), not left to skill-prompt discipline. Also refuses an already-promoted or not-yet-approved recommendation. /promote is on-demand only, never auto-invoked; merge always stays human. The harness eval-suite gate for a promotion-PR (§4.4) is the existing full npm test suite + harness-manifest honesty invariant, not a new golden-task framework — deliberately scoped down from the original design sketch, see §9 in the design doc."
+    },
+    {
+      "id": "plan-review-loop",
+      "axis": "traceability",
+      "kind": "feedforward",
+      "wired_at": ".claude/skills/plan-review-loop/SKILL.md",
+      "net_add_justification": "The three planning gates already stopped for a human, but asked a closed approve/reject question over a wall of artifacts — the cheapest correct answer is always yes, so the stop bought nothing. This is the shared dialogue discipline (review brief leading with the load-bearing decisions and where the planner would push back, one question at a time in /clarify format, 2-3 alternatives at each fork, revise-and-re-present as a changelog including declined feedback, round cap 5). Registered once as a sub-skill rather than triplicated into /spec, /design, /test, which would have been three copies free to drift.",
+      "description": "Human review of a planning artifact run as a brainstorming dialogue instead of an approve/reject prompt. Invoked at /spec Step 7, /design gate, and /test Step 4.8; supplies the round shape, the question budget (reused from /clarify), and the per-phase challenge sources. Records rounds via plan-approval.js."
     }
   ],
   "sensors": [
@@ -1536,6 +1544,18 @@
       "signal": "write outside the project / tmp / project-memory scope",
       "description": "PreToolUse(Write|Edit) block on any write resolving outside the project tree, /tmp, or this project's Claude memory dir (isWriteInScope). Stops an agent editing unrelated repos or home-directory config.",
       "net_add_justification": "Pre-existing control, previously UNREGISTERED. It has been running on every write/commit; registering it corrects the inventory rather than adding machinery. The budget rises because the old count understated what governs this repo."
+    },
+    {
+      "id": "plan-approval",
+      "axis": "traceability",
+      "type": "computational",
+      "cadence": "planning",
+      "status": "active",
+      "scope": "artifacts",
+      "wired_at": ".claude/scripts/plan-approval.js",
+      "signal": "a planning phase entered with no recorded human review, a review still in changes-requested, or an approval whose artifacts have changed since it was given",
+      "net_add_justification": "The human planning gates were prose-only and therefore unobservable: nothing downstream could tell whether /spec, /design or /test ever stopped for a human, what was said, or whether the plan still matches what was approved — the feedforward-only failure the sensor-value-meter cannot detect because no outcome was ever written. This is the feedback half. It owns one invariant no existing sensor covers (human review happened and still applies), distinct from trace-check.js, which owns machine ID-linkage between artifacts and says nothing about human sign-off. The digest check is the load-bearing part: without it an agent can rewrite the stories after approval and inherit a receipt for a plan the human never saw.",
+      "description": "Receipt + hard gate for the plan-review-loop at /spec, /design, /test. record/waive/check verbs write specs/reviews/<phase>-approval.json (rounds, verbatim feedback, changes, declined items, artifact sha256 digests). Rejects placeholder feedback and an approval that leaves earlier feedback unaccounted for; voids an approval whose artifacts changed. /design blocks on spec, /test on design, /auto on all three (check --phase all). Headless lanes record a waiver naming the lane; --require-human refuses waivers. Flags low_engagement (zero feedback, zero answered questions) as a rubber-stamp trend signal for /retro without blocking."
     }
   ],
   "drift_sensors_planned": {

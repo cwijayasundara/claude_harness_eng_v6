@@ -192,12 +192,27 @@ Display:
    or the `skipped-no-graph` / `inconclusive` marker if it didn't run to
    completion
 
-Ask: "Does this design amendment correctly evolve the existing architecture?
-Approve to commit the amendment and proceed, or provide corrections."
+Run the review as a dialogue over the amendment, following
+`.claude/skills/plan-review-loop/SKILL.md` with `--phase design` — the brief
+leads with what this amendment changes about the existing architecture and what
+it breaks, since a delta is judged against a baseline the human already
+approved rather than on its own terms.
 
 Do not auto-advance — this gate is never skipped by `--autonomous` in
 `/sprint` or `/feature` (there is no `--auto` zero-gate mode for the design
-amendment). On approval, commit the amendment together with the updated
+amendment). Record the approving round before committing, naming the amendment
+and the changed living-design files:
+
+```bash
+node .claude/scripts/plan-approval.js record --phase design --verdict approved \
+  --artifact specs/design/amendments/<amendment-id>.md \
+  --artifact specs/design/component-map.md
+```
+
+`/auto` blocks on this receipt, so an unrecorded amendment stops the sprint at
+the build boundary rather than silently building an unreviewed design change.
+
+On approval, commit the amendment together with the updated
 living-design files in one commit:
 
 ```bash

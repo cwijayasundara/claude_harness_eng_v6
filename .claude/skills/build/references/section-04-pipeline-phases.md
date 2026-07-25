@@ -32,9 +32,9 @@ Do NOT proceed without a clear "yes" or "approved" from the user. *(In `--autono
 
 Run `/spec` using the approved BRD. Outputs are written to `specs/stories/` and root `features.json`.
 
-**Stop and wait for explicit human approval before proceeding.** Present the story count, dependency groups, and feature list. Ask: "Approve stories to proceed to Phase 3?"
+**Stop and run `/spec`'s Step 7 review loop before proceeding** — a `plan-review-loop` dialogue over the decomposition, not a single approve/reject question. It ends by recording `plan-approval.js record --phase spec`, which Phase 3 hard-blocks on.
 
-Do NOT proceed without a clear "yes" or "approved" from the user. *(In `--autonomous` mode, do not stop here — deferred to the consolidated Plan Approval gate, Phase 3.5.)*
+Do NOT proceed without an approving round on the receipt. *(In `--autonomous` mode, do not stop here — deferred to the consolidated Plan Approval gate, Phase 3.5.)*
 
 If the user already has product stories, `/spec` may normalize those existing stories instead of deriving them from the BRD. The output contract is still the same: `epics.md`, ready story files, `dependency-graph.md`, and root `features.json`. Stories marked `needs_breakdown` must be resolved before Phase 3.
 
@@ -49,14 +49,15 @@ Wait for BOTH to complete before presenting results.
 
 **Then compute plan confidence.** Run `node .claude/scripts/plan-confidence.js`, which writes `specs/plan-confidence.json` — a band (high/medium/low), a score, and its risk drivers, derived deterministically from the BRD's open questions and assumptions, the needs-breakdown backlog, the epic count, hollow definitions in the design schemas, and unmitigated high/critical seams in the brownfield risk map. This gates **planning only** and never touches the machine verification gates; it just makes the planner's own uncertainty visible to the gate that follows.
 
-**Stop and wait for explicit human approval before proceeding.** Present:
+**Stop and run both review loops before proceeding.** `/design` and `/test --plan-only` each run their own `plan-review-loop` dialogue (`--phase design`, `--phase test`) — they review different decisions and are not collapsed into one question. Run them in sequence, design first, since the test plan's obligations follow from the approved schemas. Each brief carries:
+
 1. Architecture summary: tech stack, component count, API surface area.
-2. Test plan summary: test case count, story coverage, fixture count.
-3. **Plan confidence** from `specs/plan-confidence.json`: the band and its drivers — present it here too, not only in the `--autonomous` Phase 3.5 gate, so the human approves with the planner's uncertainty in view.
+2. Test plan summary: test case count, story coverage, fixture count — and what was deliberately left untested.
+3. **Plan confidence** from `specs/plan-confidence.json`: the band and its drivers — present it here too, not only in the `--autonomous` Phase 3.5 gate, so the human reviews with the planner's uncertainty in view.
 
-Ask: "Approve design and test plan to proceed to autonomous build?" **When confidence is LOW, lead with the drivers and recommend `/clarify` first** — e.g. *"Plan confidence is LOW (2 open questions, 1 undecomposable story). Recommend `/clarify` before building. Clarify now, approve anyway, or stop?"* — rather than the bare approve/reject question. (This mirrors what `--auto` does automatically; in the gated model the human makes the call.)
+**When confidence is LOW, lead with the drivers and recommend `/clarify` first** — e.g. *"Plan confidence is LOW (2 open questions, 1 undecomposable story). Recommend `/clarify` before building. Clarify now, review anyway, or stop?"* (This mirrors what `--auto` does automatically; in the gated model the human makes the call.)
 
-Do NOT proceed without a clear "yes" or "approved" from the user. *(In `--autonomous` mode, do not present a design-only gate here — go to Phase 3.5, which presents the whole plan at once.)*
+Do NOT proceed until `node .claude/scripts/plan-approval.js check --phase all` exits 0. *(In `--autonomous` mode, do not present a design-only gate here — go to Phase 3.5, which presents the whole plan at once.)*
 
 ### Phase 3.5 — Consolidated Plan Approval [`--autonomous` ONLY]
 
@@ -81,6 +82,16 @@ In `--autonomous` mode this is the **single** human gate. After Phases 1–3 hav
 7. **Projected spend** vs the budget cap: a rough estimate from the story/group count (`~N min · ~M agents · ~$K`, same rate table as `budget-state.js`) against the resolved cap — so the human sees the likely cost before approving. In `--auto`, if the projection already exceeds the cap before a single group runs, stop and surface it rather than starting a run that cannot finish in budget.
 
 Ask once: **"Approve this plan to build autonomously through to an open PR?"** On a clear "yes/approved", proceed through Phases 4–11 with **no further human stops** — the machine gates carry the rest. On anything else, fall back to the gated model (treat the remaining phases as gated). In the default (non-`--autonomous`) model, skip Phase 3.5 entirely; the per-phase gates above already ran.
+
+**Satisfy `/auto`'s review gate for the collapsed lanes.** `/auto` blocks on `plan-approval.js check --phase all`, so a lane that skipped the per-phase loops records *why* rather than leaving the receipt absent — an absent receipt and a deliberately-headless run are different facts, and the audit trail should say which one this was:
+
+```bash
+for phase in spec design test; do
+  node .claude/scripts/plan-approval.js waive --phase "$phase" --lane --autonomous   # or --lane --auto
+done
+```
+
+Write the `--autonomous` waivers only **after** the consolidated approval above is given; on a fallback to the gated model, do not write them — the per-phase loops run instead. In `--auto`, write the `--auto` waivers once Phase 3 completes.
 
 When confidence is **low**, do not present the bare approve/reject question — lead with the drivers and recommend resolving them first, e.g. *"Plan confidence is LOW (2 open questions, 1 undecomposable story). Recommend `/clarify` before an unattended run. Clarify now, approve anyway, or stop?"* High/medium confidence keeps the single question above.
 

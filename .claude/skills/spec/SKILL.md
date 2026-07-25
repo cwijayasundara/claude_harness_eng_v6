@@ -490,9 +490,12 @@ Spawn Agent with subagent_type="evaluator" and prompt:
 - List of orphan stories (not tracing to any BRD goal)
 - List of uncovered goals (BRD goals with no stories)
 
-### Step 7 — Present for Human Review
+### Step 7 — Human Review Loop [REQUIRED SUB-SKILL: `plan-review-loop`]
 
-Display:
+Follow `.claude/skills/plan-review-loop/SKILL.md`. The decomposition is the cheapest artifact in the pipeline to change and the most expensive to get wrong — a mis-cut story graph is re-litigated as merge conflicts three phases later — so this gate is a dialogue, not an approve/reject prompt.
+
+Open the review brief with:
+
 1. Epic summary table (ID, title, story count, groups covered)
 2. Dependency graph overview
 3. Story point summary by epic and dependency group
@@ -502,7 +505,18 @@ Display:
    - **Hand-offs:** every `blocking_dependencies` entry as `blocked_cluster waits on producer_cluster (story)`. Each is a scheduling constraint the allocation cannot remove.
    - Any `warnings[]` verbatim.
 5. Total story count, total story points, total feature count
-6. Ask: "Does this decomposition, estimation, and allocation look correct? Approve to proceed to `/design`, or provide corrections."
+
+**Challenge sources for this phase** — read these before asking anything, and lead the brief with what they say rather than with the tables above:
+
+- `specs/plan-confidence.json` — band and drivers, when it exists
+- `risk_gap_table` entries carried from the BRD
+- `specs/reviews/phase-spec-eval.json` — findings you accepted without fixing, and why
+- `story-clusters.json#warnings` and any cluster that is not `independently_startable`
+- Stories where you chose a `depends_on` edge type that collapses parallelism
+
+The load-bearing decisions worth putting to the human are typically: where you drew story boundaries, which dependencies you judged real versus defensive, and the cluster allocation. Those are product-shaped calls the machine gates cannot make.
+
+Record each round with `plan-approval.js` as the sub-skill describes, naming `specs/stories/epics.md`, `specs/stories/dependency-graph.md`, `specs/stories/stories.json`, and `features.json` on the approving round. In `--auto` / `--autonomous`, waive instead (`--lane`), per that skill's *Headless lanes* rule.
 
 ---
 
@@ -538,7 +552,11 @@ Display:
 - Dependency graph consistency (acyclic, valid groups)
 - Feature coverage (every AC maps to features.json)
 
-**Human review is still required before proceeding to `/design`.** The evaluator validates structure and traceability; the human validates product intent.
+**Human review is still required before proceeding to `/design`.** The evaluator validates structure and traceability; the human validates product intent. Step 7 runs that review as a `plan-review-loop` dialogue and records it — `/design` hard-blocks on the receipt:
+
+```bash
+node .claude/scripts/plan-approval.js check --phase spec
+```
 
 Pre-approval checklist (verified by evaluator, confirmed by human):
 - [ ] Every story has 3-6 specific, testable acceptance criteria in Given/When/Then form with stable `{story}-AC{n}` ids
@@ -558,7 +576,7 @@ Pre-approval checklist (verified by evaluator, confirmed by human):
 - [ ] All `passes` fields are `false`
 - [ ] Every story traces to a BRD goal (evaluator-enforced)
 
-Do not auto-advance. Wait for explicit approval or correction.
+Do not auto-advance. The loop ends on an explicit approving round, not on silence or a lack of objections.
 
 ---
 

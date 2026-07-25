@@ -30,6 +30,9 @@ agent: generator
 **For `--plan-only` (test planning phase — runs parallel with `/design`):**
 - `specs/stories/` — user stories with acceptance criteria (one file per story).
 - `project-manifest.json` — for service configuration context.
+- An approved story set — `node .claude/scripts/plan-approval.js check --phase spec` must exit 0. Test cases trace to acceptance criteria, so planning against an unreviewed decomposition writes obligations for stories that may still change.
+
+  This gates on `spec`, not `design`, because `/design` and `/test --plan-only` run **concurrently** in `/build` Phase 3 — both consume `/spec` output independently. Blocking here on design approval would deadlock the parallel branch. The design review still lands before code: `/auto` checks both.
 
 **For full run or `--e2e-only` (Playwright generation — runs after `/auto`):**
 - `specs/stories/` — user stories with acceptance criteria.
@@ -164,7 +167,22 @@ Write acceptance tests to `specs/test_artefacts/acceptance/{story-id}.<ext>` (ex
 
 Every implementation-ready AC should have a corresponding AT before the story is handed to implementation. `at-traces.json` is the deterministic signal downstream review should check for. As of gap G23, this is also mechanically enforced at commit time: `at-first-gate.js` (pre-commit) blocks a story's NEW production source files from being committed unless both the AT file and a `record-at-red.js` receipt exist for that story (see `HARNESS.md` G20/G23).
 
-**If `--plan-only`: STOP HERE.** Steps 4–4.6 (plan + cases + fixtures + trace spine + grounding gate + acceptance tests) are the complete deliverable for the planning phase. Do not proceed to Playwright generation — source code does not exist yet. Report the generated artifacts and exit.
+### Step 4.8 — Human Review Loop [REQUIRED SUB-SKILL: `plan-review-loop`] [`--plan-only`]
+
+The test plan is the definition of "done" that `/auto` will ratchet against for the rest of the build. Whatever it omits, no gate will ever ask for. Review it with the human before that becomes load-bearing — follow `.claude/skills/plan-review-loop/SKILL.md` with `--phase test`.
+
+The brief leads with coverage judgement, not the case list: which acceptance criteria you covered at which layer and why, where you chose a cheap unit test over an expensive E2E, and — the part worth their attention — **what you decided not to test**, each with a reason. A plan is far more often wrong in what it silently omits than in what it contains.
+
+**Challenge sources for this phase:**
+
+- `specs/reviews/test-grounding.json` and `verification-matrix-verdict.json` — what the deterministic gates already proved, so the human does not re-check coverage arithmetic
+- `constraint-obligations.json` — obligations you covered with one representative case, and the boundary values you picked
+- ACs where the required layers are `unit` only, with no api/e2e evidence planned
+- Fixtures encoding an assumption about real data that only the human can confirm
+
+Record each round with `plan-approval.js`, naming `test-plan.md`, `test-cases.md`, and `verification-matrix.json` on the approving round. In `--auto` / `--autonomous`, waive with `--lane`.
+
+**If `--plan-only`: STOP HERE.** Steps 4–4.8 (plan + cases + fixtures + trace spine + grounding gate + acceptance tests + human review) are the complete deliverable for the planning phase. Do not proceed to Playwright generation — source code does not exist yet. Report the generated artifacts and exit.
 
 ### Step 4.7 — Generate Integration Tests (`tests/integration/`) [when source exists]
 
