@@ -13,8 +13,8 @@ _Source: `README.md`_
 
 | Metric | Value |
 |---|---|
-| Indexed files | 447 |
-| Graph edges | 2050 |
+| Indexed files | 453 |
+| Graph edges | 2078 |
 | Concept pages | 20 |
 | Wiki cluster pages | 20 |
 
@@ -34,15 +34,15 @@ npm run ask -- "..."     # ask the codebase
 | Module | fan-in | fan-out |
 |---|---|---|
 | `test/helpers/hook-fixture.js` | 25 | 0 |
-| `test/helpers/skill-corpus.js` | 22 | 0 |
+| `test/helpers/skill-corpus.js` | 23 | 0 |
 | `test/e2e/helpers/claude-runner.js` | 17 | 0 |
 | `test/e2e/helpers/project-suite.js` | 9 | 0 |
 | `test/helpers/pre-commit-fixtures.js` | 9 | 0 |
 | `symphony_clone/src/orchestrator/scheduler.js` | 7 | 6 |
+| `test/helpers/pack-membership.js` | 6 | 0 |
 | `symphony_clone/src/config.js` | 5 | 0 |
 | `symphony_clone/src/orchestrator/workspace-manager.js` | 5 | 0 |
 | `test/e2e/helpers/fresh-project.js` | 5 | 0 |
-| `test/helpers/pack-membership.js` | 5 | 0 |
 | `test/helpers/record-run-fixture.js` | 5 | 0 |
 | `test/e2e/full-auto-output/src/server.js` | 4 | 1 |
 
@@ -59,6 +59,7 @@ npm run ask -- "..."     # ask the codebase
 - [test/e2e](specs/brownfield/wiki/concepts/test__e2e.md)
 - [symphony_clone/src](specs/brownfield/wiki/concepts/symphony_clone__src.md)
 - [dsl-packs/private-equity](specs/brownfield/wiki/concepts/dsl-packs__private-equity.md)
+- [test/fleet-retrofit-helpers.js](specs/brownfield/wiki/concepts/test__fleet-retrofit-helpers.js.md)
 - [test/fixtures](specs/brownfield/wiki/concepts/test__fixtures.md)
 - [symphony_clone/test](specs/brownfield/wiki/concepts/symphony_clone__test.md)
 - [test/evals](specs/brownfield/wiki/concepts/test__evals.md)
@@ -74,7 +75,6 @@ npm run ask -- "..."     # ask the codebase
 - [test/approve-fixtures.test.js](specs/brownfield/wiki/concepts/test__approve-fixtures.test.js.md)
 - [test/approved-fixtures-gate.test.js](specs/brownfield/wiki/concepts/test__approved-fixtures-gate.test.js.md)
 - [test/archive-state.test.js](specs/brownfield/wiki/concepts/test__archive-state.test.js.md)
-- [test/ask-codebase-readiness-digest.test.js](specs/brownfield/wiki/concepts/test__ask-codebase-readiness-digest.test.js.md)
 
 ## DeepWiki cluster pages
 
