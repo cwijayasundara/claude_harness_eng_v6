@@ -202,6 +202,41 @@ For each entry in `playwright_checks`:
 
 5. Record each check as PASS or FAIL with a description of what was asserted, what was found, and the `matrix_ids` executed.
 
+6. Append the check's entry to the evidence ledger described below.
+
+### Evidence integrity (G39) — every browser check
+
+The sprint contract is the pre-committed expectation set; the ledger is what actually happened against it. Write `specs/reviews/evaluator-evidence.json` as you go:
+
+```json
+{
+  "group": "C",
+  "checks": [
+    {
+      "id": "PW-1",
+      "layer": "playwright",
+      "verdict": "pass",
+      "interactions": ["browser_navigate", "browser_click", "browser_snapshot"],
+      "matrix_ids": ["VM-004"],
+      "artifacts": ["test-results/PW-1/trace.zip"]
+    }
+  ]
+}
+```
+
+- `id` is the contract check's own `id`. `layer` is `playwright` for functional flows, `accessibility` for an axe audit.
+- `interactions` lists the browser tools used on that check (bare or full MCP names both parse).
+- `verdict` is `pass`, `fail`, or `untested`. A contracted check you could not execute is `untested` — recording it is how the gate distinguishes "not attempted" from "verified"; omitting it reads as a silent skip and blocks.
+- `browser_evaluate` is for axe-core injection on an `accessibility` entry. A functional `playwright_checks` assertion satisfied by evaluating JavaScript rather than driving the UI is a BLOCK: it proves a script ran, not that a user can do the thing.
+
+Then run the gate:
+
+```bash
+node .claude/scripts/evidence-integrity-gate.js --group {group}
+```
+
+Exit 1 is a **FAIL** with `failure_layer: "evidence"` — fold it into the verdict exactly like the security gate. Exit 2 means the contract or ledger was unreadable, which is also a FAIL, never a pass. It writes `specs/reviews/evidence-integrity-verdict.json`, which the quality card reads.
+
 ### Accessibility (axe-core) — when the contract has `accessibility_checks`
 
 Semantic selectors prove an element is *reachable*; they do not prove the page is *accessible*. When the contract carries an `accessibility_checks` block, run an axe-core audit on each page (default: `evaluation.ui_base_url`; or the block's `urls`):
@@ -264,7 +299,7 @@ After all checks complete, update `features.json` for every feature ID listed in
 - `passes`: `true` if all checks for that feature passed, `false` otherwise.
 - `last_evaluated`: current timestamp in ISO 8601 format.
 - `failure_reason`: `null` if passing; otherwise a human-readable description of the first failure (e.g., `"GET /users/1 returned 404, expected 200"`).
-- `failure_layer`: `null` if passing; otherwise one of `"api"`, `"playwright"`, `"design"`, `"accessibility"`, `"unit_test"`, `"docker"`, `"security"`, `"performance"`.
+- `failure_layer`: `null` if passing; otherwise one of `"api"`, `"playwright"`, `"design"`, `"accessibility"`, `"evidence"`, `"unit_test"`, `"docker"`, `"security"`, `"performance"`.
 
 Do not remove existing fields from `features.json`. Merge the updates into the existing structure.
 Only update evaluation state fields: `passes`, `last_evaluated`, `failure_reason`, and `failure_layer`. Preserve immutable feature identity/specification fields such as `id`, `category`, `story`, `group`, `description`, and `steps`.
@@ -322,7 +357,7 @@ VERDICT: PASS | FAIL
 - F003: PASS
 ```
 
-The overall VERDICT is PASS only if every check across all layers passes, the security gate passes (`security-verdict.json#pass === true`), the performance ratchet reports no read-endpoint regression, **and** required matrix coverage is present. A single FAIL in any layer — an open BLOCK (critical/high) security finding, a p95 latency regression beyond threshold, or missing required matrix coverage — produces a FAIL verdict. Performance WARNs (over budget, or first-build baseline established) do not affect the verdict.
+The overall VERDICT is PASS only if every check across all layers passes, the security gate passes (`security-verdict.json#pass === true`), the evidence-integrity gate passes (`evidence-integrity-verdict.json#pass === true`), the performance ratchet reports no read-endpoint regression, **and** required matrix coverage is present. A single FAIL in any layer — an open BLOCK (critical/high) security finding, an evidence-integrity finding, a p95 latency regression beyond threshold, or missing required matrix coverage — produces a FAIL verdict. Performance WARNs (over budget, or first-build baseline established) do not affect the verdict.
 
 ---
 

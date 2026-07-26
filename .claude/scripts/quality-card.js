@@ -28,6 +28,7 @@ const SOURCES = [
   { key: 'contract_drift', file: 'contract-drift-verdict.json', kind: 'json_verdict', optional: true },
   { key: 'approved_fixtures', file: 'approved-fixtures-verdict.json', kind: 'json_verdict', optional: true },
   { key: 'verification_matrix', file: 'verification-matrix-verdict.json', kind: 'json_pass', optional: true },
+  { key: 'evidence_integrity', file: 'evidence-integrity-verdict.json', kind: 'json_pass', optional: true },
   { key: 'observability', file: 'observability-verdict.json', kind: 'json_pass', optional: true },
   { key: 'perf_smell', file: 'perf-smell-verdict.json', kind: 'json_pass', optional: true },
   { key: 'slo', file: 'slo-verdict.json', kind: 'json_pass', optional: true },

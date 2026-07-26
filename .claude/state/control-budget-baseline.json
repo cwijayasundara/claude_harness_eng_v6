@@ -1,5 +1,5 @@
 {
-  "count": 140,
+  "count": 141,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -54,6 +54,7 @@
     "eval-api",
     "eval-design-critic",
     "eval-playwright",
+    "evidence-integrity",
     "first-window-init",
     "fix-diagnostics-workflow",
     "fix-from-diagnostics",

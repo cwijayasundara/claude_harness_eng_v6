@@ -45,6 +45,7 @@ If the inputs include a `phase` and `artifact_paths`, you are in artifact mode. 
 - **Performance ratchet:** measure read-endpoint latency and FAIL on a p95 **regression** beyond threshold versus the recorded baseline (`perf-baseline.js --compare`). When no baseline exists yet (first/greenfield build) or an endpoint only overruns its absolute budget without regressing, that is a WARN, not a FAIL — record it, don't block. Full procedure in `.claude/skills/evaluate/SKILL.md` → "Performance Checks." Do not read source to judge speed; the running app produces the latency evidence.
 - **SLO error-rate:** when `observability.enabled`, the SLO sensor (`slo-check.js`, evaluate Step P4) scrapes `/metrics` and FAILs the evaluation in Full mode (`failure_layer: "slo"`) if the 5xx error-rate exceeds `observability.slo.error_rate_pct`. It counts only 5xx (server errors), never 4xx, so deliberate negative tests do not trip it. A p95 over `slo.p95_ms` is a WARN, not a FAIL (regression is the perf ratchet's job).
 - **Accessibility (when the contract has `accessibility_checks`):** run an axe-core audit on each page via `browser_evaluate` (`return await axe.run()`). Any violation whose `impact` is in `block_impacts` (default serious/critical) FAILs the evaluation in Full mode (`failure_layer: "accessibility"`) and is a WARN in Lean mode. A missing audit when `required: true` is a FAIL, not a pass. Full procedure in `.claude/skills/evaluate/SKILL.md` → Layer 2 "Accessibility".
+- **Evidence ledger (G39):** write `specs/reviews/evaluator-evidence.json` alongside the report — one entry per browser check, carrying the contract's check `id`, the `layer` (`playwright` / `accessibility`), the `verdict` (`pass` / `fail` / `untested`), `interactions` (the browser tools you actually used on that check), `matrix_ids`, and any `artifacts` paths (G40). `browser_evaluate` belongs to axe-core injection on an `accessibility` entry: a functional `playwright_checks` assertion satisfied by evaluating JavaScript instead of driving the UI is a BLOCK, because it proves a script ran, not that a user can do the thing. A contracted check you could not execute is recorded `untested` — never omitted, never `pass`. `evidence-integrity-gate.js` cross-checks the ledger against the contract; a finding is a FAIL with `failure_layer: "evidence"`.
 - **Verification matrix:** API, Playwright, accessibility, security, and performance report entries must include the `matrix_ids` they executed when those checks map to matrix rows. Missing required matrix coverage is a hard verification failure. When a row declares `implementation_paths`, regenerate runtime evidence after those production files change; stale evidence older than an `implementation_paths` file must not clear the executed gate.
 
 ## Inputs
@@ -116,12 +117,14 @@ In addition to the prose verdict, write a structured failure JSON to `specs/revi
     "stack_trace": "Extracted from Docker logs / process stderr. Include file:line if available.",
     "error_type": "key_error | type_error | import_error | timeout | connection_refused | validation_error | assertion_error",
     "files_likely_involved": ["backend/src/service/user_service.py:45"],
+    "artifacts": ["test-results/PW-1/trace.zip", "test-results/PW-1/video.webm"],
     "prior_attempts": []
   }
 }
 ```
 
 Rules for structured failures:
+- `artifacts`: paths to the run's Playwright trace/video/screenshot for a browser-layer failure (G40). The generated `playwright.config.ts` retains them on failure under `test-results/`; citing the path is what makes the verdict re-checkable by a human instead of re-derivable only by re-running the whole evaluation. Omit for a non-browser failure.
 - `stack_trace`: Extract from Docker logs (`docker compose logs --tail=50`) in docker mode, process stderr in local mode, stub mismatch details in stub mode.
 - `error_type`: Classify from the exception name in the stack trace. Use `"unknown"` if not classifiable.
 - `files_likely_involved`: Parse file paths from the stack trace. Include line numbers when available.

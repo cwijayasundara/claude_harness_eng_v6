@@ -96,6 +96,15 @@
       "remediation": "A previously-passing e2e spec or prior contract check now fails — this is a regression, not a flake (quarantined flakes are excluded). Fix the regression."
     },
     {
+      "id": "evidence-integrity",
+      "pack": "verification",
+      "script": "evidence-integrity-gate.js",
+      "when": "exists:sprint-contracts",
+      "blocking": true,
+      "summary": "Cross-checks the evaluator's evidence ledger against the read-only sprint contract: a claimed browser PASS must be backed by real user-path interaction against a pre-committed check (gap G39).",
+      "remediation": "Re-run the evaluation driving the app through the user path (browser_click / browser_fill_form), not browser_evaluate — that is permitted only for axe-core injection on an accessibility entry. A contracted check with no evidence entry is a silent skip: execute it, or record the honest \"untested\" verdict. Reads specs/reviews/evaluator-evidence.json, so run it after the evaluator returns."
+    },
+    {
       "id": "observability-gate",
       "pack": "verification",
       "script": "observability-gate.js",

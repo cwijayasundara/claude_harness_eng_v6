@@ -10,8 +10,18 @@ export default defineConfig({
   reporter: 'html',
   use: {
     baseURL: '{{UI_BASE_URL}}',
-    trace: 'on-first-retry',
+    // Runtime evidence artifacts (gap G40). A verdict a human cannot cheaply
+    // re-check gets rubber-stamped, so a failing run must leave something
+    // watchable behind. `retain-on-failure` rather than `on-first-retry`
+    // deliberately: retries are 0 locally, so on-first-retry captures nothing
+    // on the very runs an engineer is debugging.
+    trace: 'retain-on-failure',
+    video: 'retain-on-failure',
+    screenshot: 'only-on-failure',
   },
+  // Artifacts land here; the evaluator cites the paths in its failure report and
+  // the quality card links them. Keep it gitignored.
+  outputDir: './test-results',
   projects: [
     {
       name: 'chromium',

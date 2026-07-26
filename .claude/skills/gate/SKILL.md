@@ -95,6 +95,20 @@ completely; do **not** invoke them separately.
 Pass only production source in `--files`. When the diff has zero production source files
 (docs-only / pure test), pass none and record the skip in the context pack.
 
+One registry check has an ordering constraint: **`evidence-integrity` (G39)** reads the
+evidence ledger the evaluator writes (`specs/reviews/evaluator-evidence.json`), so when
+`sprint-contracts/` exists, re-run it after the evaluator returns rather than trusting the pass
+from the concurrent Step 2 sweep:
+
+```bash
+node .claude/scripts/run-gate-checks.js --only evidence-integrity
+```
+
+(The runner refuses to report a vacuous pass, so it errors if the check's trigger did not
+fire — skip this line in a project with no `sprint-contracts/`.) A finding is a BLOCK — a claimed browser PASS that was not backed by user-path interaction
+against a pre-committed contract check means the functional verdict is unproven, whatever the
+evaluator reported.
+
 ### Step 3 — Apply the Canonical Gate Semantics
 
 Severity levels (BLOCK/WARN/INFO), the BLOCK self-healing loop (generator fix → full re-run, max 3 cycles, then escalate), and the security verdict format are defined once in `/evaluate` (`.claude/skills/evaluate/SKILL.md`) — follow them exactly from there. Do not merge or mark a group complete while any BLOCK finding remains open, and always re-run the full review after fixes.
@@ -124,6 +138,7 @@ A quality-card with `pass: false` or missing core inputs (evaluator report / cod
 - `specs/reviews/regression-gate-verdict.json` — accumulated e2e + prior sprint-contract regression result when `e2e/` or `sprint-contracts/` exists
 - `specs/reviews/sensor-waivers-verdict.json` — waiver validation result when waivers are present or checked
 - `specs/reviews/review-context-pack.md` — compact shared review input
+- `specs/reviews/evidence-integrity-verdict.json` — evaluator-evidence cross-check against the read-only sprint contract (G39); only when `sprint-contracts/` exists
 - `specs/reviews/observability-verdict.json` — static logging/exception ratchet (Step 2.5)
 - `specs/reviews/perf-smell-verdict.json` — static perf smell ratchet (Step 2.5)
 - `specs/reviews/walkthrough.md` + `walkthrough.json` — logical PR walkthrough for humans (Step 4)

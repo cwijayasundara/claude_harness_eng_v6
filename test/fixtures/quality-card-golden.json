@@ -86,6 +86,14 @@
       "detail": "not present"
     },
     {
+      "key": "evidence_integrity",
+      "file": "evidence-integrity-verdict.json",
+      "status": "skipped",
+      "pass": true,
+      "optional": true,
+      "detail": "not present"
+    },
+    {
       "key": "observability",
       "file": "observability-verdict.json",
       "status": "skipped",
@@ -131,6 +139,6 @@
     "pass": 3,
     "fail": 1,
     "missing": 0,
-    "skipped": 10
+    "skipped": 11
   }
 }
