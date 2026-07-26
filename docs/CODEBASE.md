@@ -59,7 +59,6 @@ npm run ask -- "..."     # ask the codebase
 - [test/e2e](specs/brownfield/wiki/concepts/test__e2e.md)
 - [symphony_clone/src](specs/brownfield/wiki/concepts/symphony_clone__src.md)
 - [dsl-packs/private-equity](specs/brownfield/wiki/concepts/dsl-packs__private-equity.md)
-- [test/fleet-retrofit-helpers.js](specs/brownfield/wiki/concepts/test__fleet-retrofit-helpers.js.md)
 - [test/fixtures](specs/brownfield/wiki/concepts/test__fixtures.md)
 - [symphony_clone/test](specs/brownfield/wiki/concepts/symphony_clone__test.md)
 - [test/evals](specs/brownfield/wiki/concepts/test__evals.md)
@@ -75,6 +74,7 @@ npm run ask -- "..."     # ask the codebase
 - [test/approve-fixtures.test.js](specs/brownfield/wiki/concepts/test__approve-fixtures.test.js.md)
 - [test/approved-fixtures-gate.test.js](specs/brownfield/wiki/concepts/test__approved-fixtures-gate.test.js.md)
 - [test/archive-state.test.js](specs/brownfield/wiki/concepts/test__archive-state.test.js.md)
+- [test/ask-codebase-readiness-digest.test.js](specs/brownfield/wiki/concepts/test__ask-codebase-readiness-digest.test.js.md)
 
 ## DeepWiki cluster pages
 
@@ -83,11 +83,11 @@ npm run ask -- "..."     # ask the codebase
 - [03-symphony_clone-src-orchestrator](specs/brownfield/wiki/pages/03-symphony_clone-src-orchestrator.md)
 - [04-test-e2e-helpers](specs/brownfield/wiki/pages/04-test-e2e-helpers.md)
 - [05-symphony_clone-test](specs/brownfield/wiki/pages/05-symphony_clone-test.md)
-- [06-tools](specs/brownfield/wiki/pages/06-tools.md)
-- [07-symphony_clone-src-tracker](specs/brownfield/wiki/pages/07-symphony_clone-src-tracker.md)
-- [08-test-helpers](specs/brownfield/wiki/pages/08-test-helpers.md)
-- [09-open_wiki-scripts](specs/brownfield/wiki/pages/09-open_wiki-scripts.md)
-- [10-symphony_clone-src](specs/brownfield/wiki/pages/10-symphony_clone-src.md)
+- [06-symphony_clone-src-tracker](specs/brownfield/wiki/pages/06-symphony_clone-src-tracker.md)
+- [07-test-helpers](specs/brownfield/wiki/pages/07-test-helpers.md)
+- [08-open_wiki-scripts](specs/brownfield/wiki/pages/08-open_wiki-scripts.md)
+- [09-symphony_clone-src](specs/brownfield/wiki/pages/09-symphony_clone-src.md)
+- [10-tools](specs/brownfield/wiki/pages/10-tools.md)
 - [11-dsl-packs-private-equity-waterfall](specs/brownfield/wiki/pages/11-dsl-packs-private-equity-waterfall.md)
 - [12-test-e2e-full-auto-output-src](specs/brownfield/wiki/pages/12-test-e2e-full-auto-output-src.md)
 - [13-test-e2e-full-auto-output-tests](specs/brownfield/wiki/pages/13-test-e2e-full-auto-output-tests.md)

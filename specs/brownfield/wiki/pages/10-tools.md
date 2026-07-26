@@ -1,26 +1,16 @@
-# `tools/` — 9 module(s)
+# `tools/` — 4 module(s)
 
-9 module(s).
+4 module(s).
 
 ## Dependencies
 
 ```mermaid
 flowchart LR
   n_js_tools_check_partition_js["check-partition.js"]
-  n_js_tools_check_partition_test_js["check-partition.test.js"]
   n_js_tools_overlap_candidates_js["overlap-candidates.js"]
-  n_js_tools_overlap_candidates_test_js["overlap-candidates.test.js"]
-  n_js_tools_pack_install_smoke_test_js["pack-install-smoke.test.js"]
   n_js_tools_pack_install_js["pack-install.js"]
-  n_js_tools_pack_install_test_js["pack-install.test.js"]
   n_js_tools_partition_report_js["partition-report.js"]
-  n_js_tools_partition_report_test_js["partition-report.test.js"]
   n_js_tools_check_partition_js -->|imports| n_js_tools_partition_report_js
-  n_js_tools_check_partition_test_js -->|imports| n_js_tools_check_partition_js
-  n_js_tools_pack_install_smoke_test_js -->|imports| n_js_tools_pack_install_js
-  n_js_tools_pack_install_test_js -->|imports| n_js_tools_pack_install_js
-  n_js_tools_partition_report_test_js -->|imports| n_js_tools_partition_report_js
-  n_js_tools_overlap_candidates_test_js -->|imports| n_js_tools_overlap_candidates_js
 ```
 
 ## `js:tools/check-partition.js`
@@ -48,13 +38,6 @@ flowchart LR
   - `loadUnitTexts` (function) → js:tools/check-partition.js:240 — `function loadUnitTexts()`
   - `main` (function) → js:tools/check-partition.js:257 — `function main()`
 
-## `js:tools/check-partition.test.js`
-
-- fan-in: 0, fan-out: 3
-
-### Symbols
-  _(no extracted symbols)_
-
 ## `js:tools/overlap-candidates.js`
 
 - fan-in: 1, fan-out: 2
@@ -81,23 +64,6 @@ flowchart LR
   - `runStale` (function) → js:tools/overlap-candidates.js:205 — `function runStale(controls)`
   - `main` (function) → js:tools/overlap-candidates.js:211 — `function main()`
 
-## `js:tools/overlap-candidates.test.js`
-
-- fan-in: 0, fan-out: 5
-
-### Symbols
-  - `prep` (function) → js:tools/overlap-candidates.test.js:16 — `prep = (c) => (`
-
-## `js:tools/pack-install-smoke.test.js`
-
-- fan-in: 0, fan-out: 7
-
-### Symbols
-  - `kernelOnly` (function) → js:tools/pack-install-smoke.test.js:26 — `function kernelOnly()`
-  - `coreProfile` (function) → js:tools/pack-install-smoke.test.js:38 — `function coreProfile()`
-  - `node` (function) → js:tools/pack-install-smoke.test.js:47 — `node = (args, opts = {}) => spawnSync('node', args, { encoding: 'utf8', timeout: 60000, ...opts })`
-  - `brownfieldProfile` (function) → js:tools/pack-install-smoke.test.js:76 — `function brownfieldProfile()`
-
 ## `js:tools/pack-install.js`
 
 - fan-in: 2, fan-out: 2
@@ -115,13 +81,6 @@ flowchart LR
   - `listPacks` (function) → js:tools/pack-install.js:161 — `function listPacks(partition)`
   - `main` (function) → js:tools/pack-install.js:170 — `function main(argv = process.argv.slice(2))`
 
-## `js:tools/pack-install.test.js`
-
-- fan-in: 0, fan-out: 3
-
-### Symbols
-  _(no extracted symbols)_
-
 ## `js:tools/partition-report.js`
 
 - fan-in: 2, fan-out: 0
@@ -133,10 +92,3 @@ flowchart LR
   - `reportProfileBreaks` (function) → js:tools/partition-report.js:46 — `function reportProfileBreaks(breaks)`
   - `reportViolations` (function) → js:tools/partition-report.js:55 — `function reportViolations(violations)`
   - `printReport` (function) → js:tools/partition-report.js:72 — `function printReport({ partition, assign, result })`
-
-## `js:tools/partition-report.test.js`
-
-- fan-in: 0, fan-out: 3
-
-### Symbols
-  _(no extracted symbols)_

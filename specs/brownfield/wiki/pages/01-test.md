@@ -1,6 +1,6 @@
-# `test/` — 304 module(s)
+# `test/` — 309 module(s)
 
-304 module(s).
+309 module(s).
 
 ## Dependencies
 
@@ -44,6 +44,7 @@ flowchart LR
   n_js_test_canvas_test_js["canvas.test.js"]
   n_js_test_certification_status_test_js["certification-status.test.js"]
   n_js_test_check_git_hooks_test_js["check-git-hooks.test.js"]
+  n_js_test_check_partition_test_js["check-partition.test.js"]
   n_js_test_ci_ingest_test_js["ci-ingest.test.js"]
   n_js_test_code_index_commonjs_test_js["code-index-commonjs.test.js"]
   n_js_test_code_index_enterprise_test_js["code-index-enterprise.test.js"]
@@ -85,7 +86,6 @@ flowchart LR
   n_js_test_drift_test_js["drift.test.js"]
   n_js_test_duplication_gate_wiring_contract_test_js["duplication-gate-wiring-contract.test.js"]
   n_js_test_duplication_gate_test_js["duplication-gate.test.js"]
-  n_js_test_e2e_no_hang_contract_test_js["e2e-no-hang-contract.test.js"]
 ```
 
 ## `js:test/accessibility-contract.test.js`
@@ -387,6 +387,13 @@ flowchart LR
 ### Symbols
   - `gitProjectWithHook` (function) → js:test/check-git-hooks.test.js:11 — `function gitProjectWithHook()`
   - `installPreCommit` (function) → js:test/check-git-hooks.test.js:20 — `function installPreCommit(projectDir, content)`
+
+## `js:test/check-partition.test.js`
+
+- fan-in: 0, fan-out: 3
+
+### Symbols
+  _(no extracted symbols)_
 
 ## `js:test/ci-ingest.test.js`
 
@@ -705,11 +712,4 @@ flowchart LR
 ### Symbols
   _(no extracted symbols)_
 
-## `js:test/e2e-no-hang-contract.test.js`
-
-- fan-in: 0, fan-out: 4
-
-### Symbols
-  - `read` (function) → js:test/e2e-no-hang-contract.test.js:17 — `read = (...p) => fs.readFileSync(path.join(ROOT, ...p), 'utf8')`
-
-_+ 224 more module(s) not shown (page capped at 80)._
+_+ 229 more module(s) not shown (page capped at 80)._
