@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-// Materialize an install from docs/internal/v6-partition.json.
+// Materialize an install from .claude/config/packs.json.
 //
 // The partition declares which units are kernel and which belong to each pack, and
 // tools/check-partition.js proves the kernel never hard-references a pack. This turns

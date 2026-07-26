@@ -146,6 +146,11 @@ test('check-partition --strict passes: no kernel violations and no profile-break
   // here (not only by a manual CLI run) so a regression fails the suite.
   const r = node([path.join(ROOT, 'tools', 'check-partition.js'), '--strict']);
   assert.strictEqual(r.status, 0, `the partition must stay closed under hard references:\n${r.stdout}`);
+  // A checker that silently loaded nothing exits 0 too. The unit count is the cheapest
+  // proof the run was real, so an unreadable partition fails loud instead of vacuously.
+  const seen = /^partition: (\d+) units/m.exec(r.stdout || '');
+  assert.ok(seen && Number(seen[1]) > 100,
+    `check-partition loaded ${seen ? seen[1] : 'no'} units — the partition or the .claude tree did not load`);
 });
 
 test('every file in the accounted directories is claimed by some pack', () => {
