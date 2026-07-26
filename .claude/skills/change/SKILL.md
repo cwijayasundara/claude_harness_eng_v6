@@ -54,6 +54,39 @@ Do not proceed until acceptance criteria are written and confirmed.
 
 ### Step S2 — Impact Assessment
 
+Before implementation, classify the story and persist the canonical risk
+envelope. Pass the expected touched files when known:
+
+```bash
+node .claude/scripts/risk-envelope.js --task <story-id> \
+  --story specs/stories/<story-id>.md \
+  --graph specs/brownfield/code-graph.json \
+  --file <expected-path> [--file <expected-path> ...]
+```
+
+Read `.claude/state/risk-envelope.json`. Treat its tier as a deterministic
+minimum, never something the implementing agent may lower. Add every
+`required_evidence` item to the review context pack. Honor
+`forbidden_actions`; an `R4` change may be analyzed and prepared here but the
+production action itself remains human-executed.
+
+Create and verify the task envelope before the first production edit. Include
+the expected source paths, tests, and review artifacts. Never use a repo-wide
+wildcard as a convenience:
+
+```bash
+node .claude/scripts/task-envelope.js create --task <story-id> \
+  --intent-file specs/stories/<story-id>.md \
+  --allow <expected-source-or-glob> --allow <expected-test-or-glob> \
+  --allow 'specs/reviews/**'
+node .claude/scripts/task-envelope.js verify
+node .claude/scripts/task-lifecycle.js transition active "approved change execution begins"
+```
+
+The existing write/Bash gates now enforce the envelope. If discovery reveals a
+legitimate new path, stop and surface the scope change before recreating the
+envelope; do not let implementation silently expand its own authority.
+
 Read the current codebase to understand what is affected:
 
 - **Learned rules:** read `.claude/state/learned-rules.md`. If it exists and is non-empty, inject its contents verbatim into your working context before making any edits — the same convention `/auto` already uses for every spawned agent.

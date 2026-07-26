@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "modes": ["attended", "supervised", "unattended"],
+  "risk_ceiling": {
+    "R0": "unattended",
+    "R1": "unattended",
+    "R2": "supervised",
+    "R3": "supervised",
+    "R4": "attended"
+  },
+  "promotion": {
+    "minimum_matched_pairs": 10,
+    "maximum_agentic_rework_rate": 0.2,
+    "require_complete_study": true,
+    "require_security_certification_for_unattended": true
+  }
+}

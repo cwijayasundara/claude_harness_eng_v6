@@ -109,6 +109,25 @@ test('record-run emits prompt telemetry and updates lane for slash commands', as
   assert.equal(ledger[0].skill_count, 3);
 });
 
+test('record-run attaches canonical run, task, and risk context to events', async () => {
+  const projectDir = makeProject();
+  const stateDir = path.join(projectDir, '.claude', 'state');
+  fs.writeFileSync(path.join(stateDir, 'current-task'), 'TASK-42\n');
+  fs.writeFileSync(path.join(stateDir, 'current-risk-tier'), 'R3\n');
+  const result = await runHook(projectDir, {
+    hook_event_name: 'UserPromptSubmit',
+    session_id: 'session-42',
+    prompt: '/feature secure login',
+  }, {});
+  assert.strictEqual(result.status, 0);
+  const runsDir = path.join(projectDir, '.claude', 'runs');
+  const record = JSON.parse(fs.readFileSync(path.join(runsDir, fs.readdirSync(runsDir)[0]), 'utf8').trim());
+  assert.strictEqual(record.schema_version, 1);
+  assert.strictEqual(record.run_id, 'run-session-42');
+  assert.strictEqual(record.task_id, 'TASK-42');
+  assert.strictEqual(record.risk_tier, 'R3');
+});
+
 test('record-run records normalized build lane variants, not just generic build', async () => {
   const projectDir = makeProject();
   const gateway = await withGateway((port) => {

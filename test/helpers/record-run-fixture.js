@@ -130,7 +130,7 @@ function runHook(projectDir, input, env) {
 // record-run.js shares these hooks/lib helpers (readHookInput, skill
 // inference, model-pin resolution) with the rest of the hook suite —
 // /scaffold copies the whole hooks/ dir, so production always has them.
-const HOOK_LIB_SCRIPTS = ['common.js', 'record-skills.js', 'agent-model.js'];
+const HOOK_LIB_SCRIPTS = ['common.js', 'record-skills.js', 'agent-model.js', 'run-context.js'];
 
 function copyHookLibFiles(hooksDir) {
   for (const libName of HOOK_LIB_SCRIPTS) {

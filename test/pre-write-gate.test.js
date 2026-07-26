@@ -15,6 +15,20 @@ const FAKE_SSN = ['123', '45', '6789'].join('-');
 // run with the TDD layer off and turn it on only in the TDD-specific tests.
 const ENV = { HARNESS_TDD_GATE: 'off' };
 
+function writeTaskEnvelope(projectDir, allowedPaths) {
+  const { stampEnvelope } = require('../.claude/hooks/lib/task-envelope');
+  fs.writeFileSync(path.join(projectDir, '.claude', 'state', 'task-envelope.json'), JSON.stringify(stampEnvelope({
+    schema_version: 1,
+    task_id: 'TASK-1',
+    risk_tier: 'R1',
+    allowed_paths: allowedPaths,
+    forbidden_actions: [],
+    required_evidence: ['unit'],
+    required_approvals: 1,
+    budgets: { dimensions: [{ unit: 'agents', limit: 10 }] },
+  })));
+}
+
 function lines(n, prefix = 'v') {
   return Array.from({ length: n }, (_, i) => `const ${prefix}${i} = ${i};`).join('\n') + '\n';
 }
@@ -85,6 +99,49 @@ test('blocks a write outside the project directory', async () => {
   }, ENV);
   assert.strictEqual(result.status, 2);
   assert.ok(result.stdout.includes('outside project directory'), result.stdout);
+});
+
+test('task envelope allows declared paths and blocks silent scope expansion', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  writeTaskEnvelope(projectDir, ['src/approved/**']);
+  const allowed = await runHook(projectDir, HOOK, {
+    tool_name: 'Write',
+    tool_input: { file_path: path.join(projectDir, 'src', 'approved', 'a.ts'), content: 'const a = 1;\n' },
+  }, ENV);
+  assert.strictEqual(allowed.status, 0, allowed.stdout);
+  const blocked = await runHook(projectDir, HOOK, {
+    tool_name: 'Write',
+    tool_input: { file_path: path.join(projectDir, 'src', 'other', 'b.ts'), content: 'const b = 1;\n' },
+  }, ENV);
+  assert.strictEqual(blocked.status, 2, blocked.stdout);
+  assert.match(blocked.stdout, /outside task TASK-1/);
+});
+
+test('an invalid task envelope blocks rather than becoming unrestricted', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  fs.writeFileSync(path.join(projectDir, '.claude', 'state', 'task-envelope.json'), '{"schema_version":1}');
+  const result = await runHook(projectDir, HOOK, {
+    tool_name: 'Write',
+    tool_input: { file_path: path.join(projectDir, 'src', 'a.ts'), content: 'const a = 1;\n' },
+  }, ENV);
+  assert.strictEqual(result.status, 2, result.stdout);
+  assert.match(result.stdout, /task envelope is invalid/);
+});
+
+test('a completed task cannot continue writing', async () => {
+  const projectDir = makeHookProject([HOOK]);
+  writeTaskEnvelope(projectDir, ['src/**']);
+  const task = JSON.parse(fs.readFileSync(path.join(projectDir, '.claude', 'state', 'task-envelope.json'), 'utf8'));
+  const { appendEvent } = require('../.claude/hooks/lib/task-lifecycle');
+  appendEvent(projectDir, task, 'created');
+  appendEvent(projectDir, task, 'active');
+  appendEvent(projectDir, task, 'completed');
+  const result = await runHook(projectDir, HOOK, {
+    tool_name: 'Write',
+    tool_input: { file_path: path.join(projectDir, 'src', 'late.ts'), content: 'const late = true;\n' },
+  }, ENV);
+  assert.strictEqual(result.status, 2, result.stdout);
+  assert.match(result.stdout, /lifecycle is completed/);
 });
 
 // --- env protection ---

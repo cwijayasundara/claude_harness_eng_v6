@@ -230,7 +230,8 @@ sum by (agent) (harness_agent_runs_total)           -- breakdown by agent type
 sum by (user, agent) (harness_agent_runs_total)     -- which user is using which agents
 ```
 
-Track these daily. Rising numbers with stable error rates = the harness is scaling your output.
+Track these as utilization signals only. Rising activity, even with stable error
+rates, does not establish that engineering output or productivity increased.
 
 **2. "What's the success rate? Is the harness struggling?"**
 
@@ -341,6 +342,10 @@ Run these queries weekly and track the trend:
 | Evaluator pass rate | `sum(harness_agent_runs_total{agent="evaluator",exit="ok"}) / sum(harness_agent_runs_total{agent="evaluator"})` | > 80% |
 | Design-critic / generator ratio | `sum(harness_agent_runs_total{agent="design-critic"}) / sum(harness_agent_runs_total{agent="generator"})` | < 2.0 |
 | Lane distribution | `sum by (lane) (harness_agent_runs_total)` | Bulk in auto/change, minimal in vibe |
+
+These metrics are operational diagnostics, not evidence for a productivity
+multiplier. To evaluate a claim such as “8x”, use the matched study described in
+`docs/productivity-study.md`.
 
 ### Cost tracking (native OTEL — available once Claude Code sessions run with .env)
 

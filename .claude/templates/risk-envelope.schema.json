@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claude-harness.local/schemas/risk-envelope.schema.json",
+  "title": "Harness task risk envelope",
+  "type": "object",
+  "required": [
+    "schema_version", "task_id", "tier", "reasons", "signals",
+    "allowed_paths", "forbidden_actions", "required_evidence",
+    "required_approvals", "classified_at"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "task_id": { "type": "string", "minLength": 1 },
+    "tier": { "enum": ["R0", "R1", "R2", "R3", "R4"] },
+    "reasons": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "signals": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "allowed_paths": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "forbidden_actions": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "required_evidence": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "required_approvals": { "type": "integer", "minimum": 0 },
+    "classified_at": { "type": "string", "format": "date-time" },
+    "classifier_version": { "type": "integer", "minimum": 1 }
+  },
+  "additionalProperties": false
+}

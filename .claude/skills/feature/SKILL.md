@@ -169,6 +169,42 @@ After GATE 1 you hold the decomposition. First classify size, reusing
 
 State the chosen lane in one line before proceeding.
 
+### Risk envelope (all lanes)
+
+After the story/decomposition identifies the task ID and expected touched files,
+but before any implementation or autonomous fan-out, write the canonical risk
+envelope:
+
+```bash
+node .claude/scripts/risk-envelope.js --task <story-or-epic-id> \
+  --story <story-file> --graph specs/brownfield/code-graph.json \
+  --file <expected-path> [--file <expected-path> ...]
+```
+
+Read `.claude/state/risk-envelope.json` and carry its `tier`,
+`forbidden_actions`, `required_evidence`, and `required_approvals` into every
+delegated lane. The classifier establishes a floor: an agent or autonomous lane
+may raise the tier, but must never lower it. `R3` and `R4` never become
+zero-human-authority merely because `--auto` was requested; `R4` agents prepare
+evidence only and a human executes the production action.
+
+Then create and verify the execution contract. Include the expected source
+paths, their tests, and the review-artifact directory; do not use a repository-
+wide `**` merely to avoid deciding scope:
+
+```bash
+node .claude/scripts/task-envelope.js create --task <story-or-epic-id> \
+  --intent-file <story-file> \
+  --allow <expected-source-or-glob> --allow <expected-test-or-glob> \
+  --allow 'specs/reviews/**'
+node .claude/scripts/task-envelope.js verify
+node .claude/scripts/task-lifecycle.js transition active "approved feature execution begins"
+```
+
+The write and Bash gates enforce `allowed_paths` and `forbidden_actions`.
+`budget-state.js` consumes the envelope budget. Scope expansion requires a
+human-visible envelope amendment/recreation before the edit, not after it.
+
 **Reuse-or-justify — REQUIRED SUB-SKILL: `reuse-or-justify`** when the request
 adds or materially extends behavior. Invoke `reuse-or-justify` at intake with the
 feature request as the goal (epic/cluster lane: also hand it the epic's story

@@ -2,6 +2,11 @@
 
 At the start of EVERY iteration — including the first — read these files in order:
 
+First run `node .claude/scripts/checkpoint-state.js resume`. `resume_exact` authorizes
+continuation from the recorded `next_action`; `repair_partial_iteration` routes to the
+self-healing loop before new work; `diverged_after_checkpoint` requires reconciliation;
+any `blocked_*` result is a hard stop. Never infer recovery solely from prose state.
+
 1. **`.claude/program.md`** — Constraints may have changed mid-run. Re-read every iteration. Never cache.
 2. **`.claude/state/learned-rules.md`** — Accumulated project rules. Inject verbatim into ALL agent prompts spawned this iteration.
 3. **`claude-progress.txt`** — Read the LAST session block (the block after the final `=== Session` marker). Extract: `current_group`, `groups_completed`, `groups_remaining`, `last_commit`, `next_action`. If the file does not exist (`/auto` invoked standalone, without `/build`), create it now with a Session 0 block in the SECTION 10 format before reading.

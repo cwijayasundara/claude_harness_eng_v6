@@ -132,6 +132,37 @@ for (const profile of ['core', 'brownfield', 'full']) {
   });
 }
 
+test('scaffold (core) installs a deny-by-default unattended policy', () => {
+  const { workDir, target } = scaffoldInto('core');
+  try {
+    const policyPath = path.join(target, '.claude', 'unattended-policy.json');
+    assert.ok(fs.existsSync(policyPath));
+    const policy = JSON.parse(fs.readFileSync(policyPath, 'utf8'));
+    assert.strictEqual(policy.network.mode, 'deny-by-default');
+    assert.deepStrictEqual(policy.network.allowed_domains, []);
+    assert.ok(policy.read_only_paths.includes('.claude/trust'));
+    assert.ok(policy.read_only_paths.includes('.claude/certification'));
+    assert.ok(policy.read_only_paths.includes('.claude/state/autonomy-policy.json'));
+    assert.ok(policy.read_only_paths.includes('.claude/config/autonomy-policy.json'));
+    assert.ok(policy.broker_only_commands.includes('gh'));
+    assert.strictEqual(policy.allow_package_install, false);
+    assert.deepStrictEqual(policy.credentials, {});
+  } finally {
+    fs.rmSync(workDir, { recursive: true, force: true });
+  }
+});
+
+test('scaffold (core) installs an empty trusted issuer registry', () => {
+  const { workDir, target } = scaffoldInto('core');
+  try {
+    const registry = JSON.parse(fs.readFileSync(path.join(target, '.claude', 'trust', 'issuers.json'), 'utf8'));
+    assert.strictEqual(registry.schema_version, 1);
+    assert.deepStrictEqual(registry.issuers, []);
+  } finally {
+    fs.rmSync(workDir, { recursive: true, force: true });
+  }
+});
+
 test('scaffold (full) copies the .claude/config/ registry directory', () => {
   const { workDir, target } = scaffoldInto('full');
   try {

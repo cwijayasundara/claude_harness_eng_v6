@@ -126,6 +126,28 @@ test('pr-body allows draft with --no-require-gate', () => {
   assert.ok(fs.existsSync(path.join(root, 'specs/reviews/walkthrough.md')));
 });
 
+test('pr-body completion check binds receipt to the active task envelope', () => {
+  const root = tmp();
+  const { stampEnvelope } = require('../.claude/hooks/lib/task-envelope');
+  const envelope = stampEnvelope({
+    schema_version: 1, task_id: 'T-PR', risk_tier: 'R1',
+    intent_hash: 'a'.repeat(64), risk_envelope_hash: 'b'.repeat(64),
+    allowed_paths: ['src/**'], forbidden_actions: ['merge'],
+    required_evidence: [], required_approvals: 0,
+    budgets: { warn_at_pct: 80, dimensions: [{ unit: 'agents', limit: 1 }] },
+    stopping_conditions: ['gate_pass'], created_at: new Date().toISOString(),
+  });
+  write(root, '.claude/state/task-envelope.json', JSON.stringify(envelope));
+  assert.strictEqual(prBody.completionPasses(root), false);
+  write(root, '.claude/state/task-completion-receipt.json', JSON.stringify({
+    pass: true, task_id: 'T-PR', task_envelope_hash: envelope.integrity.hash,
+  }));
+  assert.strictEqual(prBody.completionPasses(root), true);
+  envelope.allowed_paths.push('other/**');
+  write(root, '.claude/state/task-envelope.json', JSON.stringify(envelope));
+  assert.strictEqual(prBody.completionPasses(root), false);
+});
+
 test('human-codebase writes docs/CODEBASE.md from graph', () => {
   const root = tmp();
   write(root, 'CONTEXT.md', '# Context\n\nThis is a payments system for enterprise billing.\n');

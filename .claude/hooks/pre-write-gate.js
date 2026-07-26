@@ -21,6 +21,8 @@ const { missingTest } = require('./lib/tdd');
 const { isHarnessRepo, machineryViolation } = require('./lib/trust-boundary');
 const { prefixCacheViolation, prefixCacheBlockMessage } = require('./lib/prefix-cache');
 const { recordOutcome } = require('./lib/sensor-outcomes');
+const { loadEnvelope, pathAllowed } = require('./lib/task-envelope');
+const { lifecycleStatus, readLedger } = require('./lib/task-lifecycle');
 // legacy-discipline pack: absent = that discipline is not configured here.
 const coveragePreflightMod = optionalRequire(path.join(__dirname, 'lib', 'coverage-preflight.js'));
 
@@ -72,6 +74,32 @@ function checkScope(projectDir, filePath) {
   const resolved = realResolve(filePath);
   if (isWriteInScope(projectDir, resolved)) return;
   block(`BLOCKED: Write outside project directory: ${resolved}\nFix: Move the file to a location within the project directory or use .claude/ for scaffold files.\n`);
+}
+
+function checkTaskEnvelope(projectDir, filePath) {
+  const loaded = loadEnvelope(projectDir);
+  if (loaded.state === 'absent') {
+    const ledger = readLedger(projectDir);
+    if (ledger.events.length) block('BLOCKED: task envelope is missing while lifecycle state exists; recover or abort the task.\n');
+    return;
+  }
+  if (loaded.state === 'invalid') {
+    block(
+      `BLOCKED: task envelope is invalid: ${loaded.errors.join('; ')}\n` +
+      'Fix: run `node .claude/scripts/task-envelope.js verify`, then recreate the envelope from the approved risk envelope.\n'
+    );
+  }
+  const lifecycle = lifecycleStatus(projectDir, loaded.envelope);
+  if (!lifecycle.allowed) {
+    block(`BLOCKED: task ${loaded.envelope.task_id} lifecycle is ${lifecycle.state}: ${lifecycle.errors.join('; ')}\n`);
+  }
+  if (pathAllowed(loaded.envelope, projectDir, filePath)) return;
+  const rel = path.relative(projectDir, filePath).replace(/\\/g, '/');
+  block(
+    `BLOCKED: ${rel} is outside task ${loaded.envelope.task_id}'s allowed_paths.\n` +
+    `Allowed: ${loaded.envelope.allowed_paths.join(', ')}\n` +
+    'Fix: amend/recreate the task envelope before expanding scope; do not edit an unapproved path.\n'
+  );
 }
 
 function checkTrustBoundary(projectDir, filePath) {
@@ -163,6 +191,7 @@ runHook('pre-write-gate', (input) => {
 
   const rel = path.relative(projectDir, path.resolve(filePath));
   runCheck('write-scope', projectDir, rel, () => checkScope(projectDir, path.resolve(filePath)));
+  runCheck('task-envelope-scope', projectDir, rel, () => checkTaskEnvelope(projectDir, path.resolve(filePath)));
   runCheck('trust-boundary', projectDir, rel, () => checkTrustBoundary(realResolve(projectDir), realResolve(filePath)));
   runCheck('prefix-cache', projectDir, rel, () => checkPrefixCache(realResolve(projectDir), realResolve(filePath)));
   runCheck('protected-env-file', projectDir, rel, () => {

@@ -15,12 +15,17 @@
 // HARNESS_PREFIX_EDIT=1 (prompt-cache prefix files only).
 
 const path = require('path');
+const fs = require('fs');
 const { resolveProjectDir, runHook, realResolve, isWriteInScope } = require('./lib/common');
 const { isHarnessRepo, machineryViolation } = require('./lib/trust-boundary');
 const { prefixCacheViolation, prefixCacheBlockMessage } = require('./lib/prefix-cache');
 const { isProtectedEnvFile } = require('./lib/secrets');
 const { extractWriteTargets } = require('./lib/bash-targets');
 const { checkGitSafety } = require('./lib/git-safety');
+const { forbiddenAction, loadEnvelope, pathAllowed } = require('./lib/task-envelope');
+const { lifecycleStatus, readLedger } = require('./lib/task-lifecycle');
+const { consumeCapability, detectSensitiveAction, findCapability } = require('./lib/authority-receipt');
+const { classifyCommand } = require('./lib/runtime-command-policy');
 
 function block(message) {
   process.stdout.write(message);
@@ -73,7 +78,46 @@ function checkTarget(projectDir, target, command, opts) {
     block(`BLOCKED: Bash write outside the project directory: ${resolved}\n` +
       `(from: ${command})\nFix: write inside the project, or use Write/Edit so the gate can verify the change.\n`);
   }
+  if (opts.envelope && !pathAllowed(opts.envelope, projectDir, resolved)) {
+    const rel = path.relative(projectDir, resolved).replace(/\\/g, '/');
+    block(
+      `BLOCKED: Bash write to ${rel} is outside task ${opts.envelope.task_id}'s allowed_paths.\n` +
+      `Allowed: ${opts.envelope.allowed_paths.join(', ')}\n` +
+      `Fix: amend/recreate the task envelope before expanding scope.\n`
+    );
+  }
   checkProtectedTarget(projectDir, resolved, command, opts);
+}
+
+function activeEnvelope(projectDir) {
+  const loaded = loadEnvelope(projectDir);
+  if (loaded.state === 'absent') {
+    const ledger = readLedger(projectDir);
+    if (ledger.events.length) block('BLOCKED: task envelope is missing while lifecycle state exists; recover or abort the task.\n');
+    return null;
+  }
+  if (loaded.state === 'invalid') {
+    block(
+      `BLOCKED: task envelope is invalid: ${loaded.errors.join('; ')}\n` +
+      'Fix: verify and recreate .claude/state/task-envelope.json before running Bash.\n'
+    );
+  }
+  const lifecycle = lifecycleStatus(projectDir, loaded.envelope);
+  if (!lifecycle.allowed) {
+    block(`BLOCKED: task ${loaded.envelope.task_id} lifecycle is ${lifecycle.state}: ${lifecycle.errors.join('; ')}\n`);
+  }
+  return loaded.envelope;
+}
+
+function runtimeCommandViolation(projectDir, command) {
+  if (process.env.HARNESS_UNATTENDED !== '1') return null;
+  try {
+    const policy = JSON.parse(fs.readFileSync(path.join(projectDir, '.claude', 'unattended-policy.json'), 'utf8'));
+    const result = classifyCommand(policy, command);
+    return result.allowed ? null : result;
+  } catch (_) {
+    return { finding: 'unattended-policy-missing' };
+  }
 }
 
 runHook('pre-bash-gate', (input) => {
@@ -82,6 +126,41 @@ runHook('pre-bash-gate', (input) => {
   if (typeof command !== 'string' || !command) process.exit(0);
 
   const projectDir = resolveProjectDir(path.dirname(path.resolve(__filename)));
+  const envelope = activeEnvelope(projectDir);
+  const runtimeViolation = runtimeCommandViolation(projectDir, command);
+  if (runtimeViolation) {
+    block(
+      `BLOCKED: unattended command violates runtime policy: ${runtimeViolation.finding}` +
+      `${runtimeViolation.detail ? ` (${JSON.stringify(runtimeViolation.detail)})` : ''}.\n` +
+      'Fix: use an allowed transparent command, or submit a task-bound request for external execution.\n'
+    );
+  }
+  const sensitiveAction = detectSensitiveAction(command);
+  if (sensitiveAction) {
+    if (sensitiveAction === 'execute_production_change') {
+      block('BLOCKED: production execution is non-delegable; a human must execute it and provide a signed execution receipt.\n');
+    }
+    if (!envelope) {
+      block(`BLOCKED: sensitive action "${sensitiveAction}" requires a valid task envelope and signed capability.\n`);
+    }
+    const capability = findCapability(projectDir, envelope, sensitiveAction);
+    if (!capability.valid) {
+      block(
+        `BLOCKED: sensitive action "${sensitiveAction}" lacks external authority.\n` +
+        `${capability.errors.join('; ')}\n` +
+        'Fix: obtain signed human approval receipt(s) and a short-lived capability from a trusted issuer.\n'
+      );
+    }
+    const consumed = consumeCapability(projectDir, capability.receipt, sensitiveAction);
+    if (!consumed.consumed) block(`BLOCKED: ${consumed.error}; obtain a new short-lived capability.\n`);
+  }
+  const denied = envelope && forbiddenAction(envelope, command);
+  if (denied && (!sensitiveAction || denied === 'execute_production_change')) {
+    block(
+      `BLOCKED: task ${envelope.task_id} forbids action "${denied}".\n` +
+      `Command: ${command}\nFix: preserve the approved authority boundary; a human must amend the task envelope.\n`
+    );
+  }
 
   // Bun Phase A: deny destructive git while parallel agents are active.
   const gitSafety = checkGitSafety(command, { projectDir, env: process.env });
@@ -92,6 +171,7 @@ runHook('pre-bash-gate', (input) => {
   const opts = {
     protect: (process.env.HARNESS_PROTECT || '').toLowerCase() !== 'off',
     harness: isHarnessRepo(projectDir),
+    envelope,
   };
   for (const target of extractWriteTargets(command)) {
     checkTarget(projectDir, target, command, opts);

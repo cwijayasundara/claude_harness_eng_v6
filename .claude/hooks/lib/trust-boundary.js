@@ -18,9 +18,14 @@ const path = require('path');
 const MACHINERY = [
   /^\.claude\/hooks\//,
   /^\.claude\/git-hooks\//,
-  /^\.claude\/settings(\.local)?\.json$/,
+  /^\.claude\/settings(?:\.local|\.auto)?\.json$/,
   /^\.claude\/security-patterns\.(json|ya?ml)$/,
-  /^\.claude\/state\/(coverage-baseline[^/]*|coverage-preflight-cache\.json|review-block-count|hook-errors\.(log|offset)|pending-reviews\.jsonl)$/,
+  /^\.claude\/unattended-policy\.json$/,
+  /^\.claude\/trust\/issuers\.json$/,
+  /^\.claude\/authority\//,
+  /^\.claude\/certification\/security-boundary\.json$/,
+  /^\.claude\/config\/autonomy-policy\.json$/,
+  /^\.claude\/state\/(coverage-baseline[^/]*|coverage-preflight-cache\.json|review-block-count|hook-errors\.(log|offset)|pending-reviews\.jsonl|risk-envelope\.json|task-envelope\.json|task-envelope-history\/.*|task-lifecycle\.jsonl|task-completion-receipt\.json|autonomy-policy\.json|used-capabilities\/.*|credential-requests\/.*|checkpoints\/.*|current-checkpoint\.json|isolation-evidence\.json|unattended-preflight\.json)$/,
 ];
 
 const HARNESS_PKG_NAME = 'claude-harness-eng-v5';

@@ -196,4 +196,10 @@ node .claude/scripts/verification-matrix-gate.js --phase executed
 
 This blocks if evaluator execution failed to cover required matrix rows.
 
+Before an integrated PR or final completion claim, also generate the quality card and run
+`node .claude/scripts/finalize-task-evidence.js`. A task envelope makes this mandatory:
+`pr-body.js` refuses a non-draft PR unless the completion receipt passes and matches the
+current task-envelope hash. Missing/stale required evidence or insufficient trusted,
+signed human approvals is a hard stop, not a warning.
+
 ---

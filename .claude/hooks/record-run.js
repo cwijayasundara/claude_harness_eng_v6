@@ -12,6 +12,7 @@ const telemetry = optionalRequire(path.join(__dirname, '..', 'scripts', 'telemet
 const buildLane = optionalRequire(path.join(__dirname, '..', 'scripts', 'build-lane.js'));
 const { inferSkills } = require('./lib/record-skills');
 const { resolveAgentModel, extractUsageFields } = require('./lib/agent-model');
+const { contextFields } = require('./lib/run-context');
 
 // The real subagent-dispatch tool's tool_name is "Agent" in this environment (confirmed
 // by direct hook-payload capture); "Task" is the name this harness originally shipped
@@ -119,6 +120,7 @@ function shouldSkipCommandTelemetry(command) {
     const groupId = readMarker(stateDir, 'current-group');
     const storyId = readMarker(stateDir, 'current-story');
     const skillInventory = (telemetry ? telemetry.readSkillCatalog(projectDir) : null) || [];
+    const lifecycle = { schema_version: 1, ...contextFields(stateDir, input.session_id || null) };
 
     if (eventKind === 'UserPromptSubmit') {
       const command = inferCommand(input.prompt);
@@ -127,6 +129,7 @@ function shouldSkipCommandTelemetry(command) {
       if (inferredLane) writeMarker(stateDir, 'current-lane', inferredLane);
       const skills = inferSkills({ input, command, lane: inferredLane || lane, catalog: skillInventory });
       const promptRecord = {
+        ...lifecycle,
         kind: 'prompt',
         ts: Date.now(),
         user,
@@ -159,6 +162,7 @@ function shouldSkipCommandTelemetry(command) {
       const usage = extractUsageFields(input);
       const model = usage.model || resolveAgentModel(projectDir, agent) || null;
       const subagentRecord = {
+        ...lifecycle,
         kind: 'subagent',
         ts: Date.now(),
         user,
@@ -194,6 +198,7 @@ function shouldSkipCommandTelemetry(command) {
             const lastHistory = (evalData.score_history || []).slice(-1)[0];
             if (!lastHistory) continue;
             const evalRecord = {
+              ...lifecycle,
               kind: 'phase_eval',
               ts: Date.now(),
               user,
@@ -222,6 +227,7 @@ function shouldSkipCommandTelemetry(command) {
       const tr = input.tool_response || {};
       const skills = inferSkills({ input, command: null, lane, catalog: skillInventory });
       const toolRecord = {
+        ...lifecycle,
         kind: 'tool',
         ts: Date.now(),
         user,
@@ -257,6 +263,7 @@ function shouldSkipCommandTelemetry(command) {
       const usage = extractUsageFields(input);
       const model = usage.model || resolveAgentModel(projectDir, agent) || null;
       const turnRecord = {
+        ...lifecycle,
         kind: eventKind === 'Stop' ? 'turn' : 'subagent_stop',
         ts: Date.now(),
         user,

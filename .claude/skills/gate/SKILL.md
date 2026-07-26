@@ -122,7 +122,15 @@ After all reviewers and static gates settle (including after fix cycles), **alwa
 2. **Quality card:** `node .claude/scripts/quality-card.js --range <base..head>`
    - Writes `specs/reviews/quality-card.md` + `quality-card.json` and stamps `.claude/state/gate-receipt.json`.
    - Aggregates evaluator, code-review, security, observability, perf-smell, regression, ownership, etc.
-3. **Human homepage (refresh):** `node .claude/scripts/human-codebase.js` (idempotent; keeps `docs/CODEBASE.md` current).
+3. **Task-bound evidence finalization:** when `.claude/state/task-envelope.json` exists, run
+   `node .claude/scripts/finalize-task-evidence.js`. This is a hard completion gate: every
+   `required_evidence` item must resolve to a passing artifact created after the task envelope,
+   the green gate receipt must exist, and the envelope's required number of distinct human
+   approvals must carry valid Ed25519 signatures from `.claude/trust/issuers.json`.
+4. **Human homepage (refresh):** `node .claude/scripts/human-codebase.js` (idempotent; keeps `docs/CODEBASE.md` current).
+5. **Seal lifecycle:** only after every receipt and homepage write passes, run
+   `node .claude/scripts/task-lifecycle.js transition completed "gate and task evidence passed"`.
+   Completed and aborted tasks cannot perform more writes.
 
 A quality-card with `pass: false` or missing core inputs (evaluator report / code-review verdict) means the gate is not green — do not open a PR.
 

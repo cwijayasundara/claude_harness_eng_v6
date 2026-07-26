@@ -37,6 +37,34 @@ Before `/auto` can run, the following must exist:
 
 If any prerequisite is missing, stop and report what is absent. Do not proceed with partial context.
 
+**Execution contract [HARD BLOCK].** A valid
+`.claude/state/task-envelope.json` must exist before `/auto` dispatches any
+agent:
+
+```bash
+node .claude/scripts/task-envelope.js verify
+node .claude/scripts/task-lifecycle.js status
+```
+
+The envelope binds the approved task/risk decision to allowed paths, forbidden
+actions, evidence, approvals, budgets, and stopping conditions. A missing or
+invalid envelope is not an implicit unrestricted task.
+
+**Unattended containment [HARD BLOCK].** When
+`HARNESS_UNATTENDED=1` (the `settings.auto.json` profile), also run:
+
+```bash
+node .claude/scripts/security-certification.js verify --profile unattended-core
+node .claude/scripts/unattended-preflight.js
+```
+
+The certification must be current and match the exact unattended policy and
+enforcement sources. Both commands must pass before any delegation. Preflight
+verifies a fail-closed Claude sandbox,
+subprocess credential scrubbing, a deny-by-default egress policy, container/CI
+or externally attested isolation, absence of mounted host credential stores,
+and required security scanners. A warning is not sufficient in headless mode.
+
 **The planning phases must have closed their review loops [HARD BLOCK]:**
 
 ```bash

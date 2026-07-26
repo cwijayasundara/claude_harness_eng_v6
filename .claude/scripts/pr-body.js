@@ -13,6 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const { buildCard, writeCard } = require('./quality-card');
 const { buildWalkthrough, writeWalkthrough } = require('./pr-walkthrough');
+const { contentHash, loadEnvelope } = require('../hooks/lib/task-envelope');
 
 function readText(file) {
   try {
@@ -29,6 +30,22 @@ function arg(argv, name, fb) {
 
 function hasFlag(argv, name) {
   return argv.includes(name);
+}
+
+function completionPasses(root) {
+  const loaded = loadEnvelope(root);
+  if (loaded.state === 'absent') return true;
+  if (loaded.state !== 'valid') return false;
+  try {
+    const receipt = JSON.parse(fs.readFileSync(
+      path.join(root, '.claude', 'state', 'task-completion-receipt.json'), 'utf8',
+    ));
+    return receipt.pass === true
+      && receipt.task_id === loaded.envelope.task_id
+      && receipt.task_envelope_hash === contentHash(loaded.envelope);
+  } catch (_) {
+    return false;
+  }
 }
 
 function ensureArtifacts(root, base) {
@@ -129,9 +146,10 @@ function main(argv = process.argv.slice(2)) {
   });
   process.stdout.write(body);
 
-  if (requireGate && !hasFlag(argv, '--no-require-gate') && !pass) {
+  const completionPass = completionPasses(root);
+  if (requireGate && !hasFlag(argv, '--no-require-gate') && (!pass || !completionPass)) {
     process.stderr.write(
-      'pr-body: quality-card is FAIL or incomplete — refuse PR open without a green /gate receipt '
+      'pr-body: quality-card or task completion evidence is FAIL/incomplete — refuse PR open without green receipts '
       + '(use --no-require-gate only for drafts).\n',
     );
     return 1;
@@ -148,4 +166,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { composeBody, ensureArtifacts, main };
+module.exports = { completionPasses, composeBody, ensureArtifacts, main };

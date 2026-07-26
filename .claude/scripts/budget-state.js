@@ -309,7 +309,17 @@ if (require.main === module) {
   try { manifest = JSON.parse(read('project-manifest.json') || '{}'); } catch (_) { /* defaults */ }
   const exec = manifest.execution || {};
   const tier = exec.model_tier || 'balanced';
-  const config = exec.budget || defaultBudget(tier);
+  let taskBudget = null;
+  try {
+    const { loadEnvelope } = require('../hooks/lib/task-envelope');
+    const loaded = loadEnvelope(path.resolve(root));
+    if (loaded.state === 'invalid') {
+      process.stderr.write(`Budget:    task envelope INVALID — ${loaded.errors.join('; ')}\n`);
+      process.exit(2);
+    }
+    if (loaded.state === 'valid') taskBudget = loaded.envelope.budgets;
+  } catch (_) { /* older scaffold without task-envelope support */ }
+  const config = taskBudget || exec.budget || defaultBudget(tier);
 
   const startRaw = (read('.claude/state/budget-start') || '').trim();
   const started = parseInt(startRaw, 10) || null;

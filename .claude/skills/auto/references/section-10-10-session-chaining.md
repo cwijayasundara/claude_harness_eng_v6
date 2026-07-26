@@ -35,7 +35,9 @@ When invoked with `--once`, `/auto` performs **one** pass of the loop and then s
 
 1. Run Context Recovery (SECTION 2) and select the current wave exactly as normal.
 2. Execute that one wave through Sprint Contract negotiation, agent-team build, all 8 ratchet gates, and pass/fail handling (SECTIONS 3–6) — unchanged.
-3. On a clean wave, **commit** and **append the session block** (SECTION 10 format) — this is the durable checkpoint.
+3. On a clean wave, **commit**, append the session block, then run
+   `node .claude/scripts/checkpoint-state.js create --group <group-or-wave> --next "<exact next action>"`
+   — the hash-chained, atomically written checkpoint is the durable recovery authority.
 4. Set `next_action` precisely so a fresh process can continue with zero ambiguity:
    - If `features.json` now has every feature passing (or no groups remain): `next_action: DONE — all groups complete` and `groups_remaining: []`.
    - Otherwise: `next_action: CONTINUE — next wave: [<group ids>]` with an accurate `groups_remaining: [...]`.

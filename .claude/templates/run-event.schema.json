@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claude-harness.local/schemas/run-event.schema.json",
+  "title": "Harness lifecycle event",
+  "type": "object",
+  "required": ["schema_version", "kind", "ts", "run_id", "task_id", "risk_tier"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": {
+      "enum": [
+        "prompt", "tool", "subagent", "subagent_stop", "turn", "phase_eval",
+        "intent_approved", "implementation_started", "gate_completed",
+        "pr_opened", "merged", "deployed", "outcome_confirmed",
+        "rework_started", "reverted", "incident_linked"
+      ]
+    },
+    "ts": { "type": "integer", "minimum": 0 },
+    "run_id": { "type": "string", "minLength": 1 },
+    "task_id": { "type": "string", "minLength": 1 },
+    "parent_run_id": { "type": ["string", "null"] },
+    "risk_tier": {
+      "enum": ["unclassified", "R0", "R1", "R2", "R3", "R4"]
+    },
+    "attention_minutes": { "type": "number", "minimum": 0 },
+    "model_cost_usd": { "type": "number", "minimum": 0 },
+    "accepted": { "type": "boolean" },
+    "production_survived": { "type": "boolean" },
+    "reference": { "type": ["string", "null"] },
+    "metadata": { "type": "object" }
+  },
+  "additionalProperties": true
+}

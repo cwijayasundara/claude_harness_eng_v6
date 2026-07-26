@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "network": {
+    "mode": "deny-by-default",
+    "allowed_domains": []
+  },
+  "required_scanners": ["gitleaks", "semgrep"],
+  "credential_paths": [".ssh", ".aws", ".azure", ".config/gcloud"],
+  "authority": {
+    "read_only_paths": [
+      ".claude/hooks",
+      ".claude/settings.json",
+      ".claude/settings.auto.json",
+      ".claude/trust",
+      ".claude/authority",
+      ".claude/certification",
+      ".claude/config/autonomy-policy.json",
+      ".claude/state/autonomy-policy.json"
+    ]
+  },
+  "read_only_paths": [
+    ".claude/hooks",
+    ".claude/settings.json",
+    ".claude/settings.auto.json",
+    ".claude/trust",
+    ".claude/authority",
+    ".claude/certification",
+    ".claude/config/autonomy-policy.json",
+    ".claude/state/autonomy-policy.json"
+  ],
+  "broker_only_commands": ["gh", "aws", "gcloud", "kubectl", "terraform", "npm publish"],
+  "allow_package_install": false,
+  "credentials": {},
+  "note": "Copy to .claude/unattended-policy.json and add only the domains the task requires. Empty allowed_domains means no outbound destinations are approved."
+}

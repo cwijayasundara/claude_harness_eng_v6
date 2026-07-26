@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claude-harness.local/schemas/authority-receipt.schema.json",
+  "title": "Externally signed harness authority receipt",
+  "type": "object",
+  "required": [
+    "schema_version", "type", "receipt_id", "issuer", "key_id", "task_id",
+    "task_envelope_hash", "issued_at", "expires_at", "nonce", "signature"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "type": { "enum": ["human_approval", "capability", "human_execution", "runtime_attestation"] },
+    "receipt_id": { "type": "string", "minLength": 1 },
+    "issuer": { "type": "string", "minLength": 1 },
+    "key_id": { "type": "string", "minLength": 1 },
+    "task_id": { "type": "string", "minLength": 1 },
+    "task_envelope_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "approver_id": { "type": "string", "minLength": 1 },
+    "decision": { "const": "approved" },
+    "actions": {
+      "type": "array", "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^(merge|deploy|modify_branch_protection|execute_production_change|amend_task|rotate_task|credential:[A-Za-z0-9_.-]+)$"
+      }
+    },
+    "approval_receipt_ids": {
+      "type": "array", "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "execution_ref": { "type": "string", "minLength": 1 },
+    "runtime_id": { "type": "string", "minLength": 1 },
+    "policy_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "network_enforced": { "type": "boolean" },
+    "credential_brokered": { "type": "boolean" },
+    "read_only_paths": {
+      "type": "array", "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "issued_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "nonce": { "type": "string", "minLength": 1 },
+    "signature": {
+      "type": "object",
+      "required": ["algorithm", "value"],
+      "properties": {
+        "algorithm": { "const": "Ed25519" },
+        "value": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

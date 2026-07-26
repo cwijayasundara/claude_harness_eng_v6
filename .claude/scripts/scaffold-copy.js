@@ -134,6 +134,17 @@ function copyScaffoldTree(src, target, profileName) {
   for (const file of ['architecture.md', 'program.md', 'settings.json', 'settings.auto.json', 'package.json']) {
     copyTree(path.join(src, file), path.join(dotClaude, file));
   }
+  const unattendedPolicy = path.join(dotClaude, 'unattended-policy.json');
+  if (!fs.existsSync(unattendedPolicy)) {
+    copyTree(
+      path.join(src, 'templates', 'unattended-policy.template.json'),
+      unattendedPolicy
+    );
+  }
+  const trustedIssuers = path.join(dotClaude, 'trust', 'issuers.json');
+  if (!fs.existsSync(trustedIssuers)) {
+    copyTree(path.join(src, 'templates', 'trusted-issuers.template.json'), trustedIssuers);
+  }
   copyDirContents(path.join(src, 'templates', 'state-seeds'), path.join(dotClaude, 'state'));
 }
 

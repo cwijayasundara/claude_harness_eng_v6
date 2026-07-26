@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "minimum_pairs": 10,
+  "bootstrap_samples": 2000,
+  "confidence_level": 0.95,
+  "claim_threshold": 8,
+  "required_dimensions": [
+    "risk_tier",
+    "work_class",
+    "size_bucket"
+  ],
+  "eligible_cohorts": [
+    "baseline",
+    "agentic"
+  ]
+}

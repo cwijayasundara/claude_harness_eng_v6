@@ -3,7 +3,7 @@
 > Deterministic, always-current map rendered from `code-graph.json`. No LLM — re-rendered on graph change.
 
 - Producer: `vendored-ast`  ·  Language: `mixed`
-- Modules: 453  ·  Edges: 2078  ·  Clusters: 50
+- Modules: 456  ·  Edges: 2099  ·  Clusters: 50
 
 ## Hubs (most-depended-on)
 
@@ -62,7 +62,6 @@ _(none)_
 - [test/e2e](concepts/test__e2e.md)
 - [symphony_clone/src](concepts/symphony_clone__src.md)
 - [dsl-packs/private-equity](concepts/dsl-packs__private-equity.md)
-- [test/fleet-retrofit-helpers.js](concepts/test__fleet-retrofit-helpers.js.md)
 - [test/fixtures](concepts/test__fixtures.md)
 - [symphony_clone/test](concepts/symphony_clone__test.md)
 - [test/evals](concepts/test__evals.md)
@@ -78,12 +77,13 @@ _(none)_
 - [test/approve-fixtures.test.js](concepts/test__approve-fixtures.test.js.md)
 - [test/approved-fixtures-gate.test.js](concepts/test__approved-fixtures-gate.test.js.md)
 - [test/archive-state.test.js](concepts/test__archive-state.test.js.md)
+- [test/ask-codebase-readiness-digest.test.js](concepts/test__ask-codebase-readiness-digest.test.js.md)
 
 _(Hash-cached concept pages from `nav-concepts.js`.)_
 
 ## Pages
 
-- [`test/` — 309 module(s)](pages/01-test.md) — 309 module(s)
+- [`test/` — 312 module(s)](pages/01-test.md) — 312 module(s)
 - [`test/e2e/` — 18 module(s)](pages/02-test-e2e.md) — 18 module(s)
 - [`symphony_clone/src/orchestrator/` — 16 module(s)](pages/03-symphony_clone-src-orchestrator.md) — 16 module(s)
 - [`test/e2e/helpers/` — 14 module(s)](pages/04-test-e2e-helpers.md) — 14 module(s)
