@@ -6,7 +6,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-const { resolveSelection, filesFor } = require('./pack-install');
+const { resolveSelection, filesFor } = require('../tools/pack-install');
 
 const PARTITION = {
   kernel: { skill: ['vibe', 'change'], agent: ['implementer'], lib: ['common'], script: ['review-tier'] },

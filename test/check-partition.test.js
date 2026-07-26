@@ -5,7 +5,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-const { hardRefs, checkPartition } = require('./check-partition');
+const { hardRefs, checkPartition } = require('../tools/check-partition');
 
 test('hardRefs finds a require() of a lib', () => {
   const refs = hardRefs("const x = require('./lib/story-graph');", { lib: ['story-graph', 'common'] });

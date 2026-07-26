@@ -15,7 +15,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
-const { loadPartition, resolveSelection, filesFor, materialize, undeclaredUnits } = require('./pack-install');
+const { loadPartition, resolveSelection, filesFor, materialize, undeclaredUnits } = require('../tools/pack-install');
 
 const ALWAYS = [
   '.claude/.claude-plugin', '.claude/settings.json', '.claude/config',

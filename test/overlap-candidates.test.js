@@ -11,7 +11,7 @@ const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
 const { clusterOverlaps, pairSignals, jaccard, tokens, loadControls,
-  buildMarker, auditedIds, staleControls } = require('./overlap-candidates');
+  buildMarker, auditedIds, staleControls } = require('../tools/overlap-candidates');
 
 const prep = (c) => ({
   id: c.id, axis: c.axis, file: (c.wired_at || '').split('#')[0],

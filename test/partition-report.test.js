@@ -6,7 +6,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-const { installs, computeProfileBreaks } = require('./partition-report');
+const { installs, computeProfileBreaks } = require('../tools/partition-report');
 
 const PROFILES = {
   kernel: { packs: [] },

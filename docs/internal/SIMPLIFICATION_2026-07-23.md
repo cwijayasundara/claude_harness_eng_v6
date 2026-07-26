@@ -55,7 +55,7 @@ profile break, and `pack-install-smoke` asserts it exits 0 so a regression fails
 This is *the* simplification: it makes the modularization already paid for deliver a smaller
 bootable install. Established pattern (proven by commit `d76d8eb`): guard the top-level `require`
 in a `try/catch`, null-check call sites to reach the module's existing pack-absent degradation, and
-grow `CORE_MODULES_THAT_MUST_LOAD` in `tools/pack-install-smoke.test.js`. Prose-skill edges that are
+grow `CORE_MODULES_THAT_MUST_LOAD` in `test/pack-install-smoke.test.js`. Prose-skill edges that are
 conditional steps become `accepted_edges` (like `/refactor → code-map`), not code changes. Target:
 edges → 0, then flip profile-closure to `--strict`.
 
