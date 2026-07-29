@@ -23,17 +23,29 @@
 // characterization pin-downs (no red phase to honour), and anything after the
 // pair closed (refactoring a passing test is normal work).
 
-/** Red→green cycles for one file, in order, as {red, green} event pairs. */
+/**
+ * Red→green cycles for one file, in order, as {red, green} event pairs.
+ *
+ * The anchor is the FIRST red of each cycle, not the last. Anchoring on the last
+ * red let a weakened test launder itself: strip assertions but stay red, re-run
+ * (which re-anchored the pair to the weakened text), then fix the one surviving
+ * assertion — red and green hashes then match and the gate says nothing.
+ *
+ * Anchoring on the first red means any change to the test between failing and
+ * passing is visible, including a change that kept it failing. Correcting a test
+ * you believe is genuinely wrong therefore SURFACES rather than passing silently,
+ * which is the intended outcome: from the outside, correcting and weakening are
+ * indistinguishable, so a human should see it.
+ */
 function cyclesFor(events, file) {
   const seen = events.filter((e) => Array.isArray(e.test_files) && e.test_files.includes(file));
   if (!seen.length || seen[0].verdict !== 'fail') return []; // green-first: no red phase
   const cycles = [];
   let red = null;
   for (const event of seen) {
-    // The LAST red before a green is the anchor: re-running red after correcting
-    // a test is the declared way to fix one, and it re-anchors the pair.
-    if (event.verdict === 'fail') red = event;
-    else if (red) {
+    if (event.verdict === 'fail') {
+      if (!red) red = event; // FIRST red of this cycle wins
+    } else if (red) {
       cycles.push({ red, green: event });
       red = null;
     }
@@ -71,12 +83,15 @@ function findingFor(file, red, green) {
 }
 
 /**
+ * Deliberately NOT scoped by task_id. Scoping by it made the gate a self-service
+ * unlock: declaring a different task (or none) emptied the event set and every
+ * cycle disappeared unchecked.
+ *
  * @param {object[]} events red-phase ledger events
- * @param {string|null} taskId active task id
  * @returns {{kind, file, redSha, detail}[]} one finding per offending file
  */
-function integrityFindings(events, taskId) {
-  const scoped = (events || []).filter((e) => e.task_id === taskId);
+function integrityFindings(events) {
+  const scoped = events || [];
   const files = [...new Set(scoped.flatMap((e) => e.test_files || []))].sort();
   const findings = [];
   for (const file of files) {

@@ -21,15 +21,24 @@ function ledgerOf(events, state = 'valid') {
   return { state, events, errors: state === 'invalid' ? ['event hash mismatch at 1'] : [] };
 }
 
+const H = 'content-hash-of-the-failing-text';
+
 function ev(over = {}) {
-  return { task_id: 'T-1', verdict: 'fail', test_files: [TEST_FILE], head_sha: 'red111', ...over };
+  return {
+    task_id: 'T-1',
+    verdict: 'fail',
+    test_files: [TEST_FILE],
+    file_hashes: { [TEST_FILE]: H },
+    head_sha: 'red111',
+    ...over,
+  };
 }
 
 function decide(over = {}) {
   return decideLock({
     ledger: ledgerOf([ev()]),
-    taskId: 'T-1',
     filePath: TEST_FILE,
+    contentHash: H,
     env: {},
     ...over,
   });
@@ -71,8 +80,24 @@ test('allows non-test files without consulting the ledger', () => {
   assert.strictEqual(d.reason, 'not-a-test');
 });
 
-test('scopes the lock to the active task', () => {
-  const d = decide({ taskId: 'T-2' });
+// C1 regression: task_id used to be part of the key, which made it a
+// self-service unlock — declare a different task and every lock evaporated.
+test('the lock does NOT depend on the declared task', () => {
+  const d = decide({ ledger: ledgerOf([ev({ task_id: 'some-other-task' })]) });
+  assert.strictEqual(d.blocked, true, 'a red on this text locks it regardless of task');
+  assert.strictEqual(d.reason, 'open-red');
+});
+
+// I3 regression: the lock is keyed on the text that was RUN. Different text on
+// disk means this content was never observed, so there is nothing to honour.
+test('a different content hash is unseen, not locked', () => {
+  const d = decide({ contentHash: 'some-other-text' });
+  assert.strictEqual(d.blocked, false);
+  assert.strictEqual(d.reason, 'unseen');
+});
+
+test('an unreadable file (no content hash) is allowed — creating a test is not the tamper', () => {
+  const d = decide({ contentHash: null });
   assert.strictEqual(d.blocked, false);
   assert.strictEqual(d.reason, 'unseen');
 });

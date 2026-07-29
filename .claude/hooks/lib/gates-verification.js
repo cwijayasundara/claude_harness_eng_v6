@@ -8,7 +8,6 @@ const { runMutationOnFiles, renderSurvivors } = require('./mutation-gate');
 const { failBlock, noteSkip, inAutoBuild } = require('./pre-commit-util');
 const { readLedger } = require('./red-phase-ledger');
 const { integrityFindings } = require('./test-integrity');
-const { loadEnvelope } = require('./task-envelope');
 
 function checkMutation(ctx) {
   const { projectDir, stagedSource } = ctx;
@@ -50,8 +49,7 @@ function checkTestIntegrity(ctx) {
     });
     return;
   }
-  const loaded = loadEnvelope(projectDir);
-  const findings = integrityFindings(ledger.events, loaded.envelope ? loaded.envelope.task_id : null);
+  const findings = integrityFindings(ledger.events);
   if (!findings.length) return;
   failBlock({
     id: 'test-integrity',

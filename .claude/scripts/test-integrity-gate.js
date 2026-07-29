@@ -32,15 +32,9 @@ const fs = require('fs');
 const path = require('path');
 const { readLedger } = require('../hooks/lib/red-phase-ledger');
 const { integrityFindings } = require('../hooks/lib/test-integrity');
-const { loadEnvelope } = require('../hooks/lib/task-envelope');
 
 const REPO = path.resolve(__dirname, '..', '..');
 const VERDICT_REL = path.join('specs', 'reviews', 'test-integrity.json');
-
-function activeTaskId(root) {
-  const loaded = loadEnvelope(root);
-  return loaded.envelope ? loaded.envelope.task_id : null;
-}
 
 function emitVerdict(root, verdict) {
   const file = path.join(root, VERDICT_REL);
@@ -72,7 +66,7 @@ function evaluate(root) {
   // No ledger = no evidence = nothing proved. Reported as vacuous rather than
   // dressed up as a pass; --strict makes it a failure.
   if (ledger.state === 'absent') return { pass: true, vacuous: true, reason: 'no-ledger', findings: [] };
-  const findings = integrityFindings(ledger.events, activeTaskId(root));
+  const findings = integrityFindings(ledger.events);
   return {
     pass: findings.length === 0,
     vacuous: ledger.events.length === 0,

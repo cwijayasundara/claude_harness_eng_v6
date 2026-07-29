@@ -46,28 +46,33 @@ function blockedMessage(redSha) {
  * @param {object} args.env    process.env (or a stub)
  * @returns {{blocked: boolean, reason: string, redSha: string|null, message: string|null}}
  */
-function decideLock({ ledger, taskId, filePath, env = {} }) {
+// A gate that cannot read its own evidence must fail loud, never open — the rule
+// gate-registry.js applies to a missing pack module. A tampered ledger is
+// precisely the state an agent would engineer to unlock a test.
+function ledgerInvalid(ledger) {
+  return {
+    blocked: true,
+    reason: 'ledger-invalid',
+    redSha: null,
+    message:
+      'BLOCKED: the red-phase ledger failed its integrity check, so the lock cannot be\n' +
+      'evaluated. Refusing to treat an unreadable record as a passing one.\n' +
+      `Errors: ${(ledger.errors || []).join('; ')}\n`,
+  };
+}
+
+function decideLock({ ledger, filePath, contentHash, env = {} }) {
   if (String(env.HARNESS_TEST_LOCK || '').toLowerCase() === 'off') return allow('bypass');
 
   const rel = String(filePath || '').replace(/\\/g, '/');
   if (!isTestFile(rel)) return allow('not-a-test');
+  if (ledger && ledger.state === 'invalid') return ledgerInvalid(ledger);
+  // No readable on-disk content means nothing was ever run against this text (a
+  // brand-new test file). Creating one is always fine; EDITING a failing one is
+  // the tamper.
+  if (!contentHash) return allow('unseen');
 
-  // A gate that cannot read its own evidence must fail loud, never open — the
-  // rule gate-registry.js applies to a missing pack module. A tampered ledger is
-  // precisely the state an agent would engineer to unlock a test.
-  if (ledger && ledger.state === 'invalid') {
-    return {
-      blocked: true,
-      reason: 'ledger-invalid',
-      redSha: null,
-      message:
-        'BLOCKED: the red-phase ledger failed its integrity check, so the lock cannot be\n' +
-        'evaluated. Refusing to treat an unreadable record as a passing one.\n' +
-        `Errors: ${(ledger.errors || []).join('; ')}\n`,
-    };
-  }
-
-  const state = fileState((ledger && ledger.events) || [], taskId, rel);
+  const state = fileState((ledger && ledger.events) || [], rel, contentHash);
   if (!state) return allow('unseen');
   if (!state.redFirst) return allow('green-first');
   if (!state.open) return allow('cycle-closed');

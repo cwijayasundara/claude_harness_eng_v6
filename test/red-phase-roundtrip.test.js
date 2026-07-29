@@ -173,6 +173,60 @@ test('the red-phase ledger is protected machinery, like task-lifecycle.jsonl', (
   assert.strictEqual(machineryViolation(root, path.join(root, '.claude', 'state', 'current-lane')), null);
 });
 
+// Found by independent review, not by the suite: checkTarget resolves symlinks,
+// so on macOS the SAME file reached pre-write-gate as /var/... (blocked) and
+// /private/var/... (allowed). Both hooks must relativise against the REAL project
+// dir, and both path forms must behave identically.
+test('an equivalent path form cannot bypass either hook', () => {
+  const root = fixtureRepo();
+  observeRun(root, 'pytest tests/test_calc.py', RED_OUTPUT);
+  const real = fs.realpathSync(root);
+  assert.notStrictEqual(real, root, 'probe needs a symlinked tmp dir to be meaningful');
+
+  for (const base of [root, real]) {
+    const write = runHook(PRE_WRITE, root, {
+      tool_name: 'Write',
+      tool_input: { file_path: path.join(base, 'tests', 'test_calc.py'), content: 'def test_add():\n    pass\n' },
+    });
+    assert.strictEqual(write.status, 2, `pre-write-gate allowed the ${base === root ? '/var' : '/private/var'} form`);
+
+    const bash = runHook(PRE_BASH, root, {
+      tool_name: 'Bash',
+      tool_input: { command: `sed -i '' 's/3/0/' ${path.join(base, 'tests', 'test_calc.py')}` },
+    });
+    assert.strictEqual(bash.status, 2, `pre-bash-gate allowed the ${base === root ? '/var' : '/private/var'} form`);
+  }
+});
+
+// C2 end-to-end: the cheapest bypass of the whole chain.
+test('a filtered run cannot release the lock', () => {
+  const root = fixtureRepo();
+  observeRun(root, 'pytest tests/test_calc.py', RED_OUTPUT);
+  // The agent runs a filter that matches nothing and exits 0.
+  observeRun(root, 'pytest tests/test_calc.py -k nothing-matches', '===== 0 passed, 1 deselected in 0.01s =====');
+
+  const res = runHook(PRE_WRITE, root, {
+    tool_name: 'Write',
+    tool_input: { file_path: path.join(root, 'tests', 'test_calc.py'), content: 'def test_add():\n    pass\n' },
+  });
+  assert.strictEqual(res.status, 2, 'a filtered green must not close the cycle');
+});
+
+// B2: an unfiltered whole-suite green names no files, but still proves the
+// previously-failing file passes — otherwise the lock could never be released.
+test('an unfiltered green sweep that names no files closes the open cycle', () => {
+  const root = fixtureRepo();
+  observeRun(root, 'pytest tests/test_calc.py', RED_OUTPUT);
+  fs.writeFileSync(path.join(root, 'src', 'calc.py'), 'def add(a, b):\n    return a + b\n');
+  observeRun(root, 'pytest', GREEN_OUTPUT); // bare run: no FAILED lines, no paths
+
+  const res = runHook(PRE_WRITE, root, {
+    tool_name: 'Write',
+    tool_input: { file_path: path.join(root, 'tests', 'test_calc.py'), content: 'def test_add():\n    assert add(1, 2) == 3\n\ndef test_zero():\n    assert add(0, 0) == 0\n' },
+  });
+  assert.strictEqual(res.status, 0, `the sweep should have closed the cycle: ${res.stdout}${res.stderr}`);
+});
+
 test('an env-broken run never arms the lock', () => {
   const root = fixtureRepo();
   observeRun(root, 'pytest tests/test_calc.py', 'bash: pytest: command not found');

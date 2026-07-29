@@ -18,9 +18,7 @@
 // itself. The pair is what carries the proof.
 //
 // Legitimate flows this must NOT flag:
-//   - refactoring a test after it has gone green (happens after the pair closed);
-//   - correcting a genuinely wrong test, then re-running: the correction lands as
-//     a NEW red anchor, and the new pair is internally consistent;
+//   - editing a test AFTER its cycle closed (refactoring a passing test);
 //   - characterization pin-downs, which are green-first and have no pair at all.
 
 const { test } = require('node:test');
@@ -42,12 +40,12 @@ function ev(verdict, hash, over = {}) {
 
 test('passes when the test text is identical at red and at green', () => {
   const events = [ev('fail', 'H1'), ev('pass', 'H1')];
-  assert.deepStrictEqual(integrityFindings(events, 'T-1'), []);
+  assert.deepStrictEqual(integrityFindings(events), []);
 });
 
 test('BLOCKS when the test changed between red and green — the tamper', () => {
   const events = [ev('fail', 'H1'), ev('pass', 'H2')];
-  const found = integrityFindings(events, 'T-1');
+  const found = integrityFindings(events);
   assert.strictEqual(found.length, 1);
   assert.strictEqual(found[0].kind, 'test-changed-between-red-and-green');
   assert.strictEqual(found[0].file, FILE);
@@ -56,24 +54,35 @@ test('BLOCKS when the test changed between red and green — the tamper', () => 
 });
 
 test('a still-red test has no pair yet and is not a finding', () => {
-  assert.deepStrictEqual(integrityFindings([ev('fail', 'H1')], 'T-1'), []);
+  assert.deepStrictEqual(integrityFindings([ev('fail', 'H1')]), []);
 });
 
 test('ignores green-first (pin-down) files entirely — they have no red phase to honour', () => {
   const events = [ev('pass', 'H1'), ev('fail', 'H2'), ev('pass', 'H3')];
-  assert.deepStrictEqual(integrityFindings(events, 'T-1'), []);
+  assert.deepStrictEqual(integrityFindings(events), []);
 });
 
 test('allows refactoring the test AFTER the pair closed', () => {
   const events = [ev('fail', 'H1'), ev('pass', 'H1'), ev('pass', 'H2')];
-  assert.deepStrictEqual(integrityFindings(events, 'T-1'), []);
+  assert.deepStrictEqual(integrityFindings(events), []);
 });
 
-// The declared way to correct a test you believe is wrong: say so and re-run, so
-// the correction is visible in the ledger as a new anchor instead of silent.
-test('allows a corrected test that was re-run red before going green', () => {
+// I4 regression. The first version anchored on the LAST red before the green,
+// which let a weakened test launder itself: strip assertions but stay red,
+// re-run (re-anchoring the pair to the weakened text), then fix the one
+// surviving assertion — red and green hashes then matched and the gate said
+// nothing. Anchoring on the FIRST red of the cycle makes any change between
+// failing and passing visible, including one that kept it failing.
+//
+// This also means correcting a test you believe is genuinely wrong now SURFACES
+// rather than passing silently. That is intended: from the outside, correcting
+// and weakening are indistinguishable, so a human should see it.
+test('BLOCKS a test edited while still red, then fixed — the re-anchor laundry', () => {
   const events = [ev('fail', 'H1'), ev('fail', 'H2'), ev('pass', 'H2')];
-  assert.deepStrictEqual(integrityFindings(events, 'T-1'), []);
+  const found = integrityFindings(events);
+  assert.strictEqual(found.length, 1, 'the intra-cycle edit must not be laundered by a re-run');
+  assert.strictEqual(found[0].kind, 'test-changed-between-red-and-green');
+  assert.strictEqual(found[0].redSha, 'sha-H1', 'anchored on the FIRST red of the cycle');
 });
 
 test('catches the tamper on the SECOND cycle, not just the first', () => {
@@ -81,15 +90,19 @@ test('catches the tamper on the SECOND cycle, not just the first', () => {
     ev('fail', 'H1'), ev('pass', 'H1'), // clean first cycle
     ev('fail', 'H2'), ev('pass', 'H3'), // weakened second cycle
   ];
-  const found = integrityFindings(events, 'T-1');
+  const found = integrityFindings(events);
   assert.strictEqual(found.length, 1);
   assert.strictEqual(found[0].redSha, 'sha-H2');
 });
 
-test('scopes to the active task', () => {
-  const events = [ev('fail', 'H1', { task_id: 'T-0' }), ev('pass', 'H2', { task_id: 'T-0' })];
-  assert.deepStrictEqual(integrityFindings(events, 'T-1'), []);
-  assert.strictEqual(integrityFindings(events, 'T-0').length, 1);
+// C1 regression: the first version scoped findings by task_id, so declaring a
+// different task (or none) emptied the event set and every cycle vanished
+// unchecked. The gate is now task-agnostic.
+test('task_id cannot hide a finding', () => {
+  const mixed = [ev('fail', 'H1', { task_id: 'T-0' }), ev('pass', 'H2', { task_id: 'T-9' })];
+  const found = integrityFindings(mixed);
+  assert.strictEqual(found.length, 1, 'a cycle split across declared tasks is still a cycle');
+  assert.strictEqual(found[0].kind, 'test-changed-between-red-and-green');
 });
 
 test('reports each offending file once, even across several test files', () => {
@@ -100,7 +113,7 @@ test('reports each offending file once, even across several test files', () => {
     file_hashes: { 'tests/test_a.py': ha, 'tests/test_b.py': hb },
     head_sha: 'sha',
   });
-  const found = integrityFindings([two('fail', 'A1', 'B1'), two('pass', 'A2', 'B1')], 'T-1');
+  const found = integrityFindings([two('fail', 'A1', 'B1'), two('pass', 'A2', 'B1')]);
   assert.deepStrictEqual(found.map((f) => f.file), ['tests/test_a.py']);
 });
 
@@ -109,7 +122,7 @@ test('a run missing a hash for a file is reported, never silently passed', () =>
     { task_id: 'T-1', verdict: 'fail', test_files: [FILE], file_hashes: {}, head_sha: 'sha-r' },
     ev('pass', 'H1'),
   ];
-  const found = integrityFindings(events, 'T-1');
+  const found = integrityFindings(events);
   assert.strictEqual(found.length, 1);
   assert.strictEqual(found[0].kind, 'unverifiable-red-phase');
 });

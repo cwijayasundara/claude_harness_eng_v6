@@ -8,23 +8,43 @@
 // could silently rewrite "this test failed first" could unlock any test. Chaining
 // reuses task-lifecycle.js's eventHash rather than a second implementation.
 //
-// THE ARMING RULE, and why it is first-run rather than any-run:
+// THE ARMING RULE:
 //
-//   A test file whose FIRST observed run (within a task) is RED arms the lock.
-//   Green-first never arms.
+//   A test file whose FIRST observed run AT ITS CURRENT TEXT is RED arms the
+//   lock. Green-first never arms.
 //
 // TDD is red-first by definition. Characterization (pin-down) tests are
 // green-first by definition — skills/pinning-down-behavior Step 3 says "Run green
 // against the current code" — and that same step explicitly permits repairing a
 // pin afterwards for a nondeterministic field. Step 4 then makes those pins fail
 // on purpose (flip production code, watch it bite, revert). A lock that armed on
-// ANY red run would forbid the permitted repair and break the legacy lane. Keying
-// on the first run separates the two disciplines with no lane special-casing, and
-// no knowledge of the mutation-smoke wrapper.
+// ANY red run would forbid the permitted repair and break the legacy lane.
+//
+// "At its current text" is load-bearing and was NOT in the first version, which
+// keyed on (task_id, path). Review found both halves of that key were
+// agent-controlled: declaring a different task emptied the ledger and released
+// every lock, and running a file once before adding the failing test marked it
+// green-first forever. Content is the one part of the key the agent cannot
+// restate without actually changing the test — see fileState.
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { eventHash } = require('./task-lifecycle');
+
+/**
+ * sha256 of a file's bytes, or null when unreadable. ONE implementation, shared
+ * by the recorder (which hashes the text as it ran) and the lock (which hashes
+ * the text about to be edited) — two implementations would silently disagree and
+ * every lookup would miss.
+ */
+function hashFile(file) {
+  try {
+    return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+  } catch (_) {
+    return null;
+  }
+}
 
 const LEDGER_REL = path.join('.claude', 'state', 'red-phase.jsonl');
 const VERDICTS = new Set(['pass', 'fail']);
@@ -110,23 +130,39 @@ function appendRun(root, run, now = new Date()) {
 }
 
 /**
- * First-observed verdict, latest verdict, and latest red anchor for one
- * (task, test file).
+ * State for one test file AT A SPECIFIC CONTENT HASH.
  *
- * `open` is what the G42 lock keys on, and it is deliberately narrower than
- * red-first alone: a file is locked only while its LATEST run is still red.
- * Locking for the whole task would break ordinary TDD — write test 1, go green,
- * then add test 2 to the same file and you would be blocked by your own passing
- * work. The tamper actually worth blocking is the narrow one: the test is
- * failing, and the agent edits the TEST instead of the production code. Once the
- * file legitimately goes green, the cycle is closed and the next red re-arms it.
+ * Two things are deliberately NOT keys here, both because review showed they were
+ * self-service unlocks:
+ *
+ *  - **task_id.** It was compared by exact equality, so declaring a different
+ *    task (or none) made the ledger look empty and every lock evaporate. The
+ *    lock is now task-agnostic: an open red on a file locks that file, full stop.
+ *  - **the file alone.** Keying first-run on the path meant the agent chose the
+ *    ordering: run the file once before adding the failing test and it was
+ *    marked green-first forever, so the lock never armed.
+ *
+ * Keying on CONTENT makes both correct without special cases:
+ *  - TDD — write test (text T), run red. First verdict for T is fail → armed.
+ *  - Green-first bypass — the pre-existing suite ran at text T0; adding a failing
+ *    test makes the text T1, which has its own first verdict (fail) → armed.
+ *  - Pin-down — the pin is written (text P) and runs GREEN at P. Step 4 flips
+ *    PRODUCTION code, so the pins fail while still at text P; first verdict for P
+ *    is pass → never armed, and the permitted matcher repair still works.
+ *
+ * `open` stays narrower than red-first: a file is locked only while its latest
+ * run at this text is red. Locking for a whole task would break ordinary TDD —
+ * add test 2 to a file whose test 1 passes and you are blocked by your own
+ * passing work.
  *
  * @returns {{firstVerdict, latestVerdict, redFirst, open, redSha, redAt}|null}
- *   null when the ledger has never seen this file under this task.
+ *   null when the ledger has never observed this file at this content.
  */
-function fileState(events, taskId, testFile) {
+function fileState(events, testFile, contentHash) {
   const seen = (events || []).filter(
-    (e) => e.task_id === taskId && Array.isArray(e.test_files) && e.test_files.includes(testFile)
+    (e) => Array.isArray(e.test_files)
+      && e.test_files.includes(testFile)
+      && (e.file_hashes || {})[testFile] === contentHash
   );
   if (!seen.length) return null;
   const reds = seen.filter((e) => e.verdict === 'fail');
@@ -143,4 +179,28 @@ function fileState(events, taskId, testFile) {
   };
 }
 
-module.exports = { LEDGER_REL, appendRun, readLedger, fileState };
+/**
+ * Files whose most recent observed run was a failure, with the content hash that
+ * was failing.
+ *
+ * Needed because an unfiltered whole-suite green run frequently names no files at
+ * all (bare `pytest` prints FAILED lines but nothing on success). Without this,
+ * a red->green cycle opened by a named run could never be closed by an unnamed
+ * green one, and the file would stay locked forever — fail-closed, but unusable.
+ * An unfiltered green suite genuinely proves every previously-failing file passed.
+ *
+ * @returns {{file: string, hash: string}[]}
+ */
+function openRedFiles(events) {
+  const latest = new Map(); // file -> {verdict, hash}
+  for (const event of events || []) {
+    for (const file of event.test_files || []) {
+      latest.set(file, { verdict: event.verdict, hash: (event.file_hashes || {})[file] });
+    }
+  }
+  return [...latest.entries()]
+    .filter(([, v]) => v.verdict === 'fail' && v.hash)
+    .map(([file, v]) => ({ file, hash: v.hash }));
+}
+
+module.exports = { LEDGER_REL, appendRun, readLedger, fileState, openRedFiles, hashFile };

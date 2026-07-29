@@ -23,7 +23,7 @@ const { prefixCacheViolation, prefixCacheBlockMessage } = require('./lib/prefix-
 const { recordOutcome } = require('./lib/sensor-outcomes');
 const { loadEnvelope, pathAllowed } = require('./lib/task-envelope');
 const { lifecycleStatus, readLedger } = require('./lib/task-lifecycle');
-const { readLedger: readRedPhaseLedger } = require('./lib/red-phase-ledger');
+const { readLedger: readRedPhaseLedger, hashFile } = require('./lib/red-phase-ledger');
 const { decideLock } = require('./lib/test-write-lock');
 // legacy-discipline pack: absent = that discipline is not configured here.
 const coveragePreflightMod = optionalRequire(path.join(__dirname, 'lib', 'coverage-preflight.js'));
@@ -185,11 +185,15 @@ function checkTdd(projectDir, filePath) {
 // making a currently-failing one pass by editing the test. The pair is the
 // red-green ordering that gate's own comment says it does not cover.
 function checkTestWriteLock(projectDir, filePath) {
-  const { envelope } = loadEnvelope(projectDir);
+  // BOTH sides must go through realResolve. Relativising a /private/var path
+  // against a /var projectDir yields ../../.., which never matches a test-file
+  // pattern, so the lock passed silently on any equivalent path form — the same
+  // class of bug that made the bash half inert, in the opposite direction.
+  const real = realResolve(projectDir);
   const decision = decideLock({
     ledger: readRedPhaseLedger(projectDir),
-    taskId: envelope ? envelope.task_id : null,
-    filePath: path.relative(projectDir, path.resolve(filePath)),
+    filePath: path.relative(real, realResolve(filePath)),
+    contentHash: hashFile(realResolve(filePath)),
     env: process.env,
   });
   if (decision.blocked) block(decision.message);
