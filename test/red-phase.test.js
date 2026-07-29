@@ -205,3 +205,44 @@ test('classifyRun never reports fail when the environment was broken', () => {
   assert.strictEqual(got.verdict, 'env-broken');
   assert.deepStrictEqual(got.testFiles, [], 'a run that never happened names no files');
 });
+
+// Round-2 review, Important. The verdict is run-level, but it was applied to
+// every file the command named: `pytest a b` where only `a` fails recorded BOTH
+// as failing, locking a passing test and raising a false G43 block on any later
+// legitimate edit of it.
+test('a failing multi-file run records only the files the output names as failing', () => {
+  const got = classifyRun({
+    command: 'pytest tests/a_test.py tests/b_test.py',
+    text: 'FAILED tests/a_test.py::t - x\n===== 1 failed, 1 passed =====',
+  });
+  assert.strictEqual(got.verdict, 'fail');
+  assert.deepStrictEqual(got.testFiles, ['tests/a_test.py'], 'b passed and must not be recorded red');
+});
+
+test('a single-file failing run still attributes the failure when output names nothing', () => {
+  const got = classifyRun({ command: 'pytest tests/only_test.py', text: '===== 1 failed =====' });
+  assert.strictEqual(got.verdict, 'fail');
+  assert.deepStrictEqual(got.testFiles, ['tests/only_test.py'], 'unambiguous: one file named, it failed');
+});
+
+test('a passing run records every file it named', () => {
+  const got = classifyRun({
+    command: 'pytest tests/a_test.py tests/b_test.py',
+    text: '===== 2 passed =====',
+  });
+  assert.deepStrictEqual(got.testFiles, ['tests/a_test.py', 'tests/b_test.py']);
+});
+
+// Round-2 review, Critical. A directory/subset run names no FILES and is not
+// `filtered`, so it looked identical to a bare whole-suite sweep — and one
+// `pytest tests/unit` closed open cycles for files it never ran.
+test('parseCommand reports positional scope paths, so a subset run is not a whole-suite sweep', () => {
+  assert.deepStrictEqual(parseCommand('pytest tests/unit').scopePaths, ['tests/unit']);
+  assert.deepStrictEqual(parseCommand('pytest tests/a_test.py').scopePaths, ['tests/a_test.py']);
+  assert.deepStrictEqual(parseCommand('go test ./pkg/foo').scopePaths, ['./pkg/foo']);
+  // A bare whole-suite run genuinely covers everything.
+  assert.deepStrictEqual(parseCommand('pytest').scopePaths, []);
+  assert.deepStrictEqual(parseCommand('npm test').scopePaths, []);
+  // Flags and their values are not scope.
+  assert.deepStrictEqual(parseCommand('pytest -q --maxfail 2').scopePaths, []);
+});

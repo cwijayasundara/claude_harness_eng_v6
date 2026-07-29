@@ -57,9 +57,15 @@ test('a still-red test has no pair yet and is not a finding', () => {
   assert.deepStrictEqual(integrityFindings([ev('fail', 'H1')]), []);
 });
 
-test('ignores green-first (pin-down) files entirely — they have no red phase to honour', () => {
+// This case used to assert "green-first files are exempt entirely". That was the
+// bug: the exemption was PATH-keyed, so one earlier green excused a file forever.
+// The text here CHANGES between red (H2) and green (H3), which is exactly the
+// tamper — an earlier green must not excuse it.
+test('an earlier green does not excuse a later red->green text change', () => {
   const events = [ev('pass', 'H1'), ev('fail', 'H2'), ev('pass', 'H3')];
-  assert.deepStrictEqual(integrityFindings(events), []);
+  const found = integrityFindings(events);
+  assert.strictEqual(found.length, 1);
+  assert.strictEqual(found[0].redSha, 'sha-H2');
 });
 
 test('allows refactoring the test AFTER the pair closed', () => {
@@ -125,4 +131,23 @@ test('a run missing a hash for a file is reported, never silently passed', () =>
   const found = integrityFindings(events);
   assert.strictEqual(found.length, 1);
   assert.strictEqual(found[0].kind, 'unverifiable-red-phase');
+});
+
+// Round-2 review, Critical. cyclesFor's green-first short-circuit was PATH-keyed
+// while the lock is CONTENT-keyed, so ANY file ever observed green at older text
+// was exempt from this gate forever — which is nearly every pre-existing test
+// file in a real repo. The short-circuit is gone: the hash comparison already
+// gives pin-downs the right answer without it.
+test('a file that was green at OLDER text is still checked', () => {
+  const events = [ev('pass', 'X'), ev('fail', 'Y'), ev('pass', 'Z')];
+  const found = integrityFindings(events);
+  assert.strictEqual(found.length, 1, 'routine earlier green must not grant lifetime exemption');
+  assert.strictEqual(found[0].redSha, 'sha-Y');
+});
+
+// ...and the pin-down case still passes, without needing a special case: the
+// flip changes PRODUCTION code, so the pin text is identical at red and green.
+test('a pin-down cycle passes on hash equality alone, with no green-first rule', () => {
+  const events = [ev('pass', 'P'), ev('fail', 'P'), ev('pass', 'P')];
+  assert.deepStrictEqual(integrityFindings(events), []);
 });

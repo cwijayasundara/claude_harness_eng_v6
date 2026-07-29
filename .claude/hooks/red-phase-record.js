@@ -63,8 +63,24 @@ function hashTestFiles(projectDir, files) {
 // closed by an unnamed green one and the file would stay locked forever:
 // fail-closed, but unusable. An unfiltered green suite genuinely proves every
 // previously-failing file now passes.
-function filesForGreenSweep(projectDir, ledger) {
+// ...but ONLY a run that actually covered them. A directory or package argument
+// (`pytest tests/unit`, `go test ./pkg/foo`) names no FILE and is not a filter
+// flag, so it used to look exactly like a bare whole-suite run — and one subset
+// green closed open cycles for files it never executed, releasing the lock and
+// making G43 compare a file against itself. Empty scopePaths means the command
+// genuinely covers everything; otherwise a file must sit under a named path.
+function coveredBy(file, scopePaths) {
+  if (!scopePaths.length) return true;
+  return scopePaths.some((scope) => {
+    const s = scope.replace(/^\.\//, '').replace(/\/+$/, '');
+    if (!s || s === '.' || s === '...') return true;
+    return file === s || file.startsWith(`${s}/`);
+  });
+}
+
+function filesForGreenSweep(projectDir, ledger, scopePaths) {
   return openRedFiles(ledger.events)
+    .filter(({ file }) => coveredBy(file, scopePaths))
     .filter(({ file, hash }) => hashFile(path.join(projectDir, file)) === hash)
     .map(({ file }) => file);
 }
@@ -96,7 +112,7 @@ runHook('red-phase-record', (input) => {
   let testFiles = run.testFiles;
   // Unfiltered green sweep that named nothing: close the open cycles it proves.
   if (!testFiles.length && run.verdict === 'pass' && ledger.state === 'valid') {
-    testFiles = filesForGreenSweep(projectDir, ledger);
+    testFiles = filesForGreenSweep(projectDir, ledger, run.scopePaths || []);
   }
   if (!testFiles.length) return;
 

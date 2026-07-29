@@ -104,6 +104,34 @@ function testPathTokens(tokens) {
   );
 }
 
+// Flags whose NEXT token is a value, not a path. Without this, `pytest --maxfail 2`
+// would read `2` as scope.
+const FLAG_WITH_VALUE = /^(-k|-t|-n|-m|--maxfail|--test-name-pattern|--test-reporter|--reporter|--filter|--grep|-run)$/;
+
+/**
+ * Positional path arguments — the SCOPE the run covered.
+ *
+ * Distinct from `paths` (concrete test FILES). A directory or package argument
+ * (`pytest tests/unit`, `go test ./pkg/foo`) names no file and is not a filter
+ * flag, so without this it was indistinguishable from a bare whole-suite run —
+ * and one subset run could close open cycles for files it never executed.
+ * Empty means the command genuinely covers everything.
+ */
+function scopePathTokens(tokens, runner) {
+  // Skip the runner invocation itself (`npm run test:unit`, `go test`, `python -m pytest`).
+  const args = [];
+  let i = 1;
+  if (runner === 'npm-test' || runner === 'go-test') i = 2;
+  if (tokens[1] === 'run' || tokens[1] === '-m') i = 3;
+  for (; i < tokens.length; i += 1) {
+    const t = tokens[i];
+    if (FLAG_WITH_VALUE.test(t)) { i += 1; continue; }
+    if (t.startsWith('-')) continue;
+    args.push(t);
+  }
+  return args;
+}
+
 /**
  * @param {string} command raw Bash command line
  * @returns {{isTestRun: boolean, runner: string|null, paths: string[]}}
@@ -117,10 +145,12 @@ function parseCommand(command) {
     const runner = resolveRunner(tokens);
     if (!runner) continue;
     if (tokens.some((t) => WATCH.test(t))) return none; // no terminal verdict
+    const stripped = stripEnvAssignments(seg.tokens);
     return {
       isTestRun: true,
       runner,
       paths: testPathTokens(tokens),
+      scopePaths: scopePathTokens(stripped, runner),
       filtered: tokens.some((t) => FILTER.test(t)),
     };
   }
@@ -214,6 +244,26 @@ function failingTestFiles(runner, text) {
 }
 
 /**
+ * Which files this run's verdict actually applies to.
+ *
+ * The verdict is RUN-level; applying it to every file the command named recorded
+ * passing tests as failing. `pytest a b` where only `a` fails would lock `b`, and
+ * any later legitimate edit of `b` then raised a false G43 block.
+ *
+ * A FAIL therefore attributes only to files the output names as failing — except
+ * when the command named exactly one test file, where it is unambiguous. A PASS
+ * attributes to everything the command named, since a green run genuinely
+ * exonerates all of them.
+ */
+function attributeFiles(parsed, verdict, text) {
+  if (verdict !== 'pass' && verdict !== 'fail') return []; // nothing was proved
+  if (verdict === 'pass') return [...new Set(parsed.paths)].sort();
+  const failing = failingTestFiles(parsed.runner, text);
+  if (failing.length) return failing;
+  return parsed.paths.length === 1 ? [...parsed.paths] : [];
+}
+
+/**
  * One record-ready verdict for a Bash tool call.
  * @param {{command: string, text: string}} run
  * @returns {{isTestRun: boolean, runner: string|null, verdict: string|null, testFiles: string[]}}
@@ -224,14 +274,14 @@ function classifyRun({ command, text }) {
     return { isTestRun: false, runner: null, verdict: null, testFiles: [], filtered: false };
   }
   const verdict = parseVerdict(parsed.runner, text);
-  // A run that never happened, or ran no tests, names no files — recording them
-  // would let a broken environment arm a lock, or mark a file green when nothing
-  // was executed.
-  const proved = verdict === 'pass' || verdict === 'fail';
-  const testFiles = proved
-    ? [...new Set([...parsed.paths, ...failingTestFiles(parsed.runner, text)])].sort()
-    : [];
-  return { isTestRun: true, runner: parsed.runner, verdict, testFiles, filtered: parsed.filtered };
+  return {
+    isTestRun: true,
+    runner: parsed.runner,
+    verdict,
+    testFiles: attributeFiles(parsed, verdict, text),
+    scopePaths: parsed.scopePaths,
+    filtered: parsed.filtered,
+  };
 }
 
 module.exports = { parseCommand, parseVerdict, failingTestFiles, classifyRun };

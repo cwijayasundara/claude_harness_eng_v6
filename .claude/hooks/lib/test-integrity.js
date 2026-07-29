@@ -39,7 +39,14 @@
  */
 function cyclesFor(events, file) {
   const seen = events.filter((e) => Array.isArray(e.test_files) && e.test_files.includes(file));
-  if (!seen.length || seen[0].verdict !== 'fail') return []; // green-first: no red phase
+  // NO green-first short-circuit. It used to exempt any file whose FIRST event
+  // was a pass — but that test was PATH-keyed while the lock is CONTENT-keyed, so
+  // one routine green run at older text exempted a file from this gate forever,
+  // which is nearly every pre-existing test file in a real repo.
+  //
+  // It is not needed: hash equality already gives pin-downs the right answer.
+  // A pin runs green at text P, fails at text P when Step 4 flips PRODUCTION
+  // code, then passes at text P again — red and green hashes match, no finding.
   const cycles = [];
   let red = null;
   for (const event of seen) {
