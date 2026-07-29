@@ -24,6 +24,8 @@ const { extractWriteTargets } = require('./lib/bash-targets');
 const { checkGitSafety } = require('./lib/git-safety');
 const { forbiddenAction, loadEnvelope, pathAllowed } = require('./lib/task-envelope');
 const { lifecycleStatus, readLedger } = require('./lib/task-lifecycle');
+const { readLedger: readRedPhaseLedger } = require('./lib/red-phase-ledger');
+const { decideLock } = require('./lib/test-write-lock');
 const { consumeCapability, detectSensitiveAction, findCapability } = require('./lib/authority-receipt');
 const { classifyCommand } = require('./lib/runtime-command-policy');
 
@@ -87,6 +89,26 @@ function checkTarget(projectDir, target, command, opts) {
     );
   }
   checkProtectedTarget(projectDir, resolved, command, opts);
+  checkTestWriteLock(projectDir, resolved, opts);
+}
+
+// G42, shell half. The Edit/Write path is only half a lock — `sed -i`, `tee`, and
+// `patch` reach the same file. The pack's adversarial checklist calls this out
+// explicitly, and extractWriteTargets already resolves those verbs, so the same
+// decision runs here rather than a second, weaker one.
+function checkTestWriteLock(projectDir, resolved, opts) {
+  const decision = decideLock({
+    ledger: readRedPhaseLedger(projectDir),
+    taskId: opts.envelope ? opts.envelope.task_id : null,
+    // `resolved` has been through realResolve, so it must be made relative to the
+    // REAL project dir too. Relativising a /private/var path against a /var
+    // projectDir yields ../../.., which never looks like a test file — the lock
+    // then passes silently on every shell write. Caught by the round-trip test;
+    // the unit tests could not see it.
+    filePath: path.relative(realResolve(projectDir), resolved).replace(/\\/g, '/'),
+    env: process.env,
+  });
+  if (decision.blocked) block(decision.message);
 }
 
 function activeEnvelope(projectDir) {

@@ -58,6 +58,21 @@ jobs:
       - name: Unit tests (plugin/skill/hook schema, eval task specs + runner orchestration)
         run: npm test
 
+      - name: Test-integrity proof (G43)
+        # The merge-level backstop for the G42 session lock. A turn-level gate is
+        # steppable — hooks can be disabled, `--no-verify` exists, an agent can
+        # work outside Claude Code — so the invariant is re-proved here where no
+        # in-session override reaches: no test file changed between the run that
+        # made it RED and the run that made it GREEN.
+        #
+        # Runs NON-STRICT deliberately: the recorder that writes the ledger is not
+        # yet wired in .claude/settings.json, so there is nothing to check and
+        # --strict would fail every build. Non-strict still prints a loud WARNING
+        # and marks the emitted verdict `vacuous: true`, so this step cannot be
+        # mistaken for a proof. ADD --strict THE MOMENT THE RECORDER IS WIRED —
+        # until then this step is a placeholder, not a gate.
+        run: npm run test-integrity
+
       - name: Agent readiness ratchet (Project Zero)
         # Hard-fails when active pillars drop below min_active_pillars or the
         # committed baseline (project-manifest.json#quality.agent_readiness).

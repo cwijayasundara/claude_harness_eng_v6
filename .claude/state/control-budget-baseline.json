@@ -1,5 +1,5 @@
 {
-  "count": 153,
+  "count": 156,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -111,6 +111,7 @@
     "readiness-digest",
     "reasons-canvas",
     "record-reuse-decision",
+    "red-phase-record",
     "refactor-purity",
     "regression-suite-full",
     "resume-smoke",
@@ -142,6 +143,8 @@
     "tdd-test-first",
     "team-policy",
     "test-deletion-guard",
+    "test-integrity",
+    "test-write-lock",
     "token-advisor",
     "token-governor",
     "tool-output-pack",

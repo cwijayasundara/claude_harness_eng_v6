@@ -88,6 +88,9 @@ test('withoutSourceOnly returns only docs-safe gates', () => {
     'test-deletion-guard',
     'stub-smell-gate',
     'live-externals',
+    // G43: the tamper it catches (a test edited to go green) can land in a
+    // test-only commit, exactly like test-deletion-guard above.
+    'test-integrity',
   ]);
 });
 

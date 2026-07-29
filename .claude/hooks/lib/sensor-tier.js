@@ -27,6 +27,7 @@ const GATE_TIERS = Object.freeze({
   'coverage-ratchet-py': new Set(['standard', 'strict']),
   'coverage-ratchet-js': new Set(['standard', 'strict']),
   'mutation-smoke': new Set(['standard', 'strict']),
+  'test-integrity': new Set(['standard', 'strict']),
   'cycle-detection': new Set(['strict']),
   'coupling-ratchet': new Set(['strict']),
   'duplication-ratchet': new Set(['strict']),

@@ -23,6 +23,8 @@ const { prefixCacheViolation, prefixCacheBlockMessage } = require('./lib/prefix-
 const { recordOutcome } = require('./lib/sensor-outcomes');
 const { loadEnvelope, pathAllowed } = require('./lib/task-envelope');
 const { lifecycleStatus, readLedger } = require('./lib/task-lifecycle');
+const { readLedger: readRedPhaseLedger } = require('./lib/red-phase-ledger');
+const { decideLock } = require('./lib/test-write-lock');
 // legacy-discipline pack: absent = that discipline is not configured here.
 const coveragePreflightMod = optionalRequire(path.join(__dirname, 'lib', 'coverage-preflight.js'));
 
@@ -179,6 +181,20 @@ function checkTdd(projectDir, filePath) {
   );
 }
 
+// G42. `tdd-test-first` above proves a test EXISTS; this proves you are not
+// making a currently-failing one pass by editing the test. The pair is the
+// red-green ordering that gate's own comment says it does not cover.
+function checkTestWriteLock(projectDir, filePath) {
+  const { envelope } = loadEnvelope(projectDir);
+  const decision = decideLock({
+    ledger: readRedPhaseLedger(projectDir),
+    taskId: envelope ? envelope.task_id : null,
+    filePath: path.relative(projectDir, path.resolve(filePath)),
+    env: process.env,
+  });
+  if (decision.blocked) block(decision.message);
+}
+
 runHook('pre-write-gate', (input) => {
   const toolName = input.tool_name || '';
   const ti = input.tool_input || {};
@@ -205,6 +221,7 @@ runHook('pre-write-gate', (input) => {
   }
   runCheck('length-caps', projectDir, rel, () => checkLength(toolName, ti, filePath, ext));
   runCheck('tdd-test-first', projectDir, rel, () => checkTdd(projectDir, filePath));
+  runCheck('test-write-lock', projectDir, rel, () => checkTestWriteLock(projectDir, filePath));
   if (coveragePreflightMod && TRACKED_EXTS.has(ext) && !isSkippedPath(filePath)) {
     runCheck('coverage-preflight', projectDir, rel, () => {
       const pf = coveragePreflightMod.coveragePreflight(projectDir, toolName, ti, path.resolve(filePath));

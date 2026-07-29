@@ -6,6 +6,9 @@
 
 const { runMutationOnFiles, renderSurvivors } = require('./mutation-gate');
 const { failBlock, noteSkip, inAutoBuild } = require('./pre-commit-util');
+const { readLedger } = require('./red-phase-ledger');
+const { integrityFindings } = require('./test-integrity');
+const { loadEnvelope } = require('./task-envelope');
 
 function checkMutation(ctx) {
   const { projectDir, stagedSource } = ctx;
@@ -28,4 +31,36 @@ function checkMutation(ctx) {
 }
 
 
-module.exports = { checkMutation };
+// G43. The commit-time backstop for the G42 session lock: no test file may
+// change between the run that made it RED and the run that made it GREEN.
+// runsWithoutSource, because the tamper can land in a test-only commit.
+function checkTestIntegrity(ctx) {
+  const { projectDir } = ctx;
+  if ((process.env.HARNESS_TEST_INTEGRITY_GATE || '').toLowerCase() === 'off') return;
+  const ledger = readLedger(projectDir);
+  if (ledger.state === 'absent') return; // nothing observed yet
+  if (ledger.state === 'invalid') {
+    failBlock({
+      id: 'test-integrity',
+      title: 'red-phase ledger failed its integrity check',
+      detail: `${ledger.errors.join('; ')}\n`,
+      fix: 'the ledger is tamper-evident by design; recover it from a clean state rather than editing it.',
+      envOff: 'HARNESS_TEST_INTEGRITY_GATE',
+      minTier: 'standard',
+    });
+    return;
+  }
+  const loaded = loadEnvelope(projectDir);
+  const findings = integrityFindings(ledger.events, loaded.envelope ? loaded.envelope.task_id : null);
+  if (!findings.length) return;
+  failBlock({
+    id: 'test-integrity',
+    title: 'a test changed between its failing run and its passing run',
+    detail: `${findings.map((f) => `  - ${f.file}: ${f.detail}`).join('\n')}\n`,
+    fix: 'fix the production code instead, or re-run the corrected test so a new red phase is recorded.',
+    envOff: 'HARNESS_TEST_INTEGRITY_GATE',
+    minTier: 'standard',
+  });
+}
+
+module.exports = { checkMutation, checkTestIntegrity };
