@@ -25,6 +25,7 @@ const {
   failingTestFiles,
   classifyRun,
 } = require('../.claude/hooks/lib/red-phase');
+const { provenanceUnverifiable } = require('../.claude/hooks/lib/red-phase-command');
 
 // ---------------------------------------------------------------- parseCommand
 
@@ -268,4 +269,69 @@ test('jest: an all-green run is still a pass', () => {
 test('a runner that could not run is env-broken, never a pass', () => {
   assert.strictEqual(parseVerdict('pytest', '===== 1 error in 0.53s ====='), 'env-broken');
   assert.strictEqual(parseVerdict('vitest', 'No test files found, exiting with code 1'), 'env-broken');
+});
+
+// Round-3 review, Critical. Exclusion flags select which tests run just as much
+// as inclusion flags do, but were not treated as filters — so
+// `pytest tests/unit --ignore=tests/unit/test_a.py` looked like a full green
+// sweep of tests/unit and closed test_a's open cycle without ever running it.
+test('exclusion flags mark a run as filtered, not as a full sweep', () => {
+  const cases = [
+    'pytest tests/unit --ignore=tests/unit/test_a.py',
+    'pytest tests/unit --ignore tests/unit/test_a.py',
+    'pytest tests/unit --deselect tests/unit/test_a.py::t',
+    'pytest -m "not slow" tests/unit',
+    'npx vitest run --exclude src/a.test.ts',
+    'go test ./... -skip TestSlow',
+  ];
+  for (const cmd of cases) {
+    assert.strictEqual(parseCommand(cmd).filtered, true, `${cmd} selects a subset and must be filtered`);
+  }
+});
+
+test('a genuine full sweep is still not filtered', () => {
+  for (const cmd of ['pytest', 'pytest tests/unit', 'npm test', 'go test ./...']) {
+    assert.strictEqual(parseCommand(cmd).filtered, false, `${cmd} must remain a full sweep`);
+  }
+});
+
+// Round-3 review, Critical — the part the pre-run snapshot CANNOT close.
+//
+// The recorder sees the file before and after the whole Bash command, so a single
+// line that writes weak test text, runs it, and restores the original leaves
+// pre == post and is indistinguishable from an honest run:
+//
+//   python -c "open('t.py','w').write(WEAK)" ; pytest t.py ; git checkout t.py
+//
+// No before/after tap can see inside one command. What IS detectable is the
+// co-tenancy: a test run sharing a command line with an inline-code interpreter or
+// a content-restoring git verb has unverifiable text provenance, so the run is not
+// usable as evidence. Narrow on purpose — these combinations are vanishingly rare
+// in honest use, and the cost of a false positive is one unrecorded run.
+test('a test run sharing a command with inline interpreter code is unverifiable', () => {
+  const cases = [
+    'python -c "open(\'tests/t.py\',\'w\').write(x)" ; pytest tests/t.py',
+    'pytest tests/t.py && node -e "require(\'fs\').writeFileSync(\'tests/t.py\',y)"',
+    'perl -i -pe s/3/0/ tests/t.py; pytest tests/t.py',
+    'pytest tests/t.py ; git checkout tests/t.py',
+    'pytest tests/t.py; git restore tests/t.py',
+    'git stash pop && pytest tests/t.py',
+  ];
+  for (const cmd of cases) {
+    assert.strictEqual(provenanceUnverifiable(cmd), true, `should be unverifiable: ${cmd}`);
+  }
+});
+
+test('an ordinary test run is verifiable', () => {
+  const cases = [
+    'pytest tests/t.py',
+    'npm test',
+    'pytest tests/t.py -v --maxfail 1',
+    'cd backend && pytest',
+    'git status && pytest',                 // reading git is fine
+    'python -m pytest tests/t.py',          // -m is a module, not inline code
+  ];
+  for (const cmd of cases) {
+    assert.strictEqual(provenanceUnverifiable(cmd), false, `should be verifiable: ${cmd}`);
+  }
 });

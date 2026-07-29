@@ -203,4 +203,74 @@ function openRedFiles(events) {
     .map(([file, v]) => ({ file, hash: v.hash }));
 }
 
-module.exports = { LEDGER_REL, appendRun, readLedger, fileState, openRedFiles, hashFile };
+// ------------------------------------------------------------- pre-run snapshot
+//
+// The recorder fires at PostToolUse, i.e. AFTER the command, so hashing the file
+// then records the text as it stands when the HOOK runs — not as it stood when the
+// RUNNER read it. One Bash line defeated the whole chain:
+//
+//   python -c "open('t.py','w').write(WEAK)" ; pytest t.py ; git checkout t.py
+//
+// The ledger stored pass@hash(STRONG) for a run of WEAK, so the lock opened and
+// G43 compared STRONG to STRONG in silence. Neither write verb is one
+// bash-targets recognises, so neither gate saw it either.
+//
+// pre-bash-gate already runs as PreToolUse(Bash), so it can capture the hashes
+// BEFORE the command — no new hook and no settings.json change (which the
+// prefix-cache gate blocks anyway).
+
+const SNAPSHOT_REL = path.join('.claude', 'state', 'red-phase-presnap.json');
+
+function writeSnapshot(root, command, hashes) {
+  const file = path.join(root, SNAPSHOT_REL);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, `${JSON.stringify({ command, hashes })}\n`);
+}
+
+/** Pre-run hashes for THIS command, or {} when none apply. */
+function readSnapshot(root, command) {
+  try {
+    const snap = JSON.parse(fs.readFileSync(path.join(root, SNAPSHOT_REL), 'utf8'));
+    // A snapshot for some other command says nothing about this one.
+    return snap && snap.command === command ? (snap.hashes || {}) : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+/**
+ * Which files a verdict may be attributed to, and at which hash.
+ *
+ * Prefers the PRE-run hash — that is the text the runner actually read. A file
+ * whose text MOVED during the command is dropped entirely: we cannot tell which
+ * version produced the verdict, and guessing is how the bypass above worked.
+ * With no snapshot it degrades to the post-run hash (previous behaviour), which
+ * is why the snapshot lives in an always-wired hook.
+ */
+function snapshotHashes(files, pre, post) {
+  const hashes = {};
+  const kept = [];
+  for (const file of files) {
+    const before = pre[file];
+    const after = post[file];
+    if (before && after && before !== after) continue; // changed mid-run — unattributable
+    const hash = before || after;
+    if (!hash) continue;
+    hashes[file] = hash;
+    kept.push(file);
+  }
+  return { files: kept, hashes };
+}
+
+module.exports = {
+  LEDGER_REL,
+  SNAPSHOT_REL,
+  appendRun,
+  readLedger,
+  fileState,
+  openRedFiles,
+  hashFile,
+  readSnapshot,
+  writeSnapshot,
+  snapshotHashes,
+};

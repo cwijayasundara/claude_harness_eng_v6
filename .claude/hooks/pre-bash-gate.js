@@ -24,7 +24,10 @@ const { extractWriteTargets } = require('./lib/bash-targets');
 const { checkGitSafety } = require('./lib/git-safety');
 const { forbiddenAction, loadEnvelope, pathAllowed } = require('./lib/task-envelope');
 const { lifecycleStatus, readLedger } = require('./lib/task-lifecycle');
-const { readLedger: readRedPhaseLedger, hashFile } = require('./lib/red-phase-ledger');
+const {
+  readLedger: readRedPhaseLedger, hashFile, openRedFiles, writeSnapshot,
+} = require('./lib/red-phase-ledger');
+const { parseCommand } = require('./lib/red-phase-command');
 const { decideLock } = require('./lib/test-write-lock');
 const { consumeCapability, detectSensitiveAction, findCapability } = require('./lib/authority-receipt');
 const { classifyCommand } = require('./lib/runtime-command-policy');
@@ -120,6 +123,29 @@ function checkTestWriteLock(projectDir, resolved) {
   if (decision.blocked) block(decision.message);
 }
 
+// G41 pre-run snapshot. The recorder fires AFTER the command, so it can only see
+// the file as it stands then — one Bash line could write weak test text, run it,
+// and restore the original, leaving the ledger attributing a pass to text that
+// never ran. This hook is already PreToolUse(Bash), so it is the one place that
+// can capture the text the runner is ABOUT to read. Never blocks: a snapshot
+// failure must not stop a command.
+function snapshotTestHashes(projectDir, command) {
+  try {
+    const run = parseCommand(command);
+    if (!run.isTestRun) return;
+    // Candidates: the files this command names, plus every file with an open red
+    // cycle (a bare `pytest` names nothing but can still close them).
+    const candidates = new Set(run.paths);
+    for (const { file } of openRedFiles(readRedPhaseLedger(projectDir).events)) candidates.add(file);
+    const hashes = {};
+    for (const file of candidates) {
+      const hash = hashFile(path.join(projectDir, file));
+      if (hash) hashes[file] = hash;
+    }
+    writeSnapshot(projectDir, command, hashes);
+  } catch (_) { /* observation only — never block a command over this */ }
+}
+
 function activeEnvelope(projectDir) {
   const loaded = loadEnvelope(projectDir);
   if (loaded.state === 'absent') {
@@ -207,4 +233,5 @@ runHook('pre-bash-gate', (input) => {
   for (const target of extractWriteTargets(command)) {
     checkTarget(projectDir, target, command, opts);
   }
+  snapshotTestHashes(projectDir, command);
 });

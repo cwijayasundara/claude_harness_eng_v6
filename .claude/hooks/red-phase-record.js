@@ -22,7 +22,10 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { resolveProjectDir, runHook, reportFailure } = require('./lib/common');
 const { classifyRun } = require('./lib/red-phase');
-const { appendRun, readLedger, openRedFiles, hashFile } = require('./lib/red-phase-ledger');
+const { provenanceUnverifiable } = require('./lib/red-phase-command');
+const {
+  appendRun, readLedger, openRedFiles, hashFile, readSnapshot, snapshotHashes,
+} = require('./lib/red-phase-ledger');
 const { loadEnvelope } = require('./lib/task-envelope');
 
 function headSha(projectDir) {
@@ -107,6 +110,11 @@ runHook('red-phase-record', (input) => {
   // never arm a lock, because the agent chose which tests ran.
   if (!run.isTestRun || run.verdict !== 'pass' && run.verdict !== 'fail') return;
   if (run.filtered) return;
+  // The text this run read cannot be established: something on the same command
+  // line could have rewritten it mid-command (inline interpreter code, or a git
+  // restore). A before/after tap cannot see inside one command, so the run is not
+  // evidence. See provenanceUnverifiable.
+  if (provenanceUnverifiable(command)) return;
 
   const ledger = readLedger(projectDir);
   let testFiles = run.testFiles;
@@ -116,13 +124,23 @@ runHook('red-phase-record', (input) => {
   }
   if (!testFiles.length) return;
 
+  // Attribute the verdict to the text the RUNNER read, not the text on disk now.
+  // pre-bash-gate captured the pre-run hashes; a file whose text moved during the
+  // command is dropped, because we cannot tell which version produced the verdict.
+  const attributed = snapshotHashes(
+    testFiles,
+    readSnapshot(projectDir, command),
+    hashTestFiles(projectDir, testFiles)
+  );
+  if (!attributed.files.length) return;
+
   try {
     appendRun(projectDir, {
       task_id: activeTaskId(projectDir),
       runner: run.runner,
       verdict: run.verdict,
-      test_files: testFiles,
-      file_hashes: hashTestFiles(projectDir, testFiles),
+      test_files: attributed.files,
+      file_hashes: attributed.hashes,
       head_sha: headSha(projectDir),
       command,
     });

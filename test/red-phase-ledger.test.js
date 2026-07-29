@@ -237,3 +237,55 @@ test('openRedFiles is empty when nothing is failing', () => {
   run(root, { verdict: 'pass' });
   assert.deepStrictEqual(openRedFiles(readLedger(root).events), []);
 });
+
+// ------------------------------------------------------------------ pre-snapshot
+//
+// Round-3 review, CRITICAL and the deepest finding of all three rounds. The
+// recorder runs at PostToolUse — AFTER the command — so it hashed the file as it
+// stood when the hook fired, not as it stood when the runner read it. One Bash
+// line closed the whole chain:
+//
+//   python -c "open('t_x.py','w').write(WEAK)" ; pytest t_x.py ; git checkout t_x.py
+//
+// The ledger recorded pass@hash(STRONG) for a run of WEAK. fileState(STRONG) then
+// showed latest=pass (unlocked) and G43's cycle compared STRONG against STRONG
+// (silent). Neither gate saw anything, because neither write verb is one
+// bash-targets recognises.
+//
+// The fix uses a hook that is ALREADY wired: pre-bash-gate runs as
+// PreToolUse(Bash), so it can record the pre-run hashes. The recorder then uses
+// those, and refuses to attribute a verdict to a file whose text changed during
+// the command — we genuinely cannot tell which text produced that verdict.
+
+const { readSnapshot, writeSnapshot, snapshotHashes } = require('../.claude/hooks/lib/red-phase-ledger');
+
+test('writeSnapshot/readSnapshot round-trip the pre-run hashes for a command', () => {
+  const root = tmpRoot();
+  writeSnapshot(root, 'pytest tests/test_a.py', { 'tests/test_a.py': 'PRE' });
+  const snap = readSnapshot(root, 'pytest tests/test_a.py');
+  assert.deepStrictEqual(snap, { 'tests/test_a.py': 'PRE' });
+});
+
+test('readSnapshot ignores a snapshot taken for a DIFFERENT command', () => {
+  const root = tmpRoot();
+  writeSnapshot(root, 'pytest tests/test_a.py', { 'tests/test_a.py': 'PRE' });
+  assert.deepStrictEqual(readSnapshot(root, 'pytest tests/test_b.py'), {});
+});
+
+test('readSnapshot returns {} when none was taken', () => {
+  assert.deepStrictEqual(readSnapshot(tmpRoot(), 'pytest'), {});
+});
+
+// The load-bearing behaviour: prefer the PRE-run hash, and drop any file whose
+// text moved during the command.
+test('snapshotHashes prefers the pre-run hash and drops files that changed mid-run', () => {
+  const pre = { stable: 'A', moved: 'B' };
+  const post = { stable: 'A', moved: 'C' };
+  const got = snapshotHashes(['stable', 'moved'], pre, post);
+  assert.deepStrictEqual(got, { files: ['stable'], hashes: { stable: 'A' } });
+});
+
+test('snapshotHashes falls back to the post hash when no snapshot exists', () => {
+  const got = snapshotHashes(['a'], {}, { a: 'POST' });
+  assert.deepStrictEqual(got, { files: ['a'], hashes: { a: 'POST' } });
+});
