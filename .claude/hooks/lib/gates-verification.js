@@ -5,7 +5,8 @@
 // kernel commit gate does not require mutation-gate.
 
 const { runMutationOnFiles, renderSurvivors } = require('./mutation-gate');
-const { failBlock, noteSkip, inAutoBuild } = require('./pre-commit-util');
+const { failBlock, noteSkip, inAutoBuild, gitExec } = require('./pre-commit-util');
+const { isTestFile } = require('./tdd');
 const { readLedger } = require('./red-phase-ledger');
 const { integrityFindings } = require('./test-integrity');
 
@@ -33,28 +34,49 @@ function checkMutation(ctx) {
 // G43. The commit-time backstop for the G42 session lock: no test file may
 // change between the run that made it RED and the run that made it GREEN.
 // runsWithoutSource, because the tamper can land in a test-only commit.
+function blockInvalidLedger(ledger) {
+  failBlock({
+    id: 'test-integrity',
+    title: 'red-phase ledger failed its integrity check',
+    detail: `${ledger.errors.join('; ')}\n`,
+    fix: 'the ledger is tamper-evident by design; recover it from a clean state rather than editing it.',
+    envOff: 'HARNESS_TEST_INTEGRITY_GATE',
+    minTier: 'standard',
+  });
+}
+
+// Test-shaped files ADDED by this commit. Only new files can be "never red" in a
+// way worth reporting — an existing test predates the ledger.
+function newTestFiles(ctx) {
+  try {
+    return String(gitExec(ctx.projectDir, ['diff', '--cached', '--name-only', '--diff-filter=A']))
+      .split('\n')
+      .filter(Boolean)
+      .filter(isTestFile);
+  } catch (_) {
+    return [];
+  }
+}
+
 function checkTestIntegrity(ctx) {
   const { projectDir } = ctx;
   if ((process.env.HARNESS_TEST_INTEGRITY_GATE || '').toLowerCase() === 'off') return;
   const ledger = readLedger(projectDir);
   if (ledger.state === 'absent') return; // nothing observed yet
-  if (ledger.state === 'invalid') {
-    failBlock({
-      id: 'test-integrity',
-      title: 'red-phase ledger failed its integrity check',
-      detail: `${ledger.errors.join('; ')}\n`,
-      fix: 'the ledger is tamper-evident by design; recover it from a clean state rather than editing it.',
-      envOff: 'HARNESS_TEST_INTEGRITY_GATE',
-      minTier: 'standard',
-    });
-    return;
+  if (ledger.state === 'invalid') return blockInvalidLedger(ledger);
+
+  const findings = integrityFindings(ledger.events, { newTestFiles: newTestFiles(ctx) });
+  // Advisory findings (never-red) are surfaced but never blocked on: a pin-down
+  // is indistinguishable from a tautological test at the ledger level.
+  for (const f of findings.filter((x) => x.advisory)) {
+    process.stdout.write(`NOTE test-integrity: ${f.detail}\n`);
   }
-  const findings = integrityFindings(ledger.events);
-  if (!findings.length) return;
+  const blocking = findings.filter((f) => !f.advisory);
+  if (!blocking.length) return;
   failBlock({
     id: 'test-integrity',
     title: 'a test changed between its failing run and its passing run',
-    detail: `${findings.map((f) => `  - ${f.file}: ${f.detail}`).join('\n')}\n`,
+    detail: `${blocking.map((f) => `  - ${f.file}: ${f.detail}`).join('\n')}\n`,
     fix: 'fix the production code instead, or re-run the corrected test so a new red phase is recorded.',
     envOff: 'HARNESS_TEST_INTEGRITY_GATE',
     minTier: 'standard',

@@ -89,15 +89,56 @@ function findingFor(file, red, green) {
   };
 }
 
+// A NEW test file that the ledger never observed failing. Everything else here
+// proves "if a test was red, it wasn't weakened to go green"; nothing proves
+// "every test was red first". A tautological test — written to match code that
+// already works, green on its first run — leaves no red record, so every cycle
+// check is silent. That is failure mode #11 in its most common form.
+//
+// mutation-smoke (G7) covers it from the other direction, but only inside an
+// /auto build (it early-returns on inAutoBuild), so /change, /vibe, /feature and
+// ordinary work have nothing.
+//
+// ADVISORY, and the reason is honest rather than timid: at the ledger level a
+// characterization pin-down is INDISTINGUISHABLE from a tautological test —
+// both are green-only by design (pinning-down-behavior Step 3 runs pins green
+// against unmodified code). Blocking would fail the legacy lane for following
+// its own skill. Surfacing "this test was never observed failing" is the honest
+// ceiling without a signal that separates intent.
+function neverRedFindings(events, newTestFiles) {
+  const everRed = new Set(
+    events.filter((e) => e.verdict === 'fail').flatMap((e) => e.test_files || [])
+  );
+  return [...new Set(newTestFiles)]
+    .filter((file) => !everRed.has(file))
+    .sort()
+    .map((file) => ({
+      kind: 'never-red-test',
+      file,
+      redSha: null,
+      advisory: true,
+      detail:
+        `${file} is newly added and was never observed failing, so nothing proves it CAN fail. ` +
+        'A test that passes on its first run may be asserting what the code already does rather ' +
+        'than what it should. Watch it fail once (break the code it covers), or accept it as a ' +
+        'characterization pin-down, which is green-first by design.',
+    }));
+}
+
 /**
  * Deliberately NOT scoped by task_id. Scoping by it made the gate a self-service
  * unlock: declaring a different task (or none) emptied the event set and every
  * cycle disappeared unchecked.
  *
  * @param {object[]} events red-phase ledger events
- * @returns {{kind, file, redSha, detail}[]} one finding per offending file
+ * @param {{newTestFiles?: string[]}} [opts] test files newly added in this commit
+ * @returns {{kind, file, redSha, detail, advisory?}[]} findings; `advisory: true`
+ *   ones are reported but must not block.
  */
-function integrityFindings(events) {
+function integrityFindings(events, opts) {
+  // A default parameter does not catch an explicit null, and this argument used
+  // to be a taskId — a stale caller passing null must not crash the gate.
+  const options = opts || {};
   const scoped = events || [];
   const files = [...new Set(scoped.flatMap((e) => e.test_files || []))].sort();
   const findings = [];
@@ -110,7 +151,7 @@ function integrityFindings(events) {
       }
     }
   }
-  return findings;
+  return [...findings, ...neverRedFindings(scoped, options.newTestFiles || [])];
 }
 
 module.exports = { integrityFindings, cyclesFor };

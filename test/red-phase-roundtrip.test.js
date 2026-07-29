@@ -140,7 +140,7 @@ test('test-integrity passes a clean red->green cycle and BLOCKS a weakened one',
 
   const { integrityFindings } = require('../.claude/hooks/lib/test-integrity');
   const { readLedger } = require('../.claude/hooks/lib/red-phase-ledger');
-  assert.deepStrictEqual(integrityFindings(readLedger(clean).events, null), []);
+  assert.deepStrictEqual(integrityFindings(readLedger(clean).events), []);
 
   // Now the tamper: the TEST changes between red and green, production does not.
   const dirty = fixtureRepo();
@@ -148,7 +148,7 @@ test('test-integrity passes a clean red->green cycle and BLOCKS a weakened one',
   fs.writeFileSync(path.join(dirty, 'tests', 'test_calc.py'), 'def test_add():\n    assert add(1, 2) == 0\n');
   observeRun(dirty, 'pytest tests/test_calc.py', GREEN_OUTPUT);
 
-  const findings = integrityFindings(readLedger(dirty).events, null);
+  const findings = integrityFindings(readLedger(dirty).events);
   assert.strictEqual(findings.length, 1, 'the weakened test must be caught');
   assert.strictEqual(findings[0].kind, 'test-changed-between-red-and-green');
   assert.strictEqual(findings[0].file, 'tests/test_calc.py');

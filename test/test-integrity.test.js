@@ -151,3 +151,58 @@ test('a pin-down cycle passes on hash equality alone, with no green-first rule',
   const events = [ev('pass', 'P'), ev('fail', 'P'), ev('pass', 'P')];
   assert.deepStrictEqual(integrityFindings(events), []);
 });
+
+// ------------------------------------------------------ never-red (advisory)
+//
+// THE RESIDUAL GAP this addresses, stated plainly: everything above proves "if a
+// test was red, it wasn't weakened to go green". None of it proves "every test
+// was red first". A tautological test — written to match code that already
+// works, passing on its very first run — produces no red record at all, so every
+// cycle check is silent. That is failure mode #11 in its most common form, and
+// neither independent review round raised it.
+//
+// mutation-smoke (G7) covers it from the other direction (a test that doesn't
+// bite leaves survivors), but only inside an /auto build — it early-returns on
+// inAutoBuild. /change, /vibe, /feature and ordinary work have nothing.
+//
+// ADVISORY, not blocking, and the reason is honest rather than cautious: at the
+// ledger level a characterization pin-down is INDISTINGUISHABLE from a
+// tautological test. Both are green-only by design (pinning-down-behavior Step 3
+// runs pins green against unmodified code). Blocking would fail the legacy lane
+// for doing exactly what its skill instructs. Surfacing the fact that a test was
+// never observed failing is the honest ceiling here.
+
+test('flags a new test file that was never observed failing', () => {
+  const events = [ev('pass', 'H1')];
+  const found = integrityFindings(events, { newTestFiles: [FILE] });
+  assert.strictEqual(found.length, 1);
+  assert.strictEqual(found[0].kind, 'never-red-test');
+  assert.strictEqual(found[0].advisory, true, 'must not block — pin-downs look identical');
+  assert.match(found[0].detail, /never observed failing/i);
+});
+
+test('does not flag a new test file that WAS observed failing', () => {
+  const events = [ev('fail', 'H1'), ev('pass', 'H1')];
+  assert.deepStrictEqual(integrityFindings(events, { newTestFiles: [FILE] }), []);
+});
+
+test('flags a new test file with no ledger record at all', () => {
+  const found = integrityFindings([ev('fail', 'X')], { newTestFiles: ['tests/brand_new.py'] });
+  assert.deepStrictEqual(found.map((f) => f.kind), ['never-red-test']);
+});
+
+test('says nothing about files that are not newly added', () => {
+  assert.deepStrictEqual(integrityFindings([ev('pass', 'H1')], { newTestFiles: [] }), []);
+  assert.deepStrictEqual(integrityFindings([ev('pass', 'H1')]), [], 'opts is optional');
+});
+
+// A blocking finding and an advisory one must stay separable, or the gate cannot
+// block on one while merely reporting the other.
+test('advisory findings are distinguishable from blocking ones', () => {
+  const events = [ev('fail', 'H1'), ev('pass', 'H2')]; // real tamper
+  const found = integrityFindings(events, { newTestFiles: ['tests/other_new.py'] });
+  const blocking = found.filter((f) => !f.advisory);
+  const advisory = found.filter((f) => f.advisory);
+  assert.deepStrictEqual(blocking.map((f) => f.kind), ['test-changed-between-red-and-green']);
+  assert.deepStrictEqual(advisory.map((f) => f.kind), ['never-red-test']);
+});

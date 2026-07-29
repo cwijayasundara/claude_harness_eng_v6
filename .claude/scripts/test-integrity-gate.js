@@ -30,8 +30,10 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const { readLedger } = require('../hooks/lib/red-phase-ledger');
 const { integrityFindings } = require('../hooks/lib/test-integrity');
+const { isTestFile } = require('../hooks/lib/tdd');
 
 const REPO = path.resolve(__dirname, '..', '..');
 const VERDICT_REL = path.join('specs', 'reviews', 'test-integrity.json');
@@ -66,13 +68,29 @@ function evaluate(root) {
   // No ledger = no evidence = nothing proved. Reported as vacuous rather than
   // dressed up as a pass; --strict makes it a failure.
   if (ledger.state === 'absent') return { pass: true, vacuous: true, reason: 'no-ledger', findings: [] };
-  const findings = integrityFindings(ledger.events);
+  const findings = integrityFindings(ledger.events, { newTestFiles: newTestFiles(root) });
+  // Advisory findings (never-red) are reported, never blocked on — a pin-down is
+  // indistinguishable from a tautological test at the ledger level.
+  const blocking = findings.filter((f) => !f.advisory);
   return {
-    pass: findings.length === 0,
+    pass: blocking.length === 0,
     vacuous: ledger.events.length === 0,
-    reason: findings.length ? 'findings' : 'clean',
+    reason: blocking.length ? 'findings' : 'clean',
     findings,
   };
+}
+
+// Test-shaped files ADDED by this commit; only those can be meaningfully "never
+// red", since an existing test predates the ledger.
+function newTestFiles(root) {
+  try {
+    const out = execFileSync('git', ['diff', '--cached', '--name-only', '--diff-filter=A'], {
+      cwd: root, encoding: 'utf8',
+    });
+    return String(out).split('\n').filter(Boolean).filter(isTestFile);
+  } catch (_) {
+    return [];
+  }
 }
 
 // A gate with no evidence has proved nothing. Saying so out loud is the whole
@@ -112,12 +130,15 @@ function main(argv) {
       findings: result.findings,
     });
   }
+  for (const f of (result.findings || []).filter((x) => x.advisory)) {
+    process.stdout.write(`NOTE test-integrity: ${f.detail}\n`);
+  }
   if (result.vacuous) return reportVacuous(strict);
   if (result.pass) {
     process.stdout.write('test-integrity OK: no test changed between its red and green runs.\n');
     return 0;
   }
-  return reportFindings(result.findings);
+  return reportFindings(result.findings.filter((f) => !f.advisory));
 }
 
 if (require.main === module) process.exit(main(process.argv.slice(2)));
