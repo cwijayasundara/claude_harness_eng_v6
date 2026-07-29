@@ -17,10 +17,10 @@
 const path = require('path');
 const fs = require('fs');
 const { resolveProjectDir, runHook, realResolve, isWriteInScope } = require('./lib/common');
-const { isHarnessRepo, machineryViolation } = require('./lib/trust-boundary');
+const { isHarnessRepo, machineryViolation, machineryAncestor } = require('./lib/trust-boundary');
 const { prefixCacheViolation, prefixCacheBlockMessage } = require('./lib/prefix-cache');
 const { isProtectedEnvFile } = require('./lib/secrets');
-const { extractWriteTargets } = require('./lib/bash-targets');
+const { extractWriteTargets, extractRemoveTargets } = require('./lib/bash-targets');
 const { checkGitSafety } = require('./lib/git-safety');
 const { forbiddenAction, loadEnvelope, pathAllowed } = require('./lib/task-envelope');
 const { lifecycleStatus, readLedger } = require('./lib/task-lifecycle');
@@ -146,6 +146,37 @@ function snapshotTestHashes(projectDir, command) {
   } catch (_) { /* observation only — never block a command over this */ }
 }
 
+// Deleting the file a gate reads is equivalent to rewriting it — and for a
+// state-backed gate it is strictly better for the attacker, because an absent
+// file reads as "nothing to check" rather than as tampering. `rm`, `mv <src>` and
+// `git restore` left no write target at all, so none of them were checked.
+//
+// Deliberately NARROWER than checkTarget: machinery, prompt-cache prefix and
+// protected env files only. No project-scope check, because removing something
+// outside the project is cleanup (`rm -rf /tmp/scratch`), not an escape — and no
+// envelope allowlist, because test deletion is already covered at commit time by
+// test-deletion-guard. Widening either would add friction without closing a hole.
+function checkRemoveTarget(projectDir, target, command, opts) {
+  if (isDeviceSink(target)) return;
+  const abs = path.isAbsolute(target) ? target : path.join(projectDir, target);
+  const resolved = realResolve(abs);
+  // Removing a CONTAINER removes what it contains, and the file patterns match
+  // only paths inside these directories — so `rm -rf .claude/hooks` matched
+  // nothing and defeated every file-level guard at once.
+  if (opts.protect && !opts.harness) {
+    const dir = machineryAncestor(realResolve(projectDir), resolved);
+    if (dir) {
+      block(
+        `BLOCKED: Bash removal of ${dir}/ — that directory holds harness machinery.\n` +
+        `(from: ${command})\n` +
+        'Deleting the gates is the same as rewriting them, and an absent gate reads as "nothing to check".\n' +
+        'Fix: a human removes machinery (HARNESS_PROTECT=off), or it lands in the harness repo and is re-scaffolded.\n'
+      );
+    }
+  }
+  checkProtectedTarget(projectDir, resolved, command, opts);
+}
+
 function activeEnvelope(projectDir) {
   const loaded = loadEnvelope(projectDir);
   if (loaded.state === 'absent') {
@@ -233,5 +264,11 @@ runHook('pre-bash-gate', (input) => {
   for (const target of extractWriteTargets(command)) {
     checkTarget(projectDir, target, command, opts);
   }
+  for (const target of extractRemoveTargets(command)) {
+    checkRemoveTarget(projectDir, target, command, opts);
+  }
+  // Last, and after every blocking check: this only OBSERVES (it records the
+  // pre-run test hashes for G41). A command that is about to be blocked should
+  // not leave a snapshot behind.
   snapshotTestHashes(projectDir, command);
 });

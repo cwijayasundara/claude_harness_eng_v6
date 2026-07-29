@@ -112,4 +112,70 @@ function extractWriteTargets(command) {
   return [...targets];
 }
 
-module.exports = { extractWriteTargets };
+// ---------------------------------------------------------------- removals
+//
+// The extractor above answers "what does this command WRITE". It never answered
+// "what does it REMOVE", which left the cheapest attack on a state-backed gate
+// completely invisible:
+//
+//   rm .claude/state/task-lifecycle.jsonl
+//   rm -rf .claude/git-hooks
+//   git checkout -- .claude/git-hooks/pre-commit
+//   mv .claude/state/task-envelope.json /tmp/x     (only /tmp/x was extracted)
+//
+// Deleting the evidence a gate reads is equivalent to rewriting it, and for a
+// ledger-backed control it is strictly better for the attacker: an absent file
+// reads as "nothing to check" rather than as tampering.
+//
+// SEPARATE from write targets on purpose. pre-bash-gate checks write targets for
+// project scope too, and routing removals through that would start blocking
+// `rm -rf /tmp/scratch` — large new friction for no security gain. Removals are
+// checked only against protected machinery.
+const REMOVE_HEADS = new Set(['rm', 'unlink', 'shred']);
+const MOVE_HEADS = new Set(['mv', 'rename']);
+// git subcommands that overwrite a working-tree path from the index or stash.
+const GIT_RESTORE_VERBS = new Set(['checkout', 'restore']);
+
+function gitRestoreTargets(rest) {
+  const verb = rest.find((t) => !isFlag(t));
+  if (!GIT_RESTORE_VERBS.has(verb)) return [];
+  const after = rest.slice(rest.indexOf(verb) + 1);
+  const sep = after.indexOf('--');
+  if (sep !== -1) return after.slice(sep + 1).filter((t) => !isFlag(t)).map(unquote);
+  // Without a `--` separator the two verbs differ, and conflating them either
+  // misses real overwrites or blocks ordinary branch work:
+  //   `git restore <path>`  — restore takes PATHS positionally (a ref goes in
+  //                           --source=), so a bare operand is a path.
+  //   `git checkout <x>`    — ambiguous: `git checkout main` and
+  //                           `git checkout -b feature` are branch operations,
+  //                           and guessing "path" would block everyday git.
+  if (verb !== 'restore') return [];
+  return after.filter((t) => !isFlag(t)).map(unquote);
+}
+
+function removalTargets(tokens) {
+  let i = 0;
+  while (i < tokens.length && (isEnvAssignment(tokens[i]) || tokens[i] === 'sudo' || tokens[i] === 'command')) i++;
+  const head = tokens[i];
+  if (!head) return [];
+  const rest = tokens.slice(i + 1);
+  const nonFlag = rest.filter((t) => !isFlag(t) && !isEnvAssignment(t)).map(unquote);
+
+  if (REMOVE_HEADS.has(head)) return nonFlag;
+  // A move REMOVES its sources; the destination is already a write target.
+  if (MOVE_HEADS.has(head)) return nonFlag.slice(0, -1);
+  if (head === 'git') return gitRestoreTargets(rest);
+  return [];
+}
+
+/** Paths a command deletes, moves away, or overwrites from git. */
+function extractRemoveTargets(command) {
+  if (typeof command !== 'string' || !command) return [];
+  const targets = new Set();
+  for (const seg of splitSegments(command)) {
+    for (const t of removalTargets(tokenize(seg))) targets.add(t);
+  }
+  return [...targets];
+}
+
+module.exports = { extractWriteTargets, extractRemoveTargets };

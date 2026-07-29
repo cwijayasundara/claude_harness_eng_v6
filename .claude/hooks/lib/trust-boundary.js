@@ -28,6 +28,26 @@ const MACHINERY = [
   /^\.claude\/state\/(coverage-baseline[^/]*|coverage-preflight-cache\.json|review-block-count|hook-errors\.(log|offset)|pending-reviews\.jsonl|risk-envelope\.json|task-envelope\.json|task-envelope-history\/.*|task-lifecycle\.jsonl|red-phase\.jsonl|task-completion-receipt\.json|autonomy-policy\.json|used-capabilities\/.*|credential-requests\/.*|checkpoints\/.*|current-checkpoint\.json|isolation-evidence\.json|unattended-preflight\.json)$/,
 ];
 
+// Directories whose CONTENTS are machinery. Needed because the patterns above
+// match paths *inside* these directories, so the directory itself matched
+// nothing — and `rm -rf .claude/hooks` (or `rm -rf .claude`) defeated every
+// file-level guard at once. Removing a container removes what it contains.
+//
+// Listed explicitly rather than derived from MACHINERY, because several of those
+// patterns are anchored on a specific filename (`...task-lifecycle\.jsonl$`) and
+// no probe path can recover the directory they live in.
+const MACHINERY_DIRS = [
+  '.claude',
+  '.claude/hooks',
+  '.claude/git-hooks',
+  '.claude/state',
+  '.claude/authority',
+  '.claude/trust',
+  '.claude/config',
+  '.claude/certification',
+  '.claude/scripts',
+];
+
 const HARNESS_PKG_NAME = 'claude-harness-eng-v5';
 
 function isHarnessRepo(projectDir) {
@@ -47,4 +67,15 @@ function machineryViolation(projectDir, filePath) {
   return MACHINERY.some((re) => re.test(rel)) ? rel : null;
 }
 
-module.exports = { isHarnessRepo, machineryViolation };
+/**
+ * The project-relative path when removing `dirPath` would remove machinery it
+ * CONTAINS, else null. Distinct from machineryViolation, which asks whether the
+ * path IS machinery.
+ */
+function machineryAncestor(projectDir, dirPath) {
+  const rel = path.relative(projectDir, dirPath).split(path.sep).join('/');
+  if (!rel || rel.startsWith('..')) return null; // outside the project
+  return MACHINERY_DIRS.includes(rel) ? rel : null;
+}
+
+module.exports = { isHarnessRepo, machineryViolation, machineryAncestor };
