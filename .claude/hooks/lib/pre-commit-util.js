@@ -151,7 +151,31 @@ function buildContext(projectDir) {
   return { projectDir, staged, stagedSource, stagedPy, stagedTs, stagedJs };
 }
 
+/**
+ * Test-shaped files ADDED by the staged commit. Lives here, next to
+ * stagedFiles(), because the G43 pre-commit gate and its CLI both need it and two
+ * copies would drift.
+ *
+ * `--diff-filter=A` excludes renames on purpose: a renamed test is not new — it
+ * had a red phase under its old path — and since the red-phase ledger is
+ * path-keyed, including R would flag every rename as never-red. A noisy advisory
+ * trains people to ignore it.
+ */
+function stagedNewTestFiles(projectDir, isTestFile) {
+  try {
+    const out = execFileSync('git', ['diff', '--cached', '--name-only', '--diff-filter=A'], {
+      cwd: projectDir,
+      encoding: 'utf8',
+      maxBuffer: GIT_MAX_BUFFER,
+    });
+    return out.split('\n').filter(Boolean).filter(isTestFile);
+  } catch (_) {
+    return []; // not a repo, nothing staged, or git unavailable
+  }
+}
+
 module.exports = {
+  stagedNewTestFiles,
   findWaiver,
   formatWaived,
   gitExec,

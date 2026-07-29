@@ -5,7 +5,7 @@
 // kernel commit gate does not require mutation-gate.
 
 const { runMutationOnFiles, renderSurvivors } = require('./mutation-gate');
-const { failBlock, noteSkip, inAutoBuild, gitExec } = require('./pre-commit-util');
+const { failBlock, noteSkip, inAutoBuild, stagedNewTestFiles } = require('./pre-commit-util');
 const { isTestFile } = require('./tdd');
 const { readLedger } = require('./red-phase-ledger');
 const { integrityFindings } = require('./test-integrity');
@@ -45,19 +45,6 @@ function blockInvalidLedger(ledger) {
   });
 }
 
-// Test-shaped files ADDED by this commit. Only new files can be "never red" in a
-// way worth reporting — an existing test predates the ledger.
-function newTestFiles(ctx) {
-  try {
-    return String(gitExec(ctx.projectDir, ['diff', '--cached', '--name-only', '--diff-filter=A']))
-      .split('\n')
-      .filter(Boolean)
-      .filter(isTestFile);
-  } catch (_) {
-    return [];
-  }
-}
-
 function checkTestIntegrity(ctx) {
   const { projectDir } = ctx;
   if ((process.env.HARNESS_TEST_INTEGRITY_GATE || '').toLowerCase() === 'off') return;
@@ -65,7 +52,7 @@ function checkTestIntegrity(ctx) {
   if (ledger.state === 'absent') return; // nothing observed yet
   if (ledger.state === 'invalid') return blockInvalidLedger(ledger);
 
-  const findings = integrityFindings(ledger.events, { newTestFiles: newTestFiles(ctx) });
+  const findings = integrityFindings(ledger.events, { newTestFiles: stagedNewTestFiles(projectDir, isTestFile) });
   // Advisory findings (never-red) are surfaced but never blocked on: a pin-down
   // is indistinguishable from a tautological test at the ledger level.
   for (const f of findings.filter((x) => x.advisory)) {
