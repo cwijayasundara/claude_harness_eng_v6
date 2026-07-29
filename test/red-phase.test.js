@@ -246,3 +246,26 @@ test('parseCommand reports positional scope paths, so a subset run is not a whol
   // Flags and their values are not scope.
   assert.deepStrictEqual(parseCommand('pytest -q --maxfail 2').scopePaths, []);
 });
+
+// Self-review after round 2. jest reports suite-level and test-level failures on
+// SEPARATE lines, and the fail signature keyed on `Tests:` never matched
+// `Test Suites:`. A suite that failed to compile while other tests passed was
+// therefore read as a clean pass — which closes a red->green cycle, releases the
+// lock, and makes G43 compare the file against itself.
+test('jest: a failed SUITE is a failure even when the tests that ran passed', () => {
+  const text = 'Test Suites: 1 failed, 1 passed, 2 total\nTests:       3 passed, 3 total';
+  assert.strictEqual(parseVerdict('jest', text), 'fail');
+});
+
+test('jest: an all-green run is still a pass', () => {
+  const text = 'Test Suites: 2 passed, 2 total\nTests:       9 passed, 9 total';
+  assert.strictEqual(parseVerdict('jest', text), 'pass');
+});
+
+// The conservative direction is deliberate elsewhere: a runner that could not
+// run (collection error, no test files) is env-broken and recorded as nothing,
+// never as a pass. Not arming is safe; a false green is not.
+test('a runner that could not run is env-broken, never a pass', () => {
+  assert.strictEqual(parseVerdict('pytest', '===== 1 error in 0.53s ====='), 'env-broken');
+  assert.strictEqual(parseVerdict('vitest', 'No test files found, exiting with code 1'), 'env-broken');
+});

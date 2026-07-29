@@ -168,7 +168,11 @@ function parseCommand(command) {
 const SIGNATURES = {
   pytest: [/\bFAILED\b|\b\d+ failed\b|\berror\b.*\bcollecting\b/i, /\b\d+ passed\b/i],
   vitest: [/^\s*FAIL\b|\bfailed\b\s*\(/im, /\bpassed\b/i],
-  jest: [/^\s*FAIL\b|Tests:.*\bfailed\b/im, /Tests:.*\bpassed\b|\bpassed\b/i],
+  // `Test Suites:` is a SEPARATE line from `Tests:`, and a suite that fails to
+  // compile reports `Test Suites: 1 failed` while `Tests:` shows only the ones
+  // that ran — all passing. Keying the failure on `Tests:` alone read that as a
+  // clean pass, closing a red->green cycle on a run that never executed the test.
+  jest: [/^\s*FAIL\b|Tests?(?: Suites)?:.*\bfailed\b/im, /Tests:.*\bpassed\b|\bpassed\b/i],
   'node-test': [/^[ℹ#]\s*fail\s+[1-9]/im, /^[ℹ#]\s*fail\s+0\b/im],
   'go-test': [/^(?:FAIL|---\s*FAIL)\b/im, /^ok\b|\bPASS\b/im],
 };
