@@ -154,6 +154,25 @@ test('test-integrity passes a clean red->green cycle and BLOCKS a weakened one',
   assert.strictEqual(findings[0].file, 'tests/test_calc.py');
 });
 
+// The ledger IS the control. An agent that can rewrite or blank it can unlock
+// every test, so it belongs to the same protected-machinery class as its direct
+// peer .claude/state/task-lifecycle.jsonl — which was already listed while this
+// file was not.
+test('the red-phase ledger is protected machinery, like task-lifecycle.jsonl', () => {
+  const { machineryViolation } = require('../.claude/hooks/lib/trust-boundary');
+  const root = REPO;
+  const protectedPaths = [
+    path.join(root, '.claude', 'state', 'red-phase.jsonl'),
+    path.join(root, '.claude', 'state', 'task-lifecycle.jsonl'), // the precedent
+  ];
+  for (const p of protectedPaths) {
+    assert.ok(machineryViolation(root, p), `${p} must be protected machinery`);
+  }
+  // Ordinary state is still writable — this must not over-reach into a blanket
+  // .claude/state/ lock, which would break every gate that ratchets a baseline.
+  assert.strictEqual(machineryViolation(root, path.join(root, '.claude', 'state', 'current-lane')), null);
+});
+
 test('an env-broken run never arms the lock', () => {
   const root = fixtureRepo();
   observeRun(root, 'pytest tests/test_calc.py', 'bash: pytest: command not found');

@@ -25,7 +25,7 @@ const MACHINERY = [
   /^\.claude\/authority\//,
   /^\.claude\/certification\/security-boundary\.json$/,
   /^\.claude\/config\/autonomy-policy\.json$/,
-  /^\.claude\/state\/(coverage-baseline[^/]*|coverage-preflight-cache\.json|review-block-count|hook-errors\.(log|offset)|pending-reviews\.jsonl|risk-envelope\.json|task-envelope\.json|task-envelope-history\/.*|task-lifecycle\.jsonl|task-completion-receipt\.json|autonomy-policy\.json|used-capabilities\/.*|credential-requests\/.*|checkpoints\/.*|current-checkpoint\.json|isolation-evidence\.json|unattended-preflight\.json)$/,
+  /^\.claude\/state\/(coverage-baseline[^/]*|coverage-preflight-cache\.json|review-block-count|hook-errors\.(log|offset)|pending-reviews\.jsonl|risk-envelope\.json|task-envelope\.json|task-envelope-history\/.*|task-lifecycle\.jsonl|red-phase\.jsonl|task-completion-receipt\.json|autonomy-policy\.json|used-capabilities\/.*|credential-requests\/.*|checkpoints\/.*|current-checkpoint\.json|isolation-evidence\.json|unattended-preflight\.json)$/,
 ];
 
 const HARNESS_PKG_NAME = 'claude-harness-eng-v5';
