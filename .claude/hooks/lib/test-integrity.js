@@ -106,6 +106,12 @@ function findingFor(file, red, green) {
 // its own skill. Surfacing "this test was never observed failing" is the honest
 // ceiling without a signal that separates intent.
 function neverRedFindings(events, newTestFiles) {
+  // "Never observed failing" is trivially true when nothing was observed at all.
+  // An empty ledger accused every newly-added test file, which on the first
+  // commits after wiring the recorder is a wall of notes about files it simply had
+  // not seen yet — and an advisory that cries wolf on day one is one people learn
+  // to skip. No evidence means no accusation.
+  if (!events.length) return [];
   const everRed = new Set(
     events.filter((e) => e.verdict === 'fail').flatMap((e) => e.test_files || [])
   );

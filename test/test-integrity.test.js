@@ -206,3 +206,18 @@ test('advisory findings are distinguishable from blocking ones', () => {
   assert.deepStrictEqual(blocking.map((f) => f.kind), ['test-changed-between-red-and-green']);
   assert.deepStrictEqual(advisory.map((f) => f.kind), ['never-red-test']);
 });
+
+// Self-review after round 3 (its reviewer died twice on server errors). "Never
+// observed failing" is TRIVIALLY true when nothing was observed at all, so an
+// empty ledger accused every newly-added test file. Two commits after wiring the
+// recorder that is a wall of notes about files it simply had not seen yet — and an
+// advisory that cries wolf on day one is an advisory people learn to skip.
+test('an empty ledger accuses nothing — vacuous evidence is not a finding', () => {
+  const found = integrityFindings([], { newTestFiles: ['tests/a_test.py', 'tests/b_test.py'] });
+  assert.deepStrictEqual(found, []);
+});
+
+test('once the ledger has ANY evidence, never-red applies again', () => {
+  const found = integrityFindings([ev('fail', 'X')], { newTestFiles: ['tests/b_test.py'] });
+  assert.deepStrictEqual(found.map((f) => f.kind), ['never-red-test']);
+});
