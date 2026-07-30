@@ -151,3 +151,68 @@ test('render surfaces decisive verdicts and prompts the subtractive test for the
   const outNoVerdict = render(outcomes, 20);
   assert.match(outNoVerdict, /sensor-withhold\.js record/, 'a candidate without a verdict must show how to run the test');
 });
+
+// --- crash recency ----------------------------------------------------------
+// An append-only ledger has no notion of "still broken". Both G41-G43 sensors
+// crashed once during development and were fixed minutes later, yet the meter
+// kept reporting them as "the control CRASHED ... it is not running at all" —
+// and, worse, quarantined them out of every other bucket for good. A permanent
+// alarm for a fixed fault is an alarm the operator learns to ignore.
+
+test('tally tracks when a sensor last crashed and when it last ran clean', () => {
+  const stats = tally([
+    row('flappy', { ts: 100, errored: true }),
+    row('flappy', { ts: 200 }),
+  ]);
+  const s = stats.get('flappy');
+  assert.strictEqual(s.errored, 1, 'the crash still counts — history is not erased');
+  assert.strictEqual(s.lastErroredTs, 100);
+  assert.strictEqual(s.lastCleanTs, 200);
+});
+
+test('a sensor that ran clean after its last crash is not reported as errored', () => {
+  const c = classify(tally([
+    row('recovered', { ts: 100, errored: true }),
+    row('recovered', { ts: 200 }),
+  ]));
+  assert.ok(!c.errored.some((e) => e.startsWith('recovered')),
+    'a fault fixed after the crash must not alarm forever');
+  assert.ok(c.recovered.some((e) => e.startsWith('recovered')),
+    'but the history stays visible — a crash must never become invisible');
+});
+
+test('a sensor whose most recent outcome is a crash is still reported as errored', () => {
+  const c = classify(tally([
+    row('broken', { ts: 100 }),
+    row('broken', { ts: 200, errored: true }),
+  ]));
+  assert.ok(c.errored.some((e) => e.startsWith('broken')), 'still crashing → still an alarm');
+  assert.ok(!c.recovered.some((e) => e.startsWith('broken')));
+});
+
+test('a recovered sensor rejoins the ordinary buckets instead of staying quarantined', () => {
+  // The old code filtered every errored row out of `healthy`, so a sensor that
+  // crashed once was excluded from never-blocked/proven-live/removable forever.
+  const c = classify(tally([
+    row('recovered', { ts: 100, errored: true }),
+    row('recovered', { ts: 200 }),
+    row('recovered', { ts: 300 }),
+  ]));
+  assert.ok(c.neverBlocked.includes('recovered'),
+    'once recovered it is judged on its merits again');
+});
+
+test('render separates a live crash from a healed one', () => {
+  const healed = render([
+    row('recovered', { ts: 100, errored: true, surface: 'session' }),
+    row('recovered', { ts: 200, surface: 'session' }),
+  ], 2);
+  assert.match(healed, /RECOVERED[^\n]*recovered/);
+  assert.doesNotMatch(healed, /ERRORED \(the control CRASHED[^\n]*recovered/);
+
+  const live = render([
+    row('broken', { ts: 100, surface: 'session' }),
+    row('broken', { ts: 200, errored: true, surface: 'session' }),
+  ], 2);
+  assert.match(live, /ERRORED \(the control CRASHED[^\n]*broken/);
+});

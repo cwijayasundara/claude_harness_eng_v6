@@ -222,3 +222,74 @@ test('a crashing hook announces itself on stderr rather than dying mute', () => 
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// --- a crash channel that never reports success can never heal ---------------
+// runHook recorded a hook-level row only on crash. So once a hook crashed, its id
+// sat in the value meter's ERRORED bucket permanently: there was no clean run to
+// compare against, and "has it run since?" was unanswerable. pre-bash-gate crashed
+// once on 2026-07-29, was fixed two minutes later, and still reported as "not
+// running at all". Recording the clean path too makes the hook a real sensor —
+// recoverable, and visible when it stops being invoked at all.
+
+function healthyHook(dir) {
+  const file = path.join(dir, 'healthy.js');
+  fs.writeFileSync(file, `
+    const { runHook } = require(${JSON.stringify(COMMON)});
+    runHook('healthy', () => {});
+  `);
+  return file;
+}
+
+test('a clean hook run records a non-errored outcome', () => {
+  const dir = tempProject();
+  try {
+    runHookScript(healthyHook(dir), dir);
+    const rows = readOutcomes(dir).filter((r) => r.sensor === 'healthy');
+    assert.strictEqual(rows.length, 1, 'a successful hook run must leave a ledger row');
+    assert.strictEqual(rows[0].ran, true);
+    assert.strictEqual(rows[0].blocked, false);
+    assert.strictEqual(rows[0].errored, undefined, 'a clean run is not a crash');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a hook that crashed and then ran clean is recoverable, not permanently errored', () => {
+  const dir = tempProject();
+  try {
+    // Same sensor id crashing then succeeding — the pre-bash-gate timeline.
+    const file = path.join(dir, 'flappy.js');
+    const body = (throws) => `
+      const { runHook } = require(${JSON.stringify(COMMON)});
+      runHook('flappy', () => { ${throws ? "throw new Error('boom');" : ''} });
+    `;
+    fs.writeFileSync(file, body(true));
+    runHookScript(file, dir);
+    fs.writeFileSync(file, body(false));
+    runHookScript(file, dir);
+
+    const rows = readOutcomes(dir).filter((r) => r.sensor === 'flappy');
+    assert.strictEqual(rows.length, 2, 'both the crash and the recovery are recorded');
+    assert.strictEqual(rows[0].errored, true);
+    assert.strictEqual(rows[1].errored, undefined);
+    assert.ok(rows[1].ts >= rows[0].ts, 'the clean run must be dateable as the later one');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('an empty-stdin invocation still records nothing at all', () => {
+  // The clean-path row must not fire for a fixture/manual run either, or every
+  // test run forges hundreds of phantom "healthy" outcomes.
+  const dir = tempProject();
+  try {
+    const file = healthyHook(dir);
+    execFileSync(process.execPath, [file], {
+      input: '', env: { ...process.env, CLAUDE_PROJECT_DIR: dir },
+      encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    assert.deepStrictEqual(readOutcomes(dir).filter((r) => r.sensor === 'healthy'), []);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

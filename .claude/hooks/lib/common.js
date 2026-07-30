@@ -91,14 +91,37 @@ function readHookInputAsync(timeoutMs = 4000) {
   });
 }
 
+// A hook-level id that is only ever written on crash can never be seen to heal:
+// the value meter has no clean run to compare the crash against, so a fault fixed
+// minutes later still reads as "not running at all" forever. Recording the clean
+// path too makes the hook a real sensor — it can recover, and a hook that stops
+// being invoked becomes visible instead of just going quiet.
+function recordClean(hookName, elapsedMs) {
+  try {
+    const projectDir = resolveProjectDir(path.dirname(__dirname));
+    // Lazy, for the same reason persistFailure is: a telemetry bug must not be
+    // able to break hook startup.
+    require('./sensor-outcomes').recordOutcome(projectDir, {
+      sensor: hookName, ran: true, blocked: false, surface: 'session', elapsedMs,
+    });
+  } catch (_) {
+    /* observation only — never fail a passing hook over its own bookkeeping */
+  }
+}
+
 // Uniform hook entry point: read the event (bounded) and run the handler with a
 // GUARANTEED fail-open — any read timeout, parse error, or handler throw is
 // logged and the process still exits 0, because a broken hook must never block
-// the tool it guards. A handler that means to BLOCK calls process.exit(2) itself.
+// the tool it guards. A handler that means to BLOCK calls process.exit(2) itself,
+// so a block never reaches recordClean.
+//
+// No event on stdin throws EMPTY_HOOK_INPUT before the handler runs, so a fixture
+// or manual invocation cannot forge a clean outcome either — see reportFailure.
 function runHook(hookName, handler) {
+  const started = Date.now();
   readHookInputAsync()
     .then((input) => Promise.resolve(handler(input)))
-    .then(() => process.exit(0))
+    .then(() => { recordClean(hookName, Date.now() - started); process.exit(0); })
     .catch((err) => {
       reportFailure(hookName, err);
       process.exit(0);
