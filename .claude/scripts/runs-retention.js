@@ -2,20 +2,39 @@
 
 'use strict';
 
-// Prune old harness runtime churn under .claude/runs/ and .claude/state/archive/.
+// Prune old harness runtime churn under .claude/runs/ and .claude/state/.
 // Project Zero Phase 2: keep dogfood history bounded without deleting active state.
 //
 // Usage:
 //   node .claude/scripts/runs-retention.js [--root path] [--runs-days N] [--archive-days N]
-//                                         [--dry-run]
+//                                         [--cache-days N] [--dry-run]
 //
-// Defaults: runs 14 days, archive 30 days. Exit 0 always (best-effort hygiene).
+// Defaults: runs 14 days, archive 30 days, transient caches 7 days.
+// Exit 0 always (best-effort hygiene).
 
 const fs = require('fs');
 const path = require('path');
 
 const DEFAULT_RUNS_DAYS = 14;
 const DEFAULT_ARCHIVE_DAYS = 30;
+// context-cache / tool-output are regenerated on demand — a short window is enough.
+const DEFAULT_CACHE_DAYS = 7;
+
+/**
+ * Every directory of harness churn that has a retention policy.
+ *
+ * context-cache and tool-output are listed here because they had none: they
+ * reached 86MB unbounded. context-cache entries are named by content hash
+ * ("bc2be0c7ad3617e8.raw") with no date anywhere in the name, so they can only
+ * be aged by mtime — a name-only rule would prune nothing and still report
+ * success.
+ */
+const RETENTION_DIRS = Object.freeze([
+  { label: 'runs', rel: ['.claude', 'runs'], daysFlag: '--runs-days', defaultDays: DEFAULT_RUNS_DAYS },
+  { label: 'archive', rel: ['.claude', 'state', 'archive'], daysFlag: '--archive-days', defaultDays: DEFAULT_ARCHIVE_DAYS },
+  { label: 'context-cache', rel: ['.claude', 'state', 'context-cache'], daysFlag: '--cache-days', defaultDays: DEFAULT_CACHE_DAYS },
+  { label: 'tool-output', rel: ['.claude', 'state', 'tool-output'], daysFlag: '--cache-days', defaultDays: DEFAULT_CACHE_DAYS },
+]);
 
 // Daily run ledgers: 2026-07-10.jsonl
 const RUN_DAY_RE = /^(\d{4}-\d{2}-\d{2})\.jsonl$/;
@@ -113,39 +132,51 @@ function pruneDir(dir, keepDays, now, { dryRun, preferName }) {
   return deleted;
 }
 
+/** Resolve each spec's window from argv and prune it. */
+function pruneAll(root, argv, now, dryRun) {
+  return RETENTION_DIRS.map((spec) => {
+    const days = Math.max(
+      1,
+      parseInt(arg(argv, spec.daysFlag, String(spec.defaultDays)), 10) || spec.defaultDays
+    );
+    // Aged by name where the name carries a date, by mtime where it does not
+    // (see RETENTION_DIRS) — preferName:true selects exactly that.
+    const deleted = pruneDir(path.join(root, ...spec.rel), days, now, { dryRun, preferName: true });
+    return { label: spec.label, days, deleted };
+  });
+}
+
+function report(results, dryRun) {
+  const mode = dryRun ? 'dry-run' : 'deleted';
+  const summary = results
+    .map((r) => `${r.label} ${r.deleted.length} file(s) older than ${r.days}d`)
+    .join('; ');
+  process.stdout.write(`runs-retention (${mode}): ${summary}.\n`);
+  if (!dryRun) return;
+  for (const r of results) {
+    for (const n of r.deleted.slice(0, 10)) {
+      process.stdout.write(`  would delete ${r.label}/${n}\n`);
+    }
+    if (r.deleted.length > 10) {
+      process.stdout.write(`  … ${r.deleted.length - 10} more ${r.label}\n`);
+    }
+  }
+}
+
 function main(argv = process.argv.slice(2)) {
   const root = path.resolve(arg(argv, '--root', process.cwd()));
-  const runsDays = Math.max(1, parseInt(arg(argv, '--runs-days', String(DEFAULT_RUNS_DAYS)), 10) || DEFAULT_RUNS_DAYS);
-  const archiveDays = Math.max(1, parseInt(arg(argv, '--archive-days', String(DEFAULT_ARCHIVE_DAYS)), 10) || DEFAULT_ARCHIVE_DAYS);
   const dryRun = hasFlag(argv, '--dry-run');
-  const now = new Date();
-
-  const runsDir = path.join(root, '.claude', 'runs');
-  const archiveDir = path.join(root, '.claude', 'state', 'archive');
-
-  const runsDeleted = pruneDir(runsDir, runsDays, now, { dryRun, preferName: true });
-  // Archive files are mostly timestamped telemetry; use mtime when name has no day
-  const archiveDeleted = pruneDir(archiveDir, archiveDays, now, { dryRun, preferName: true });
-
-  const mode = dryRun ? 'dry-run' : 'deleted';
-  process.stdout.write(
-    `runs-retention (${mode}): runs ${runsDeleted.length} file(s) older than ${runsDays}d; ` +
-      `archive ${archiveDeleted.length} file(s) older than ${archiveDays}d.\n`
-  );
-  if (dryRun && (runsDeleted.length || archiveDeleted.length)) {
-    for (const n of runsDeleted.slice(0, 20)) process.stdout.write(`  would delete runs/${n}\n`);
-    if (runsDeleted.length > 20) process.stdout.write(`  … ${runsDeleted.length - 20} more runs\n`);
-    for (const n of archiveDeleted.slice(0, 10)) process.stdout.write(`  would delete archive/${n}\n`);
-    if (archiveDeleted.length > 10) process.stdout.write(`  … ${archiveDeleted.length - 10} more archive\n`);
-  }
+  report(pruneAll(root, argv, new Date(), dryRun), dryRun);
   process.exit(0);
 }
 
 module.exports = {
   isStaleByName,
   planDeletes,
+  RETENTION_DIRS,
   DEFAULT_RUNS_DAYS,
   DEFAULT_ARCHIVE_DAYS,
+  DEFAULT_CACHE_DAYS,
 };
 
 if (require.main === module) main();
