@@ -4,7 +4,7 @@
 > design-touching story) when `specs/design/` already holds an approved
 > baseline. **Never regenerates `specs/design/` from scratch** — it reads the
 > living design as the baseline and writes a non-destructive amendment. See
-> `docs/superpowers/specs/2026-07-04-sprint-delta-lane-design.md`.
+> `docs/archive/superpowers/specs/2026-07-04-sprint-delta-lane-design.md`.
 
 ### Prerequisites (delta mode only)
 

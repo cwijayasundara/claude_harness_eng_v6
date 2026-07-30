@@ -150,7 +150,7 @@ function copyScaffoldTree(src, target, profileName) {
 
 // Copy a locally-bundled framework-skill-pack's skills into <target>/.claude/skills,
 // per project-manifest.json#framework_skill_packs (Expert-Generalist scaffold
-// composition, docs/superpowers/specs/2026-07-06-expert-generalist-scaffold-composition-design.md).
+// composition, docs/archive/superpowers/specs/2026-07-06-expert-generalist-scaffold-composition-design.md).
 // "source":"github" packs (langchain, google-adk) are untouched here — those stay
 // manual-install-only via install-framework-packs, as today.
 function copyFrameworkPackSkills(pluginSource, target, frameworkSkillPacks) {

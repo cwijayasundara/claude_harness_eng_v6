@@ -12,7 +12,7 @@ grounds the new PRD against the prior sprint's requirement spine, amends the
 living `specs/design/` baseline instead of replacing it, and gates code
 generation on a human-reviewable diff of the design amendment — never a
 regenerated document. See
-`docs/superpowers/specs/2026-07-04-sprint-delta-lane-design.md` for the full
+`docs/archive/superpowers/specs/2026-07-04-sprint-delta-lane-design.md` for the full
 design rationale.
 
 Use `/build` for sprint 1 (no existing code or specs). Use `/feature` for a

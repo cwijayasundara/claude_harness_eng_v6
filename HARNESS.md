@@ -2,7 +2,7 @@
 
 > **Agent = Model + Harness.** The model writes code; the *harness* is everything around it that makes the output trustworthy: **guides** that steer before it acts, **sensors** that detect after it acts, and a human **steering loop** that improves both over time.
 >
-> This file is the registry of that control system. Its machine-readable companion is [`harness-manifest.json`](harness-manifest.json) — the single source of truth for *what governs what* and *where the holes are*. The gap roadmap lives in [`docs/internal/HARNESS_ENGINEERING_GAP_ANALYSIS.md`](docs/internal/HARNESS_ENGINEERING_GAP_ANALYSIS.md).
+> This file is the registry of that control system. Its machine-readable companion is [`harness-manifest.json`](harness-manifest.json) — the single source of truth for *what governs what* and *where the holes are*. The gap roadmap lives in [`docs/archive/internal/HARNESS_ENGINEERING_GAP_ANALYSIS.md`](docs/archive/internal/HARNESS_ENGINEERING_GAP_ANALYSIS.md).
 >
 > Framing follows Thoughtworks/Fowler *Harness Engineering for Coding Agents* and *Maintainability Sensors for Coding Agents*.
 >
@@ -84,7 +84,7 @@ Every sensor and guide in this registry earns its keep, and this file's doctrine
 *gaps are explicit; wire a control so it joins the loop* — is purely **additive**.
 That was the whole problem: for months every gap analysis argued to *add*, nothing
 ever argued to *subtract*, and a detailed 2026-06-10 cut-to-half proposal
-(`docs/internal/SIMPLIFICATION_PROPOSAL.md`) partially executed and was then
+(`docs/archive/internal/SIMPLIFICATION_PROPOSAL.md`) partially executed and was then
 overwhelmed by accretion in five weeks (27→45 skills, 22→69 hook files). The harness
 ratchets *product* code (coverage, cycles, coupling, length, perf) one way — better —
 but had **no ratchet on its own size**.

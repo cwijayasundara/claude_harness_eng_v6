@@ -3,7 +3,7 @@
 'use strict';
 
 // Deterministic install-status report for domain-vertical plugins, read by
-// /scaffold's own Step 10 reporting (docs/superpowers/specs/2026-07-06-
+// /scaffold's own Step 10 reporting (docs/archive/superpowers/specs/2026-07-06-
 // expert-generalist-scaffold-composition-design.md, Part 3). Deliberately
 // separate from install-framework-packs — that skill's identity is scoped to
 // npx-skills-add-installed tech packs; verticals are Claude Code marketplace

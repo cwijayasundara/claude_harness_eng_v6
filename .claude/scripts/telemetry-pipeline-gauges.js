@@ -5,7 +5,7 @@
 // /status CLI, and the push path all share one source of truth. Returns
 // Prometheus text lines that pushSnapshot appends to its body — emitted ONLY
 // when real data exists, so a fresh project still pushes an empty body.
-// See docs/internal/PIPELINE_PROGRESS_PROPOSAL_2026-06-21.md §3 Part B.
+// See docs/archive/internal/PIPELINE_PROGRESS_PROPOSAL_2026-06-21.md §3 Part B.
 
 const { buildSnapshot } = require('./pipeline-snapshot');
 

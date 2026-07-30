@@ -3,7 +3,7 @@
 'use strict';
 
 // Deterministic evidence extraction for the ubiquitous-language glossary
-// (docs/superpowers/specs/2026-07-05-ubiquitous-language-design.md), generalized
+// (docs/archive/superpowers/specs/2026-07-05-ubiquitous-language-design.md), generalized
 // from the private-equity-only pe-glossary-pack.js (2026-07-06) into a
 // registry-driven engine: any vertical plugin registered in
 // .claude/config/scaffold-packs.json (verticalPacks) is a config entry, not a new

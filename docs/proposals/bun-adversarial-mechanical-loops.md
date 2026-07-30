@@ -7,7 +7,7 @@
 **Related (already shipped from the same case study):**  
 - **G31** — zero tests skipped/deleted (`test-deletion-gate.js`)  
 - **G32** — canary-first mechanical rollout on `/refactor` and `upgrading-dependencies`  
-**Related (control-system baseline):** `HARNESS.md`, `docs/internal/HARNESS_ENGINEERING_GAP_ANALYSIS.md`, Devin-parity dual/majority re-verify on `/gate` security boundary (2026-07-09).
+**Related (control-system baseline):** `HARNESS.md`, `docs/archive/internal/HARNESS_ENGINEERING_GAP_ANALYSIS.md`, Devin-parity dual/majority re-verify on `/gate` security boundary (2026-07-09).
 
 ---
 
@@ -597,7 +597,7 @@ Bun’s lesson is a **control-system** lesson:
 
 This scaffold already owns writer/grader separation, behaviour oracles, and two Bun-derived gates (G31/G32). Phase A closes the **review and process** gap every autonomous run can use. Phase B unlocks **mass mechanical** work without inventing a second product. Phase C stays demand-driven.
 
-**Next step after design approval:** superpowers-style implementation plan for Phase A only (`docs/superpowers/plans/…`), task-split with wiring tests first, then scripts, then skill text, then registry updates.
+**Next step after design approval:** superpowers-style implementation plan for Phase A only (`docs/archive/superpowers/plans/…`), task-split with wiring tests first, then scripts, then skill text, then registry updates.
 
 ---
 
@@ -609,4 +609,4 @@ This scaffold already owns writer/grader separation, behaviour oracles, and two 
 - `.claude/agents/code-reviewer.md` — fresh-context review contract  
 - `.claude/workflows/README.md` — dynamic workflow slot (empty by design)  
 - `docs/proposals/context-first-navigation.md` — proposal format / phased delivery precedent  
-- `docs/superpowers/plans/2026-07-09-devin-parity-hardening.md` — majority re-verify + learned-rules propagation precedent  
+- `docs/archive/superpowers/plans/2026-07-09-devin-parity-hardening.md` — majority re-verify + learned-rules propagation precedent  

@@ -96,7 +96,7 @@ function tokenGovernorBlock() {
 }
 
 // Auto-attaches tech-stack specialty packs based on the chosen stack, additive
-// to whatever the user explicitly picked (docs/superpowers/specs/2026-07-07-
+// to whatever the user explicitly picked (docs/archive/superpowers/specs/2026-07-07-
 // python-react-specialty-pack-design.md). Must be the single place this
 // derivation happens — both the manifest (below) and the actual skill copy
 // (scaffold-apply.js) call this same function, so what gets recorded and what

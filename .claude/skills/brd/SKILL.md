@@ -34,7 +34,7 @@ This is the first gate in the SDLC pipeline, and the origin of the whole groundi
 > **prior sprint's approved requirement spine**, not against nothing — this is
 > what proves the new PRD's requirements are new/changed/carried, and flags
 > anything it silently drops. See
-> `docs/superpowers/specs/2026-07-04-sprint-delta-lane-design.md`.
+> `docs/archive/superpowers/specs/2026-07-04-sprint-delta-lane-design.md`.
 
 ### Step Δ0 — Locate the prior spine and resolve N
 

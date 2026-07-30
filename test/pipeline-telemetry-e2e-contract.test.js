@@ -8,7 +8,7 @@
 //      their receipts live via the record-run hook (same path as production);
 //   2. the build+observability e2e ASSERTS the build's own receipts landed in
 //      Prometheus (harness_conversation_turns_total), not just phase_eval.
-// See docs/internal/PIPELINE_PROGRESS_PROPOSAL_2026-06-21.md §3 Part B.
+// See docs/archive/internal/PIPELINE_PROGRESS_PROPOSAL_2026-06-21.md §3 Part B.
 
 const assert = require('assert');
 const fs = require('fs');

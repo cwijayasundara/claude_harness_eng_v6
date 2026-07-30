@@ -3,7 +3,7 @@
 **Date:** 2026-07-11  
 **Status:** Design proposal — **P0–P2 + follow-ons implemented** (pack v2, Iron Law across change/implement/generator, receipt/advisor including unconstrained search, nav-query, TF-IDF + inverted graph index, co-change, concept pages, MCP, telemetry, **deterministic lean brownfield maps**, **nav-bench golden queries**, wiki concept links). Disposable analysis artifact — not run through the SDLC pipeline. SQLite store still optional (non-goal until measured need).  
 **Trigger:** Review of living DeepWiki/code-map vs Devin DeepWiki, Cursor hybrid RAG, and open code-graph MCPs. Goal: cut token burn on ambiguous queries without replacing the deterministic DAG.  
-**Supersedes / extends:** `docs/internal/DEEPWIKI_BROWNFIELD_PROPOSAL_2026-06-21.md` (§3.3 retrieval), `docs/token-usage-optimizer-design.md` (§2 Context Access Optimizer — design ahead of implementation).
+**Supersedes / extends:** `docs/archive/internal/DEEPWIKI_BROWNFIELD_PROPOSAL_2026-06-21.md` (§3.3 retrieval), `docs/token-usage-optimizer-design.md` (§2 Context Access Optimizer — design ahead of implementation).
 
 ---
 
@@ -507,7 +507,7 @@ That is the Devin/Cursor lesson without abandoning the deterministic control pla
 ## Sources (internal)
 
 - Review conversation 2026-07-11 (code-map / DeepWiki vs Devin, Cursor, CodeGraph)  
-- `docs/internal/DEEPWIKI_BROWNFIELD_PROPOSAL_2026-06-21.md`  
+- `docs/archive/internal/DEEPWIKI_BROWNFIELD_PROPOSAL_2026-06-21.md`  
 - `docs/token-usage-optimizer-design.md`  
 - `.claude/scripts/context-pack.js`, `test/context-pack.test.js`  
 - `.claude/skills/change/SKILL.md` Step S2  

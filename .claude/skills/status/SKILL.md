@@ -13,7 +13,7 @@ the harness already writes (`claude-progress.txt`, `.claude/state/*`,
 one normalized snapshot and renders it. It writes no state and makes no network
 calls.
 
-Design: `docs/internal/PIPELINE_PROGRESS_PROPOSAL_2026-06-21.md`.
+Design: `docs/archive/internal/PIPELINE_PROGRESS_PROPOSAL_2026-06-21.md`.
 
 ## Usage
 

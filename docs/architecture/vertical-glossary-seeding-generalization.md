@@ -2,7 +2,7 @@
 
 **Status:** Proposal (disposable architecture narrative, `/design --doc-only` — not an SDLC gate, not `specs/design/`)
 **Date:** 2026-07-06
-**Related:** `docs/superpowers/specs/2026-07-05-ubiquitous-language-design.md` (CONTEXT.md + `vocabulary-check.js` mechanism), `docs/superpowers/specs/2026-07-06-pe-ubiquitous-language-design.md` (PE-specific seeding, ships as `pe-glossary-pack.js` + BRD Step 2.7)
+**Related:** `docs/archive/superpowers/specs/2026-07-05-ubiquitous-language-design.md` (CONTEXT.md + `vocabulary-check.js` mechanism), `docs/archive/superpowers/specs/2026-07-06-pe-ubiquitous-language-design.md` (PE-specific seeding, ships as `pe-glossary-pack.js` + BRD Step 2.7)
 
 ## Context & Problem Statement
 

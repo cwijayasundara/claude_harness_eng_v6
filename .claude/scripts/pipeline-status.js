@@ -5,7 +5,7 @@
 // Reads only what the harness already writes; produces one snapshot object and
 // renders it. A plain node script so it works outside a Claude session — watch a
 // running /auto from a second terminal. The /status skill wraps it in-session.
-// See docs/internal/PIPELINE_PROGRESS_PROPOSAL_2026-06-21.md.
+// See docs/archive/internal/PIPELINE_PROGRESS_PROPOSAL_2026-06-21.md.
 
 const { buildSnapshot } = require('./pipeline-snapshot');
 const { readRunReceipts, findProjectDir } = require('./pipeline-state-readers');

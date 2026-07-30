@@ -53,7 +53,7 @@ function checkAmendmentProvenance(ctx) {
     failBlock({
       id: 'amendment-provenance',
       title: verdict.reason,
-      fix: 'write a design amendment under specs/design/amendments/ (see docs/superpowers/specs/2026-07-04-sprint-delta-lane-design.md) in the same commit as the specs/design/ change.',
+      fix: 'write a design amendment under specs/design/amendments/ (see docs/archive/superpowers/specs/2026-07-04-sprint-delta-lane-design.md) in the same commit as the specs/design/ change.',
       envOff: 'HARNESS_AMENDMENT_GATE',
       minTier: 'minimal',
     });

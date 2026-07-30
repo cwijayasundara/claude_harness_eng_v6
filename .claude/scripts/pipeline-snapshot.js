@@ -2,7 +2,7 @@
 
 // Composes the read-only state accessors into one normalized pipeline snapshot.
 // The snapshot shape is the machine contract consumed by renderers, --json, CI,
-// and e2e. See docs/internal/PIPELINE_PROGRESS_PROPOSAL_2026-06-21.md.
+// and e2e. See docs/archive/internal/PIPELINE_PROGRESS_PROPOSAL_2026-06-21.md.
 
 const path = require('path');
 const {
