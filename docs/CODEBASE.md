@@ -13,8 +13,8 @@ _Source: `README.md`_
 
 | Metric | Value |
 |---|---|
-| Indexed files | 456 |
-| Graph edges | 2099 |
+| Indexed files | 471 |
+| Graph edges | 2169 |
 | Concept pages | 20 |
 | Wiki cluster pages | 20 |
 

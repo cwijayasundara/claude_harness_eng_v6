@@ -1,5 +1,5 @@
 {
-  "count": 158,
+  "count": 159,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -105,6 +105,7 @@
     "portfolio-compliance-rollup",
     "pr-respond",
     "pr-walkthrough",
+    "prd-shape-gate",
     "promote-eligibility-gate",
     "prompt-cache-prefix",
     "protected-env-file",

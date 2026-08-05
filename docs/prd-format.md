@@ -66,7 +66,11 @@ of trusting the generator's own "done".
 
 ## Don't have a PRD yet?
 
-Run `/brd` with no argument for an interactive Socratic interview that builds the
-requirements from scratch. Use a PRD when you already know what you want — both
+Run **`/prd`** — a collaborative dialogue that proposes a default for each
+decision and produces this shape, validated by `validate-prd.js`. It is the
+supported way to author one; this template is the contract it writes against.
+
+`/brd` with no argument remains available for an interactive Socratic interview
+that builds the requirements from scratch without a document. Use a PRD when you already know what you want — both
 routes are grounding-gated: a PRD makes the baseline a reviewable document, the
 interview builds it from confirmed `INT-n` requirements.

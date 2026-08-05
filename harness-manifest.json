@@ -335,6 +335,14 @@
       "description": "Bounded post-PR response loop: /pr-respond polls a harness-opened PR's CI checks and review comments, classifies failures via the /auto self-healing table, fixes/pushes/replies with evidence, and stops on clean/max-cycles/watch-window/budget. Opt-in from /build and /feature via --respond (default off); never merges or force-pushes — merge stays human-owned. The deterministic half (poll/diff/handled-state) lives in .claude/scripts/pr-poll.js."
     },
     {
+      "id": "prd-shape-gate",
+      "axis": "traceability",
+      "kind": "feedforward",
+      "wired_at": ".claude/scripts/validate-prd.js",
+      "net_add_justification": "The PRD is the root of the grounding chain and the only artifact a human authors, and nothing has ever checked one — while --autonomous and --auto both refuse to run without it. R2 raised the stakes: brd-adopt.js now carries PRD text verbatim into the spine, so there is no longer a rewriting step that might incidentally fix a malformed requirement. Owns one invariant nothing else covers: every functional requirement has an OBSERVABLE POSTCONDITION. trace-check proves ids link and brd-taxonomy-floor proves the ten slots are addressed; neither notices that a requirement gives the evaluator nothing to check, and a check with no oracle passes by default. Measured on a real PRD: 27 of 38 functional requirements had none.",
+      "description": "Blocks a malformed PRD before it becomes the grounding baseline: missing/empty Out of Scope (or Non-goals), no functional requirements, duplicate ids, placeholder text, an acceptance entry naming an unknown requirement, and any FR with no acceptance postcondition. Warns on an NFR with no number or named standard and a milestone with no observable Done-when. Accepts the layouts real PRDs use (bullet, heading-per-requirement, bold pseudo-heading; acceptance in its own section or as an inline AC: line) — ids and postconditions are what is load-bearing, not heading text."
+    },
+    {
       "id": "promote-eligibility-gate",
       "axis": "traceability",
       "kind": "feedforward",
