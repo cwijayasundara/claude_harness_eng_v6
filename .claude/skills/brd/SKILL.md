@@ -111,6 +111,41 @@ If an FRD path was provided:
 
 If no `--frd` was given, skip this step; the BRD's grounding baseline is then the confirmed `INT-n` interview requirements captured in Step 2 (`specs/brd/interview-requirements.json`), plus the Step 0.5 clarification log.
 
+### Step 0.1 — Adopt the spine, do not re-express it [`--frd` / `--prd` only]
+
+```bash
+node .claude/scripts/brd-adopt.js
+```
+
+This derives `brd-requirements.json`, `brd-acceptance.json` and
+`brd-safeguards.json` **deterministically** from the spine you just extracted:
+requirement text carried verbatim, each entry tracing to its own source id,
+`Out of Scope` / `Non-goals` sections becoming Forbidden Actions, and per-
+requirement `… AC` sections becoming acceptance criteria linked to their
+requirement. **Do not write these three files by hand in `--frd` mode.**
+
+**Why.** On a real run this phase turned 149 source requirements into 88 BRD
+ones, and the grounding gate then proved the mapping lossless in both
+directions — 149/149, 0 net-new, 0 dropped. That is a formal proof that the
+re-expression added no requirement content: `BR-1` was a paraphrase of `FRD-1`.
+It cost 258 KB of frontier output, and every paraphrase is a chance to shift a
+constraint the gate cannot detect because the gate checks coverage, not meaning.
+Adopting makes grounding an identity — there is nothing to prove because
+nothing was transformed.
+
+**What still needs you.** Adoption deliberately leaves `taxonomy: null` on every
+requirement. Slot classification is a judgement, and the ten-slot floor
+(Step 4.45) still has to be satisfied — that gate, the analysis pack, and the
+clarification log are what this phase actually contributes over the PRD. Fill
+the taxonomy tags and record `na_reason` entries where a slot genuinely does not
+apply. Where adoption prints a warning, resolve it rather than ignoring it: an
+acceptance criterion naming a requirement outside the spine is an untraceable
+postcondition.
+
+Steps 3 and 4 then write a **short** `brd.md` — a pointer to `source-frd.md`,
+the confirmed clarifications, the taxonomy verdict, and the open questions. Not
+a restatement of the requirements, which now live in the adopted spine.
+
 ### Step 0 — Brainstorm with Superpowers
 
 Before beginning the interview, invoke `superpowers:brainstorming` to explore the user's intent, requirements, and design space. This surfaces hidden assumptions and alternative framings before the structured Socratic interview locks in a direction. In FRD-grounded mode, brainstorm **gaps and ambiguities in the FRD** specifically — what it leaves unspecified. The brainstorming output feeds into the interview — it does not replace it.

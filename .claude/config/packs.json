@@ -121,6 +121,7 @@
       "script": [
         "amendment-provenance-check",
         "auto-merge",
+        "brd-adopt",
         "brd-taxonomy-check",
         "build-chain",
         "build-chain-state",
