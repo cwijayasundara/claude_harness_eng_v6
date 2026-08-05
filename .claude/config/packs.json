@@ -99,6 +99,7 @@
         "clarify",
         "deploy",
         "design",
+        "design-render",
         "evaluate",
         "feature",
         "implement",
@@ -157,6 +158,7 @@
         "trace-check",
         "validate-canvas",
         "validate-contract",
+        "validate-design-decisions",
         "validate-spec-decisions",
         "verification-matrix-gate",
         "unattended-preflight",
@@ -169,6 +171,7 @@
         "canvas",
         "canvas-sync",
         "contract-schema",
+        "decision-record",
         "gates-planning",
         "story-graph"
       ],

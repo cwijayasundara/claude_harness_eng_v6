@@ -19,16 +19,11 @@
 const fs = require('fs');
 const path = require('path');
 
-const REL = path.join('specs', 'decisions', 'spec-decisions.json');
-const LANES = new Set(['--auto', '--autonomous']);
-const BASIS = new Set(['human', 'default-accepted', 'headless-default']);
+const {
+  checkShape, checkDecisions, checkHumanShaping, laneDisagreement, normalizeLane, BASIS,
+} = require('../hooks/lib/decision-record.js');
 
-function checkShape(doc) {
-  if (!doc || typeof doc !== 'object') return ['decisions file is missing or not a JSON object'];
-  if (doc.phase !== 'spec') return [`phase must be "spec", found ${JSON.stringify(doc.phase)}`];
-  if (!Array.isArray(doc.decisions)) return ['decisions must be an array'];
-  return [];
-}
+const REL = path.join('specs', 'decisions', 'spec-decisions.json');
 
 function checkMilestone(doc) {
   const epics = doc.milestone && doc.milestone.epics;
@@ -38,65 +33,21 @@ function checkMilestone(doc) {
   return [];
 }
 
-function checkDecision(entry, index, seen) {
-  const errors = [];
-  const id = entry && entry.id ? String(entry.id) : `#${index + 1}`;
-  if (!entry || typeof entry !== 'object') return [`decision ${id} is not an object`];
-  if (!entry.id) errors.push(`decision ${id} has no id`);
-  else if (seen.has(entry.id)) errors.push(`duplicate decision id ${entry.id}`);
-  else seen.add(entry.id);
-  if (!String(entry.question || '').trim()) errors.push(`decision ${id} has no question`);
-  if (!String(entry.chosen || '').trim()) errors.push(`decision ${id} has no chosen answer`);
-  if (!BASIS.has(entry.basis)) {
-    errors.push(`decision ${id} has basis ${JSON.stringify(entry.basis)}; expected one of ${[...BASIS].join(' | ')}`);
-  }
-  return errors;
-}
-
-// The human requirement — the only part a headless lane may waive.
-function checkHumanShaping(decisions) {
-  const errors = [];
-  const loadBearing = decisions.filter((d) => d && d.load_bearing === true);
-  if (loadBearing.length === 0) {
-    errors.push('no decision is marked load_bearing: true — mark the calls that shape scope');
-  }
-  for (const entry of loadBearing) {
-    if (entry.basis !== 'human') {
-      errors.push(`load-bearing decision ${entry.id} has basis "${entry.basis}"; it must be "human"`);
-    }
-  }
-  if (!decisions.some((d) => d && d.basis === 'human')) {
-    errors.push('no decision has basis "human" — a decisions file the human never shaped cannot unlock the renderer');
-  }
-  return errors;
-}
-
 /**
  * @param {object} doc parsed spec-decisions.json
  * @param {object} [opts] {lane} — '--auto' | '--autonomous' waives the human rules
  * @returns {{ok: boolean, errors: string[], waived: string|null}}
  */
-// `--lane` is supplied by the same agent this gate constrains, so a claimed
-// waiver is corroborated against .claude/state/current-lane, which record-run
-// writes from the actual invocation. Absent marker = no contradiction.
-function laneDisagreement(lane, sessionLane) {
-  if (!lane || sessionLane == null || sessionLane === '') return null;
-  const headless = /--auto|--autonomous|\bauto\b|\bautonomous\b/.test(String(sessionLane));
-  return headless ? null
-    : `--lane ${lane} was claimed, but the session lane is "${sessionLane}" — a gated run cannot waive itself`;
-}
-
 function validateDecisions(doc, opts = {}) {
-  const lane = LANES.has(opts.lane) ? opts.lane : null;
+  const lane = normalizeLane(opts.lane);
   const disagreement = laneDisagreement(lane, opts.sessionLane);
   const effectiveLane = disagreement ? null : lane;
-  const shape = checkShape(doc);
+  const shape = checkShape(doc, 'spec');
   if (shape.length) return { ok: false, errors: shape, waived: effectiveLane };
 
   const errors = disagreement ? [disagreement] : [];
   errors.push(...checkMilestone(doc));
-  const seen = new Set();
-  doc.decisions.forEach((entry, i) => errors.push(...checkDecision(entry, i, seen)));
+  errors.push(...checkDecisions(doc.decisions));
   if (doc.decisions.length === 0) {
     errors.push('decisions must contain at least one decision');
   } else if (!effectiveLane) {

@@ -13,7 +13,7 @@ const REPO_ROOT = path.join(__dirname, '..', '..');
 // wiring contract keeps asserting "this phase documents X" rather than "this
 // file documents X". /spec was split into a main-session shaping half and a
 // forked sidekick renderer; the phase's obligations did not change.
-const COMPANION_SKILLS = { spec: ['spec-render'] };
+const COMPANION_SKILLS = { spec: ['spec-render'], design: ['design-render'] };
 
 function readSkillCorpus(skillName, root = REPO_ROOT) {
   const skillDir = path.join(root, '.claude', 'skills', skillName);

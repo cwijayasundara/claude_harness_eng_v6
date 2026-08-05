@@ -27,7 +27,24 @@ const MUST_STAY_INTERACTIVE = [
   'feature',  // three interactive gates + git workflow
   'sprint',   // GATE 1 + GATE 2
   'spec',     // decision dialogue (Step 3) + plan-review-loop (Step 8)
+  'design',   // Step 0 brainstorm + Step 0.5 clarify + the design gate
 ];
+
+// Phases split into a main-session shaping half and a forked sidekick renderer.
+const SPLIT_PHASES = [
+  { shaping: 'spec', renderer: 'spec-render' },
+  { shaping: 'design', renderer: 'design-render' },
+];
+
+// /design is an orchestrator index: its dispatch step lives in references/,
+// not in SKILL.md, so the assertion has to read the whole skill.
+function refs(skill) {
+  const dir = path.join(SKILLS_DIR, skill, 'references');
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir)
+    .filter((f) => f.endsWith('.md'))
+    .map((f) => fs.readFileSync(path.join(dir, f), 'utf8'));
+}
 
 function frontmatter(skill) {
   const file = path.join(SKILLS_DIR, skill, 'SKILL.md');
@@ -52,22 +69,35 @@ test('each interactive skill states the rule so the next editor sees it', () => 
     `missing the main-session note: ${missing.join(', ')}`);
 });
 
-test('/spec actually dispatches spec-render — the corpus union must not mask a severed handoff', () => {
-  // Three wiring contracts now read spec + spec-render as one corpus, so an
-  // artifact documented in the renderer satisfies them. Without this assertion,
-  // deleting /spec's dispatch leaves every one of them green while the phase
-  // produces no story graph at all.
-  const spec = fs.readFileSync(path.join(SKILLS_DIR, 'spec', 'SKILL.md'), 'utf8');
-  assert.match(spec, /spec-render/,
-    '/spec must name the renderer it dispatches');
-  assert.match(spec, /Dispatch `spec-render`|Invoke the `spec-render` skill/,
-    '/spec must carry an explicit dispatch step, not just a mention');
+test('each shaping half actually dispatches its renderer — the corpus union must not mask a severed handoff', () => {
+  // Wiring contracts read shaping + renderer as one corpus, so an artifact
+  // documented in the renderer satisfies them. Without this assertion, deleting
+  // the dispatch leaves every one of them green while the phase produces
+  // nothing at all.
+  for (const { shaping, renderer } of SPLIT_PHASES) {
+    const corpus = [
+      fs.readFileSync(path.join(SKILLS_DIR, shaping, 'SKILL.md'), 'utf8'),
+      ...refs(shaping),
+    ].join('\n');
+    assert.match(corpus, new RegExp(`Dispatch \`${renderer}\`|Invoke the \`${renderer}\` skill`),
+      `/${shaping} must carry an explicit dispatch step for ${renderer}, not just a mention`);
+  }
 });
 
 test('the renderer half of a split phase does fork — the split must stay real', () => {
-  // If spec-render stopped forking, the expensive shaping context would carry
+  // If a renderer stopped forking, the expensive shaping context would carry
   // the whole rendering volume and the sidekick split would be cosmetic.
-  assert.match(frontmatter('spec-render'), /^context:\s*fork\s*$/m);
-  assert.match(frontmatter('spec-render'), /^agent:\s*generator\s*$/m,
-    'spec-render must dispatch to the sidekick generator, not the frontier planner');
+  for (const { renderer } of SPLIT_PHASES) {
+    assert.match(frontmatter(renderer), /^context:\s*fork\s*$/m, `${renderer} must fork`);
+    assert.match(frontmatter(renderer), /^agent:\s*generator\s*$/m,
+      `${renderer} must dispatch to the sidekick generator, not the frontier planner`);
+  }
+});
+
+test('each renderer gates on its own decisions file, so bypassing the shaping half still blocks', () => {
+  for (const { renderer } of SPLIT_PHASES) {
+    const text = fs.readFileSync(path.join(SKILLS_DIR, renderer, 'SKILL.md'), 'utf8');
+    assert.match(text, /validate-(spec|design)-decisions\.js/,
+      `${renderer} must re-run the decisions gate itself`);
+  }
 });

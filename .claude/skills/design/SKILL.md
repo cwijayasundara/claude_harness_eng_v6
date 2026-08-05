@@ -2,12 +2,21 @@
 name: design
 description: "[Internal pipeline stage — run by /build (use --doc-only standalone for an ARB narrative); invoke directly only as a power user.] Generate system architecture, machine-readable schemas, and UI mockups. Spawns planner + generator concurrently."
 argument-hint: "[--doc-only [path] | --delta --stories <dir> | --story <file> --amendment-id <id> | --baseline-recovery]"
-context: fork
 ---
 
-# Design Skill — System Architecture & UI Mockups
+# Design Skill — Architecture Shaping
 
-> **Ultracode tip:** This is the most reasoning-heavy, divergent phase in the pipeline — exploring a wide space of architecture and schema alternatives. Run `/effort ultracode` before invoking it so the design space is explored as a judge-panel of approaches, then drop back to `/effort high` before the execution phases (`/auto`, `/implement`).
+**Runs in the main session — do not add `context: fork`.** This skill owns the
+architecture dialogue (Step 0 brainstorm, Step 0.5 clarify) and the human review
+gate. A forked skill cannot pause for `AskUserQuestion`, so a forked design
+phase can only answer its own questions — which is how nine documents and every
+mockup came to be written before the human was asked anything, and how five
+queued design questions were never put at all.
+
+The rendering half forks: `design-render` expands the recorded decisions onto
+the sidekick model. Judgement here, volume there.
+
+> **Effort.** The *shaping* dialogue is where extra reasoning pays — a judge-panel of architecture approaches is worth it across a handful of decisions. The *rendering* is transcription and runs on the sidekick model, so do not raise effort for it. Keep `/effort high` for the execution phases (`/auto`, `/implement`).
 
 ## Progressive loading (Phase 4+)
 
@@ -24,7 +33,7 @@ This skill is an **orchestrator index**. Read only the reference file for the mo
 | Step 0 — Brainstorm Architecture Direction | `references/mode-07-step-0-brainstorm-architecture-direction.md` |
 | Step 0.5 — Clarify Load-Bearing Design Decisions | `references/mode-08-step-0-5-clarify-load-bearing-design-decisions.md` |
 | Step 0.7 — Pre-Code Modularity Assessment | `references/mode-09-step-0-7-pre-code-modularity-assessment.md` |
-| Step 1 — Spawn Two Agents Concurrently | `references/mode-10-step-1-spawn-two-agents-concurrently.md` |
+| Step 0.9 — Record decisions + dispatch the renderer | `references/mode-10-step-1-spawn-two-agents-concurrently.md` |
 | Machine-Readable Artifacts | `references/mode-11-machine-readable-artifacts.md` |
 | Output | `references/mode-12-output.md` |
 | Gate | `references/mode-13-gate.md` |
