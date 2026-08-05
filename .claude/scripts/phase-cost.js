@@ -158,21 +158,27 @@ function transcriptsFor(target) {
   }
 }
 
-// Subagent task transcripts for one session live beside the session uuid under
-// the per-user temp root: /tmp/claude-<uid>/<projectSlug>/<sessionUuid>/tasks/.
-// They are temp files — absent once cleaned, which is why coverage is reported.
-function subagentTranscriptsFor(transcriptPath, slug) {
+// Subagent transcripts for a session live in a sibling directory of the session
+// transcript itself: <projects>/<slug>/<sessionUuid>/subagents/agent-*.jsonl.
+//
+// An earlier version searched /tmp/claude-<uid>/<slug>/<sessionUuid>/tasks/.
+// That directory is keyed by a different runtime uuid, so it never matched a
+// transcript filename and the whole feature was inert: a real session reported
+// $92.71 against a true $173.25 (46% light) while printing a note blaming
+// cleaned temp files. Resolve from the transcript path, which is always known.
+function subagentTranscriptsFor(transcriptPath) {
   const session = path.basename(transcriptPath, '.jsonl');
-  const roots = [`/tmp/claude-${typeof process.getuid === 'function' ? process.getuid() : ''}`, os.tmpdir()];
-  for (const root of roots) {
-    const dir = path.join(root, slug, session, 'tasks');
-    try {
-      return fs.readdirSync(dir)
-        .filter((f) => f.endsWith('.output') || f.endsWith('.jsonl'))
-        .map((f) => path.join(dir, f));
-    } catch (_) { /* try next root */ }
+  const dir = path.join(path.dirname(transcriptPath), session, 'subagents');
+  try {
+    // agent-*.jsonl only: the same trees can hold background-Bash logs, which
+    // parse to zero turns but would inflate the coverage count and flip the
+    // honesty note from "main-loop only" to a false "subagents pooled".
+    return fs.readdirSync(dir)
+      .filter((f) => /^agent-.*\.jsonl$/.test(f))
+      .map((f) => path.join(dir, f));
+  } catch (_) {
+    return [];
   }
-  return [];
 }
 
 function aggregate(rows) {
@@ -243,10 +249,9 @@ function main(argv) {
     process.stderr.write(`phase-cost: no transcripts found for ${target}\n`);
     process.exit(1);
   }
-  const slug = projectSlug(fs.statSync(target).isFile() ? path.dirname(target) : target);
   const coverage = { subagentFiles: 0, sessions: files.length };
   const rows = files.flatMap((file) => {
-    const extraTranscripts = subagentTranscriptsFor(file, slug);
+    const extraTranscripts = subagentTranscriptsFor(file);
     coverage.subagentFiles += extraTranscripts.length;
     return costByPhase(file, { extraTranscripts });
   }).sort((a, b) => a.start.localeCompare(b.start));
@@ -262,4 +267,4 @@ function main(argv) {
 
 if (require.main === module) main(process.argv.slice(2));
 
-module.exports = { segmentsFromTranscript, costByPhase, commandOf, aggregate };
+module.exports = { segmentsFromTranscript, costByPhase, commandOf, aggregate, subagentTranscriptsFor };

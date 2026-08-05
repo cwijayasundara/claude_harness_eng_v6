@@ -323,7 +323,7 @@ Each BR entry also carries `taxonomy` — one or more of the ten slots Step 4.45
 ]
 ```
 
-A prose `acceptance` sentence usually bundles two or three separate claims, and a story can satisfy one while silently dropping another. Splitting them is what lets `/spec` Step 6.46 prove coverage at criterion granularity instead of at requirement granularity.
+A prose `acceptance` sentence usually bundles two or three separate claims, and a story can satisfy one while silently dropping another. Splitting them is what lets `spec-render` Step 6.46 prove coverage at criterion granularity instead of at requirement granularity.
 
 **And write `specs/brd/brd-safeguards.json`** — the non-negotiable boundaries the design must honour, a superset of the Forbidden Actions list:
 
@@ -429,7 +429,7 @@ Display the BRD and ask: "Does this BRD accurately capture the requirements? App
 | `specs/brd/brd.md` | Full BRD for a new project |
 | `specs/brd/feature-{name}.md` | BRD for a feature addition |
 | `specs/brd/brd-requirements.json` | Machine-readable requirement spine; each BR carries `traces` to FRD/clarification ids and `taxonomy` slots |
-| `specs/brd/brd-acceptance.json` | Postconditions split into individually traceable `BR-n-ACm` ids — what `/spec` Step 6.46 checks |
+| `specs/brd/brd-acceptance.json` | Postconditions split into individually traceable `BR-n-ACm` ids — what `spec-render` Step 6.46 checks |
 | `specs/brd/brd-safeguards.json` | Invariants, prohibitions, limits, and norms — required trace targets for the Canvas |
 | `specs/brd/taxonomy-coverage.json` | Recorded `na_reason` for any taxonomy slot no requirement covers |
 | `specs/reviews/brd-taxonomy.json` | Ten-slot comprehensiveness verdict (`pass`, `uncovered[]`, `unjustified[]`) |

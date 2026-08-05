@@ -15,7 +15,9 @@ const os = require('os');
 const path = require('path');
 const { test } = require('node:test');
 
-const { segmentsFromTranscript, costByPhase } = require('../.claude/scripts/phase-cost.js');
+const {
+  segmentsFromTranscript, costByPhase, subagentTranscriptsFor,
+} = require('../.claude/scripts/phase-cost.js');
 
 function writeTranscript(rows) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-phase-cost-'));
@@ -139,6 +141,52 @@ test('work before any command is bucketed as freeform, not dropped', () => {
   assert.ok(freeform, 'pre-command work is reported rather than silently discarded');
   assert.strictEqual(freeform.output_tokens, 300);
   assert.strictEqual(rows.find((r) => r.command === 'spec').output_tokens, 100);
+});
+
+test('discovers subagent transcripts beside the session transcript', () => {
+  // The durable location is a sibling directory of the transcript being read:
+  //   <projects>/<slug>/<sessionUuid>/subagents/agent-*.jsonl
+  // Searching a temp path keyed on a different uuid found nothing while these
+  // files sat next to the transcript, undercounting a real session by 46% and
+  // blaming "cleaned temp files" for it.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-discovery-'));
+  const session = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+  const transcript = path.join(dir, `${session}.jsonl`);
+  fs.writeFileSync(transcript, '');
+  const subagents = path.join(dir, session, 'subagents');
+  fs.mkdirSync(subagents, { recursive: true });
+  fs.writeFileSync(path.join(subagents, 'agent-abc123.jsonl'), '');
+  // Non-agent files in the same tree must not be counted as subagent work.
+  fs.writeFileSync(path.join(subagents, 'notes.txt'), 'x');
+  fs.writeFileSync(path.join(subagents, 'bash-output.output'), 'x');
+
+  const found = subagentTranscriptsFor(transcript);
+  assert.strictEqual(found.length, 1, `expected exactly one agent transcript, got ${JSON.stringify(found)}`);
+  assert.match(found[0], /agent-abc123\.jsonl$/);
+});
+
+test('discovery returns empty rather than throwing when no subagents ran', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-discovery-none-'));
+  const transcript = path.join(dir, 'ffffffff-0000-0000-0000-000000000000.jsonl');
+  fs.writeFileSync(transcript, '');
+  assert.deepStrictEqual(subagentTranscriptsFor(transcript), []);
+});
+
+test('a turn exactly on a phase boundary is billed once, not to both phases', () => {
+  // Segment N's `until` is segment N+1's `since`. With both bounds inclusive a
+  // boundary turn was counted twice, and dedup could not catch it because each
+  // segment is a separate pass.
+  const boundary = '2026-08-02T09:00:00.000Z';
+  const file = writeTranscript([
+    userTurn('2026-08-02T07:00:00.000Z', '/brd'),
+    assistantTurn('2026-08-02T08:00:00.000Z', 'a1', 'claude-opus-5', 100),
+    assistantTurn(boundary, 'boundary', 'claude-opus-5', 1000),
+    userTurn(boundary, '/spec'),
+    assistantTurn('2026-08-02T10:00:00.000Z', 'a2', 'claude-opus-5', 10),
+  ]);
+  const rows = costByPhase(file);
+  const total = rows.reduce((sum, r) => sum + r.output_tokens, 0);
+  assert.strictEqual(total, 1110, 'the boundary turn must be counted exactly once across all phases');
 });
 
 test('excludes <synthetic> turns — they are not a billable model', () => {

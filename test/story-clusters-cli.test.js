@@ -120,7 +120,7 @@ test('CLI exits 2 on a missing story index and points at the step that writes it
   const res = run(ws);
   assert.strictEqual(res.code, 2);
   assert.match(res.stderr, /cannot read/);
-  assert.match(res.stderr, /\/spec Step 3/);
+  assert.match(res.stderr, /spec-render Step 3/);
 });
 
 test('CLI exits 2 rather than passing vacuously on an empty story index', () => {

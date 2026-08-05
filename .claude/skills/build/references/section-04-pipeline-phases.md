@@ -32,7 +32,7 @@ Do NOT proceed without a clear "yes" or "approved" from the user. *(In `--autono
 
 Run `/spec` using the approved BRD. Outputs are written to `specs/stories/` and root `features.json`.
 
-**Stop and run `/spec`'s Step 7 review loop before proceeding** — a `plan-review-loop` dialogue over the decomposition, not a single approve/reject question. It ends by recording `plan-approval.js record --phase spec`, which Phase 3 hard-blocks on.
+**Stop and run `/spec`'s Step 8 review loop before proceeding** — a `plan-review-loop` dialogue over the decomposition, not a single approve/reject question. It ends by recording `plan-approval.js record --phase spec`, which Phase 3 hard-blocks on.
 
 Do NOT proceed without an approving round on the receipt. *(In `--autonomous` mode, do not stop here — deferred to the consolidated Plan Approval gate, Phase 3.5.)*
 

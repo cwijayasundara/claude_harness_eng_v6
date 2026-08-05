@@ -63,11 +63,13 @@
   ],
   "guides": [
     {
-      "id": "code-gen",
-      "axis": "maintainability",
+      "id": "acceptance-tests-first",
+      "axis": "behaviour",
       "kind": "feedforward",
-      "wired_at": ".claude/skills/code-gen/SKILL.md",
-      "description": "10 quality principles injected into every generator teammate: TDD, static typing, 30-line function cap, deep modules, explicit errors, latency budgets. Phase A also: no stub-to-green + paragraph-workaround rule (Bun)."
+      "wired_at": ".claude/skills/writing-acceptance-tests-first/SKILL.md",
+      "status": "active",
+      "gap_ref": "G20",
+      "description": "AT-first discipline (gap G20, Matteo Vaccari's 'Acceptance Tests for AI-Assisted Development'): before implementation on a story, writes a business-readable Given/When/Then acceptance test against a Ports-and-Adapters seam — reusing /seam-finder's observable/funnel/asymmetry scoring rather than inventing a new seam concept — with a test-double adapter standing in for I/O, confirms it fails for the right reason, then proceeds to implementation. Wired into /test (Step 4.6, part of the plan-phase deliverable) and /change Step S4. Additive to, not a replacement for, the existing Playwright E2E layer (/test Step 5), which remains the final full-stack confirmation layer — this closes the harness's structural instance of Vaccari's E2E-as-AT-implementation antipattern (E2E was previously the ONLY acceptance-criteria verification layer). As of gap G23, this discipline has real commit-time mechanical proof (at-first-gate.js + record-at-red.js, mirroring legacy-discipline-gate.js's G17 pattern): a story's new production files are blocked without both an AT file on disk and a receipt proving it ran red. Readability review remains prompt-level only (surfaced to code-reviewer at Step S6, not mechanically checked) — see HARNESS.md G20/G23 for the current, narrower disclosed scope."
     },
     {
       "id": "adversarial-code-review",
@@ -78,28 +80,51 @@
       "description": "Tiered dual adversarial code review (Bun Phase A): review-tier.js resolves standard vs adversarial; adversarial spawns two independent code-reviewer instances and merge-review-verdicts.js (default union). Wired into /implement Step 7, /auto Gate 8, /change S6/I8. Defaults: review.adversarial=auto, min 8 files / 200 lines, or security-boundary / sensor_tier=strict."
     },
     {
-      "id": "git-safety-parallel",
-      "axis": "behaviour",
+      "id": "advisor",
+      "axis": "architecture",
       "kind": "feedforward",
-      "wired_at": ".claude/hooks/lib/git-safety.js",
+      "wired_at": ".claude/agents/advisor.md",
       "status": "active",
-      "description": "Multi-agent git safety (Bun Phase A): deny git stash / reset --hard / clean -fd / force-push while HARNESS_PARALLEL_AGENTS=1 or parallel-implement.lock exists. Pre-bash-gate enforces; SECTION 4 teammate prompts restate. Escape: HARNESS_GIT_SAFETY=off."
+      "description": "Frontier mid-run advisor (Opus, read-only): structural re-rank/unblock at fixed checkpoints (post_fail_2, mid_epic) or /advise. Not self-serve escalation. Cap via execution.advisor_max_per_run."
     },
     {
-      "id": "fix-from-diagnostics",
-      "axis": "behaviour",
+      "id": "architecture-constitution",
+      "axis": "architecture",
       "kind": "feedforward",
-      "wired_at": ".claude/skills/fix-from-diagnostics/SKILL.md",
+      "wired_at": ".claude/templates/constitution-template.md",
       "status": "active",
-      "description": "Bun Phase B diagnostics work queue: parse tsc/eslint/ruff/mypy → diagnostics-shard.js → fix per package shard without full monorepo suite mid-queue. Invoked from /implement Step 6 and /auto SECTION 6 when lint/type volume is high (≥~15 findings)."
+      "description": "Cross-sprint architecture invariants (sprint-delta lane): a human-owned, PR-reviewed file scaffolded into every project at specs/design/constitution.md. /design --delta's design-delta rubric treats every '## Invariants' line as a hard constraint on every future sprint's design amendment."
     },
     {
-      "id": "mechanical-migrate",
+      "id": "architecture-doc",
+      "axis": "architecture",
+      "kind": "feedforward",
+      "wired_at": ".claude/architecture.md",
+      "description": "Architecture reference copied into target projects."
+    },
+    {
+      "id": "author-prompt-surface",
+      "axis": "maintainability",
+      "kind": "feedforward",
+      "wired_at": ".claude/skills/author-prompt-surface/SKILL.md",
+      "status": "active",
+      "description": "Claude-only skill that loads docs/prompting-standards.md when creating or editing agents, skills, or commands (trigger conditions, model-agnostic bodies, no reasoning-as-text)."
+    },
+    {
+      "id": "boundary-test-doubles",
       "axis": "behaviour",
       "kind": "feedforward",
-      "wired_at": ".claude/skills/refactor/SKILL.md",
+      "wired_at": ".claude/templates/boundary-doubles/replay_transport.py",
       "status": "active",
-      "description": "Bun Phase B mechanical migrate via /refactor --mechanical and .claude/templates/migrate/ (MAPPING.md, CONSTRAINTS.tsv, CANARY.md). Mapping dual-review + mandatory 3-file canary before fan-out."
+      "gap_ref": "G34",
+      "description": "Shipped record/replay test-double kit (DB transactional-rollback fixture, HTTP ReplayTransport at the wrapper _call seam, deterministic FakeLLMClient with golden structured responses keyed by request hash) bound under HARNESS_TEST_REPLAY=1, plus a Ports-and-Adapters at-template.py. Converts the harness's live-integration test story into a deterministic one: the /test integration-generation step (Step 4.7) generates tests/integration/ against these doubles, the live-externals sensor (G36) blocks tests that reach real externals instead, and the regression gates (G15/G16) run --replay against them. v1 covers the Python/FastAPI backend; TS/React and other stacks are a later gap."
+    },
+    {
+      "id": "brd-spec-design",
+      "axis": "behaviour",
+      "kind": "feedforward",
+      "wired_at": ".claude/skills/design/SKILL.md",
+      "description": "BRD -> spec -> design artifacts + acceptance criteria + sprint contracts: the functional specification the agent builds against."
     },
     {
       "id": "canary-before-fanout",
@@ -112,30 +137,6 @@
       "description": "Prompt-level guide (gap G32): before applying one mechanical change across many files or stories, prove the pattern on a small trial batch (3 files, or the smallest representative sample; threshold ~10 files) and run tests/lint/typecheck on it first; a canary failure revises the pattern rather than forcing a post-fan-out bisect. Wired at /refactor Step 5, /upgrading-dependencies Step 6, /implement Step 0.5, and /feature (first ready story as epic canary). Prompt-only, no computational sensor: the file-count trigger is judgment the agent applies mid-task, and a canary failure is caught by the same test/lint/typecheck gates every step already runs."
     },
     {
-      "id": "semantic-divergence",
-      "axis": "behaviour",
-      "kind": "feedforward",
-      "wired_at": ".claude/skills/code-gen/references/semantic-divergence.md",
-      "status": "active",
-      "description": "Bun Phase C: checklist for mechanical ports (assert side effects, rounding, bounds, Drop/defer, placeholders). code-reviewer applies when specs/migrate or /refactor --mechanical is in scope."
-    },
-    {
-      "id": "review-commit-attribution",
-      "axis": "traceability",
-      "kind": "feedforward",
-      "wired_at": ".claude/scripts/review-commit-msg.js",
-      "status": "active",
-      "description": "Bun Phase C: optional commit subject formatter that attributes dual-review fixes (review:…; policy=union). adversarial-review-audit.json remains the machine source of truth."
-    },
-    {
-      "id": "fix-diagnostics-workflow",
-      "axis": "behaviour",
-      "kind": "feedforward",
-      "wired_at": ".claude/workflows/fix-diagnostics.js",
-      "status": "active",
-      "description": "Bun Phase C dynamic workflow exemplar: multi-phase diagnostics work queue. Not a clone of /gate or /implement; skill fix-from-diagnostics remains the primary single-agent form. Teaches 'edit the workflow when agents misbehave'."
-    },
-    {
       "id": "clarify",
       "axis": "maintainability",
       "kind": "feedforward",
@@ -143,83 +144,11 @@
       "description": "Bounded clarification gate — resolve ambiguity before code, consuming local context first."
     },
     {
-      "id": "architecture-doc",
-      "axis": "architecture",
+      "id": "code-gen",
+      "axis": "maintainability",
       "kind": "feedforward",
-      "wired_at": ".claude/architecture.md",
-      "description": "Architecture reference copied into target projects."
-    },
-    {
-      "id": "layer-config",
-      "axis": "architecture",
-      "kind": "feedforward",
-      "wired_at": ".claude/hooks/lib/layers.js",
-      "description": "Default layer order + roots that the layer sensor enforces; overridden per target project via project-manifest.json#architecture (opt-out for non-layered shapes)."
-    },
-    {
-      "id": "brd-spec-design",
-      "axis": "behaviour",
-      "kind": "feedforward",
-      "wired_at": ".claude/skills/design/SKILL.md",
-      "description": "BRD -> spec -> design artifacts + acceptance criteria + sprint contracts: the functional specification the agent builds against."
-    },
-    {
-      "id": "reasons-canvas",
-      "axis": "behaviour",
-      "kind": "feedforward",
-      "wired_at": ".claude/skills/design/references/reasons-canvas-template.md",
-      "status": "active",
-      "description": "SPDD REASONS Canvas (gap G4): /design emits specs/design/reasons-canvas.md (Requirements/Entities/Approach/Structure/Operations/Norms/Safeguards + a machine-read Governs list). Living artifact — 'fix the prompt first' when behaviour changes; brownfield grounds entities existing-vs-new in the code-graph."
-    },
-    {
-      "id": "legacy-discipline",
-      "axis": "behaviour",
-      "kind": "feedforward",
-      "wired_at": ".claude/skills/checking-coverage-before-change/SKILL.md",
-      "description": "Behaviour-preservation skills (checking-coverage, pinning-down-behavior, sprouting, keeping-refactors-pure) that steer brownfield edits."
-    },
-    {
-      "id": "acceptance-tests-first",
-      "axis": "behaviour",
-      "kind": "feedforward",
-      "wired_at": ".claude/skills/writing-acceptance-tests-first/SKILL.md",
-      "status": "active",
-      "gap_ref": "G20",
-      "description": "AT-first discipline (gap G20, Matteo Vaccari's 'Acceptance Tests for AI-Assisted Development'): before implementation on a story, writes a business-readable Given/When/Then acceptance test against a Ports-and-Adapters seam — reusing /seam-finder's observable/funnel/asymmetry scoring rather than inventing a new seam concept — with a test-double adapter standing in for I/O, confirms it fails for the right reason, then proceeds to implementation. Wired into /test (Step 4.6, part of the plan-phase deliverable) and /change Step S4. Additive to, not a replacement for, the existing Playwright E2E layer (/test Step 5), which remains the final full-stack confirmation layer — this closes the harness's structural instance of Vaccari's E2E-as-AT-implementation antipattern (E2E was previously the ONLY acceptance-criteria verification layer). As of gap G23, this discipline has real commit-time mechanical proof (at-first-gate.js + record-at-red.js, mirroring legacy-discipline-gate.js's G17 pattern): a story's new production files are blocked without both an AT file on disk and a receipt proving it ran red. Readability review remains prompt-level only (surfaced to code-reviewer at Step S6, not mechanically checked) — see HARNESS.md G20/G23 for the current, narrower disclosed scope."
-    },
-    {
-      "id": "observability-conventions",
-      "axis": "architecture",
-      "kind": "feedforward",
-      "wired_at": ".claude/skills/code-gen/references/observability-conventions.md",
-      "status": "active",
-      "gap_ref": "G9",
-      "description": "App-level observability baseline (gap G9, guide-half): the generator emits a RED-metrics + /metrics + trace-id-log-correlation baseline INTO generated server apps, steered by observability-conventions.md (stack-neutral) + observability-python-fastapi.md (concrete). Default-on for server shapes via project-manifest.json#observability (scaffold-render.js); deploy adds Prometheus scrape discovery; /metrics is a verifiable acceptance criterion. The runtime-SLO drift sensor that reads these signals is a separate follow-on."
-    },
-    {
-      "id": "topology-templates",
-      "axis": "architecture",
-      "kind": "feedforward",
-      "wired_at": ".claude/scripts/topologies.js",
-      "status": "active",
-      "gap_ref": "G10",
-      "description": "Per-topology harness templates (gap G10): /scaffold resolves a detected topology (web-app / api-service / cli-or-library) and presets a coherent bundle of existing manifest knobs (architecture, observability, verification, ceremony, model_tier) via the TOPOLOGIES registry, instead of a uniform default. Ashby's-Law variety reduction; drop-in extensible; the manifest stays per-project overridable."
-    },
-    {
-      "id": "token-governor",
-      "axis": "traceability",
-      "kind": "feedforward",
-      "wired_at": ".claude/scripts/navigation-refresh.js",
-      "status": "active",
-      "description": "Default-on advisory token governor: /scaffold creates placeholder living navigation for empty greenfield repos or a lean initial DeepWiki/code-map for source-bearing repos; agents are steered to wiki/symbol-map/context queries before broad source reads. Configured by project-manifest.json#token_governor."
-    },
-    {
-      "id": "architecture-constitution",
-      "axis": "architecture",
-      "kind": "feedforward",
-      "wired_at": ".claude/templates/constitution-template.md",
-      "status": "active",
-      "description": "Cross-sprint architecture invariants (sprint-delta lane): a human-owned, PR-reviewed file scaffolded into every project at specs/design/constitution.md. /design --delta's design-delta rubric treats every '## Invariants' line as a hard constraint on every future sprint's design amendment."
+      "wired_at": ".claude/skills/code-gen/SKILL.md",
+      "description": "10 quality principles injected into every generator teammate: TDD, static typing, 30-line function cap, deep modules, explicit errors, latency budgets. Phase A also: no stub-to-green + paragraph-workaround rule (Bun)."
     },
     {
       "id": "context-pack",
@@ -230,23 +159,95 @@
       "description": "Bounded source-context retrieval (schema v2) over the living DeepWiki/code-map: lexical+wiki BM25-ish ranking, optional TF-IDF semantic index (.claude/state/nav-index), depth-2 graph neighbors, co-change expansion, optional --diff boost, impact-scoped tests_to_run, task_map + confidence, read_next citations, session receipt, and nav-telemetry.jsonl. Facade: nav-query.js; MCP: nav-mcp-server.js; change-family Iron Law requires pack before broad source reads."
     },
     {
-      "id": "nav-query-facade",
-      "axis": "traceability",
+      "id": "cyclic-dependency-prepass",
+      "axis": "behaviour",
       "kind": "feedforward",
-      "wired_at": ".claude/scripts/nav-query.js",
+      "wired_at": ".claude/skills/fix-from-diagnostics/SKILL.md",
       "status": "active",
-      "description": "Single CLI facade for pack/symbol/callers/impact/cochange/semantic/refresh over code-graph + secondary nav artifacts. MCP twin: nav-mcp-server.js."
+      "gap_ref": "G33",
+      "description": "Prompt-level guide (gap G33, same shape as G32's canary-first guide): before fix-from-diagnostics shards diagnostics by package, if ≥3 packages are affected and cycle data exists (specs/brownfield/modularity-pack.md, or code-graph.json's cycles field as a fallback), check whether the error-dense packages sit together on a known import cycle. If so, run a structural pass to break the cycle first (smallest cut, validated narrowly), then re-capture diagnostics and re-shard before resuming normal per-shard fixing — prevents cross-shard cyclic errors from burning the queue's 3-pass cap without converging. Wired into fix-from-diagnostics/SKILL.md Step 2 (locked by test/cyclic-prepass-wiring.test.js, same skill-text-assertion pattern test/canary-rollout-wiring.test.js uses). No computational sensor: the package-count and error-density thresholds are judgment applied mid-task, not a mechanically checkable commit-time property."
     },
     {
-      "id": "nav-index-semantic",
+      "id": "first-window-init",
+      "axis": "behaviour",
+      "kind": "feedforward",
+      "wired_at": ".claude/skills/auto/SKILL.md",
+      "status": "active",
+      "gap_ref": "G13",
+      "description": "First-context-window vs continuation split (gap G13): on the first /auto window (Session 0 only, no completed groups) the loop verifies the initializer's artifacts are coherent (populated features.json, executable init.sh, specs prerequisites) before building, instead of running identical recovery logic on window 1 and window N. Implements Anthropic's multi-context-window 'a different prompt for the very first context window' principle."
+    },
+    {
+      "id": "fix-diagnostics-workflow",
+      "axis": "behaviour",
+      "kind": "feedforward",
+      "wired_at": ".claude/workflows/fix-diagnostics.js",
+      "status": "active",
+      "description": "Bun Phase C dynamic workflow exemplar: multi-phase diagnostics work queue. Not a clone of /gate or /implement; skill fix-from-diagnostics remains the primary single-agent form. Teaches 'edit the workflow when agents misbehave'."
+    },
+    {
+      "id": "fix-from-diagnostics",
+      "axis": "behaviour",
+      "kind": "feedforward",
+      "wired_at": ".claude/skills/fix-from-diagnostics/SKILL.md",
+      "status": "active",
+      "description": "Bun Phase B diagnostics work queue: parse tsc/eslint/ruff/mypy → diagnostics-shard.js → fix per package shard without full monorepo suite mid-queue. Invoked from /implement Step 6 and /auto SECTION 6 when lint/type volume is high (≥~15 findings)."
+    },
+    {
+      "id": "git-safety-parallel",
+      "axis": "behaviour",
+      "kind": "feedforward",
+      "wired_at": ".claude/hooks/lib/git-safety.js",
+      "status": "active",
+      "description": "Multi-agent git safety (Bun Phase A): deny git stash / reset --hard / clean -fd / force-push while HARNESS_PARALLEL_AGENTS=1 or parallel-implement.lock exists. Pre-bash-gate enforces; SECTION 4 teammate prompts restate. Escape: HARNESS_GIT_SAFETY=off."
+    },
+    {
+      "id": "layer-config",
+      "axis": "architecture",
+      "kind": "feedforward",
+      "wired_at": ".claude/hooks/lib/layers.js",
+      "description": "Default layer order + roots that the layer sensor enforces; overridden per target project via project-manifest.json#architecture (opt-out for non-layered shapes)."
+    },
+    {
+      "id": "legacy-discipline",
+      "axis": "behaviour",
+      "kind": "feedforward",
+      "wired_at": ".claude/skills/checking-coverage-before-change/SKILL.md",
+      "description": "Behaviour-preservation skills (checking-coverage, pinning-down-behavior, sprouting, keeping-refactors-pure) that steer brownfield edits."
+    },
+    {
+      "id": "local-ccr",
+      "axis": "traceability",
+      "kind": "feedforward",
+      "wired_at": ".claude/scripts/context-store.js",
+      "status": "active",
+      "description": "Local Compress-Cache-Retrieve layer: stores raw command/search context by hash, emits compact packs with retrieval commands, and supports query-filtered raw retrieval through context-retrieve.js, run-compact.js, and search-compact.js."
+    },
+    {
+      "id": "mechanical-migrate",
+      "axis": "behaviour",
+      "kind": "feedforward",
+      "wired_at": ".claude/skills/refactor/SKILL.md",
+      "status": "active",
+      "description": "Bun Phase B mechanical migrate via /refactor --mechanical and .claude/templates/migrate/ (MAPPING.md, CONSTRAINTS.tsv, CANARY.md). Mapping dual-review + mandatory 3-file canary before fan-out."
+    },
+    {
+      "id": "nav-bench",
       "axis": "traceability",
       "type": "computational",
       "cadence": "session",
       "status": "active",
       "scope": "repo",
-      "wired_at": ".claude/scripts/nav-index.js",
-      "signal": "stale or missing TF-IDF nav index after graph refresh",
-      "description": "Offline TF-IDF semantic index over symbols+wiki; rebuilt by graph-refresh / nav-query refresh; fail-open when missing. Feeds context-pack scoring."
+      "wired_at": ".claude/scripts/nav-bench.js",
+      "signal": "golden-query recall_rate and pack vs naive token estimates",
+      "description": "Golden navigation benchmark (test/fixtures/nav-bench/golden-queries.json); measures pack recall and estimated token savings."
+    },
+    {
+      "id": "nav-brownfield-maps",
+      "axis": "traceability",
+      "kind": "feedforward",
+      "wired_at": ".claude/scripts/nav-brownfield-maps.js",
+      "status": "active",
+      "description": "Deterministic lean brownfield essays (codebase/architecture/test/risk/change-strategy) from code-graph — default /brownfield path skips LLM essays; --full for narrative enrichment."
     },
     {
       "id": "nav-cochange",
@@ -271,14 +272,6 @@
       "description": "Hash-cached deterministic concept pages under specs/brownfield/wiki/concepts/, steered by .harness/wiki.json."
     },
     {
-      "id": "nav-brownfield-maps",
-      "axis": "traceability",
-      "kind": "feedforward",
-      "wired_at": ".claude/scripts/nav-brownfield-maps.js",
-      "status": "active",
-      "description": "Deterministic lean brownfield essays (codebase/architecture/test/risk/change-strategy) from code-graph — default /brownfield path skips LLM essays; --full for narrative enrichment."
-    },
-    {
       "id": "nav-graph-index",
       "axis": "traceability",
       "type": "computational",
@@ -290,40 +283,40 @@
       "description": "Pure-JSON inverted index for O(1) symbol/caller lookup without re-walking the full graph; rebuilt on graph-refresh."
     },
     {
-      "id": "nav-bench",
+      "id": "nav-index-semantic",
       "axis": "traceability",
       "type": "computational",
       "cadence": "session",
       "status": "active",
       "scope": "repo",
-      "wired_at": ".claude/scripts/nav-bench.js",
-      "signal": "golden-query recall_rate and pack vs naive token estimates",
-      "description": "Golden navigation benchmark (test/fixtures/nav-bench/golden-queries.json); measures pack recall and estimated token savings."
+      "wired_at": ".claude/scripts/nav-index.js",
+      "signal": "stale or missing TF-IDF nav index after graph refresh",
+      "description": "Offline TF-IDF semantic index over symbols+wiki; rebuilt by graph-refresh / nav-query refresh; fail-open when missing. Feeds context-pack scoring."
     },
     {
-      "id": "tool-output-pack",
+      "id": "nav-query-facade",
       "axis": "traceability",
       "kind": "feedforward",
-      "wired_at": ".claude/scripts/tool-output-pack.js",
+      "wired_at": ".claude/scripts/nav-query.js",
       "status": "active",
-      "description": "Standalone tool-output compactor: preserves raw logs on disk, extracts failures/paths/lines, and emits raw/packed/saved token estimates. Hook integration remains future work."
+      "description": "Single CLI facade for pack/symbol/callers/impact/cochange/semantic/refresh over code-graph + secondary nav artifacts. MCP twin: nav-mcp-server.js."
     },
     {
-      "id": "local-ccr",
+      "id": "observability-conventions",
+      "axis": "architecture",
+      "kind": "feedforward",
+      "wired_at": ".claude/skills/code-gen/references/observability-conventions.md",
+      "status": "active",
+      "gap_ref": "G9",
+      "description": "App-level observability baseline (gap G9, guide-half): the generator emits a RED-metrics + /metrics + trace-id-log-correlation baseline INTO generated server apps, steered by observability-conventions.md (stack-neutral) + observability-python-fastapi.md (concrete). Default-on for server shapes via project-manifest.json#observability (scaffold-render.js); deploy adds Prometheus scrape discovery; /metrics is a verifiable acceptance criterion. The runtime-SLO drift sensor that reads these signals is a separate follow-on."
+    },
+    {
+      "id": "plan-review-loop",
       "axis": "traceability",
       "kind": "feedforward",
-      "wired_at": ".claude/scripts/context-store.js",
-      "status": "active",
-      "description": "Local Compress-Cache-Retrieve layer: stores raw command/search context by hash, emits compact packs with retrieval commands, and supports query-filtered raw retrieval through context-retrieve.js, run-compact.js, and search-compact.js."
-    },
-    {
-      "id": "first-window-init",
-      "axis": "behaviour",
-      "kind": "feedforward",
-      "wired_at": ".claude/skills/auto/SKILL.md",
-      "status": "active",
-      "gap_ref": "G13",
-      "description": "First-context-window vs continuation split (gap G13): on the first /auto window (Session 0 only, no completed groups) the loop verifies the initializer's artifacts are coherent (populated features.json, executable init.sh, specs prerequisites) before building, instead of running identical recovery logic on window 1 and window N. Implements Anthropic's multi-context-window 'a different prompt for the very first context window' principle."
+      "wired_at": ".claude/skills/plan-review-loop/SKILL.md",
+      "net_add_justification": "The three planning gates already stopped for a human, but asked a closed approve/reject question over a wall of artifacts — the cheapest correct answer is always yes, so the stop bought nothing. This is the shared dialogue discipline (review brief leading with the load-bearing decisions and where the planner would push back, one question at a time in /clarify format, 2-3 alternatives at each fork, revise-and-re-present as a changelog including declined feedback, round cap 5). Registered once as a sub-skill rather than triplicated into /spec, /design, /test, which would have been three copies free to drift.",
+      "description": "Human review of a planning artifact run as a brainstorming dialogue instead of an approve/reject prompt. Invoked at /spec Step 8, /design gate, and /test Step 4.8; supplies the round shape, the question budget (reused from /clarify), and the per-phase challenge sources. Records rounds via plan-approval.js."
     },
     {
       "id": "pr-respond",
@@ -334,64 +327,20 @@
       "description": "Bounded post-PR response loop: /pr-respond polls a harness-opened PR's CI checks and review comments, classifies failures via the /auto self-healing table, fixes/pushes/replies with evidence, and stops on clean/max-cycles/watch-window/budget. Opt-in from /build and /feature via --respond (default off); never merges or force-pushes — merge stays human-owned. The deterministic half (poll/diff/handled-state) lives in .claude/scripts/pr-poll.js."
     },
     {
-      "id": "sensor-arbitration-policy",
+      "id": "promote-eligibility-gate",
       "axis": "traceability",
       "kind": "feedforward",
-      "wired_at": "docs/sensor-arbitration.md",
+      "wired_at": ".claude/scripts/promote-recommendation.js",
       "status": "active",
-      "description": "Guide for resolving conflicts between sensors and recording reviewed waivers with explicit expiry, so a larger harness stays coherent instead of accumulating contradictory gates."
+      "description": "Agentic-flywheel Phase B (§4.3, docs/agentic-flywheel-design.md): the /promote skill's deterministic, non-negotiable guardrail — a recommendation whose class is gate-loosen or security is PERMANENTLY ineligible for automated promotion regardless of status/confidence/any other field, enforced in code (checkPromotionEligible), not left to skill-prompt discipline. Also refuses an already-promoted or not-yet-approved recommendation. /promote is on-demand only, never auto-invoked; merge always stays human. The harness eval-suite gate for a promotion-PR (§4.4) is the existing full npm test suite + harness-manifest honesty invariant, not a new golden-task framework — deliberately scoped down from the original design sketch, see §9 in the design doc."
     },
     {
-      "id": "boundary-test-doubles",
+      "id": "reasons-canvas",
       "axis": "behaviour",
       "kind": "feedforward",
-      "wired_at": ".claude/templates/boundary-doubles/replay_transport.py",
+      "wired_at": ".claude/skills/design/references/reasons-canvas-template.md",
       "status": "active",
-      "gap_ref": "G34",
-      "description": "Shipped record/replay test-double kit (DB transactional-rollback fixture, HTTP ReplayTransport at the wrapper _call seam, deterministic FakeLLMClient with golden structured responses keyed by request hash) bound under HARNESS_TEST_REPLAY=1, plus a Ports-and-Adapters at-template.py. Converts the harness's live-integration test story into a deterministic one: the /test integration-generation step (Step 4.7) generates tests/integration/ against these doubles, the live-externals sensor (G36) blocks tests that reach real externals instead, and the regression gates (G15/G16) run --replay against them. v1 covers the Python/FastAPI backend; TS/React and other stacks are a later gap."
-    },
-    {
-      "id": "cyclic-dependency-prepass",
-      "axis": "behaviour",
-      "kind": "feedforward",
-      "wired_at": ".claude/skills/fix-from-diagnostics/SKILL.md",
-      "status": "active",
-      "gap_ref": "G33",
-      "description": "Prompt-level guide (gap G33, same shape as G32's canary-first guide): before fix-from-diagnostics shards diagnostics by package, if ≥3 packages are affected and cycle data exists (specs/brownfield/modularity-pack.md, or code-graph.json's cycles field as a fallback), check whether the error-dense packages sit together on a known import cycle. If so, run a structural pass to break the cycle first (smallest cut, validated narrowly), then re-capture diagnostics and re-shard before resuming normal per-shard fixing — prevents cross-shard cyclic errors from burning the queue's 3-pass cap without converging. Wired into fix-from-diagnostics/SKILL.md Step 2 (locked by test/cyclic-prepass-wiring.test.js, same skill-text-assertion pattern test/canary-rollout-wiring.test.js uses). No computational sensor: the package-count and error-density thresholds are judgment applied mid-task, not a mechanically checkable commit-time property."
-    },
-    {
-      "id": "team-policy",
-      "axis": "architecture",
-      "kind": "feedforward",
-      "wired_at": ".claude/scripts/team-policy.js",
-      "status": "active",
-      "description": "Solo-vs-team policy for multi-story groups: solo | solo_sequential | team based on ownership span and cross-story deps. Reduces multi-agent boundary tax on tiny independent stories. Consumed by generator Rule 2."
-    },
-    {
-      "id": "advisor",
-      "axis": "architecture",
-      "kind": "feedforward",
-      "wired_at": ".claude/agents/advisor.md",
-      "status": "active",
-      "description": "Frontier mid-run advisor (Opus, read-only): structural re-rank/unblock at fixed checkpoints (post_fail_2, mid_epic) or /advise. Not self-serve escalation. Cap via execution.advisor_max_per_run."
-    },
-    {
-      "id": "reuse-scout",
-      "axis": "architecture",
-      "kind": "feedforward",
-      "wired_at": ".claude/scripts/reuse-scout.js",
-      "status": "active",
-      "net_add_justification": "Ranks the existing seam a new story could extend against the design/component-map seam metadata and cross-sprint constitution invariants; feeds the reuse-or-justify intake dialogue at /change Step S2 with a signal no existing guide (seam-confidence scores a chosen seam post-hoc; reuse-scout ranks candidates pre-hoc) or sensor covers.",
-      "description": "Ranks the existing seam a new story could extend; feeds the reuse-or-justify intake dialogue."
-    },
-    {
-      "id": "reuse-or-justify",
-      "axis": "architecture",
-      "kind": "feedforward",
-      "wired_at": ".claude/skills/reuse-or-justify/SKILL.md",
-      "status": "active",
-      "net_add_justification": "The confidence-gated dialogue that turns reuse-scout's ranked candidates into a binding intake decision (extend vs. new) plus a recorded performance budget, wired into /change, /feature, and /sprint intake before the failing test — no existing guide runs this decision step; reuse-scout only ranks candidates, it does not force or record the choice.",
-      "description": "Confidence-gated reuse-vs-new dialogue run at intake (band >= medium, a touched constitution invariant, or a same-release clone cluster); resolves whether a change extends an existing seam or justifies a new structure before code, and records the decision + performance budget via record-reuse-decision.js."
+      "description": "SPDD REASONS Canvas (gap G4): /design emits specs/design/reasons-canvas.md (Requirements/Entities/Approach/Structure/Operations/Norms/Safeguards + a machine-read Governs list). Living artifact — 'fix the prompt first' when behaviour changes; brownfield grounds entities existing-vs-new in the code-graph."
     },
     {
       "id": "record-reuse-decision",
@@ -403,14 +352,6 @@
       "description": "Immutable decision recorder for the reuse-or-justify dialogue: appends each reuse-vs-new decision (with band, chosen seam or new-structure justification, and performance budget) to reuse-decisions.jsonl for downstream seam-conformance and budget checks."
     },
     {
-      "id": "author-prompt-surface",
-      "axis": "maintainability",
-      "kind": "feedforward",
-      "wired_at": ".claude/skills/author-prompt-surface/SKILL.md",
-      "status": "active",
-      "description": "Claude-only skill that loads docs/prompting-standards.md when creating or editing agents, skills, or commands (trigger conditions, model-agnostic bodies, no reasoning-as-text)."
-    },
-    {
       "id": "retro-auto-invoke",
       "axis": "traceability",
       "kind": "feedforward",
@@ -419,20 +360,87 @@
       "description": "Agentic-flywheel §4.2/§9 decision (docs/agentic-flywheel-design.md): /auto invokes /retro once at its two genuine session-terminal stopping-criteria branches (Hard stop, Success) — never at the per-story Escalate or coverage-revert branches, which continue the session, and never on a --once intermediate link (exits via the separate SECTION 10.1 path before reaching SECTION 11). Suppressible with --no-retro. /retro (.claude/skills/retro/SKILL.md) stays silent when it drafts zero new recommendations, so a quiet run adds no interactive interruption."
     },
     {
-      "id": "promote-eligibility-gate",
-      "axis": "traceability",
+      "id": "reuse-or-justify",
+      "axis": "architecture",
       "kind": "feedforward",
-      "wired_at": ".claude/scripts/promote-recommendation.js",
+      "wired_at": ".claude/skills/reuse-or-justify/SKILL.md",
       "status": "active",
-      "description": "Agentic-flywheel Phase B (§4.3, docs/agentic-flywheel-design.md): the /promote skill's deterministic, non-negotiable guardrail — a recommendation whose class is gate-loosen or security is PERMANENTLY ineligible for automated promotion regardless of status/confidence/any other field, enforced in code (checkPromotionEligible), not left to skill-prompt discipline. Also refuses an already-promoted or not-yet-approved recommendation. /promote is on-demand only, never auto-invoked; merge always stays human. The harness eval-suite gate for a promotion-PR (§4.4) is the existing full npm test suite + harness-manifest honesty invariant, not a new golden-task framework — deliberately scoped down from the original design sketch, see §9 in the design doc."
+      "net_add_justification": "The confidence-gated dialogue that turns reuse-scout's ranked candidates into a binding intake decision (extend vs. new) plus a recorded performance budget, wired into /change, /feature, and /sprint intake before the failing test — no existing guide runs this decision step; reuse-scout only ranks candidates, it does not force or record the choice.",
+      "description": "Confidence-gated reuse-vs-new dialogue run at intake (band >= medium, a touched constitution invariant, or a same-release clone cluster); resolves whether a change extends an existing seam or justifies a new structure before code, and records the decision + performance budget via record-reuse-decision.js."
     },
     {
-      "id": "plan-review-loop",
+      "id": "reuse-scout",
+      "axis": "architecture",
+      "kind": "feedforward",
+      "wired_at": ".claude/scripts/reuse-scout.js",
+      "status": "active",
+      "net_add_justification": "Ranks the existing seam a new story could extend against the design/component-map seam metadata and cross-sprint constitution invariants; feeds the reuse-or-justify intake dialogue at /change Step S2 with a signal no existing guide (seam-confidence scores a chosen seam post-hoc; reuse-scout ranks candidates pre-hoc) or sensor covers.",
+      "description": "Ranks the existing seam a new story could extend; feeds the reuse-or-justify intake dialogue."
+    },
+    {
+      "id": "review-commit-attribution",
       "axis": "traceability",
       "kind": "feedforward",
-      "wired_at": ".claude/skills/plan-review-loop/SKILL.md",
-      "net_add_justification": "The three planning gates already stopped for a human, but asked a closed approve/reject question over a wall of artifacts — the cheapest correct answer is always yes, so the stop bought nothing. This is the shared dialogue discipline (review brief leading with the load-bearing decisions and where the planner would push back, one question at a time in /clarify format, 2-3 alternatives at each fork, revise-and-re-present as a changelog including declined feedback, round cap 5). Registered once as a sub-skill rather than triplicated into /spec, /design, /test, which would have been three copies free to drift.",
-      "description": "Human review of a planning artifact run as a brainstorming dialogue instead of an approve/reject prompt. Invoked at /spec Step 7, /design gate, and /test Step 4.8; supplies the round shape, the question budget (reused from /clarify), and the per-phase challenge sources. Records rounds via plan-approval.js."
+      "wired_at": ".claude/scripts/review-commit-msg.js",
+      "status": "active",
+      "description": "Bun Phase C: optional commit subject formatter that attributes dual-review fixes (review:…; policy=union). adversarial-review-audit.json remains the machine source of truth."
+    },
+    {
+      "id": "semantic-divergence",
+      "axis": "behaviour",
+      "kind": "feedforward",
+      "wired_at": ".claude/skills/code-gen/references/semantic-divergence.md",
+      "status": "active",
+      "description": "Bun Phase C: checklist for mechanical ports (assert side effects, rounding, bounds, Drop/defer, placeholders). code-reviewer applies when specs/migrate or /refactor --mechanical is in scope."
+    },
+    {
+      "id": "sensor-arbitration-policy",
+      "axis": "traceability",
+      "kind": "feedforward",
+      "wired_at": "docs/sensor-arbitration.md",
+      "status": "active",
+      "description": "Guide for resolving conflicts between sensors and recording reviewed waivers with explicit expiry, so a larger harness stays coherent instead of accumulating contradictory gates."
+    },
+    {
+      "id": "spec-decisions-gate",
+      "axis": "traceability",
+      "kind": "feedforward",
+      "wired_at": ".claude/scripts/validate-spec-decisions.js",
+      "net_add_justification": "The /spec phase was split into a main-session shaping half and a forked sidekick renderer so decisions are made before 1.83 MB of artifacts exist rather than after. That split is only real if the renderer cannot run against a decisions file the human never shaped — the audited failure was six clarifications whose every basis ended \"Original planner reasoning\", i.e. the planner authoring both sides. No existing control checks who made a planning decision: plan-approval.js records that a review happened, not that the scope was chosen by a human before generation. Registered as one gate invoked from both halves rather than duplicated prose in each.",
+      "description": "Hard block between /spec shaping and spec-render. Fails unless specs/decisions/spec-decisions.json is well-formed, names at least one milestone epic, carries at least one decision with basis \"human\", and marks every load_bearing decision as human-made. Headless lanes (--auto/--autonomous) waive only the human requirement, never the structural checks, and the waiver is reported. Re-run at spec-render Step 0 so the block holds if /spec is bypassed."
+    },
+    {
+      "id": "team-policy",
+      "axis": "architecture",
+      "kind": "feedforward",
+      "wired_at": ".claude/scripts/team-policy.js",
+      "status": "active",
+      "description": "Solo-vs-team policy for multi-story groups: solo | solo_sequential | team based on ownership span and cross-story deps. Reduces multi-agent boundary tax on tiny independent stories. Consumed by generator Rule 2."
+    },
+    {
+      "id": "token-governor",
+      "axis": "traceability",
+      "kind": "feedforward",
+      "wired_at": ".claude/scripts/navigation-refresh.js",
+      "status": "active",
+      "description": "Default-on advisory token governor: /scaffold creates placeholder living navigation for empty greenfield repos or a lean initial DeepWiki/code-map for source-bearing repos; agents are steered to wiki/symbol-map/context queries before broad source reads. Configured by project-manifest.json#token_governor."
+    },
+    {
+      "id": "tool-output-pack",
+      "axis": "traceability",
+      "kind": "feedforward",
+      "wired_at": ".claude/scripts/tool-output-pack.js",
+      "status": "active",
+      "description": "Standalone tool-output compactor: preserves raw logs on disk, extracts failures/paths/lines, and emits raw/packed/saved token estimates. Hook integration remains future work."
+    },
+    {
+      "id": "topology-templates",
+      "axis": "architecture",
+      "kind": "feedforward",
+      "wired_at": ".claude/scripts/topologies.js",
+      "status": "active",
+      "gap_ref": "G10",
+      "description": "Per-topology harness templates (gap G10): /scaffold resolves a detected topology (web-app / api-service / cli-or-library) and presets a coherent bundle of existing manifest knobs (architecture, observability, verification, ceremony, model_tier) via the TOPOLOGIES registry, instead of a uniform default. Ashby's-Law variety reduction; drop-in extensible; the manifest stays per-project overridable."
     }
   ],
   "sensors": [

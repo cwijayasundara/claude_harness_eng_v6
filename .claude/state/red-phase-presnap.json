@@ -1,1 +1,1 @@
-{"command":"cd /Users/chamindawijayasundara/Documents/rnd_2026/claude_scaffold_research/claude_harness_eng_v5\nnpm test 2>&1 | grep -E \"^(ℹ (tests|pass|fail))|^✖ [a-z0-9]\" | head -10","hashes":{}}
+{"command":"cd /Users/chamindawijayasundara/Documents/rnd_2026/claude_scaffold_research/claude_harness_eng_v5\nnpm test 2>&1 | grep -E \"^✖|^test at |ℹ (tests|pass|fail)\" | head -8","hashes":{}}

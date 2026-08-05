@@ -52,6 +52,18 @@ test('each interactive skill states the rule so the next editor sees it', () => 
     `missing the main-session note: ${missing.join(', ')}`);
 });
 
+test('/spec actually dispatches spec-render — the corpus union must not mask a severed handoff', () => {
+  // Three wiring contracts now read spec + spec-render as one corpus, so an
+  // artifact documented in the renderer satisfies them. Without this assertion,
+  // deleting /spec's dispatch leaves every one of them green while the phase
+  // produces no story graph at all.
+  const spec = fs.readFileSync(path.join(SKILLS_DIR, 'spec', 'SKILL.md'), 'utf8');
+  assert.match(spec, /spec-render/,
+    '/spec must name the renderer it dispatches');
+  assert.match(spec, /Dispatch `spec-render`|Invoke the `spec-render` skill/,
+    '/spec must carry an explicit dispatch step, not just a mention');
+});
+
 test('the renderer half of a split phase does fork — the split must stay real', () => {
   // If spec-render stopped forking, the expensive shaping context would carry
   // the whole rendering volume and the sidekick split would be cosmetic.

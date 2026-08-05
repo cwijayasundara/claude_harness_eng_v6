@@ -16,6 +16,17 @@ const { MODEL_PRICE, CACHE_READ_FRACTION } = require('../../scripts/budget-state
 
 const SYNTHETIC_MODEL = '<synthetic>';
 
+// Anthropic bills a cache WRITE above base input (1.25x at the 5-minute TTL).
+//
+// budget-state.js#receiptCost prices it at 1x and is therefore ~20% light on
+// cache-creation tokens. That formula is not reused here, and the constant is
+// not defined there, because budget-state.js sits above the 300-line hard limit
+// and the write gate blocks any growth. The divergence is deliberate and
+// one-directional: budget-state produces a labelled *estimate* for the /auto
+// budget, this module prints an actual bill. Fixing budget-state needs the file
+// split first.
+const CACHE_WRITE_MULTIPLIER = 1.25;
+
 function emptyBucket() {
   return {
     input_tokens: 0,
@@ -51,11 +62,15 @@ function parseTurn(line) {
   };
 }
 
+// `since` is inclusive, `until` EXCLUSIVE. Phase segments are back-to-back —
+// segment N's until is segment N+1's since — so an inclusive upper bound billed
+// a turn landing exactly on the boundary to both phases, and per-segment dedup
+// could not see it because each segment is a separate pass.
 function inWindow(turn, since, until) {
   if (since == null && until == null) return true;
   if (turn.ts == null || Number.isNaN(turn.ts)) return false;
   if (since != null && turn.ts < since) return false;
-  if (until != null && turn.ts > until) return false;
+  if (until != null && turn.ts >= until) return false;
   return true;
 }
 
@@ -67,12 +82,35 @@ function addUsage(bucket, usage) {
   bucket.messages += 1;
 }
 
+// Real model ids carry a date suffix (claude-haiku-4-5-20251001); MODEL_PRICE
+// keys do not. Without this, every dated or pinned id fell through to the Opus
+// default — pricing Haiku 5x too high, silently.
+function priceKey(model) {
+  if (!model) return null;
+  if (MODEL_PRICE[model]) return model;
+  const undated = String(model).replace(/-\d{8}$/, '');
+  return MODEL_PRICE[undated] ? undated : null;
+}
+
 function priceOf(bucket, model) {
-  const price = MODEL_PRICE[model] || MODEL_PRICE.default;
+  const price = MODEL_PRICE[priceKey(model)] || MODEL_PRICE.default;
   return bucket.input_tokens * price[0]
     + bucket.output_tokens * price[1]
     + bucket.cache_read_tokens * price[0] * CACHE_READ_FRACTION
-    + bucket.cache_creation_tokens * price[0];
+    // Anthropic bills a 5-minute cache write at 1.25x base input, not 1x.
+    + bucket.cache_creation_tokens * price[0] * CACHE_WRITE_MULTIPLIER;
+}
+
+// Total cost, plus any model billed at the default rate because it has no price
+// entry — a guess must be visible, not presented as a measurement.
+function priceAll(byModel) {
+  let cost = 0;
+  const unpriced = [];
+  for (const [model, bucket] of Object.entries(byModel)) {
+    cost += priceOf(bucket, model);
+    if (model !== 'unknown' && !priceKey(model)) unpriced.push(model);
+  }
+  return { cost, unpriced };
 }
 
 // The model that produced the most output tokens — the honest label for a
@@ -164,8 +202,7 @@ function usageFromTranscripts(sources, opts = {}) {
   }
   const { total, byModel, sidechain } = tally(pooled, { since, until, includeSidechain });
 
-  let cost = 0;
-  for (const [model, bucket] of Object.entries(byModel)) cost += priceOf(bucket, model);
+  const { cost, unpriced } = priceAll(byModel);
 
   return {
     ...total,
@@ -174,6 +211,7 @@ function usageFromTranscripts(sources, opts = {}) {
     sidechain_output_tokens: sidechain.output_tokens,
     sidechain_messages: sidechain.messages,
     cost_usd: cost,
+    unpriced_models: unpriced,
     read: anyRead,
   };
 }

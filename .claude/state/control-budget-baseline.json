@@ -1,5 +1,5 @@
 {
-  "count": 156,
+  "count": 157,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -133,6 +133,7 @@
     "sensor-arbitration-policy",
     "sensor-value-meter",
     "sensor-waiver-validation",
+    "spec-decisions-gate",
     "sprint-contract",
     "sprout-diff-one-symbol",
     "story-ownership-clusters",

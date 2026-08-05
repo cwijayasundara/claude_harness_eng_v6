@@ -1,6 +1,6 @@
 ---
 name: spec-render
-description: "[Internal pipeline stage — dispatched by /spec after its decisions gate passes; never invoke directly.] Expand an approved spec-decisions.json into the story graph: story files, typed dependency edges, ownership clusters, features.json and the trace spines."
+description: "[Internal pipeline stage — dispatched by /spec after its decisions gate passes; invoke directly only to re-render an already-approved decisions file.] Expand an approved spec-decisions.json into the story graph: story files, typed dependency edges, ownership clusters, features.json and the trace spines."
 argument-hint: "[path-to-BRD]"
 context: fork
 agent: generator
@@ -96,17 +96,18 @@ story must be split, record it and keep going on everything it does not block:
 Write these to `specs/decisions/spec-unresolved.json` and name them in your
 return message. `/spec` owns putting them to the human.
 
-Use the clarification budget:
-- Ask at most 10 questions by default.
-- Continue to 15 only if the user explicitly asks.
-- Prefer marking oversized or ambiguous stories as `needs_breakdown` over extending the interview.
-- Capture low-risk assumptions in story `Notes`.
+There is no question budget here because there is no one to ask. Prefer marking
+an oversized or ambiguous story `needs_breakdown` over guessing at it, and
+capture low-risk assumptions in story `Notes` so the reviewer can see them.
 
 ### Step 2 — Decompose or Normalize into Epics
 
 Group related functionality into epics. Rules:
 - Each epic represents a coherent vertical slice of the system (e.g., "User Authentication", "Data Ingestion", "Reporting")
-- Each epic contains 3-5 stories. Never fewer than 2, never more than 5.
+- Let the story count follow the work. Do not decompose toward a number: a real
+  run produced 12 of 16 epics with exactly 5 stories, which is a target being hit,
+  not a domain being decomposed. An epic that genuinely resists splitting is
+  `needs_breakdown`, not padding.
 - Epic IDs use the format: `E1`, `E2`, `E3` ...
 - Write the epic index to `specs/stories/epics.md`.
 - If the input already contains epics and stories, preserve their intent but normalize IDs, acceptance criteria, dependencies, layers, groups, and readiness fields to this harness format.

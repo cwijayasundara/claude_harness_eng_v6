@@ -47,6 +47,10 @@ first is what stops the harness rendering work nobody chose.
 
 ## Steps
 
+**With `--render-only`, skip to Step 6.** The decisions file already exists and
+was already gated; re-running the dialogue would re-ask settled questions. Use it
+after resolving `spec-unresolved.json`, or to re-expand an amended scope.
+
 ### Step 1 — Read the BRD and the grounding spine
 
 Read the BRD at the given path. If it is missing, halt and ask the human to run
@@ -162,11 +166,26 @@ A renderer that returns unresolved items is working correctly.
 
 ### Step 7 — Phase Evaluation Gate
 
-Run the evaluator agent in artifact mode against
-`.claude/templates/phase-eval-rubrics.json#phases.spec`, exactly as before:
-threshold weighted average >= 7.0, every criterion >= 5, max 3 iterations. It
-validates cross-phase traceability, acceptance-criteria quality, dependency
-graph consistency and feature coverage.
+Spawn the `evaluator` agent in artifact mode with:
+
+- Phase: `spec`
+- Artifacts: `specs/stories/epics.md`, `specs/stories/E*-S*.md`, `specs/stories/stories.json`, `specs/stories/dependency-graph.md`, `features.json`
+- Upstream: `specs/brd/brd.md` (+ `brd-requirements.json` when present)
+- Grounding verdict: `specs/reviews/spec-grounding.json` when present (already PASS from `spec-render`'s Step 6.45 — anchor the traceability criterion to it)
+- Rubric: read `.claude/templates/phase-eval-rubrics.json`, key `"spec"`
+- **Iteration: 1** (increment on retry)
+- **Previous score: null** (or the previous iteration's `weighted_average`)
+- Write result to `specs/reviews/phase-spec-eval.json`
+
+**Ratchet loop (max 3 iterations):**
+
+1. If verdict is **PASS** — proceed to Step 8 with the eval summary.
+2. If verdict is **FAIL** — fix the findings and re-run. Re-dispatch `spec-render` when the fix is structural rather than editorial.
+3. **Ratchet rule:** `weighted_average` must be >= the previous iteration. Revert on regression.
+4. After 3 iterations — carry the unresolved findings into Step 8's brief rather than looping further.
+
+`Previous score` is load-bearing: the evaluator only applies the ratchet rule
+when a caller passes it, so omitting it silently disables regression detection.
 
 Evaluation stays on the frontier model. This is the "final review" half of the
 split — the point of a cheap renderer is an expensive reviewer.

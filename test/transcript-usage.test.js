@@ -130,6 +130,39 @@ test('separates sidechain (subagent) turns from main-loop turns', () => {
   assert.strictEqual(mainOnly.output_tokens, 10);
 });
 
+test('a dated model id is priced as its model, not silently as Opus', () => {
+  // Real ids carry date suffixes (claude-haiku-4-5-20251001); MODEL_PRICE keys
+  // do not. Falling through to the Opus default overpriced Haiku 5x, and the
+  // report rendered the id with no indication a fallback had happened.
+  const file = writeTranscript([
+    assistant({
+      id: 'm1', requestId: 'r1', model: 'claude-haiku-4-5-20251001',
+      ts: '2026-08-05T10:00:00.000Z', usage: U(0, 1e6),
+    }),
+  ]);
+  const res = usageFromTranscript(file);
+  assert.strictEqual(Math.round(res.cost_usd), 5, 'haiku output is $5/1M, not opus $25/1M');
+  assert.deepStrictEqual(res.unpriced_models, [], 'a dated id of a known model is not unpriced');
+});
+
+test('a genuinely unknown model is reported rather than silently defaulted', () => {
+  const file = writeTranscript([
+    assistant({ id: 'm1', requestId: 'r1', model: 'claude-nextgen-9', ts: '2026-08-05T10:00:00.000Z', usage: U(0, 10) }),
+  ]);
+  assert.deepStrictEqual(usageFromTranscript(file).unpriced_models, ['claude-nextgen-9']);
+});
+
+test('cache creation is priced at the 1.25x write rate, not the base input rate', () => {
+  const file = writeTranscript([
+    assistant({
+      id: 'm1', requestId: 'r1', model: 'claude-opus-5',
+      ts: '2026-08-05T10:00:00.000Z', usage: U(0, 0, 0, 1e6),
+    }),
+  ]);
+  // Opus input $5/1M; a 5-minute cache write bills at 1.25x base.
+  assert.strictEqual(Number(usageFromTranscript(file).cost_usd.toFixed(2)), 6.25);
+});
+
 test('prices usage per model so a phase cost is a number, not an estimate label', () => {
   const file = writeTranscript([
     assistant({ id: 'm1', requestId: 'r1', model: 'claude-opus-5', ts: '2026-08-05T10:00:00.000Z', usage: U(1e6, 1e6) }),

@@ -76,20 +76,33 @@ function checkHumanShaping(decisions) {
  * @param {object} [opts] {lane} — '--auto' | '--autonomous' waives the human rules
  * @returns {{ok: boolean, errors: string[], waived: string|null}}
  */
+// `--lane` is supplied by the same agent this gate constrains, so a claimed
+// waiver is corroborated against .claude/state/current-lane, which record-run
+// writes from the actual invocation. Absent marker = no contradiction.
+function laneDisagreement(lane, sessionLane) {
+  if (!lane || sessionLane == null || sessionLane === '') return null;
+  const headless = /--auto|--autonomous|\bauto\b|\bautonomous\b/.test(String(sessionLane));
+  return headless ? null
+    : `--lane ${lane} was claimed, but the session lane is "${sessionLane}" — a gated run cannot waive itself`;
+}
+
 function validateDecisions(doc, opts = {}) {
   const lane = LANES.has(opts.lane) ? opts.lane : null;
+  const disagreement = laneDisagreement(lane, opts.sessionLane);
+  const effectiveLane = disagreement ? null : lane;
   const shape = checkShape(doc);
-  if (shape.length) return { ok: false, errors: shape, waived: lane };
+  if (shape.length) return { ok: false, errors: shape, waived: effectiveLane };
 
-  const errors = [...checkMilestone(doc)];
+  const errors = disagreement ? [disagreement] : [];
+  errors.push(...checkMilestone(doc));
   const seen = new Set();
   doc.decisions.forEach((entry, i) => errors.push(...checkDecision(entry, i, seen)));
   if (doc.decisions.length === 0) {
     errors.push('decisions must contain at least one decision');
-  } else if (!lane) {
+  } else if (!effectiveLane) {
     errors.push(...checkHumanShaping(doc.decisions));
   }
-  return { ok: errors.length === 0, errors, waived: lane };
+  return { ok: errors.length === 0, errors, waived: effectiveLane };
 }
 
 function readDoc(file) {
@@ -100,6 +113,33 @@ function readDoc(file) {
   }
 }
 
+function sessionLane(root) {
+  try {
+    return fs.readFileSync(path.join(root, '.claude', 'state', 'current-lane'), 'utf8').trim();
+  } catch (_) {
+    return null;
+  }
+}
+
+// A verdict written to stdout is gone the moment the run ends. Persist it so a
+// later step — or a human asking "was this waived?" — can check, the way
+// plan-approval.js leaves a receipt.
+function writeVerdict(root, result, lane) {
+  const out = path.join(root, 'specs', 'reviews', 'spec-decisions-verdict.json');
+  try {
+    fs.mkdirSync(path.dirname(out), { recursive: true });
+    fs.writeFileSync(out, `${JSON.stringify({
+      gate: 'spec-decisions',
+      pass: result.ok,
+      waived_by: result.waived,
+      claimed_lane: lane || null,
+      session_lane: sessionLane(root),
+      errors: result.errors,
+      checked_at: new Date().toISOString(),
+    }, null, 2)}\n`);
+  } catch (_) { /* a receipt we cannot write must not block the gate */ }
+}
+
 function main(argv) {
   const rootIdx = argv.indexOf('--root');
   const root = rootIdx >= 0 ? argv[rootIdx + 1] : process.cwd();
@@ -107,7 +147,8 @@ function main(argv) {
   const lane = laneIdx >= 0 ? argv[laneIdx + 1] : null;
   const file = path.join(root, REL);
 
-  const result = validateDecisions(readDoc(file), { lane });
+  const result = validateDecisions(readDoc(file), { lane, sessionLane: sessionLane(root) });
+  writeVerdict(root, result, lane);
   if (!result.ok) {
     process.stderr.write(`validate-spec-decisions: BLOCKED (${file})\n`);
     for (const e of result.errors) process.stderr.write(`  - ${e}\n`);

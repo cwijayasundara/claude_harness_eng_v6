@@ -10,12 +10,17 @@ Full software development lifecycle pipeline. Orchestrates BRD creation, story s
 
 **Runs in the main session — do not add `context: fork`.** This conductor owns
 the human gates on Phases 1–3. A forked skill cannot pause for `AskUserQuestion`
-and returns a single result, so a forked `/build` silently converts all four
-gated stops into prose the model reads to itself: `/brd`'s five-dimension
-interview, `/spec`'s decision dialogue, and both `plan-review-loop` rounds. That
-is not a hypothetical — a real gated run produced no `brd-approval.json` and no
-`design-approval.json`, and left five design questions queued for a human who
+and returns a single result, so a forked `/build` silently converted all four of
+its gated stops into prose the model read to itself: Phase 1's BRD approval,
+Phase 2's `/spec` decision dialogue, and Phase 3's two `plan-review-loop` rounds.
+That is not a hypothetical — a real gated run produced no `brd-approval.json` and
+no `design-approval.json`, and left five design questions queued for a human who
 was never asked.
+
+**This fixes `/build`'s own stops, not its sub-skills' internal ones.** `/brd`
+(`context: fork`) still holds its five-dimension interview inside a fork, as does
+`/design` Step 0's architecture brainstorm; both remain unreachable and need the
+same treatment `/spec` received. Do not read the de-fork as restoring them.
 
 The delegated sub-skills (`/brownfield`, `/spec-render`, `/design`, `/test`,
 `/auto`, `/gate`) fork their own work as they already do; the conductor itself

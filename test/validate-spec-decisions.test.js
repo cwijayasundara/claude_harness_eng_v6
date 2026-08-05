@@ -112,6 +112,27 @@ test('headless lanes waive the human requirement but the verdict records it', ()
   assert.strictEqual(res.waived, '--auto', 'a waiver must be visible in the verdict, not silent');
 });
 
+test('a self-declared headless lane is refused when the session says otherwise', () => {
+  // --lane is passed by the same agent the gate constrains, one line below the
+  // gated form in spec-render's own code block. .claude/state/current-lane is
+  // written by record-run.js from the actual invocation, so it arbitrates.
+  const res = validateDecisions(
+    doc({ decisions: [decision({ basis: 'headless-default', load_bearing: true })] }),
+    { lane: '--auto', sessionLane: 'spec' },
+  );
+  assert.strictEqual(res.ok, false, 'a claimed waiver must not outrank the recorded lane');
+  assert.ok(res.errors.some((e) => /lane/i.test(e)));
+});
+
+test('a headless lane confirmed by the session marker still waives', () => {
+  const res = validateDecisions(
+    doc({ decisions: [decision({ basis: 'headless-default', load_bearing: true })] }),
+    { lane: '--auto', sessionLane: 'build --auto' },
+  );
+  assert.strictEqual(res.ok, true);
+  assert.strictEqual(res.waived, '--auto');
+});
+
 test('a headless waiver never excuses structural errors', () => {
   const res = validateDecisions(doc({ decisions: [] }), { lane: '--auto' });
   assert.strictEqual(res.ok, false, 'structure is not waivable — only the human requirement is');
