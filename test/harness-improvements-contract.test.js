@@ -109,7 +109,7 @@ test('design guidance performs greenfield modularity assessment before code', ()
 });
 
 test('spec and design consume the BRD analysis pack downstream', () => {
-  const spec = read('.claude/skills/spec/SKILL.md');
+  const spec = readSkillCorpus('spec');
   const design = readSkillCorpus('design');
   for (const doc of [spec, design]) {
     assert.match(doc, /brd-analysis\.json/);

@@ -5,9 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const { test } = require('node:test');
 
-const SPEC_SKILL = fs.readFileSync(
-  path.join(__dirname, '..', '.claude', 'skills', 'spec', 'SKILL.md'), 'utf8',
-);
+const { readSkillCorpus } = require('./helpers/skill-corpus');
+const SPEC_SKILL = readSkillCorpus('spec');
 
 test('/spec documents the machine-readable dependency-graph.json', () => {
   assert.ok(SPEC_SKILL.includes('dependency-graph.json'), 'SKILL.md must instruct writing dependency-graph.json');

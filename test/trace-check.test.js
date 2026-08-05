@@ -135,7 +135,7 @@ const pathw = require('path');
 const ROOTW = pathw.join(__dirname, '..');
 
 test('/spec emits story-traces.json and runs the deterministic grounding gate', () => {
-  const spec = fsw.readFileSync(pathw.join(ROOTW, '.claude', 'skills', 'spec', 'SKILL.md'), 'utf8');
+  const spec = require('./helpers/skill-corpus').readSkillCorpus('spec');
   assert.match(spec, /story-traces\.json/);
   assert.match(spec, /trace-check\.js/);
   assert.match(spec, /spec-grounding\.json/);

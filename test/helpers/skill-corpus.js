@@ -9,6 +9,12 @@ const path = require('path');
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
 
+// A phase whose procedure is split across two skills reads as one corpus, so a
+// wiring contract keeps asserting "this phase documents X" rather than "this
+// file documents X". /spec was split into a main-session shaping half and a
+// forked sidekick renderer; the phase's obligations did not change.
+const COMPANION_SKILLS = { spec: ['spec-render'] };
+
 function readSkillCorpus(skillName, root = REPO_ROOT) {
   const skillDir = path.join(root, '.claude', 'skills', skillName);
   const skillMd = path.join(skillDir, 'SKILL.md');
@@ -22,6 +28,9 @@ function readSkillCorpus(skillName, root = REPO_ROOT) {
     for (const f of files) {
       text += `\n${fs.readFileSync(path.join(refsDir, f), 'utf8')}`;
     }
+  }
+  for (const companion of COMPANION_SKILLS[skillName] || []) {
+    text += `\n${readSkillCorpus(companion, root)}`;
   }
   return text;
 }
