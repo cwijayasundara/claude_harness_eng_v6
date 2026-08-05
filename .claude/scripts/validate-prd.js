@@ -59,8 +59,18 @@ function sectionBody(text, label) {
   return body.join('\n');
 }
 
-function addRequirement(requirements, seen, errors, id, text) {
-  if (seen.has(id)) errors.push(`duplicate requirement id ${id} — ids collapse in the grounding spine`);
+// First sighting declares; a later one is a RESTATEMENT, not a redeclaration.
+// A PRD legitimately repeats its ids in a traceability matrix, a deferral note
+// or a milestone mapping — treating those as duplicates hard-blocked the
+// document, and punished exactly the traceability table the harness advocates.
+// `declaring` marks the call sites where a repeat really is a duplicate.
+function addRequirement(requirements, seen, errors, id, text, declaring = false) {
+  if (seen.has(id)) {
+    if (declaring) {
+      errors.push(`duplicate requirement id ${id} — ids collapse in the grounding spine`);
+    }
+    return;
+  }
   seen.add(id);
   requirements.push({ id, text: String(text || '').trim() });
 }
@@ -93,9 +103,28 @@ const TABLE_REQ = /^\s*\|\s*\**(FR-[\w.]+|NFR-[\w.]+)\**\s*\|(.*)$/i;
 // topic heading; restricting the scan to "Functional Requirements" /
 // "Non-Functional Requirements" found neither, so the NFR and milestone checks
 // had nothing to check and reported nothing.
+// Bullets inside an explicit requirements section are declarations, so two
+// sightings there really are a duplicate id. Everywhere else a repeat is a
+// restatement — a traceability matrix, a deferral note, a milestone mapping —
+// and erroring on those hard-blocked documents for doing the right thing.
+function reportDeclaredDuplicates(text, errors) {
+  const declared = new Set();
+  for (const label of ['Functional Requirements', 'Non-Functional Requirements']) {
+    for (const line of sectionBody(text, label).split('\n')) {
+      const match = line.match(REQ_ID);
+      if (!match) continue;
+      if (declared.has(match[1])) {
+        errors.push(`duplicate requirement id ${match[1]} — ids collapse in the grounding spine`);
+      }
+      declared.add(match[1]);
+    }
+  }
+}
+
 function collectRequirements(text, errors) {
   const requirements = [];
   const seen = new Set();
+  reportDeclaredDuplicates(text, errors);
   for (const line of String(text).split('\n')) {
     // An acceptance entry ("- **FR-1** → …") reuses the requirement's id by
     // design. Scanning the whole document made those look like a second

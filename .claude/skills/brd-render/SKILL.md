@@ -129,6 +129,8 @@ After all five dimensions are confirmed, produce a structured BRD with these sec
 14. BRD Analysis Summary — summarize the Domain Concepts, Ambiguity Table, Edge-Case Table, AC Coverage Matrix, and Risk & Gap Table from `brd-analysis.json`; keep the full detail in JSON.
 15. Forbidden Actions — an explicit list of things the implementation must **not** do, derived from the Out-of-Scope items (Dimension 2) and any source "non-goals". This becomes the deny-list the downstream gate (and any autonomous merge) enforces; phrase each as a checkable prohibition (e.g. "must not call external payment APIs", "must not store raw passwords").
 
+    **Also read `specs/brd/brd-context.json`.** A PRD states deferrals in prose — "v1.5 defers Mode B", "no front-end until P3", "single-user, no RBAC" — and those sit under Scope or Milestones headings, so adoption classifies them as context rather than as `Out of Scope` entries. They are deny-shaped all the same, and a deferral that never reaches this list is one the autonomous merge will not enforce. Promote each such statement to a checkable prohibition here, citing its source id.
+
 ### Step 4 — Write to `specs/brd/`
 
 - For a new project: write to `specs/brd/brd.md`
@@ -195,10 +197,14 @@ Create the `specs/brd/` directory if it does not exist.
 Run the deterministic grounding check before the rubric evaluation — in FRD mode against the FRD spine, in interview mode against the confirmed interview spine. This proves mechanically — not by judgement — that the BRD invented and dropped nothing relative to the required spine (FRD or interview) + clarifications:
 
 ```bash
+# --frd / --prd (adopt) mode: check against the ADOPTION MANIFEST, not the
+# requirements subset. brd-requirements.json holds only the requirements, so
+# checking the source spine against it reports every context / open-question /
+# risk / safeguard entry as \`dropped\` — 52 of 149 on a real spine.
 node .claude/skills/brd/scripts/grounding-check.js \
   --frd specs/brd/frd-requirements.json \
   --clarifications specs/brd/clarification-log.json \
-  --brd specs/brd/brd-requirements.json \
+  --brd specs/brd/brd-adoption.json \
   --out specs/reviews/brd-grounding.json
 ```
 

@@ -225,3 +225,42 @@ test('a PRD with no requirements at all fails rather than passing vacuously', ()
   assert.strictEqual(res.ok, false);
   assert.ok(res.errors.some((e) => /no functional requirements/i.test(e)));
 });
+
+// A PRD that carries a traceability matrix or a deferral note restates ids the
+// document already declared. Treating a restatement as a second declaration
+// hard-blocks the document — and punishes exactly the traceability table the
+// harness itself advocates.
+const RESTATED = `# PRD: Triage
+
+## 2. Non-goals
+- No mobile client.
+
+- **FR-1** The system accepts an upload.
+- **FR-2** The system ranks workbooks.
+
+## 6. Acceptance / Done
+- **FR-1** → a 40 MB upload returns 201.
+- **FR-2** → a ranked list is returned.
+
+## 8. Traceability
+
+| requirement | area | status |
+|---|---|---|
+| **FR-1** | ingest | planned |
+| **FR-2** | ranking | planned |
+
+## 9. Deferrals
+- **FR-2** is deferred to v2 if P1 slips.
+`;
+
+test('a restated id is not a second declaration', () => {
+  const res = validatePrd(RESTATED);
+  assert.deepStrictEqual(res.errors, [],
+    'a traceability matrix and a deferral note must not read as duplicate requirements');
+  assert.deepStrictEqual(res.requirements.map((r) => r.id), ['FR-1', 'FR-2']);
+});
+
+test('the first sighting is the one whose text is kept', () => {
+  const res = validatePrd(RESTATED);
+  assert.match(res.requirements.find((r) => r.id === 'FR-1').text, /accepts an upload/);
+});

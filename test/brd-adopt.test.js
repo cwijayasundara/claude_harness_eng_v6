@@ -199,3 +199,61 @@ test('a source requirement with no id is reported, not skipped', () => {
   assert.ok(warnings.some((w) => /no id/i.test(w)),
     'an unidentified requirement cannot be traced and must be surfaced');
 });
+
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { execFileSync } = require('child_process');
+
+const CLI = path.join(__dirname, '..', '.claude', 'scripts', 'brd-adopt.js');
+
+function runAdopt(spine, args = []) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'brd-adopt-cli-'));
+  fs.mkdirSync(path.join(root, 'specs', 'brd'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'specs', 'brd', 'frd-requirements.json'), JSON.stringify(spine));
+  execFileSync('node', [CLI, '--root', root, ...args], { encoding: 'utf8' });
+  return root;
+}
+
+const MIXED = [
+  { id: 'FRD-1', text: 'MUST accept an upload.', section: '5. EPIC 1 / FR-1.1' },
+  { id: 'FRD-2', text: 'How much front-end?', section: '12. Open questions' },
+  { id: 'FRD-3', text: 'Neo4j may not scale.', section: '11. Risks' },
+  { id: 'FRD-4', text: 'Solo part-time build.', section: '0. Assumptions' },
+  { id: 'FRD-5', text: 'No mobile client.', section: '2. Non-goals' },
+];
+
+// Classifying in memory and writing only the requirements makes the Step 4.4
+// grounding gate report every classified entry as `dropped` — measured at 52 of
+// 149 on the real spine, a HARD BLOCK failure. Its documented remedy ("add a BR
+// entry covering it") would reinstate exactly what the classification removed.
+test('every classified entry is persisted, not just the requirements', () => {
+  const root = runAdopt(MIXED);
+  const read = (f) => JSON.parse(fs.readFileSync(path.join(root, 'specs', 'brd', f), 'utf8'));
+  assert.deepStrictEqual(read('brd-open-questions.json').map((e) => e.id), ['FRD-2']);
+  assert.deepStrictEqual(read('brd-risks.json').map((e) => e.id), ['FRD-3']);
+  assert.deepStrictEqual(read('brd-context.json').map((e) => e.id), ['FRD-4']);
+});
+
+test('the adoption manifest accounts for every source id, so grounding stays an identity', () => {
+  const root = runAdopt(MIXED);
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'specs', 'brd', 'brd-adoption.json'), 'utf8'));
+  assert.deepStrictEqual(manifest.map((e) => e.id).sort(), MIXED.map((e) => e.id).sort());
+  for (const entry of manifest) {
+    assert.deepStrictEqual(entry.traces, [entry.id], `${entry.id} must trace to its own source id`);
+    assert.ok(entry.kind, `${entry.id} must record how it was classified`);
+  }
+});
+
+// Delta mode needs the outputs under specs/brd/sprint-N/. --root cannot express
+// that: it prefixes specs/brd/ again, so the files land two levels deep where
+// Step D2's trace-check never reads them.
+test('--out-dir places every output where delta mode reads it', () => {
+  const root = runAdopt(MIXED, ['--out-dir', 'specs/brd/sprint-2']);
+  const dir = path.join(root, 'specs', 'brd', 'sprint-2');
+  for (const f of ['brd-requirements.json', 'brd-acceptance.json', 'brd-safeguards.json', 'brd-adoption.json']) {
+    assert.ok(fs.existsSync(path.join(dir, f)), `${f} must be written to --out-dir`);
+  }
+  assert.ok(!fs.existsSync(path.join(root, 'specs', 'brd', 'brd-requirements.json')),
+    'the flat sprint-1 spine must not be overwritten');
+});

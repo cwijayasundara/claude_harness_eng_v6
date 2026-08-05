@@ -282,4 +282,6 @@ function main(argv) {
 
 if (require.main === module) main(process.argv.slice(2));
 
-module.exports = { segmentsFromTranscript, costByPhase, commandOf, aggregate, subagentTranscriptsFor };
+module.exports = {
+  segmentsFromTranscript, costByPhase, commandOf, aggregate, subagentTranscriptsFor, unpricedNote,
+};

@@ -61,8 +61,11 @@ Run the FRD-grounded flow exactly as written, across both halves of the phase:
 Steps 0.0 (ingest), **0.1 (adopt)**, 0, 0.5, 1 and 2 here, then dispatch
 `brd-render` (Step 2.9) for its Steps 2.7, 2.8, 3, 4, 4.4 and 4.45. Adoption
 **does** run in delta mode — the new sprint PRD is a source document like any
-other — so pass `--root`/`--source` such that it reads and writes the sprint
-paths rather than the flat ones.
+other — so pass `--out-dir specs/brd/sprint-N` so the adopted files land where
+Step Δ2's trace-check reads them. `--root` alone cannot express this: it
+prefixes `specs/brd/` again, and without `--out-dir` adoption would overwrite
+sprint 1's approved flat spine, after which Δ2 compares sprint N against itself
+and passes vacuously with 0 dropped.
 
 One change throughout: every output path becomes
 `specs/brd/sprint-N/` (e.g. `specs/brd/sprint-N/brd.md`,

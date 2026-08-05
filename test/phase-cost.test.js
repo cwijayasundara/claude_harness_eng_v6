@@ -218,3 +218,21 @@ test('pools subagent transcripts into the phase window that dispatched them', ()
   assert.strictEqual(spec.output_tokens, 5200, 'subagent output lands in the dispatching phase');
   assert.strictEqual(spec.subagent_output_tokens, 5000, 'subagent share is reported separately');
 });
+
+const { unpricedNote } = require('../.claude/scripts/phase-cost.js');
+
+// The note is production output whose whole purpose is that a guess is visible.
+// Computing it and never rendering it is the same silence it exists to break,
+// so the surfacing needs a test of its own, not just the underlying field.
+test('the unpriced-model note names each model once and is silent when all are priced', () => {
+  assert.deepStrictEqual(unpricedNote([{ unpriced_models: [] }, {}]), []);
+  const note = unpricedNote([
+    { unpriced_models: ['claude-nextgen-9'] },
+    { unpriced_models: ['claude-nextgen-9', 'some-other'] },
+  ]);
+  assert.strictEqual(note.length, 2, 'one headline plus one remedy line');
+  assert.match(note[0], /claude-nextgen-9/);
+  assert.match(note[0], /some-other/);
+  assert.strictEqual((note[0].match(/claude-nextgen-9/g) || []).length, 1, 'deduplicated');
+  assert.match(note[1], /model-pricing\.js/, 'must say where to add the price');
+});

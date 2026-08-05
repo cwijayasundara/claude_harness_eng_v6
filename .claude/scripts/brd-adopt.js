@@ -200,12 +200,46 @@ function loadSource(sourcePath) {
   }
 }
 
+// Every source id, with how it was classified. This is what the Step 4.4
+// grounding gate must read: brd-requirements.json holds only the requirements,
+// so checking the source spine against it reports every classified entry as
+// `dropped` — 52 of 149 on a real spine, a HARD BLOCK whose documented remedy
+// ("add a BR entry covering it") would reinstate what classification removed.
+function adoptionManifest(adopted, safeguards, acceptance) {
+  const rows = [];
+  const add = (entries, kind) => {
+    for (const e of entries) rows.push({ id: e.id, kind, traces: [e.id], text: e.text });
+  };
+  add(adopted.requirements, 'requirement');
+  add(adopted.context, 'context');
+  add(adopted.open_questions, 'open_question');
+  add(adopted.risks, 'risk');
+  add(acceptance, 'acceptance');
+  for (const s of safeguards) rows.push({ id: s.traces[0], kind: 'safeguard', traces: s.traces, text: s.text });
+  return rows;
+}
+
+function writeOutputs(dir, adopted, safeguards, acceptance) {
+  const at = (rel) => path.join(dir, path.basename(rel));
+  writeJson(at(OUT_REQUIREMENTS), adopted.requirements);
+  writeJson(at(OUT_SAFEGUARDS), safeguards);
+  writeJson(at(OUT_ACCEPTANCE), acceptance);
+  writeJson(at('brd-context.json'), adopted.context);
+  writeJson(at('brd-open-questions.json'), adopted.open_questions);
+  writeJson(at('brd-risks.json'), adopted.risks);
+  writeJson(at('brd-adoption.json'), adoptionManifest(adopted, safeguards, acceptance));
+}
+
 function main(argv) {
   const arg = (name, fallback) => {
     const i = argv.indexOf(name);
     return i >= 0 ? argv[i + 1] : fallback;
   };
   const root = arg('--root', process.cwd());
+  // Delta mode writes to specs/brd/sprint-N/. --root cannot express that: it
+  // prefixes specs/brd/ again, landing the files two levels deep where Step D2's
+  // trace-check never looks.
+  const outDir = path.join(root, arg('--out-dir', path.dirname(OUT_REQUIREMENTS)));
   const source = loadSource(arg('--source', path.join(root, SOURCE_REL)));
 
   let adopted;
@@ -219,11 +253,7 @@ function main(argv) {
   const acceptance = adoptAcceptance(source);
   for (const w of adopted.warnings) process.stderr.write(`  WARN  ${w}\n`);
 
-  if (!argv.includes('--dry-run')) {
-    writeJson(path.join(root, OUT_REQUIREMENTS), adopted.requirements);
-    writeJson(path.join(root, OUT_SAFEGUARDS), safeguards);
-    writeJson(path.join(root, OUT_ACCEPTANCE), acceptance);
-  }
+  if (!argv.includes('--dry-run')) writeOutputs(outDir, adopted, safeguards, acceptance);
   return process.stdout.write(
     `brd-adopt: ${adopted.requirements.length} requirements adopted verbatim, `
     + `${acceptance.length} acceptance criteria, ${safeguards.length} forbidden actions, `
