@@ -81,11 +81,19 @@ test('an empty Out of Scope is refused — silence reads as permitted', () => {
   assert.ok(res.errors.some((e) => /out of scope/i.test(e)));
 });
 
-test('each required section must be present', () => {
-  for (const heading of ['3. Functional Requirements', '5. Out of Scope', '6. Acceptance / Done']) {
+test('the deny-list and the acceptance oracle are required', () => {
+  for (const heading of ['5. Out of Scope', '6. Acceptance / Done']) {
     const res = validatePrd(withoutSection(heading));
     assert.strictEqual(res.ok, false, `${heading} must be required`);
   }
+});
+
+test('but a missing Functional Requirements *heading* is fine when the ids are still there', () => {
+  // Substance, not layout. The requirements are what matter, and a real PRD
+  // often declares them under topic headings rather than one canonical section.
+  const res = validatePrd(withoutSection('3. Functional Requirements'));
+  assert.deepStrictEqual(res.errors, []);
+  assert.deepStrictEqual(res.requirements.map((r) => r.id).filter((i) => i.startsWith('FR-')), ['FR-1', 'FR-2']);
 });
 
 test('placeholder text anywhere is refused', () => {
@@ -147,6 +155,69 @@ test('a heading-style requirement with no AC line is still refused', () => {
   const res = validatePrd(VARIANT.replace('AC: given 4,000 workbooks, a ranked list is returned with a score per row.\n', ''));
   assert.strictEqual(res.ok, false);
   assert.ok(res.errors.some((e) => /FR-1\.2/.test(e)));
+});
+
+// The audited PRD writes its NFRs and milestones as markdown TABLES, and some
+// of its FRs as bullets outside any "Functional Requirements" heading. Scanning
+// only named sections for only bullets found none of them: checkNfrs and
+// checkMilestones produced nothing at all on the real artifact, so three of the
+// four checks were inert while the suite was green on bullet fixtures.
+const TABLES = `# PRD: Triage
+
+## 2. Non-goals
+- No mobile client.
+
+**FR-1 Upload**
+AC: a 40 MB upload returns 201.
+
+## 6. Non-functional
+
+| id | requirement |
+|---|---|
+| **NFR-1** | Ranking is fast. |
+| **NFR-2** | Encrypted at rest with AES-256. |
+
+## 10. Milestones
+
+| id | scope | done when |
+|---|---|---|
+| **M1** | Ingestion | a workbook uploads and lists in the browser |
+| **M2** | Ranking | it works |
+`;
+
+test('requirements in table rows are collected', () => {
+  const res = validatePrd(TABLES);
+  assert.ok(res.requirements.some((r) => r.id === 'NFR-1'), 'a table row is a real requirement shape');
+  assert.ok(res.requirements.some((r) => r.id === 'NFR-2'));
+});
+
+test('a vague NFR in a table is still warned about', () => {
+  assert.ok(validatePrd(TABLES).warnings.some((w) => /NFR-1/.test(w)),
+    'checkNfrs must fire on table-shaped NFRs, not silently find nothing');
+});
+
+test('a milestone in a table row is still checked for an observable done-when', () => {
+  assert.ok(validatePrd(TABLES).warnings.some((w) => /M2/.test(w)));
+});
+
+test('a section that exists but parses to zero requirements is an error, not silence', () => {
+  // The failure mode this guards: a heading present, the parser finding nothing,
+  // and every downstream check passing because it had nothing to check.
+  const opaque = `# PRD: X
+
+## 2. Non-goals
+- none stated yet, deliberately.
+
+**FR-1 Thing**
+AC: it returns 201.
+
+## 6. Non-functional Requirements
+
+Some prose about performance with no ids at all.
+`;
+  const res = validatePrd(opaque);
+  assert.ok(res.errors.some((e) => /non-functional/i.test(e) && /no .*ids|zero/i.test(e)),
+    'a requirements section with no parseable ids must fail loudly');
 });
 
 test('a PRD with no requirements at all fails rather than passing vacuously', () => {

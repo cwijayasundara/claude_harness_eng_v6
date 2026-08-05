@@ -86,7 +86,7 @@ Ask once: **"Approve this plan to build autonomously through to an open PR?"** O
 **Satisfy `/auto`'s review gate for the collapsed lanes.** `/auto` blocks on `plan-approval.js check --phase all`, so a lane that skipped the per-phase loops records *why* rather than leaving the receipt absent — an absent receipt and a deliberately-headless run are different facts, and the audit trail should say which one this was:
 
 ```bash
-for phase in spec design test; do
+for phase in brd spec design test; do
   node .claude/scripts/plan-approval.js waive --phase "$phase" --lane --autonomous   # or --lane --auto
 done
 ```

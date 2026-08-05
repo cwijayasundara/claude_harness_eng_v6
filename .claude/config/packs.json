@@ -41,9 +41,13 @@
       "git-safety",
       "layers",
       "length",
+      "model-pricing",
       "pre-commit-util",
       "prefix-cache",
       "record-skills",
+      "red-phase",
+      "red-phase-command",
+      "red-phase-ledger",
       "review-policy",
       "run-context",
       "runtime-command-policy",
@@ -54,15 +58,12 @@
       "sensor-outcomes",
       "sensor-schema",
       "sensor-tier",
-      "simulate",
-      "red-phase",
-      "red-phase-command",
-      "red-phase-ledger",
       "shell-lex",
-      "tdd",
-      "test-write-lock",
+      "simulate",
       "task-envelope",
       "task-lifecycle",
+      "tdd",
+      "test-write-lock",
       "toolchain",
       "trust-boundary"
     ],
@@ -95,6 +96,7 @@
         "advise",
         "auto",
         "brd",
+        "brd-render",
         "build",
         "clarify",
         "deploy",
@@ -104,8 +106,8 @@
         "feature",
         "implement",
         "plan-review-loop",
-        "prd",
         "pr-respond",
+        "prd",
         "spec",
         "spec-render",
         "sprint",
@@ -150,12 +152,12 @@
         "seam-confidence",
         "story-clusters",
         "team-policy",
-      "checkpoint-state",
-      "runtime-policy",
-      "security-certification",
-      "autonomy-policy",
-      "credential-request",
-      "topologies",
+        "checkpoint-state",
+        "runtime-policy",
+        "security-certification",
+        "autonomy-policy",
+        "credential-request",
+        "topologies",
         "trace-check",
         "validate-canvas",
         "validate-contract",
@@ -184,7 +186,6 @@
     "brownfield": {
       "why": "Only needed on existing codebases. Includes the 10-control nav/token-governor stack, which false-blocked 3x in one session.",
       "skill": [
-        "brd-render",
         "brownfield",
         "code-map",
         "context",
@@ -388,7 +389,6 @@
         "loop-health",
         "merge-provenance",
         "stale-stamp",
-        "model-pricing",
         "transcript-usage",
         "withhold-verdicts"
       ],
@@ -438,7 +438,7 @@
       ]
     },
     "dist": {
-      "why": "Harness distribution and self-benchmarking: packaging SKUs, cutting releases, watching upstream, replaying the harness's own telemetry. Maintainer-only \u2014 a scaffolded product never runs these.",
+      "why": "Harness distribution and self-benchmarking: packaging SKUs, cutting releases, watching upstream, replaying the harness's own telemetry. Maintainer-only — a scaffolded product never runs these.",
       "skill": [],
       "agent": [],
       "script": [
@@ -462,12 +462,12 @@
     {
       "from": "skill:refactor",
       "to": "skill:code-map",
-      "why": "Caller lookup for rename/move blast radius. The whole block is already conditional on specs/brownfield/code-graph.json existing, which only happens when the brownfield pack is installed \u2014 /refactor works without it. Prose conditionality the checker cannot see."
+      "why": "Caller lookup for rename/move blast radius. The whole block is already conditional on specs/brownfield/code-graph.json existing, which only happens when the brownfield pack is installed — /refactor works without it. Prose conditionality the checker cannot see."
     },
     {
       "from": "skill:design",
       "to": "script:modularity-pack",
-      "why": "/design --delta Step D3.5 refreshes the modularity pack ONLY if specs/brownfield/ already exists ('If it exists, refresh the pack') \u2014 i.e. when brownfield has run. A greenfield/core install never reaches this conditional step. Prose conditionality the checker cannot see, same case as skill:refactor -> skill:code-map."
+      "why": "/design --delta Step D3.5 refreshes the modularity pack ONLY if specs/brownfield/ already exists ('If it exists, refresh the pack') — i.e. when brownfield has run. A greenfield/core install never reaches this conditional step. Prose conditionality the checker cannot see, same case as skill:refactor -> skill:code-map."
     },
     {
       "from": "skill:design",
@@ -482,7 +482,7 @@
     {
       "from": "script:scaffold-apply",
       "to": "script:scaffold-security-baseline",
-      "why": "Same as scaffold-apply -> navigation-refresh: the installer runs only from the full harness source ($CLAUDE_PLUGIN_ROOT), where the compliance pack is present. Guarding the require instead would add a silent-skip path to a security-baseline install step \u2014 worse than a declared, reviewed exception."
+      "why": "Same as scaffold-apply -> navigation-refresh: the installer runs only from the full harness source ($CLAUDE_PLUGIN_ROOT), where the compliance pack is present. Guarding the require instead would add a silent-skip path to a security-baseline install step — worse than a declared, reviewed exception."
     },
     {
       "from": "script:scaffold-apply",

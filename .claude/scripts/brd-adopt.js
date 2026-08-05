@@ -35,6 +35,28 @@ function isOutOfScope(entry) {
   return OUT_OF_SCOPE.test(String(entry.section || ''));
 }
 
+// A PRD's narrative sections are extracted into the same spine as its
+// requirements, and adopting them as requirements turns prose into work: on a
+// real 149-entry spine, 36 of 133 "requirements" were Assumptions, Problem,
+// Goals, Users, Scope, Milestones, Risks and Open questions — including
+// "Open question — how much front-end?", which would then need a story, a
+// taxonomy slot and test coverage.
+//
+// Classified, never dropped: the caller gets context / open_questions / risks
+// back so nothing vanishes silently.
+const OPEN_QUESTIONS = /open[\s-]*questions?/i;
+const RISKS = /^\s*[\d.]*\s*risks?\b/i;
+const NARRATIVE = /^\s*[\d.]*\s*(assumptions?|problem|goals?|users?|scope|milestones?|context|background|glossary|overview|summary)\s*$/i;
+
+function sectionKind(entry) {
+  const section = String(entry.section || '').replace(/^\s*[\d.]+\s*/, '').trim();
+  if (OUT_OF_SCOPE.test(entry.section || '')) return 'safeguard';
+  if (OPEN_QUESTIONS.test(section)) return 'open_question';
+  if (RISKS.test(section)) return 'risk';
+  if (NARRATIVE.test(section)) return 'context';
+  return 'requirement';
+}
+
 // A PRD carries a requirement's postcondition in a sibling section suffixed
 // " AC" (e.g. "5. EPIC 1 / FR-1.1 AC"). Those are acceptance criteria, not
 // requirements: adopted as requirements they inflate the spine, and each one
@@ -83,6 +105,10 @@ function adoptRequirements(source) {
   const warnings = [];
   const seen = new Set();
   const requirements = [];
+  const context = [];
+  const openQuestions = [];
+  const risks = [];
+  const bucket = { context, open_question: openQuestions, risk: risks };
 
   for (const entry of source) {
     if (!entry || !entry.id) {
@@ -91,11 +117,16 @@ function adoptRequirements(source) {
     }
     if (seen.has(entry.id)) throw new Error(`brd-adopt: duplicate source requirement id ${entry.id}`);
     seen.add(entry.id);
-    if (acceptanceTarget(entry) || isOutOfScope(entry)) continue;
-    requirements.push(adoptOne(entry));
+    if (acceptanceTarget(entry)) continue;
+
+    const kind = sectionKind(entry);
+    if (kind === 'requirement') requirements.push(adoptOne(entry));
+    else if (kind !== 'safeguard') bucket[kind].push({ id: entry.id, text: entry.text, section: entry.section });
   }
   linkAcceptance(requirements, source, warnings);
-  return { requirements, warnings };
+  return {
+    requirements, warnings, context, open_questions: openQuestions, risks,
+  };
 }
 
 /** Acceptance-criterion entries, linked to the requirement their section names. */
@@ -117,19 +148,29 @@ function linkAcceptance(requirements, source, warnings) {
   // the entry id. On a real spine the ids are extractor-assigned (FRD-n) and
   // the PRD identifier appears only in the section, so keying by id matched
   // nothing and warned on every criterion.
+  // ALL entries sharing the PRD id, not just the first. The extractor splits one
+  // PRD requirement across several spine entries (FR-0.1 had four); attaching
+  // its acceptance criterion to only the first leaves the rest oracle-less,
+  // manufacturing downstream the exact defect validate-prd.js exists to block.
   const byPrdId = new Map();
+  const push = (key, req) => {
+    if (!key) return;
+    if (!byPrdId.has(key)) byPrdId.set(key, []);
+    byPrdId.get(key).push(req);
+  };
   for (const r of requirements) {
-    const prdId = prdIdentifier(r.section);
-    if (prdId && !byPrdId.has(prdId)) byPrdId.set(prdId, r);
-    byPrdId.set(r.id, r); // also accept a spine that already uses PRD ids
+    push(prdIdentifier(r.section), r);
+    push(r.id, r); // also accept a spine that already uses PRD ids
   }
   for (const entry of adoptAcceptance(source)) {
-    const target = byPrdId.get(entry.requirement);
-    if (!target) {
+    const targets = byPrdId.get(entry.requirement);
+    if (!targets || targets.length === 0) {
       warnings.push(`acceptance ${entry.id} names requirement ${entry.requirement}, which is not in the spine`);
       continue;
     }
-    target.acceptance.push(entry.id);
+    for (const target of targets) {
+      if (!target.acceptance.includes(entry.id)) target.acceptance.push(entry.id);
+    }
   }
 }
 
@@ -186,6 +227,7 @@ function main(argv) {
   return process.stdout.write(
     `brd-adopt: ${adopted.requirements.length} requirements adopted verbatim, `
     + `${acceptance.length} acceptance criteria, ${safeguards.length} forbidden actions, `
+    + `${adopted.context.length} context, ${adopted.open_questions.length} open question(s), ${adopted.risks.length} risk(s), `
     + `${adopted.warnings.length} warning(s).\n`
     + 'Taxonomy slots are unassigned — the ten-slot floor still has to be satisfied.\n',
   );

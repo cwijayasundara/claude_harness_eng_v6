@@ -31,7 +31,9 @@ const OUT_OF_SCOPE_HEADING = /^##+\s*\d*\.?\s*(Out of Scope|Non-?goals?)/im;
 const PLACEHOLDER = /\b(TBD|TODO|FIXME|XXX)\b|(\?{3,})/;
 const REQ_ID = /^\s*-\s*\*\*(FR-[\w.]+|NFR-[\w.]+)\*\*\s*(.*)$/;
 const ACCEPTANCE_ID = /^\s*-\s*\*\*(FR-[\w.]+)\*\*\s*(?:→|->)\s*(.+)$/;
-const MILESTONE = /^\s*-\s*\*\*(M\d+[^*]*)\*\*\s*(.*)$/;
+// Milestones are named M1.. or P0.. depending on the document; the real PRD
+// uses P0-P6, so an M-only pattern matched none of them and the check was silent.
+const MILESTONE = /^\s*(?:-|\|)\s*\**([MP]\d+[^*|]*)\**\s*[|]?(.*)$/;
 // A number, a percentage, a duration, or a named standard makes an NFR checkable.
 const MEASURABLE = /\d|\b(WCAG|SOC ?2|ISO ?\d+|GDPR|HIPAA|PCI|AES|TLS)\b/i;
 const OBSERVABLE_DONE = /done when:\s*(.+)$/i;
@@ -83,17 +85,50 @@ function collectFromHeadings(text, requirements, seen, errors) {
   });
 }
 
+// A markdown table row: "| **NFR-1** | Ranking completes in 20 min |".
+const TABLE_REQ = /^\s*\|\s*\**(FR-[\w.]+|NFR-[\w.]+)\**\s*\|(.*)$/i;
+
+// Scan the WHOLE document rather than only named sections. A real PRD puts its
+// NFRs in a table under "6. Non-functional" and some FRs as bullets under a
+// topic heading; restricting the scan to "Functional Requirements" /
+// "Non-Functional Requirements" found neither, so the NFR and milestone checks
+// had nothing to check and reported nothing.
 function collectRequirements(text, errors) {
   const requirements = [];
   const seen = new Set();
-  for (const body of [sectionBody(text, 'Functional Requirements'), sectionBody(text, 'Non-Functional Requirements')]) {
-    for (const line of body.split('\n')) {
-      const match = line.match(REQ_ID);
-      if (match) addRequirement(requirements, seen, errors, match[1], match[2]);
+  for (const line of String(text).split('\n')) {
+    // An acceptance entry ("- **FR-1** → …") reuses the requirement's id by
+    // design. Scanning the whole document made those look like a second
+    // declaration of the same requirement and every id came back duplicated.
+    if (ACCEPTANCE_ID.test(line)) continue;
+    const bullet = line.match(REQ_ID);
+    if (bullet) {
+      addRequirement(requirements, seen, errors, bullet[1], bullet[2]);
+      continue;
     }
+    const row = line.match(TABLE_REQ);
+    // Skip the id-less separator/header rows a table always carries.
+    if (row) addRequirement(requirements, seen, errors, row[1], row[2].replace(/\|/g, ' '));
   }
   collectFromHeadings(text, requirements, seen, errors);
   return requirements;
+}
+
+// A heading is a promise that requirements follow. One that parses to zero ids
+// is the silent-nothing-to-check failure: every downstream test passes because
+// it was handed an empty set.
+function checkSectionsParsed(text, requirements, errors) {
+  const kinds = [
+    { label: 'Non-functional', prefix: 'NFR-' },
+    { label: 'Functional Requirements', prefix: 'FR-' },
+  ];
+  for (const { label, prefix } of kinds) {
+    const heading = new RegExp(`^#{2,}\\s*\\d*\\.?\\s*${label}`, 'im');
+    if (!heading.test(text)) continue;
+    if (!requirements.some((r) => r.id.startsWith(prefix))) {
+      errors.push(`a "${label}" section exists but parses to zero ${prefix}ids — nothing downstream can check it`);
+    }
+  }
 }
 
 function checkAcceptance(text, requirements, errors) {
@@ -129,17 +164,25 @@ function checkNfrs(requirements, warnings) {
 }
 
 function checkMilestones(text, warnings) {
-  for (const line of sectionBody(text, 'Milestones').split('\n')) {
+  let seen = 0;
+  for (const line of String(text).split('\n')) {
     const match = line.match(MILESTONE);
     if (!match) continue;
     const [, name, rest] = match;
-    const done = rest.match(OBSERVABLE_DONE);
+    seen += 1;
+    const cells = rest.split('|').map((c) => c.trim()).filter(Boolean);
+    const done = rest.match(OBSERVABLE_DONE) || (cells.length ? [null, cells[cells.length - 1]] : null);
     const id = name.trim().split(/\s|—/)[0];
     if (!done) {
       warnings.push(`milestone ${id} has no "Done when:" — it cannot gate a deploy`);
     } else if (VAGUE_DONE.test(done[1].trim())) {
       warnings.push(`milestone ${id} done-when is not observable: "${done[1].trim()}"`);
     }
+  }
+  // A Milestones heading with nothing parseable under it is the silent-skip
+  // failure, not an absence of milestones.
+  if (seen === 0 && /^#{2,}\s*\d*\.?\s*Milestones/im.test(text)) {
+    warnings.push('a Milestones section exists but no milestone ids parsed — none were checked');
   }
 }
 
@@ -165,6 +208,7 @@ function validatePrd(text) {
     errors.push('no functional requirements found — an empty PRD cannot ground anything');
   }
   checkAcceptance(source, requirements, errors);
+  checkSectionsParsed(source, requirements, errors);
   checkNfrs(requirements, warnings);
   checkMilestones(source, warnings);
 

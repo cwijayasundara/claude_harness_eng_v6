@@ -119,6 +119,69 @@ test('an acceptance entry whose requirement is absent is reported, not dropped',
     'an acceptance criterion with no requirement is an untraceable postcondition');
 });
 
+// A PRD's narrative sections are extracted into the same spine as its
+// requirements. Adopted as requirements, an open question becomes something to
+// build: on the real 149-entry spine, 36 of 133 "requirements" were Assumptions,
+// Problem, Goals, Users, Scope, Milestones, Risks and Open questions — including
+// "Open question — how much front-end?", which would then need a story, a
+// taxonomy slot and test coverage.
+const NARRATIVE = [
+  { id: 'FRD-1', text: 'v1 is built part-time by one person.', section: '0. Assumptions' },
+  { id: 'FRD-2', text: 'Analysts cannot triage a corpus.', section: '1. Problem' },
+  { id: 'FRD-3', text: 'Ship a ranked list.', section: '2. Goals' },
+  { id: 'FRD-4', text: 'Engagement analysts.', section: '3. Users' },
+  { id: 'FRD-5', text: 'P3 is the gate that matters.', section: '10. Milestones' },
+  { id: 'FRD-6', text: 'Neo4j may not scale.', section: '11. Risks' },
+  { id: 'FRD-7', text: 'How much front-end?', section: '12. Open questions' },
+  { id: 'FRD-8', text: 'MUST accept an .xlsx upload.', section: '5. EPIC 1 / FR-1.1' },
+];
+
+test('narrative sections are not adopted as requirements', () => {
+  const { requirements } = adoptRequirements(NARRATIVE);
+  assert.deepStrictEqual(requirements.map((r) => r.id), ['FRD-8'],
+    'only requirement-bearing sections become requirements');
+});
+
+test('narrative content is classified, never silently dropped', () => {
+  const res = adoptRequirements(NARRATIVE);
+  const accounted = new Set([
+    ...res.requirements.map((r) => r.id),
+    ...res.context.map((c) => c.id),
+    ...res.open_questions.map((q) => q.id),
+    ...res.risks.map((r) => r.id),
+  ]);
+  for (const entry of NARRATIVE) {
+    assert.ok(accounted.has(entry.id), `${entry.id} was neither adopted nor classified`);
+  }
+});
+
+test('open questions and risks are separated so they can feed clarification', () => {
+  const res = adoptRequirements(NARRATIVE);
+  assert.deepStrictEqual(res.open_questions.map((q) => q.id), ['FRD-7']);
+  assert.deepStrictEqual(res.risks.map((r) => r.id), ['FRD-6']);
+});
+
+test('Non-goals still become safeguards, not narrative context', () => {
+  const withNonGoals = [...NARRATIVE, { id: 'FRD-9', text: 'No mobile client.', section: '2. Non-goals' }];
+  const res = adoptRequirements(withNonGoals);
+  assert.ok(!res.context.some((c) => c.id === 'FRD-9'), 'a non-goal is a deny-list entry, not prose');
+  assert.deepStrictEqual(adoptSafeguards(withNonGoals).map((s) => s.traces[0]), ['FRD-9']);
+});
+
+test('an acceptance criterion attaches to EVERY spine entry of its requirement', () => {
+  // The extractor splits one PRD requirement across several spine entries (FR-0.1
+  // had four). Attaching the AC to only the first leaves the rest oracle-less —
+  // manufacturing downstream the exact defect validate-prd.js exists to block.
+  const split = [
+    { id: 'FRD-10', text: 'MUST generate a corpus.', section: '5. EPIC 0 / FR-0.1' },
+    { id: 'FRD-11', text: 'MUST be seeded.', section: '5. EPIC 0 / FR-0.1' },
+    { id: 'FRD-12', text: 'AC text here.', section: '5. EPIC 0 / FR-0.1 AC' },
+  ];
+  const { requirements } = adoptRequirements(split);
+  assert.deepStrictEqual(requirements.map((r) => r.acceptance), [['FRD-12'], ['FRD-12']],
+    'both entries of FR-0.1 carry its acceptance criterion');
+});
+
 test('an empty spine fails loudly instead of adopting nothing', () => {
   assert.throws(() => adoptRequirements([]), /empty/i,
     'an empty adoption is a vacuous pass, not a valid BRD');

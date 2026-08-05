@@ -134,7 +134,25 @@ After all five dimensions are confirmed, produce a structured BRD with these sec
 - For a new project: write to `specs/brd/brd.md`
 - For a feature addition: write to `specs/brd/feature-{name}.md`
 
-Also write the **machine-readable requirement spine** to `specs/brd/brd-requirements.json` — one entry per BRD requirement, each with a stable id and a `traces` array citing the FRD section ids and/or `C-n` clarification ids it derives from:
+**In `--frd` / `--prd` mode, do NOT write `brd-requirements.json`,
+`brd-acceptance.json` or `brd-safeguards.json`.** `/brd` Step 0.1 already
+produced them deterministically via `brd-adopt.js`, carrying the source text
+verbatim with its own ids. Rewriting them as `BR-n` restores exactly the
+paraphrase R2 removed — and neither hard gate can catch it, because an adopted
+spine passes Step 4.4 as an identity and a re-expressed `BR-n` spine with
+`traces` passes it as coverage. The only difference is that one of them was
+proved lossless and the other was not.
+
+Your job in that mode is to **fill what adoption deliberately left blank**: the
+`taxonomy` slots on each adopted requirement (Step 4.45 gates them), and the
+analysis pack. Leave `id` and `text` untouched. If a requirement's text is
+wrong, that is a source-document problem — return it as unresolved rather than
+fixing it here, because the source is the immutable baseline.
+
+**Interview mode only** (no `--frd`/`--prd`): write the **machine-readable
+requirement spine** to `specs/brd/brd-requirements.json` — one entry per BRD
+requirement, each with a stable id and a `traces` array citing the confirmed
+`INT-n` interview ids and/or `C-n` clarification ids it derives from:
 ```json
 [
   { "id": "BR-1", "text": "Password reset via emailed link, token valid 1h", "traces": ["FRD-1", "C1"], "taxonomy": ["functional", "security_authz"], "acceptance": "Requesting a reset emails a link that logs the user in once within 1h and is rejected after." },

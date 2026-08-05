@@ -17,12 +17,15 @@ That is not a hypothetical — a real gated run produced no `brd-approval.json` 
 no `design-approval.json`, and left five design questions queued for a human who
 was never asked.
 
-**This fixes `/build`'s own stops, not its sub-skills' internal ones.** `/brd`
-(`context: fork`) still holds its five-dimension interview inside a fork, as does
-`/design` Step 0's architecture brainstorm; both remain unreachable and need the
-same treatment `/spec` received. Do not read the de-fork as restoring them.
+All three planning phases now share this shape: `/brd`, `/spec` and `/design`
+each run their dialogue in this session and dispatch a forked sidekick
+(`brd-render`, `spec-render`, `design-render`) for the expansion. So Phase 1's
+five-dimension interview, Phase 2's decision dialogue and Phase 3's architecture
+brainstorm all reach the human, and each phase records a `plan-approval`
+receipt — including `brd`, which had no phase at all until the intake was
+de-forked.
 
-The delegated sub-skills (`/brownfield`, `/spec-render`, `/design`, `/test`,
+The delegated sub-skills (`/brownfield`, the three `*-render` skills, `/test`,
 `/auto`, `/gate`) fork their own work as they already do; the conductor itself
 stays in the main conversation loop. Same rule, same reason, as `/feature` and
 `/sprint`. Nothing else depends on the fork: resumability is file-existence
