@@ -184,6 +184,7 @@
     "brownfield": {
       "why": "Only needed on existing codebases. Includes the 10-control nav/token-governor stack, which false-blocked 3x in one session.",
       "skill": [
+        "brd-render",
         "brownfield",
         "code-map",
         "context",

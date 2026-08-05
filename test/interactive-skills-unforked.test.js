@@ -28,12 +28,20 @@ const MUST_STAY_INTERACTIVE = [
   'sprint',   // GATE 1 + GATE 2
   'spec',     // decision dialogue (Step 3) + plan-review-loop (Step 8)
   'design',   // Step 0 brainstorm + Step 0.5 clarify + the design gate
+  'brd',      // five-dimension interview + clarification budget + approval
 ];
 
 // Phases split into a main-session shaping half and a forked sidekick renderer.
+// `guard` is what the renderer must show it refuses to run without. /spec and
+// /design have a decisions gate; /brd's confirmed input is the interview and
+// clarification record, so its renderer's guard is the standing prohibition on
+// clarifying inside a fork — where "clarifying" means answering your own
+// question, the pattern that produced a clarification log the human never
+// shaped.
 const SPLIT_PHASES = [
-  { shaping: 'spec', renderer: 'spec-render' },
-  { shaping: 'design', renderer: 'design-render' },
+  { shaping: 'spec', renderer: 'spec-render', guard: /validate-spec-decisions\.js/ },
+  { shaping: 'design', renderer: 'design-render', guard: /validate-design-decisions\.js/ },
+  { shaping: 'brd', renderer: 'brd-render', guard: /Never invoke `\/clarify` here/i },
 ];
 
 // /design is an orchestrator index: its dispatch step lives in references/,
@@ -94,10 +102,17 @@ test('the renderer half of a split phase does fork — the split must stay real'
   }
 });
 
-test('each renderer gates on its own decisions file, so bypassing the shaping half still blocks', () => {
+test('each renderer states what it refuses to run without, so bypassing the shaping half still blocks', () => {
+  for (const { renderer, guard } of SPLIT_PHASES) {
+    const text = fs.readFileSync(path.join(SKILLS_DIR, renderer, 'SKILL.md'), 'utf8');
+    assert.match(text, guard, `${renderer} must carry its own guard, not rely on the caller`);
+  }
+});
+
+test('no renderer resolves ambiguity itself — a fork can only ask itself', () => {
   for (const { renderer } of SPLIT_PHASES) {
     const text = fs.readFileSync(path.join(SKILLS_DIR, renderer, 'SKILL.md'), 'utf8');
-    assert.match(text, /validate-(spec|design)-decisions\.js/,
-      `${renderer} must re-run the decisions gate itself`);
+    assert.match(text, /unresolved/i,
+      `${renderer} must return unresolved items rather than inventing answers`);
   }
 });

@@ -26,7 +26,7 @@ Run `/brd` with the provided requirements document. Outputs are written to `spec
 
 **Stop and wait for explicit human approval before proceeding.** Present a summary of the BRD and ask: "Approve BRD to proceed to Phase 2?"
 
-Do NOT proceed without a clear "yes" or "approved" from the user. *(In `--autonomous` mode, do not stop here — the BRD is approved together with everything else at the consolidated Plan Approval gate, Phase 3.5.)*
+Record the outcome with `node .claude/scripts/plan-approval.js record --phase brd` so the stop is verifiable rather than prose — Phase 3 checks `--phase all`, which now includes it. Do NOT proceed without a clear "yes" or "approved" from the user. *(In `--autonomous` mode, do not stop here — the BRD is approved together with everything else at the consolidated Plan Approval gate, Phase 3.5.)*
 
 ### Phase 2 — Story Specification [HUMAN APPROVAL]
 
