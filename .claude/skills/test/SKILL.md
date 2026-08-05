@@ -169,9 +169,39 @@ Write acceptance tests to `specs/test_artefacts/acceptance/{story-id}.<ext>` (ex
 
 Every implementation-ready AC should have a corresponding AT before the story is handed to implementation. `at-traces.json` is the deterministic signal downstream review should check for. As of gap G23, this is also mechanically enforced at commit time: `at-first-gate.js` (pre-commit) blocks a story's NEW production source files from being committed unless both the AT file and a `record-at-red.js` receipt exist for that story (see `HARNESS.md` G20/G23).
 
+### Step 4.75 — Phase Evaluation Gate [`--plan-only`]
+
+Spawn the `evaluator` agent in **artifact mode** against
+`.claude/templates/phase-eval-rubrics.json#phases.test`:
+
+| Input | Value |
+|---|---|
+| `phase` | `test` |
+| `artifact_paths` | `specs/test_artefacts/test-plan.md`, `test-cases.md`, `verification-matrix.json`, `test-traces.json`, and `constraint-obligations.json` when Step 4.4 ran |
+| `upstream_paths` | `specs/stories/story-traces.json` (the acceptance-criterion index) |
+| `verdict_path` | `specs/reviews/phase-test-eval.json` |
+
+Threshold: weighted average >= 7.0, every criterion >= 5, max 3 iterations —
+the same contract as `/brd`, `/spec` and `/design`. On FAIL, fix the findings
+and re-run; on the third failure, carry the unresolved findings into Step 4.8's
+brief rather than looping further.
+
+**The grounding verdict is a hard gate.** When `specs/stories/story-traces.json`
+exists, `specs/reviews/test-grounding.json#pass` must be `true`. A `dropped`
+entry is an acceptance criterion with no test case — an untested requirement —
+and it fails the phase regardless of the weighted average.
+
+This step generates on the sidekick model and reviews on the frontier one. The
+review is what makes the cheap generation safe: `/test` produces the definition
+of "done" that `/auto` ratchets against for the rest of the build, and until
+this gate existed it was the only planning phase with no independent review at
+all. Whatever the plan omits, no later gate ever asks for.
+
 ### Step 4.8 — Human Review Loop [REQUIRED SUB-SKILL: `plan-review-loop`] [`--plan-only`]
 
 The test plan is the definition of "done" that `/auto` will ratchet against for the rest of the build. Whatever it omits, no gate will ever ask for. Review it with the human before that becomes load-bearing — follow `.claude/skills/plan-review-loop/SKILL.md` with `--phase test`.
+
+**Who runs this loop.** `/test` is a forked skill and a fork cannot pause for `AskUserQuestion`, so this dialogue only reaches a human when the **caller** runs it in the main session. Under `/build` it does: Phase 3 runs both `--phase design` and `--phase test` itself after the two agents return. Invoked directly as `/test --plan-only`, prepare the brief below, write the artifacts, and **return it to the caller** — do not attempt to hold the dialogue from inside the fork, which would mean answering your own questions and recording a receipt no human saw.
 
 The brief leads with coverage judgement, not the case list: which acceptance criteria you covered at which layer and why, where you chose a cheap unit test over an expensive E2E, and — the part worth their attention — **what you decided not to test**, each with a reason. A plan is far more often wrong in what it silently omits than in what it contains.
 
@@ -379,6 +409,7 @@ Any `net_new` (a delta test tracing to no CR line — scope creep) or `dropped` 
 | `specs/test_artefacts/constraint-obligations.json` | (when design schemas exist) one negative-test obligation per schema constraint |
 | `specs/test_artefacts/obligation-index.json` | (when design schemas exist) obligation upstream index for the grounding gate |
 | `specs/reviews/test-grounding.json` | (when story-traces exists) deterministic AC + obligation coverage verdict |
+| `specs/reviews/phase-test-eval.json` | Evaluator verdict for the test-planning phase (Step 4.75) |
 | `specs/reviews/verification-matrix-verdict.json` | Deterministic matrix gate verdict |
 | `e2e/{story-id}.spec.ts` | Playwright tests per story |
 | `playwright.config.ts` | Playwright configuration |
