@@ -1,3 +1,3 @@
 ## Step 0 — Brainstorm Architecture Direction
 
-Before spawning agents, invoke `superpowers:brainstorming` to explore architectural trade-offs, technology choices, and design alternatives. This prevents the planner from committing to the first viable architecture without considering alternatives. Feed the brainstorming output into the planner agent's prompt.
+Before recording any decision, invoke `superpowers:brainstorming` to explore architectural trade-offs, technology choices, and design alternatives — with the human, in this session. This is what stops the design committing to the first viable architecture without considering alternatives. Each conclusion becomes a `decisions[]` entry in `specs/decisions/design-decisions.json` (Step 0.9), which is what `design-render` then expands. The alternative you rejected is the `rules_out` field, and the gate requires it.

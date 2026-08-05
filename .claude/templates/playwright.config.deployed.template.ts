@@ -15,8 +15,8 @@ import { defineConfig, devices } from '@playwright/test';
 //     in parallel, against an environment that holds other people's data.
 //
 // The target is validated by .claude/scripts/e2e-target-guard.js before the
-// suite runs — see the `pretest` wiring in the generated package.json and the
-// guard step in .github/workflows/e2e-deployed.yml.
+// suite runs — see the guard step in .github/workflows/e2e-deployed.yml, which
+// runs before the browsers are installed so a misconfigured run costs seconds.
 
 const baseURL = process.env.E2E_BASE_URL;
 

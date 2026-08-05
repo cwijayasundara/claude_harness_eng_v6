@@ -141,6 +141,7 @@ function costByPhase(transcriptPath, opts = {}) {
       subagent_output_tokens: usage.sidechain_output_tokens,
       subagent_messages: usage.sidechain_messages,
       cost_usd: usage.cost_usd,
+      unpriced_models: usage.unpriced_models,
     };
   });
 }
@@ -207,6 +208,18 @@ function pad(value, width, left = false) {
   return left ? s.padStart(width) : s.padEnd(width);
 }
 
+// A model billed at the default (Opus) rate because it has no price entry makes
+// the total a guess. Computing that and never printing it is the same silence
+// the coverage note exists to break.
+function unpricedNote(rows) {
+  const unpriced = [...new Set(rows.flatMap((r) => r.unpriced_models || []))];
+  if (unpriced.length === 0) return [];
+  return [
+    `NOTE: no price entry for ${unpriced.join(', ')} — billed at the default rate.`,
+    '      Add them to .claude/hooks/lib/model-pricing.js; until then the total is an estimate.',
+  ];
+}
+
 // A partial bill must never read as a total.
 function coverageNote(coverage) {
   if (coverage.subagentFiles === 0) {
@@ -239,7 +252,7 @@ function render(rows, coverage) {
     ...totals.map((r) => renderRow(r, w)),
     rule,
     `${pad('TOTAL', w)}${pad('', 37)}${pad(`$${grand.toFixed(2)}`, 10, true)}`,
-    '', ...coverageNote(coverage), ''].join('\n');
+    '', ...unpricedNote(rows), ...coverageNote(coverage), ''].join('\n');
 }
 
 function main(argv) {

@@ -1,6 +1,6 @@
 ## Step 0.7 — Pre-Code Modularity Assessment
 
-Before spawning the planner, perform a lightweight greenfield modularity assessment so the design does not bake in avoidable coupling:
+Before recording the decisions (Step 0.9), perform a lightweight greenfield modularity assessment so the design does not bake in avoidable coupling:
 
 - Classify each domain area as **core/supporting/generic** and record expected **volatility** (high/medium/low).
 - Identify module boundaries and the **integration contracts** between them before naming files.

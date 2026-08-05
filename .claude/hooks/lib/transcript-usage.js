@@ -12,10 +12,9 @@
 // messages inflated a real 1661-line transcript by ~68%.
 
 const fs = require('fs');
-const { MODEL_PRICE, CACHE_READ_FRACTION, CACHE_WRITE_MULTIPLIER, priceKey, costOf } = require('./model-pricing.js');
+const { priceKey, costOf } = require('./model-pricing.js');
 
 const SYNTHETIC_MODEL = '<synthetic>';
-
 
 function emptyBucket() {
   return {
@@ -71,7 +70,6 @@ function addUsage(bucket, usage) {
   bucket.cache_creation_tokens += usage.cache_creation_input_tokens || usage.cache_creation_tokens || 0;
   bucket.messages += 1;
 }
-
 
 function priceOf(bucket, model) {
   return costOf(bucket, model);
@@ -144,7 +142,7 @@ function tally(turns, { since, until, includeSidechain }) {
  * @param {string} transcriptPath
  * @param {object} [opts]
  * @param {number} [opts.since]  epoch ms, inclusive lower bound
- * @param {number} [opts.until]  epoch ms, inclusive upper bound
+ * @param {number} [opts.until]  epoch ms, EXCLUSIVE upper bound (half-open [since, until))
  * @param {boolean} [opts.includeSidechain=true] count subagent turns
  * @returns {object} totals + per-model breakdown + cost_usd (never throws)
  */
@@ -184,6 +182,8 @@ function loadTurns(sources) {
  * Aggregate usage across several transcripts as one pool, deduplicating by
  * message id across files. Same options and shape as usageFromTranscript.
  * Pass `opts.loaded` (from loadTurns) to skip re-reading the sources.
+ * The window is half-open, [since, until): back-to-back phase segments share a
+ * boundary timestamp, and an inclusive upper bound billed that turn to both.
  */
 function usageFromTranscripts(sources, opts = {}) {
   const { since = null, until = null, includeSidechain = true } = opts;

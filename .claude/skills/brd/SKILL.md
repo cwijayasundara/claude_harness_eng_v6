@@ -57,8 +57,14 @@ for the very first sprint.
 
 ### Step Δ1 — Run Steps 0.0 through 4 unchanged, writing to `specs/brd/sprint-N/`
 
-Run the FRD-grounded flow (Steps 0.0, 0, 0.5, 1, 2, 2.8, 3, 4) exactly as
-written above, with one change: every output path becomes
+Run the FRD-grounded flow exactly as written, across both halves of the phase:
+Steps 0.0 (ingest), **0.1 (adopt)**, 0, 0.5, 1 and 2 here, then dispatch
+`brd-render` (Step 2.9) for its Steps 2.7, 2.8, 3, 4, 4.4 and 4.45. Adoption
+**does** run in delta mode — the new sprint PRD is a source document like any
+other — so pass `--root`/`--source` such that it reads and writes the sprint
+paths rather than the flat ones.
+
+One change throughout: every output path becomes
 `specs/brd/sprint-N/` (e.g. `specs/brd/sprint-N/brd.md`,
 `specs/brd/sprint-N/brd-requirements.json`, `specs/brd/sprint-N/clarification-log.json`).
 When writing `brd-requirements.json`, any requirement that carries forward a
@@ -100,6 +106,14 @@ normally against this sprint's spine).
 Same as Step 5, plus display the requirements-delta classification (new /
 changed / carried / dropped, with the human's resolution for each dropped
 item) before asking for approval.
+
+**Name the sprint paths on the receipt, not the flat ones.** Step 5's artifact
+list is `specs/brd/brd.md` etc., which for sprint N are sprint 1's files — they
+exist, so `plan-approval` would happily digest them and the receipt would go on
+matching while this sprint's BRD changed underneath it. Pass
+`specs/brd/sprint-N/brd.md`, `sprint-N/brd-requirements.json` and
+`sprint-N/clarification-log.json` explicitly. The digest-voids-on-change
+property is the whole point of the receipt.
 
 ---
 

@@ -42,20 +42,28 @@ function lspServers(profile) {
   return servers;
 }
 
+// e2e_targets is the allowlist e2e-target-guard.js checks a post-deploy run
+// against, and it fails CLOSED — an unconfigured allowlist refuses every target.
+// Emitting it empty in every generated manifest is what makes the key
+// discoverable; without it the guard names a setting that appears nowhere.
+const E2E_TARGETS = { e2e_targets: [] };
+
 function verificationBlock(mode) {
   if (mode === 'B') {
     return {
+      ...E2E_TARGETS,
       mode: 'local',
       local: { backend_url: 'http://localhost:8000', frontend_url: 'http://localhost:3000', start_commands: [] },
     };
   }
   if (mode === 'C') {
     return {
+      ...E2E_TARGETS,
       mode: 'stub',
       stub: { schema_source: 'specs/design/api-contracts.schema.json', auto_generate_mock_server: true },
     };
   }
-  return { mode: 'docker', docker: { compose_file: 'docker-compose.yml', services: ['backend', 'frontend'] } };
+  return { ...E2E_TARGETS, mode: 'docker', docker: { compose_file: 'docker-compose.yml', services: ['backend', 'frontend'] } };
 }
 
 function evaluationBlock() {
