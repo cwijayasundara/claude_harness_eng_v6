@@ -1,0 +1,172 @@
+/**
+ * Per-phase cost attribution.
+ *
+ * The harness telemetry ledger records no tokens and, on a real run, covered
+ * 8.8 of ~30 hours — the two most expensive planning phases recorded nothing.
+ * The transcript does carry every slash-command invocation and every usage
+ * block, so phase attribution is recoverable from it alone, retroactively and
+ * with no collector.
+ */
+'use strict';
+
+const assert = require('assert');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { test } = require('node:test');
+
+const { segmentsFromTranscript, costByPhase } = require('../.claude/scripts/phase-cost.js');
+
+function writeTranscript(rows) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-phase-cost-'));
+  const file = path.join(dir, 'transcript.jsonl');
+  fs.writeFileSync(file, rows.map((r) => JSON.stringify(r)).join('\n') + '\n');
+  return file;
+}
+
+const userTurn = (ts, text, isSidechain = false) => ({
+  type: 'user', isSidechain, timestamp: ts, message: { content: text },
+});
+
+const assistantTurn = (ts, id, model, output) => ({
+  type: 'assistant', isSidechain: false, timestamp: ts, requestId: id,
+  message: { id, model, usage: { input_tokens: 0, output_tokens: output } },
+});
+
+test('extracts slash-command segments in order with start timestamps', () => {
+  const file = writeTranscript([
+    userTurn('2026-08-02T07:00:00.000Z', '/brd --frd prd/x.md'),
+    assistantTurn('2026-08-02T07:30:00.000Z', 'a1', 'claude-opus-5', 100),
+    userTurn('2026-08-02T09:00:00.000Z', '/spec'),
+    assistantTurn('2026-08-02T09:30:00.000Z', 'a2', 'claude-opus-5', 200),
+  ]);
+  const segs = segmentsFromTranscript(file);
+  assert.strictEqual(segs.length, 2);
+  assert.strictEqual(segs[0].command, 'brd');
+  assert.strictEqual(segs[1].command, 'spec');
+  assert.strictEqual(segs[0].end, segs[1].start, 'a phase ends where the next begins');
+});
+
+test('recognises the <command-name> wrapper form and strips any plugin prefix', () => {
+  const file = writeTranscript([
+    userTurn('2026-08-02T06:00:00.000Z',
+      '<command-message>scaffold</command-message> <command-name>claude_harness_eng_v5:scaffold</command-name>'),
+    assistantTurn('2026-08-02T06:10:00.000Z', 'a1', 'claude-sonnet-5', 10),
+  ]);
+  const segs = segmentsFromTranscript(file);
+  assert.strictEqual(segs.length, 1);
+  assert.strictEqual(segs[0].command, 'scaffold');
+});
+
+test('ignores sidechain user turns — a subagent prompt is not a new phase', () => {
+  const file = writeTranscript([
+    userTurn('2026-08-02T07:00:00.000Z', '/spec'),
+    userTurn('2026-08-02T07:05:00.000Z', '/implement', true),
+    assistantTurn('2026-08-02T07:30:00.000Z', 'a1', 'claude-opus-5', 100),
+  ]);
+  const segs = segmentsFromTranscript(file);
+  assert.strictEqual(segs.length, 1);
+  assert.strictEqual(segs[0].command, 'spec');
+});
+
+test('freeform prose never opens a named command phase', () => {
+  const file = writeTranscript([
+    userTurn('2026-08-02T07:00:00.000Z', 'please look at the spec and tell me what you think'),
+    assistantTurn('2026-08-02T07:30:00.000Z', 'a1', 'claude-opus-5', 100),
+  ]);
+  const segs = segmentsFromTranscript(file);
+  assert.deepStrictEqual(segs.map((s) => s.command), ['(freeform)'],
+    'prose is bucketed, never mistaken for a command');
+});
+
+test('attributes real token spend and cost to each phase', () => {
+  const file = writeTranscript([
+    userTurn('2026-08-02T07:00:00.000Z', '/brd'),
+    assistantTurn('2026-08-02T07:30:00.000Z', 'a1', 'claude-opus-5', 1e6),
+    userTurn('2026-08-02T09:00:00.000Z', '/spec'),
+    assistantTurn('2026-08-02T09:30:00.000Z', 'a2', 'claude-sonnet-5', 1e6),
+  ]);
+  const rows = costByPhase(file);
+  const brd = rows.find((r) => r.command === 'brd');
+  const spec = rows.find((r) => r.command === 'spec');
+  assert.strictEqual(brd.output_tokens, 1e6);
+  assert.strictEqual(brd.model, 'claude-opus-5');
+  assert.strictEqual(Math.round(brd.cost_usd), 25, 'opus output is $25/1M');
+  assert.strictEqual(Math.round(spec.cost_usd), 15, 'sonnet output is $15/1M');
+});
+
+test('a phase spanning repeated lines of one message is not double counted', () => {
+  const dup = assistantTurn('2026-08-02T07:30:00.000Z', 'a1', 'claude-opus-5', 500);
+  const file = writeTranscript([
+    userTurn('2026-08-02T07:00:00.000Z', '/spec'),
+    dup, dup, dup,
+  ]);
+  const rows = costByPhase(file);
+  assert.strictEqual(rows[0].output_tokens, 500);
+});
+
+test('missing transcript yields no segments rather than throwing', () => {
+  assert.deepStrictEqual(segmentsFromTranscript('/nope/missing.jsonl'), []);
+  assert.deepStrictEqual(costByPhase('/nope/missing.jsonl'), []);
+});
+
+test('Claude Code built-ins do not open a phase — they would swallow the bill', () => {
+  // Observed live: /clear and /model absorbed $936 of unrelated conversational
+  // work because each opened a segment that ran until the next command.
+  const file = writeTranscript([
+    userTurn('2026-08-02T07:00:00.000Z', '/spec'),
+    assistantTurn('2026-08-02T07:10:00.000Z', 'a1', 'claude-opus-5', 100),
+    userTurn('2026-08-02T08:00:00.000Z', '/clear'),
+    assistantTurn('2026-08-02T08:10:00.000Z', 'a2', 'claude-opus-5', 900),
+  ]);
+  const segs = segmentsFromTranscript(file);
+  assert.deepStrictEqual(segs.map((s) => s.command), ['spec'],
+    '/clear is a built-in, not a harness phase');
+  const rows = costByPhase(file);
+  assert.strictEqual(rows[0].output_tokens, 1000,
+    'work after a built-in stays with the phase that was running');
+});
+
+test('work before any command is bucketed as freeform, not dropped', () => {
+  const file = writeTranscript([
+    userTurn('2026-08-02T07:00:00.000Z', 'just chatting about the design'),
+    assistantTurn('2026-08-02T07:10:00.000Z', 'a1', 'claude-opus-5', 300),
+    userTurn('2026-08-02T08:00:00.000Z', '/spec'),
+    assistantTurn('2026-08-02T08:10:00.000Z', 'a2', 'claude-opus-5', 100),
+  ]);
+  const rows = costByPhase(file);
+  const freeform = rows.find((r) => r.command === '(freeform)');
+  assert.ok(freeform, 'pre-command work is reported rather than silently discarded');
+  assert.strictEqual(freeform.output_tokens, 300);
+  assert.strictEqual(rows.find((r) => r.command === 'spec').output_tokens, 100);
+});
+
+test('excludes <synthetic> turns — they are not a billable model', () => {
+  const file = writeTranscript([
+    userTurn('2026-08-02T07:00:00.000Z', '/spec'),
+    assistantTurn('2026-08-02T07:10:00.000Z', 'a1', 'claude-opus-5', 100),
+    assistantTurn('2026-08-02T07:20:00.000Z', 's1', '<synthetic>', 0),
+  ]);
+  const rows = costByPhase(file);
+  assert.strictEqual(rows[0].messages, 1, 'synthetic turns are not counted as messages');
+  assert.ok(!('<synthetic>' in rows[0].by_model), 'synthetic never appears as a model');
+});
+
+test('pools subagent transcripts into the phase window that dispatched them', () => {
+  const main = writeTranscript([
+    userTurn('2026-08-02T07:00:00.000Z', '/brd'),
+    assistantTurn('2026-08-02T07:10:00.000Z', 'a1', 'claude-opus-5', 100),
+    userTurn('2026-08-02T09:00:00.000Z', '/spec'),
+    assistantTurn('2026-08-02T09:10:00.000Z', 'a2', 'claude-opus-5', 200),
+  ]);
+  // A subagent dispatched during /spec, living in its own transcript file.
+  const sub = writeTranscript([
+    assistantTurn('2026-08-02T09:30:00.000Z', 'sub1', 'claude-sonnet-5', 5000),
+  ]);
+  const rows = costByPhase(main, { extraTranscripts: [sub] });
+  const brd = rows.find((r) => r.command === 'brd');
+  const spec = rows.find((r) => r.command === 'spec');
+  assert.strictEqual(brd.output_tokens, 100, 'subagent spend does not leak into an earlier phase');
+  assert.strictEqual(spec.output_tokens, 5200, 'subagent output lands in the dispatching phase');
+  assert.strictEqual(spec.subagent_output_tokens, 5000, 'subagent share is reported separately');
+});

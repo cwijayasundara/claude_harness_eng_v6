@@ -120,15 +120,18 @@
       "script": [
         "amendment-provenance-check",
         "auto-merge",
+        "autonomy-policy",
         "brd-taxonomy-check",
         "build-chain",
         "build-chain-state",
         "build-lane",
         "canvas-semantic-check",
         "canvas-sync-check",
+        "checkpoint-state",
         "constraints-extract",
         "contract-accessibility-default",
         "cr-index",
+        "credential-request",
         "env-diff",
         "feature-lane",
         "flag-scan",
@@ -142,20 +145,17 @@
         "pr-body",
         "pr-poll",
         "record-modularity-review",
+        "runtime-policy",
         "seam-confidence",
+        "security-certification",
         "story-clusters",
         "team-policy",
-      "checkpoint-state",
-      "runtime-policy",
-      "security-certification",
-      "autonomy-policy",
-      "credential-request",
-      "topologies",
+        "topologies",
         "trace-check",
+        "unattended-preflight",
         "validate-canvas",
         "validate-contract",
         "verification-matrix-gate",
-        "unattended-preflight",
         "vertical-glossary-pack",
         "vocabulary-check",
         "wave-plan",
@@ -351,6 +351,7 @@
         "drift-report",
         "harness-coverage",
         "loop-health",
+        "phase-cost",
         "promote-recommendation",
         "readiness-digest",
         "run-custom-sensors",
@@ -377,6 +378,7 @@
         "loop-health",
         "merge-provenance",
         "stale-stamp",
+        "transcript-usage",
         "withhold-verdicts"
       ],
       "hook": [
@@ -425,7 +427,7 @@
       ]
     },
     "dist": {
-      "why": "Harness distribution and self-benchmarking: packaging SKUs, cutting releases, watching upstream, replaying the harness's own telemetry. Maintainer-only \u2014 a scaffolded product never runs these.",
+      "why": "Harness distribution and self-benchmarking: packaging SKUs, cutting releases, watching upstream, replaying the harness's own telemetry. Maintainer-only — a scaffolded product never runs these.",
       "skill": [],
       "agent": [],
       "script": [
@@ -449,12 +451,12 @@
     {
       "from": "skill:refactor",
       "to": "skill:code-map",
-      "why": "Caller lookup for rename/move blast radius. The whole block is already conditional on specs/brownfield/code-graph.json existing, which only happens when the brownfield pack is installed \u2014 /refactor works without it. Prose conditionality the checker cannot see."
+      "why": "Caller lookup for rename/move blast radius. The whole block is already conditional on specs/brownfield/code-graph.json existing, which only happens when the brownfield pack is installed — /refactor works without it. Prose conditionality the checker cannot see."
     },
     {
       "from": "skill:design",
       "to": "script:modularity-pack",
-      "why": "/design --delta Step D3.5 refreshes the modularity pack ONLY if specs/brownfield/ already exists ('If it exists, refresh the pack') \u2014 i.e. when brownfield has run. A greenfield/core install never reaches this conditional step. Prose conditionality the checker cannot see, same case as skill:refactor -> skill:code-map."
+      "why": "/design --delta Step D3.5 refreshes the modularity pack ONLY if specs/brownfield/ already exists ('If it exists, refresh the pack') — i.e. when brownfield has run. A greenfield/core install never reaches this conditional step. Prose conditionality the checker cannot see, same case as skill:refactor -> skill:code-map."
     },
     {
       "from": "skill:design",
@@ -469,7 +471,7 @@
     {
       "from": "script:scaffold-apply",
       "to": "script:scaffold-security-baseline",
-      "why": "Same as scaffold-apply -> navigation-refresh: the installer runs only from the full harness source ($CLAUDE_PLUGIN_ROOT), where the compliance pack is present. Guarding the require instead would add a silent-skip path to a security-baseline install step \u2014 worse than a declared, reviewed exception."
+      "why": "Same as scaffold-apply -> navigation-refresh: the installer runs only from the full harness source ($CLAUDE_PLUGIN_ROOT), where the compliance pack is present. Guarding the require instead would add a silent-skip path to a security-baseline install step — worse than a declared, reviewed exception."
     },
     {
       "from": "script:scaffold-apply",
