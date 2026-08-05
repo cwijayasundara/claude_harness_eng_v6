@@ -17,7 +17,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { usageFromTranscripts } = require('../hooks/lib/transcript-usage.js');
+const { usageFromTranscripts, loadTurns } = require('../hooks/lib/transcript-usage.js');
 
 const COMMAND_TAG = /<command-name>\s*([^<]+?)\s*<\/command-name>/;
 const LEADING_SLASH = /^\/([A-Za-z0-9_:-]+)/;
@@ -119,12 +119,14 @@ function costByPhase(transcriptPath, opts = {}) {
   const extras = (opts.extraTranscripts || []).map((p) => ({ path: p, subagent: true }));
   const sources = [transcriptPath, ...extras];
   const segments = segmentsFromTranscript(transcriptPath);
+  // Parse the corpus once; each segment only re-windows it in memory.
+  const loaded = loadTurns(sources);
   return segments.map((seg, i) => {
     // The last phase runs until everything stops, not until the main loop's
     // final turn — a subagent it dispatched can still be working after that.
     const isLast = i === segments.length - 1;
     const window = { since: seg.start, until: isLast ? null : seg.end };
-    const usage = usageFromTranscripts(sources, window);
+    const usage = usageFromTranscripts(sources, { ...window, loaded });
     return {
       command: seg.command,
       start: new Date(seg.start).toISOString(),

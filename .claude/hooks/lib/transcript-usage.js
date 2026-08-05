@@ -12,20 +12,10 @@
 // messages inflated a real 1661-line transcript by ~68%.
 
 const fs = require('fs');
-const { MODEL_PRICE, CACHE_READ_FRACTION } = require('../../scripts/budget-state.js');
+const { MODEL_PRICE, CACHE_READ_FRACTION, CACHE_WRITE_MULTIPLIER, priceKey, costOf } = require('./model-pricing.js');
 
 const SYNTHETIC_MODEL = '<synthetic>';
 
-// Anthropic bills a cache WRITE above base input (1.25x at the 5-minute TTL).
-//
-// budget-state.js#receiptCost prices it at 1x and is therefore ~20% light on
-// cache-creation tokens. That formula is not reused here, and the constant is
-// not defined there, because budget-state.js sits above the 300-line hard limit
-// and the write gate blocks any growth. The divergence is deliberate and
-// one-directional: budget-state produces a labelled *estimate* for the /auto
-// budget, this module prints an actual bill. Fixing budget-state needs the file
-// split first.
-const CACHE_WRITE_MULTIPLIER = 1.25;
 
 function emptyBucket() {
   return {
@@ -82,23 +72,9 @@ function addUsage(bucket, usage) {
   bucket.messages += 1;
 }
 
-// Real model ids carry a date suffix (claude-haiku-4-5-20251001); MODEL_PRICE
-// keys do not. Without this, every dated or pinned id fell through to the Opus
-// default — pricing Haiku 5x too high, silently.
-function priceKey(model) {
-  if (!model) return null;
-  if (MODEL_PRICE[model]) return model;
-  const undated = String(model).replace(/-\d{8}$/, '');
-  return MODEL_PRICE[undated] ? undated : null;
-}
 
 function priceOf(bucket, model) {
-  const price = MODEL_PRICE[priceKey(model)] || MODEL_PRICE.default;
-  return bucket.input_tokens * price[0]
-    + bucket.output_tokens * price[1]
-    + bucket.cache_read_tokens * price[0] * CACHE_READ_FRACTION
-    // Anthropic bills a 5-minute cache write at 1.25x base input, not 1x.
-    + bucket.cache_creation_tokens * price[0] * CACHE_WRITE_MULTIPLIER;
+  return costOf(bucket, model);
 }
 
 // Total cost, plus any model billed at the default rate because it has no price
@@ -188,18 +164,30 @@ function turnsFromSource(source) {
 }
 
 /**
+ * Read and parse a set of sources once. Callers that window the same corpus
+ * repeatedly (one pass per phase segment) should load once and reuse: parsing
+ * per segment is O(segments x files), which on a session with 84 subagent
+ * transcripts and 40 phases meant thousands of full re-parses.
+ */
+function loadTurns(sources) {
+  const turns = [];
+  let read = false;
+  for (const source of sources) {
+    const loaded = turnsFromSource(source);
+    if (loaded.read) read = true;
+    turns.push(...loaded.turns);
+  }
+  return { turns, read };
+}
+
+/**
  * Aggregate usage across several transcripts as one pool, deduplicating by
  * message id across files. Same options and shape as usageFromTranscript.
+ * Pass `opts.loaded` (from loadTurns) to skip re-reading the sources.
  */
 function usageFromTranscripts(sources, opts = {}) {
   const { since = null, until = null, includeSidechain = true } = opts;
-  const pooled = [];
-  let anyRead = false;
-  for (const source of sources) {
-    const { turns, read } = turnsFromSource(source);
-    if (read) anyRead = true;
-    pooled.push(...turns);
-  }
+  const { turns: pooled, read: anyRead } = opts.loaded || loadTurns(sources);
   const { total, byModel, sidechain } = tally(pooled, { since, until, includeSidechain });
 
   const { cost, unpriced } = priceAll(byModel);
@@ -216,4 +204,4 @@ function usageFromTranscripts(sources, opts = {}) {
   };
 }
 
-module.exports = { usageFromTranscript, usageFromTranscripts, parseTurn, priceOf };
+module.exports = { usageFromTranscript, usageFromTranscripts, loadTurns, parseTurn, priceOf };
