@@ -1,0 +1,89 @@
+# Post-deploy E2E suite. Copied into target projects by `/test --deployed`.
+#
+# Distinct from e2e.yml, which runs on pull_request and starts the stack itself.
+# This one attaches to an environment that already exists, so it is triggered by
+# a deployment finishing — never by a code change.
+#
+# Required repo/environment secrets:
+#   E2E_BASE_URL        the deployed target (must match verification.e2e_targets)
+#   E2E_USER_EMAIL      test-account identity used by e2e/auth.setup.ts
+#   E2E_USER_PASSWORD   test-account credential
+# Adapt the auth secrets to your identity provider; auth.setup.ts is the only
+# file that reads them.
+name: E2E (deployed)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to test
+        required: true
+        default: staging
+        type: choice
+        options: [staging, test]
+      suite:
+        description: Which projects to run
+        required: true
+        default: full
+        type: choice
+        options: [smoke, full]
+  workflow_run:
+    workflows: [Deploy]
+    types: [completed]
+
+concurrency:
+  # One post-deploy run per environment. Two suites provisioning data against
+  # the same environment at once is how "flaky E2E" is manufactured.
+  group: e2e-deployed-${{ github.event.inputs.environment || 'staging' }}
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    # workflow_run fires on failure too; testing a failed deploy wastes a run
+    # and reports a misleading red.
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: if [ -f package.json ]; then npm ci || npm install; fi
+
+      # Fail before the browsers are installed, and before a single request is
+      # sent to the wrong host.
+      - name: Verify the target is an approved environment
+        env:
+          E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+        run: node .claude/scripts/e2e-target-guard.js --require-deployed
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run post-deploy suite
+        env:
+          E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
+          E2E_RUN_ID: ${{ github.run_id }}
+          CI: 'true'
+        run: >-
+          npx playwright test
+          --config=playwright.deployed.config.ts
+          --project=${{ github.event.inputs.suite || 'full' }}
+
+      # Uploaded on failure AND success: a green run's trace is what you compare
+      # against when the next one goes red.
+      - name: Upload traces, videos and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-deployed-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14

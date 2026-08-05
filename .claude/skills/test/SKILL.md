@@ -16,11 +16,13 @@ agent: generator
 /test --e2e-only
 /test --from-cr <file.md>
 /test --from-cr --issue N
+/test --deployed
 ```
 
 - `/test` — generate all test artefacts: plan, cases, fixtures, and E2E tests.
 - `/test --plan-only` — generate test plan, test cases, and test data fixtures (everything in `specs/test_artefacts/`). Stop before writing Playwright files. Does NOT require source code — only needs stories from `/spec`.
 - `/test --e2e-only` — skip plan/cases, go straight to Playwright E2E generation from `specs/test_artefacts/verification-matrix.json`; record `specs/test_artefacts/e2e-traces.json`. Use when plan already exists and source code has been built.
+- `/test --deployed` — **post-deploy lane.** Generate a Playwright suite that runs against an environment that is already deployed, instead of one this suite starts itself. Writes `playwright.deployed.config.ts`, `e2e/auth.setup.ts`, `.github/workflows/e2e-deployed.yml`, and `specs/test_artefacts/e2e-deployed-traces.json`. See "Post-Deploy Lane" below and `references/e2e-deployed.md` for the authoring rules. Run after `/deploy` and after the app is live in a test environment.
 - `/test --from-cr <file.md>` / `--from-cr --issue N` — **brownfield CR lane.** Turn a change request (a markdown file, or a GitHub issue) against existing code into a **regression-pin set** (behavior that must stay identical) plus a **delta test plan** (new behavior the CR introduces), grounded against the CR. See "Brownfield CR Lane" below. Run this *before* `/change` when a CR document exists.
 
 ---
@@ -239,6 +241,79 @@ npx playwright test
 ```
 
 All tests must pass on the first run against the target environment. A failing test that was written incorrectly is not acceptable — fix the test before reporting results.
+
+---
+
+## Post-Deploy Lane (`--deployed`)
+
+Automates the regression pass that would otherwise be done by hand every time
+something ships to a test environment.
+
+**Read `references/e2e-deployed.md` before generating a single spec.** The
+default E2E suite owns its environment — it starts the stack and seeds fixtures.
+This one owns none of that: shared data, no reset, real latency, live third
+parties. A spec written for the build loop and pointed at a deployed target does
+not fail honestly, it goes flaky, and a flaky suite gets ignored.
+
+### Prerequisites
+
+- `specs/test_artefacts/verification-matrix.json` exists (from `/test --plan-only`).
+- The app is deployed and reachable at a target listed in
+  `project-manifest.json#verification.e2e_targets`. Add the allowlist if it is
+  absent — the guard fails closed and will refuse every target until it exists.
+
+### Steps
+
+1. **Copy the templates** (skip any target that already exists — never overwrite
+   a team's edited file):
+   - `.claude/templates/playwright.config.deployed.template.ts` → `playwright.deployed.config.ts`
+   - `.claude/templates/e2e-auth.setup.template.ts` → `e2e/auth.setup.ts`
+   - `.claude/templates/github-workflows/e2e-deployed.yml` → `.github/workflows/e2e-deployed.yml`
+
+   Adapt `auth.setup.ts` to the project's real sign-in flow. It is the only file
+   that reads credentials, and it must never carry a fallback default.
+
+2. **Classify every matrix row** before writing specs. For each `matrix_id`,
+   decide whether its acceptance criterion is reachable against a shared
+   environment with no fixture control. Anything needing seeded edge-case data,
+   clock manipulation, or a forced third-party failure is `@needs-fixture` and
+   stays in the build-loop suite. Do not weaken an assertion to make a row
+   technically pass post-deploy — that manufactures a green that means nothing.
+
+3. **Generate specs** from the matrix, one per row, applying the authoring rules
+   in `references/e2e-deployed.md`: self-provisioning data, `e2e-`-namespaced
+   records, cleanup that nothing depends on, assertions on observable state
+   rather than timers, and a tag on every test.
+
+4. **Mark the critical path `@smoke`.** This is the subset that gates a deploy,
+   so keep it to the journeys that must work for the product to be usable at
+   all. If everything is `@smoke`, nothing is.
+
+5. **Record traces** to `specs/test_artefacts/e2e-deployed-traces.json`, same
+   contract as `e2e-traces.json` — each entry names its `matrix_id`.
+
+6. **Verify the guard, then the suite:**
+
+   ```bash
+   E2E_BASE_URL=https://test.example.com node .claude/scripts/e2e-target-guard.js --require-deployed
+   E2E_BASE_URL=https://test.example.com npx playwright test --config=playwright.deployed.config.ts --project=smoke
+   ```
+
+   Run `smoke` before `full`. A failing smoke run means the environment or the
+   auth setup is wrong, and running the full suite on top of that produces a
+   wall of failures that hides the one real cause.
+
+### Report
+
+Close with the number that decides how much manual testing can actually be
+retired:
+
+> *N of M acceptance criteria are covered post-deploy; K are `@needs-fixture`
+> and remain build-loop only.*
+
+List the `@needs-fixture` rows with the reason each cannot run. A large K is
+usually a missing test API rather than a law of nature, and it is the backlog
+for making the automated pass complete.
 
 ---
 

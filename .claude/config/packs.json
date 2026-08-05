@@ -133,6 +133,7 @@
         "contract-accessibility-default",
         "cr-index",
         "credential-request",
+        "e2e-target-guard",
         "env-diff",
         "feature-lane",
         "flag-scan",
