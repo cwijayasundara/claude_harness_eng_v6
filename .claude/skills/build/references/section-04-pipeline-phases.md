@@ -55,6 +55,22 @@ Wait for BOTH to complete before presenting results.
 2. Test plan summary: test case count, story coverage, fixture count — and what was deliberately left untested.
 3. **Plan confidence** from `specs/plan-confidence.json`: the band and its drivers — present it here too, not only in the `--autonomous` Phase 3.5 gate, so the human reviews with the planner's uncertainty in view.
 
+**Enforce the confidence gate here, not only in `--auto`.** Run:
+
+```bash
+node .claude/scripts/plan-confidence.js . --gate
+```
+
+Exit 2 (band LOW) **blocks**. The gated lane gets the same treatment `--auto` already has: run `/clarify` on the drivers, recompute, retry once. If it is still LOW, present the drivers and let the human decide explicitly — approving a LOW plan is a decision they may take, but it has to be taken, not defaulted into. A real run recorded `score: 0, band: low, hardLow: true` and proceeded to `/design` fifteen hours later, because nothing in this lane ever read it.
+
+**Before quoting `specs/plan-confidence.json` in any brief, check it still describes the current plan:**
+
+```bash
+node .claude/scripts/plan-confidence.js . --verify
+```
+
+Exit 1 means stale — the verdict was computed from planning files that have since changed. That same run's artifact still claimed 7 undecomposable stories after the review round had brought it to 6. A stale verdict is worse than none, because it reads as current: recompute rather than quoting it.
+
 **When confidence is LOW, lead with the drivers and recommend `/clarify` first** — e.g. *"Plan confidence is LOW (2 open questions, 1 undecomposable story). Recommend `/clarify` before building. Clarify now, review anyway, or stop?"* (This mirrors what `--auto` does automatically; in the gated model the human makes the call.)
 
 Do NOT proceed until `node .claude/scripts/plan-approval.js check --phase all` exits 0. *(In `--autonomous` mode, do not present a design-only gate here — go to Phase 3.5, which presents the whole plan at once.)*

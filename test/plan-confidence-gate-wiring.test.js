@@ -19,15 +19,17 @@ function read(rel) {
   return fs.readFileSync(path.join(ROOT, rel), 'utf8');
 }
 
-test('parseCliArgs understands --gate and --root', () => {
-  assert.deepStrictEqual(parseCliArgs(['node', 'x', '--gate']), { root: '.', gate: true });
+test('parseCliArgs understands --gate, --verify and --root', () => {
+  assert.deepStrictEqual(parseCliArgs(['node', 'x', '--gate']), { root: '.', gate: true, verify: false });
   assert.deepStrictEqual(parseCliArgs(['node', 'x', '/tmp/proj', '--gate']), {
     root: '/tmp/proj',
     gate: true,
+    verify: false,
   });
   assert.deepStrictEqual(parseCliArgs(['node', 'x', '--root', '/tmp/a', '--gate']), {
     root: '/tmp/a',
     gate: true,
+    verify: false,
   });
 });
 
@@ -85,4 +87,28 @@ test('harness-manifest registers plan-confidence active on planning cadence', ()
   assert.strictEqual(s.status, 'active');
   assert.strictEqual(s.cadence, 'planning');
   assert.match(s.wired_at, /plan-confidence\.js/);
+});
+
+// --verify is deliberately separate from --gate: --gate RECOMPUTES the score,
+// --verify only asks whether the stored verdict still describes the current
+// plan. Conflating them would let a stale verdict be silently refreshed instead
+// of reported — which is the failure it exists to surface.
+test('--verify is parsed as its own mode, distinct from --gate', () => {
+  assert.deepStrictEqual(parseCliArgs(['node', 'x', '--verify']),
+    { root: '.', gate: false, verify: true });
+  assert.deepStrictEqual(parseCliArgs(['node', 'x', '--root', '/tmp/a', '--verify']),
+    { root: '/tmp/a', gate: false, verify: true });
+});
+
+// The gated lane is where this was missing: /auto already ran --gate, the human
+// lane only recommended /clarify in prose, and a real run recorded band LOW then
+// proceeded to /design fifteen hours later.
+test('/build Phase 3 enforces --gate and checks staleness before quoting the verdict', () => {
+  const phases = fs.readFileSync(
+    path.join(__dirname, '..', '.claude', 'skills', 'build', 'references',
+      'section-04-pipeline-phases.md'), 'utf8',
+  );
+  assert.match(phases, /plan-confidence\.js \. --gate/, 'the gated lane must run the gate');
+  assert.match(phases, /plan-confidence\.js \. --verify/, 'and must check the verdict is current');
+  assert.match(phases, /Exit 2 \(band LOW\) \*\*blocks\*\*/, 'and must say it blocks');
 });

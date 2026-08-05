@@ -225,23 +225,27 @@ function loadConfig(readText) {
 }
 
 function parseCliArgs(argv) {
-  // Supports: plan-confidence.js [root] [--gate] [--root path]
-  // --gate: exit 0 when band is high|medium, exit 2 when low (headless stop signal).
+  // Supports: plan-confidence.js [root] [--gate] [--verify] [--root path]
+  // --gate:   recompute, then exit 0 when band is high|medium, 2 when low.
+  // --verify: do NOT recompute — exit 1 when the STORED verdict was computed
+  //           from inputs that have since changed, or does not exist.
   let root = '.';
   let gate = false;
+  let verify = false;
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--gate') gate = true;
+    else if (a === '--verify') verify = true;
     else if (a === '--root') root = argv[++i] || root;
     else if (!a.startsWith('-')) root = a;
   }
-  return { root, gate };
+  return { root, gate, verify };
 }
 
 if (require.main === module) {
   const fs = require('fs');
   const path = require('path');
-  const { root, gate } = parseCliArgs(process.argv);
+  const { root, gate, verify } = parseCliArgs(process.argv);
   const readText = (rel) => {
     try {
       return fs.readFileSync(path.join(root, rel), 'utf8');
@@ -250,9 +254,23 @@ if (require.main === module) {
     }
   };
 
+  const fresh = require('../hooks/lib/plan-confidence-freshness.js');
+  const VERDICT = path.join(root, 'specs', 'plan-confidence.json');
+  const PATHS = Object.values(DEFAULT_PATHS);
+
+  if (verify) {
+    const r = fresh.runVerify({
+      verdictPath: VERDICT, readText, paths: PATHS, readFile: (p) => fs.readFileSync(p, 'utf8'),
+    });
+    process[r.code ? 'stderr' : 'stdout'].write(r.err || r.out);
+    process.exit(r.code);
+  }
+
   const signals = gatherSignals(readText);
   const result = computeConfidence(signals, loadConfig(readText));
-  const artifact = { ...result, signals, computed_at: new Date().toISOString() };
+  const artifact = {
+    ...result, signals, inputs: fresh.digestInputs(readText, PATHS), computed_at: new Date().toISOString(),
+  };
 
   fs.mkdirSync(path.join(root, 'specs'), { recursive: true });
   fs.writeFileSync(path.join(root, 'specs', 'plan-confidence.json'), JSON.stringify(artifact, null, 2) + '\n');

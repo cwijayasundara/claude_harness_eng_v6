@@ -224,3 +224,80 @@ test('computeConfidence consumes gatherSignals output end to end', () => {
   const r = P.computeConfidence(sig);
   assert.strictEqual(r.band, 'low'); // needs_breakdown is a hard trigger
 });
+
+// ── Staleness ────────────────────────────────────────────────────────────────
+//
+// The audited run wrote `score: 0, band: low, hardLow: true` at 15:06 and then
+// ran /design fifteen hours later. Worse than being ignored, the artifact was
+// WRONG by then: it claimed 7 needs-breakdown stories when the review round had
+// already brought it to 6. A confidence verdict that describes a superseded
+// plan is more dangerous than none, because it reads as current.
+//
+// Same remedy as plan-approval's digest-voids-on-change: record what the verdict
+// was computed from, so a reader can tell whether it still applies.
+const cfs = require('fs');
+const cpath = require('path');
+const cos = require('os');
+const { execFileSync } = require('child_process');
+
+const PC_CLI = cpath.join(__dirname, '..', '.claude', 'scripts', 'plan-confidence.js');
+
+function pcRoot(files = {}) {
+  const root = cfs.mkdtempSync(cpath.join(cos.tmpdir(), 'plan-confidence-'));
+  for (const [rel, body] of Object.entries(files)) {
+    const abs = cpath.join(root, rel);
+    cfs.mkdirSync(cpath.dirname(abs), { recursive: true });
+    cfs.writeFileSync(abs, body);
+  }
+  return root;
+}
+
+const runPc = (root, args = []) => {
+  try {
+    execFileSync('node', [PC_CLI, '--root', root, ...args], { encoding: 'utf8', stdio: 'pipe' });
+    return 0;
+  } catch (e) {
+    return e.status;
+  }
+};
+
+const readPc = (root) => JSON.parse(
+  cfs.readFileSync(cpath.join(root, 'specs', 'plan-confidence.json'), 'utf8'),
+);
+
+test('the verdict records what it was computed from', () => {
+  const root = pcRoot({ 'specs/stories/epics.md': '# Epics\n\n## E1\n' });
+  runPc(root);
+  const v = readPc(root);
+  assert.ok(v.inputs, 'the verdict must record its inputs');
+  assert.ok(v.inputs['specs/stories/epics.md'], 'a present input carries a digest');
+  assert.strictEqual(v.inputs['specs/brd/brd.md'], null,
+    'an absent input is recorded null, not omitted — absent and unchanged are different facts');
+});
+
+test('--verify passes while the inputs are unchanged', () => {
+  const root = pcRoot({ 'specs/stories/epics.md': '# Epics\n\n## E1\n' });
+  runPc(root);
+  assert.strictEqual(runPc(root, ['--verify']), 0);
+});
+
+test('--verify fails once an input the verdict was computed from changes', () => {
+  const root = pcRoot({ 'specs/stories/backlog-needs-breakdown.md': '| id |\n|---|\n| E1-S1 |\n| E1-S2 |\n' });
+  runPc(root);
+  // The review round resolves one backlog item — exactly what went unnoticed.
+  cfs.writeFileSync(
+    cpath.join(root, 'specs/stories/backlog-needs-breakdown.md'), '| id |\n|---|\n| E1-S1 |\n',
+  );
+  assert.strictEqual(runPc(root, ['--verify']), 1,
+    'a verdict describing a superseded plan must not read as current');
+});
+
+test('--verify fails when no verdict has been computed at all', () => {
+  assert.strictEqual(runPc(pcRoot(), ['--verify']), 1);
+});
+
+test('--gate still recomputes, so it is never stale', () => {
+  const root = pcRoot({ 'specs/stories/backlog-needs-breakdown.md': '| id |\n|---|\n| E1-S1 |\n' });
+  assert.strictEqual(runPc(root, ['--gate']), 2, 'a needs-breakdown story is a hardLow driver');
+  assert.strictEqual(readPc(root).hardLow, true);
+});

@@ -177,6 +177,7 @@
         "contract-schema",
         "decision-record",
         "gates-planning",
+        "plan-confidence-freshness",
         "story-graph"
       ],
       "hook": [
