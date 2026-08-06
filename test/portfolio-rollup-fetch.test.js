@@ -172,14 +172,14 @@ test('9: generate-attestation prefers project-manifest.json#harness_version over
 
 // ============================ 10. manifest + budget ==========================
 
-test('10: manifest valid; portfolio-compliance-rollup registered; control budget holds at 159', () => {
+test('10: manifest valid; portfolio-compliance-rollup registered; control budget holds at 160', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'harness-manifest.json'), 'utf8'));
   const { errors, counts } = validate(manifest);
   assert.deepStrictEqual(errors, [], errors.join('\n'));
-  assert.strictEqual(counts.guides + counts.sensors, 159);
+  assert.strictEqual(counts.guides + counts.sensors, 160);
   const ids = controlIds(manifest);
   assert.ok(ids.includes('portfolio-compliance-rollup'));
   const baseline = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, '.claude', 'state', 'control-budget-baseline.json'), 'utf8'));
-  assert.strictEqual(baseline.count, 159);
+  assert.strictEqual(baseline.count, 160);
   assert.strictEqual(budgetDecision(ids, baseline, justifiedIds(manifest)).blocked, false);
 });

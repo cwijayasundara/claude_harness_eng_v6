@@ -1,5 +1,5 @@
 {
-  "count": 159,
+  "count": 160,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -102,6 +102,7 @@
     "plan-approval",
     "plan-confidence",
     "plan-review-loop",
+    "planning-gate-receipts",
     "portfolio-compliance-rollup",
     "pr-respond",
     "pr-walkthrough",

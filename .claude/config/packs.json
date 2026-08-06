@@ -176,6 +176,7 @@
         "canvas-sync",
         "contract-schema",
         "decision-record",
+        "gate-receipt-sensor",
         "gates-planning",
         "plan-confidence-freshness",
         "story-graph"
