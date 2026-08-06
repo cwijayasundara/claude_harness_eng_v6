@@ -92,10 +92,14 @@ function learningAdvisories(stateDir) {
 // change (which would invalidate the cached prompt prefix mid-session).
 function skippedGateAdvisory(projectDir, stateDir) {
   try {
-    const { detectSkippedGates } = require('./lib/gate-receipt-sensor');
+    const { detectSkippedGates, appliesTo } = require('./lib/gate-receipt-sensor');
+    const lane = fs.readFileSync(path.join(stateDir, 'current-lane'), 'utf8').trim();
+    // Record nothing for a lane this sensor cannot say anything about. Logging
+    // ran:true on every Stop would tell the value meter the control is
+    // constantly working when it is constantly inapplicable.
+    if (!appliesTo(lane)) return null;
     const { readReceipt } = require('../scripts/plan-approval');
     const { recordOutcome } = require('./lib/sensor-outcomes');
-    const lane = fs.readFileSync(path.join(stateDir, 'current-lane'), 'utf8').trim();
     const phaseDir = { brd: 'brd', spec: 'stories', design: 'design', test: 'test_artefacts' };
     const found = detectSkippedGates(lane, {
       phaseRan: (p) => {
@@ -107,6 +111,7 @@ function skippedGateAdvisory(projectDir, stateDir) {
     });
     recordOutcome(projectDir, {
       sensor: 'planning-gate-receipts', ran: true, blocked: false, surface: 'stop',
+      target: found.length ? found.map((f) => f.phase).join(',') : 'none',
     });
     if (!found.length) return null;
     return `${found.length} planning gate(s) left no approving receipt: `

@@ -100,3 +100,20 @@ test('a build lane with flags still resolves to the build expectations', () => {
   assert.deepStrictEqual(found.map((f) => f.phase), ['brd'],
     'record-run writes lanes like "build --auto"; the base lane is what carries the gates');
 });
+
+// "Not applicable" and "applicable, nothing wrong" are different facts, and
+// detectSkippedGates returns [] for both. The hook recorded ran:true on every
+// Stop regardless — including lanes that own no planning gates, where it early
+// returns — so the value meter saw a sensor that looked maximally active while
+// doing nothing in most sessions. A control that overstates its own activity
+// cannot be judged on whether it earns its keep.
+const { appliesTo } = require('../.claude/hooks/lib/gate-receipt-sensor.js');
+
+test('the sensor says whether it applies to a lane at all', () => {
+  assert.strictEqual(appliesTo('build'), true);
+  assert.strictEqual(appliesTo('build --auto'), true);
+  assert.strictEqual(appliesTo('sprint'), true);
+  for (const lane of ['loop', 'feature', 'vibe', 'change', 'gate', '', null, undefined]) {
+    assert.strictEqual(appliesTo(lane), false, `${lane} owns no planning gate`);
+  }
+});

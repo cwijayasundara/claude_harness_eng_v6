@@ -56,4 +56,17 @@ function detectSkippedGates(lane, io) {
   return findings;
 }
 
-module.exports = { EXPECTED_PHASES, detectSkippedGates, baseLane };
+// Whether this sensor has anything to check for a lane at all.
+//
+// detectSkippedGates returns [] both for "not applicable" and for "applicable,
+// nothing wrong" — different facts. Without this the hook recorded ran:true on
+// every Stop of every lane, so the value meter saw a control that looked
+// maximally active while doing nothing in most sessions. A control that
+// overstates its own activity cannot be judged on whether it earns its keep.
+function appliesTo(lane) {
+  return Boolean(EXPECTED_PHASES[baseLane(lane)]);
+}
+
+module.exports = {
+  EXPECTED_PHASES, detectSkippedGates, appliesTo, baseLane,
+};
