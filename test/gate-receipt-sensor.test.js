@@ -29,7 +29,7 @@ const world = ({ artifacts = [], receipts = {} }) => ({
 });
 
 test('a lane that runs planning gates and recorded them reports nothing', () => {
-  const found = detectSkippedGates('build', world({
+  const found = detectSkippedGates('gated', world({
     artifacts: ['brd', 'spec', 'design', 'test'],
     receipts: {
       brd: { status: 'approved' },
@@ -42,7 +42,7 @@ test('a lane that runs planning gates and recorded them reports nothing', () => 
 });
 
 test('a phase whose artifacts exist with no receipt is reported', () => {
-  const found = detectSkippedGates('build', world({
+  const found = detectSkippedGates('gated', world({
     artifacts: ['brd', 'spec', 'design'],
     receipts: { spec: { status: 'approved' } },
   }));
@@ -52,7 +52,7 @@ test('a phase whose artifacts exist with no receipt is reported', () => {
 });
 
 test('a waiver is not a skipped gate — deliberately headless is a different fact', () => {
-  const found = detectSkippedGates('build', world({
+  const found = detectSkippedGates('gated', world({
     artifacts: ['brd', 'spec'],
     receipts: { brd: { status: 'waived', waived_by: '--auto' }, spec: { status: 'approved' } },
   }));
@@ -60,7 +60,7 @@ test('a waiver is not a skipped gate — deliberately headless is a different fa
 });
 
 test('a changes-requested receipt is reported — the loop never reached approval', () => {
-  const found = detectSkippedGates('build', world({
+  const found = detectSkippedGates('gated', world({
     artifacts: ['spec'],
     receipts: { spec: { status: 'changes-requested' } },
   }));
@@ -69,7 +69,7 @@ test('a changes-requested receipt is reported — the loop never reached approva
 
 test('a phase that never ran is not a skipped gate', () => {
   // /build stopping after Phase 2 has not skipped design — it has not reached it.
-  const found = detectSkippedGates('build', world({
+  const found = detectSkippedGates('gated', world({
     artifacts: ['brd', 'spec'],
     receipts: { brd: { status: 'approved' }, spec: { status: 'approved' } },
   }));
@@ -90,30 +90,60 @@ test('lanes that own no planning gate are never reported, however full specs/ is
 });
 
 test('the lane-to-phases map is explicit, so adding a lane is a decision', () => {
-  assert.deepStrictEqual(EXPECTED_PHASES.build, ['brd', 'spec', 'design', 'test']);
+  assert.deepStrictEqual(EXPECTED_PHASES.gated, ['brd', 'spec', 'design', 'test']);
   assert.deepStrictEqual(EXPECTED_PHASES.sprint, ['brd', 'spec', 'design']);
   assert.strictEqual(EXPECTED_PHASES.feature, undefined);
+  assert.strictEqual(EXPECTED_PHASES.finalize, undefined);
 });
 
-test('a build lane with flags still resolves to the build expectations', () => {
-  const found = detectSkippedGates('build --auto', world({ artifacts: ['brd'], receipts: {} }));
+test('a lane string with stray whitespace still resolves', () => {
+  const found = detectSkippedGates(' gated ', world({ artifacts: ['brd'], receipts: {} }));
   assert.deepStrictEqual(found.map((f) => f.phase), ['brd'],
     'record-run writes lanes like "build --auto"; the base lane is what carries the gates');
 });
 
-// "Not applicable" and "applicable, nothing wrong" are different facts, and
-// detectSkippedGates returns [] for both. The hook recorded ran:true on every
-// Stop regardless — including lanes that own no planning gates, where it early
-// returns — so the value meter saw a sensor that looked maximally active while
-// doing nothing in most sessions. A control that overstates its own activity
-// cannot be judged on whether it earns its keep.
+// The lane vocabulary is NOT the command name. record-run.js writes
+// parseBuildInvocation().lane, which build-lane.js defines as gated | auto |
+// autonomous | lite | lite-auto | lite-autonomous | finalize. "build" is never
+// written. Keying on "build" made the sensor inert for every real /build run —
+// the exact incident its own header cites — and every test hand-injected the
+// lane, so nothing exercised the real value and it shipped green.
+const { parseBuildInvocation } = require('../.claude/scripts/build-lane.js');
 const { appliesTo } = require('../.claude/hooks/lib/gate-receipt-sensor.js');
 
-test('the sensor says whether it applies to a lane at all', () => {
-  assert.strictEqual(appliesTo('build'), true);
-  assert.strictEqual(appliesTo('build --auto'), true);
+test('the sensor applies to every lane /build actually writes', () => {
+  const invocations = [
+    '/build prd.md', '/build prd.md --auto', '/build prd.md --autonomous',
+    '/build prd.md --lite', '/build prd.md --lite --auto',
+  ];
+  for (const prompt of invocations) {
+    const { lane } = parseBuildInvocation(prompt);
+    assert.strictEqual(appliesTo(lane), true,
+      `/build wrote lane "${lane}" — the sensor must apply to it`);
+  }
+});
+
+test('finalize is not applicable — it runs the tail, not the planning phases', () => {
+  const { lane } = parseBuildInvocation('/build --finalize');
+  assert.strictEqual(lane, 'finalize');
+  assert.strictEqual(appliesTo('finalize'), false);
+});
+
+test('/sprint keeps its own lane name, which is the command', () => {
   assert.strictEqual(appliesTo('sprint'), true);
+});
+
+test('lanes that own no planning gate still do not apply', () => {
   for (const lane of ['loop', 'feature', 'vibe', 'change', 'gate', '', null, undefined]) {
     assert.strictEqual(appliesTo(lane), false, `${lane} owns no planning gate`);
   }
+});
+
+test('a real gated lane with missing receipts reports them', () => {
+  const { lane } = parseBuildInvocation('/build prd.md');
+  const found = detectSkippedGates(lane, world({
+    artifacts: ['brd', 'spec', 'design'], receipts: { spec: { status: 'approved' } },
+  }));
+  assert.deepStrictEqual(found.map((f) => f.phase), ['brd', 'design'],
+    'the two gates the audited run skipped, via the lane record-run really writes');
 });

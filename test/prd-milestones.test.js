@@ -106,3 +106,36 @@ test('the log template demands the two sections that carry the weight', () => {
   assert.match(tpl, /write "none" explicitly/i,
     'an absent section and no deviations are different facts');
 });
+
+// Scanning the whole document made a priority legend parse as a build plan, and
+// the id/done-when extraction only worked for the bold and table forms. That
+// mattered more once the output became a persisted artifact /spec is told to
+// treat as "the build sequence the human already decided".
+test('a priority legend outside the Milestones section is not a build plan', () => {
+  const doc = '## 4. Priorities\n- P0 must-have\n- P1 should-have\n\n'
+    + '## 7. Milestones\n- **M1 — Ingest** (FR-1). Done when: it lists in the browser.\n';
+  assert.deepStrictEqual(parseMilestones(doc).map((m) => m.id), ['M1'],
+    'only rows under a Milestones heading declare milestones');
+});
+
+test('a priority table outside the section is not a build plan either', () => {
+  const doc = '## 4. Priorities\n\n| id | meaning |\n|---|---|\n| **P0** | Launch blocker |\n\n'
+    + '## 7. Milestones\n- **M1 — X** (FR-1). Done when: it renders.\n';
+  assert.deepStrictEqual(parseMilestones(doc).map((m) => m.id), ['M1']);
+});
+
+test('the em-dash bullet form yields a real done-when, not a false warning', () => {
+  const m = parseMilestones('## 7. Milestones\n- M1 — Ingest — Done when: it lists in the browser.\n')[0];
+  assert.strictEqual(m.id, 'M1');
+  assert.match(m.done_when, /lists in the browser/);
+  assert.strictEqual(m.observable, true);
+});
+
+test('a colon after the id is punctuation, not part of the id', () => {
+  const m = parseMilestones('## 7. Milestones\n- M1: Ingest. Done when: it lists.\n')[0];
+  assert.strictEqual(m.id, 'M1');
+});
+
+test('a document with no Milestones heading yields no plan', () => {
+  assert.deepStrictEqual(parseMilestones('## 4. Priorities\n- P0 must-have\n'), []);
+});

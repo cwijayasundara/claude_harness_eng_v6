@@ -247,7 +247,8 @@ function main(argv) {
   // resolve, not join: an absolute --out-dir must be honoured rather than
   // silently reparented under root.
   const outDir = path.resolve(root, arg('--out-dir', path.dirname(OUT_REQUIREMENTS)));
-  const source = loadSource(arg('--source', path.join(root, SOURCE_REL)));
+  const sourcePath = arg('--source', path.join(root, SOURCE_REL));
+  const source = loadSource(sourcePath);
 
   let adopted;
   try {
@@ -261,7 +262,12 @@ function main(argv) {
   for (const w of adopted.warnings) process.stderr.write(`  WARN  ${w}\n`);
 
   let prd = null;
-  try { prd = fs.readFileSync(path.join(root, SOURCE_PRD), 'utf8'); } catch (_) { /* interview mode */ }
+  // The PRD that goes with THIS spine — its sibling, not the flat one. Delta
+  // mode adopts specs/brd/sprint-N/frd-requirements.json, and reading the flat
+  // source-frd.md there gave sprint N the previous sprint's milestone plan.
+  try {
+    prd = fs.readFileSync(path.join(path.dirname(sourcePath), path.basename(SOURCE_PRD)), 'utf8');
+  } catch (_) { /* interview mode, or no PRD beside the spine */ }
   const milestones = parseMilestones(prd);
   if (!argv.includes('--dry-run')) writeOutputs(outDir, adopted, safeguards, acceptance, milestones);
   return process.stdout.write(

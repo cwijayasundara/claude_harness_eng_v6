@@ -20,12 +20,29 @@
 
 // Which lanes own which planning gates. Explicit rather than derived, so adding
 // a lane is a decision someone makes rather than a side effect.
+//
+// These are the values record-run.js actually writes to .claude/state/current-lane
+// — parseBuildInvocation().lane from build-lane.js, NOT the command name. An
+// earlier version keyed on "build", which record-run never writes, so the sensor
+// was inert for every real /build run: the exact incident it exists to detect.
+//
+// A headless lane still expects receipts. `--auto` and `--autonomous` skip the
+// human loops but /build's collapsed-lane step waives each phase explicitly, so
+// an absent receipt there means even the waiver did not happen — which is the
+// same silence, and a waiver is not treated as a finding.
+const PLANNING_PHASES = ['brd', 'spec', 'design', 'test'];
 const EXPECTED_PHASES = Object.freeze({
-  build: ['brd', 'spec', 'design', 'test'],
+  gated: PLANNING_PHASES,
+  auto: PLANNING_PHASES,
+  autonomous: PLANNING_PHASES,
+  lite: PLANNING_PHASES,
+  'lite-auto': PLANNING_PHASES,
+  'lite-autonomous': PLANNING_PHASES,
+  // finalize runs Phases 9-11 only — it never reaches a planning gate.
   sprint: ['brd', 'spec', 'design'],
 });
 
-// record-run writes lanes like "build --auto"; the base name carries the gates.
+// Defensive only: record-run writes a single normalized token, never a phrase.
 function baseLane(lane) {
   return String(lane || '').trim().split(/\s+/)[0];
 }

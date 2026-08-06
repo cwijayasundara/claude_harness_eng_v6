@@ -312,3 +312,30 @@ test("the PRD's own open questions lead the clarification budget", () => {
   assert.match(step, /brd-open-questions\.json/, 'the budget must start from the PRD, not from invention');
   assert.match(step, /Open Questions section/i, 'an unresolved one must stay visible, not be dropped');
 });
+
+// Delta mode: /brd instructs `--source <sprint-N>/frd-requirements.json
+// --out-dir specs/brd/sprint-N`. SOURCE_PRD was hardcoded flat, so sprint N's
+// milestone plan was parsed from sprint 1's PRD — and /spec is then told that
+// file is "the build sequence the human already decided… do not silently depart
+// from it."
+test('the milestone plan comes from the PRD beside the spine being adopted', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'brd-adopt-delta-'));
+  const sprint = path.join(root, 'specs', 'brd', 'sprint-2');
+  fs.mkdirSync(sprint, { recursive: true });
+  // Sprint 1's flat PRD — must NOT be the source for sprint 2.
+  fs.mkdirSync(path.join(root, 'specs', 'brd'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'specs', 'brd', 'source-frd.md'),
+    '## 7. Milestones\n- **M1 — SPRINT-ONE** (FR-1). Done when: sprint one shipped.\n');
+  fs.writeFileSync(path.join(sprint, 'frd-requirements.json'),
+    JSON.stringify([{ id: 'FRD-9', text: 'sprint two req', section: '5. EPIC 1 / FR-9.1' }]));
+  fs.writeFileSync(path.join(sprint, 'source-frd.md'),
+    '## 7. Milestones\n- **M2 — SPRINT-TWO** (FR-9.1). Done when: sprint two ships.\n');
+
+  execFileSync('node', [CLI, '--root', root,
+    '--source', path.join(sprint, 'frd-requirements.json'),
+    '--out-dir', 'specs/brd/sprint-2'], { encoding: 'utf8' });
+
+  const plan = JSON.parse(fs.readFileSync(path.join(sprint, 'brd-milestones.json'), 'utf8'));
+  assert.deepStrictEqual(plan.map((m) => m.id), ['M2'],
+    "sprint 2 must read its own PRD, not the previous sprint's");
+});

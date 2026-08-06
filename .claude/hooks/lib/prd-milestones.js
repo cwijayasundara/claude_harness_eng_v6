@@ -33,19 +33,39 @@ function doneWhen(rest) {
  * @returns {Array<{id, name, requirements: string[], done_when: string, observable: boolean}>}
  *   in document order — this is the build sequence, not a set.
  */
+// Only rows under a Milestones heading. Scanning the whole document made a
+// priority legend ("- P0 must-have") parse as a build plan — which mattered
+// once this became a persisted artifact /spec is told to treat as the sequence
+// the human already decided.
+function milestonesSection(text) {
+  const lines = String(text || '').split('\n');
+  const start = lines.findIndex((l) => MILESTONES_HEADING.test(l));
+  if (start < 0) return [];
+  const body = [];
+  for (const line of lines.slice(start + 1)) {
+    if (/^#{1,6}\s/.test(line)) break;
+    body.push(line);
+  }
+  return body;
+}
+
 function parseMilestones(text) {
   const out = [];
-  for (const line of String(text || '').split('\n')) {
+  for (const line of milestonesSection(text)) {
     const match = line.match(MILESTONE);
     if (!match) continue;
     const [, rawName, rest] = match;
     const name = rawName.trim();
-    const done = doneWhen(rest);
+    // done-when is read from the WHOLE line: the em-dash bullet form
+    // ("- M1 — Ingest — Done when: X") puts everything in the name capture, so
+    // reading only `rest` returned "" and warned that a stated one was missing.
+    const done = doneWhen(`${name} ${rest}`) || doneWhen(rest);
     out.push({
-      id: name.split(/\s|—/)[0],
+      // Trailing punctuation is punctuation: "- M1: Ingest" is milestone M1.
+      id: name.split(/\s|—/)[0].replace(/[:.,;]+$/, ''),
       name,
-      // Requirement ids named anywhere on the row — the whole row, since a table
-      // puts them in a scope cell and a bullet in the parenthetical.
+      // Requirement ids named anywhere on the row — a table puts them in a
+      // scope cell, a bullet in the parenthetical.
       requirements: [...new Set(`${name} ${rest}`.match(REQUIREMENT_REF) || [])],
       done_when: done,
       observable: Boolean(done) && !VAGUE_DONE.test(done),

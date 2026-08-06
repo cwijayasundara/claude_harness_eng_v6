@@ -256,7 +256,10 @@ if (require.main === module) {
 
   const fresh = require('../hooks/lib/plan-confidence-freshness.js');
   const VERDICT = path.join(root, 'specs', 'plan-confidence.json');
-  const PATHS = Object.values(DEFAULT_PATHS);
+  // calibration-profile.json is read by loadConfig and therefore changes the
+  // verdict; omitting it let a re-weighted MEDIUM stay 'current' while a
+  // recompute returned LOW.
+  const PATHS = [...Object.values(DEFAULT_PATHS), 'calibration-profile.json'];
 
   if (verify) {
     const r = fresh.runVerify({
