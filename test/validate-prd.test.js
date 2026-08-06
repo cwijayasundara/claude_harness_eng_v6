@@ -264,3 +264,38 @@ test('the first sighting is the one whose text is kept', () => {
   const res = validatePrd(RESTATED);
   assert.match(res.requirements.find((r) => r.id === 'FR-1').text, /accepts an upload/);
 });
+
+// Narrowing duplicate detection to bullets-inside-a-requirements-section (to
+// stop a traceability matrix reading as a redeclaration) left a hole: the
+// heading and bold pseudo-heading forms — which the audited PRD uses
+// throughout — could declare the same id twice and be silently collapsed, the
+// second declaration's text discarded with no error.
+//
+// Those two forms are unambiguously declarations. A restatement uses a table
+// row or a prose bullet; nobody restates a requirement by writing its heading
+// again.
+const dupPrd = (body) => `# PRD: X\n\n## 2. Non-goals\n- none deliberately.\n\n${body}`;
+
+test('a duplicate declared twice in bold pseudo-heading form is caught', () => {
+  const res = validatePrd(dupPrd(
+    '**FR-1 Upload**\nAC: returns 201.\n\n**FR-1 Something else**\nAC: returns 200.\n',
+  ));
+  assert.strictEqual(res.ok, false);
+  assert.ok(res.errors.some((e) => /duplicate requirement id FR-1\b/.test(e)));
+});
+
+test('a duplicate declared twice in heading form is caught', () => {
+  const res = validatePrd(dupPrd(
+    '## 5. EPIC 1 / FR-1.1\nThing one. AC: returns 201.\n\n## 5. EPIC 1 / FR-1.1\nThing two. AC: returns 200.\n',
+  ));
+  assert.strictEqual(res.ok, false);
+  assert.ok(res.errors.some((e) => /duplicate requirement id FR-1\.1/.test(e)));
+});
+
+test('but a table row or prose bullet restating a declared id is still fine', () => {
+  const res = validatePrd(dupPrd(
+    '**FR-1 Upload**\nAC: returns 201.\n\n## 8. Traceability\n\n| req | area |\n|---|---|\n'
+    + '| **FR-1** | ingest |\n\n## 9. Deferrals\n- **FR-1** slips to v2 if P1 slips.\n',
+  ));
+  assert.deepStrictEqual(res.errors, []);
+});

@@ -55,7 +55,7 @@ Wait for BOTH to complete before presenting results.
 2. Test plan summary: test case count, story coverage, fixture count — and what was deliberately left untested.
 3. **Plan confidence** from `specs/plan-confidence.json`: the band and its drivers — present it here too, not only in the `--autonomous` Phase 3.5 gate, so the human reviews with the planner's uncertainty in view.
 
-**Enforce the confidence gate here, not only in `--auto`.** Run:
+**Enforce the confidence gate here, not only in `--auto`.** *(Gated lane only. In `--auto` / `--autonomous` the gate runs once at Phase 3.5 with its own single-`/clarify` retry — running it here as well would invoke `/clarify` twice for the same drivers.)* Run:
 
 ```bash
 node .claude/scripts/plan-confidence.js . --gate

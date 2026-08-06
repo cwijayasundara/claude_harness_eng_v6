@@ -257,3 +257,14 @@ test('--out-dir places every output where delta mode reads it', () => {
   assert.ok(!fs.existsSync(path.join(root, 'specs', 'brd', 'brd-requirements.json')),
     'the flat sprint-1 spine must not be overwritten');
 });
+
+// path.join(root, outDir) silently relativises an absolute --out-dir: files for
+// `--out-dir /tmp/x` landed at `<root>/tmp/x`, somewhere the caller never looks.
+test('an absolute --out-dir is honoured, not reparented under root', () => {
+  const target = fs.mkdtempSync(path.join(os.tmpdir(), 'brd-adopt-abs-'));
+  const root = runAdopt(MIXED, ['--out-dir', target]);
+  assert.ok(fs.existsSync(path.join(target, 'brd-requirements.json')),
+    'an absolute out-dir must receive the files');
+  assert.ok(!fs.existsSync(path.join(root, target)),
+    'and must not be reparented under root');
+});

@@ -239,7 +239,9 @@ function main(argv) {
   // Delta mode writes to specs/brd/sprint-N/. --root cannot express that: it
   // prefixes specs/brd/ again, landing the files two levels deep where Step D2's
   // trace-check never looks.
-  const outDir = path.join(root, arg('--out-dir', path.dirname(OUT_REQUIREMENTS)));
+  // resolve, not join: an absolute --out-dir must be honoured rather than
+  // silently reparented under root.
+  const outDir = path.resolve(root, arg('--out-dir', path.dirname(OUT_REQUIREMENTS)));
   const source = loadSource(arg('--source', path.join(root, SOURCE_REL)));
 
   let adopted;

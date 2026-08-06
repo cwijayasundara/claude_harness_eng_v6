@@ -81,11 +81,21 @@ function addRequirement(requirements, seen, errors, id, text, declaring = false)
 const HEADING_REQ = /^##+\s*.*?\b(FR-[\w.]+|NFR-[\w.]+)\s*$/i;
 const BOLD_REQ = /^\*\*(FR-[\w.]+|NFR-[\w.]+)\b[^*]*\*\*/i;
 
+// A heading or bold pseudo-heading is unambiguously a DECLARATION — nobody
+// restates a requirement by writing its heading again. A restatement uses a
+// table row or a prose bullet. So a repeat here is a real duplicate, and
+// without this the two forms the audited PRD uses throughout could declare the
+// same id twice and be silently collapsed.
 function collectFromHeadings(text, requirements, seen, errors) {
   const lines = String(text).split('\n');
+  const declared = new Set();
   lines.forEach((line, i) => {
     const match = line.match(HEADING_REQ) || line.match(BOLD_REQ);
     if (!match) return;
+    if (declared.has(match[1])) {
+      errors.push(`duplicate requirement id ${match[1]} — ids collapse in the grounding spine`);
+    }
+    declared.add(match[1]);
     const body = [];
     for (const next of lines.slice(i + 1)) {
       if (/^#+\s/.test(next) || HEADING_REQ.test(next) || BOLD_REQ.test(next)) break;
@@ -125,6 +135,10 @@ function collectRequirements(text, errors) {
   const requirements = [];
   const seen = new Set();
   reportDeclaredDuplicates(text, errors);
+  // Declarations first, whatever their position: a traceability row can precede
+  // the requirement it references, and first-sighting-wins then kept the row cell
+  // as the requirement text, losing the real body and its inline AC line.
+  collectFromHeadings(text, requirements, seen, errors);
   for (const line of String(text).split('\n')) {
     // An acceptance entry ("- **FR-1** → …") reuses the requirement's id by
     // design. Scanning the whole document made those look like a second
@@ -139,7 +153,6 @@ function collectRequirements(text, errors) {
     // Skip the id-less separator/header rows a table always carries.
     if (row) addRequirement(requirements, seen, errors, row[1], row[2].replace(/\|/g, ' '));
   }
-  collectFromHeadings(text, requirements, seen, errors);
   return requirements;
 }
 
