@@ -70,6 +70,28 @@ changes wording. Typically:
 1. **Milestone scope** — which epics are in the next milestone, and which are
    explicitly deferred. This is always load-bearing; it governs everything the
    renderer will and will not expand.
+
+   **Read `specs/brd/brd-milestones.json` first.** It is the PRD's own milestone
+   plan, in document order — the build sequence the human already decided when
+   they wrote the PRD. Do not re-derive it from scratch and do not silently
+   depart from it.
+
+   - Each entry carries `requirements[]`. Where those are present, propose
+     `milestone.epics` as *the epics containing the next milestone's
+     requirements*, and say which milestone you are scoping to.
+   - Where `requirements[]` is **empty**, the PRD sequenced its milestones
+     without mapping them to requirement ids — common, and `validate-prd`
+     warns about it. The plan still gives you the order and the exit criteria,
+     so propose a mapping from those and ask. Do not treat an unmapped plan as
+     no plan.
+   - Read `specs/milestones/*-log.md` if any exist. A completed milestone's log
+     records what was actually built and where it deviated from the PRD, which
+     is what makes "the next milestone" mean something rather than restarting
+     from the document each time.
+
+   The milestone that is *not* in scope is the point: a real run expanded 16
+   epics to story depth against a plan-confidence of 0. Everything you defer
+   here is work the renderer will not generate.
 2. **Epic boundaries** — any epic you would split or merge, and why.
 3. **Real vs defensive dependencies** — edges where you are unsure whether the
    consumer truly needs the producer, or you are adding the edge to be safe.

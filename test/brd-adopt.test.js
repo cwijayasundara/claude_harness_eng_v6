@@ -268,3 +268,23 @@ test('an absolute --out-dir is honoured, not reparented under root', () => {
   assert.ok(!fs.existsSync(path.join(root, target)),
     'and must not be reparented under root');
 });
+
+// R4 link 1: the PRD's milestone plan reaches /spec as data. /brd Step 0.0
+// already copies the PRD verbatim to specs/brd/source-frd.md, so adoption can
+// emit the plan without introducing a second source of truth.
+test('the milestone plan is emitted from the PRD copy when one exists', () => {
+  const root = runAdopt(MIXED);
+  fs.writeFileSync(path.join(root, 'specs', 'brd', 'source-frd.md'),
+    '# PRD\n\n## 7. Milestones\n- **M1 — Ingest** (FR-1.1). Done when: a workbook lists in the browser.\n');
+  execFileSync('node', [CLI, '--root', root], { encoding: 'utf8' });
+  const plan = JSON.parse(fs.readFileSync(path.join(root, 'specs', 'brd', 'brd-milestones.json'), 'utf8'));
+  assert.deepStrictEqual(plan.map((m) => m.id), ['M1']);
+  assert.deepStrictEqual(plan[0].requirements, ['FR-1.1']);
+  assert.strictEqual(plan[0].observable, true);
+});
+
+test('no PRD copy means an empty plan, not a crash', () => {
+  const root = runAdopt(MIXED);
+  const plan = JSON.parse(fs.readFileSync(path.join(root, 'specs', 'brd', 'brd-milestones.json'), 'utf8'));
+  assert.deepStrictEqual(plan, [], 'interview mode has no PRD and therefore no milestone plan');
+});

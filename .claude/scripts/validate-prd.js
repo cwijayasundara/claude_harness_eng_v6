@@ -33,11 +33,10 @@ const REQ_ID = /^\s*-\s*\*\*(FR-[\w.]+|NFR-[\w.]+)\*\*\s*(.*)$/;
 const ACCEPTANCE_ID = /^\s*-\s*\*\*(FR-[\w.]+)\*\*\s*(?:→|->)\s*(.+)$/;
 // Milestones are named M1.. or P0.. depending on the document; the real PRD
 // uses P0-P6, so an M-only pattern matched none of them and the check was silent.
-const MILESTONE = /^\s*(?:-|\|)\s*\**([MP]\d+[^*|]*)\**\s*[|]?(.*)$/;
 // A number, a percentage, a duration, or a named standard makes an NFR checkable.
 const MEASURABLE = /\d|\b(WCAG|SOC ?2|ISO ?\d+|GDPR|HIPAA|PCI|AES|TLS)\b/i;
-const OBSERVABLE_DONE = /done when:\s*(.+)$/i;
-const VAGUE_DONE = /^(it works|works correctly|is done|complete|finished)\.?$/i;
+// Milestone shapes are shared with brd-adopt so the two cannot disagree.
+const { parseMilestones, milestonesUnparsed } = require('../hooks/lib/prd-milestones.js');
 
 // Line-scan rather than a regex with a lookahead: the obvious `(?=^##\s|\Z)`
 // silently matches a literal "Z" in JavaScript, so the LAST section of a
@@ -205,25 +204,25 @@ function checkNfrs(requirements, warnings) {
   }
 }
 
+// Shares the parser with brd-adopt via hooks/lib/prd-milestones.js, so the two
+// cannot disagree about what a milestone is.
 function checkMilestones(text, warnings) {
-  let seen = 0;
-  for (const line of String(text).split('\n')) {
-    const match = line.match(MILESTONE);
-    if (!match) continue;
-    const [, name, rest] = match;
-    seen += 1;
-    const cells = rest.split('|').map((c) => c.trim()).filter(Boolean);
-    const done = rest.match(OBSERVABLE_DONE) || (cells.length ? [null, cells[cells.length - 1]] : null);
-    const id = name.trim().split(/\s|—/)[0];
-    if (!done) {
-      warnings.push(`milestone ${id} has no "Done when:" — it cannot gate a deploy`);
-    } else if (VAGUE_DONE.test(done[1].trim())) {
-      warnings.push(`milestone ${id} done-when is not observable: "${done[1].trim()}"`);
+  const plan = parseMilestones(text);
+  for (const m of plan) {
+    if (!m.done_when) {
+      warnings.push(`milestone ${m.id} has no "Done when:" — it cannot gate a deploy`);
+    } else if (!m.observable) {
+      warnings.push(`milestone ${m.id} done-when is not observable: "${m.done_when}"`);
     }
   }
-  // A Milestones heading with nothing parseable under it is the silent-skip
-  // failure, not an absence of milestones.
-  if (seen === 0 && /^#{2,}\s*\d*\.?\s*Milestones/im.test(text)) {
+  // A milestone naming no requirements still sequences the build, but /spec
+  // cannot derive scope from it — the human has to map epics by hand.
+  const unmapped = plan.filter((m) => m.requirements.length === 0).map((m) => m.id);
+  if (plan.length && unmapped.length === plan.length) {
+    warnings.push(`no milestone names any requirement (${unmapped.join(', ')}) — `
+      + '/spec cannot propose scope from the plan and will have to ask');
+  }
+  if (milestonesUnparsed(text, plan)) {
     warnings.push('a Milestones section exists but no milestone ids parsed — none were checked');
   }
 }

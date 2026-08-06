@@ -25,6 +25,8 @@ const SOURCE_REL = path.join('specs', 'brd', 'frd-requirements.json');
 const OUT_REQUIREMENTS = path.join('specs', 'brd', 'brd-requirements.json');
 const OUT_SAFEGUARDS = path.join('specs', 'brd', 'brd-safeguards.json');
 const OUT_ACCEPTANCE = path.join('specs', 'brd', 'brd-acceptance.json');
+const SOURCE_PRD = path.join('specs', 'brd', 'source-frd.md');
+const { parseMilestones } = require('../hooks/lib/prd-milestones.js');
 
 // A PRD's "Out of Scope" section is a deny-list, not a backlog. Its entries
 // become Forbidden Actions, which the gate and any autonomous merge enforce —
@@ -219,7 +221,7 @@ function adoptionManifest(adopted, safeguards, acceptance) {
   return rows;
 }
 
-function writeOutputs(dir, adopted, safeguards, acceptance) {
+function writeOutputs(dir, adopted, safeguards, acceptance, milestones) {
   const at = (rel) => path.join(dir, path.basename(rel));
   writeJson(at(OUT_REQUIREMENTS), adopted.requirements);
   writeJson(at(OUT_SAFEGUARDS), safeguards);
@@ -228,6 +230,9 @@ function writeOutputs(dir, adopted, safeguards, acceptance) {
   writeJson(at('brd-open-questions.json'), adopted.open_questions);
   writeJson(at('brd-risks.json'), adopted.risks);
   writeJson(at('brd-adoption.json'), adoptionManifest(adopted, safeguards, acceptance));
+  // R4: the PRD milestone plan, so /spec proposes scope from the document
+  // rather than the human re-deriving it from memory each time.
+  writeJson(at('brd-milestones.json'), milestones);
 }
 
 function main(argv) {
@@ -255,7 +260,10 @@ function main(argv) {
   const acceptance = adoptAcceptance(source);
   for (const w of adopted.warnings) process.stderr.write(`  WARN  ${w}\n`);
 
-  if (!argv.includes('--dry-run')) writeOutputs(outDir, adopted, safeguards, acceptance);
+  let prd = null;
+  try { prd = fs.readFileSync(path.join(root, SOURCE_PRD), 'utf8'); } catch (_) { /* interview mode */ }
+  const milestones = parseMilestones(prd);
+  if (!argv.includes('--dry-run')) writeOutputs(outDir, adopted, safeguards, acceptance, milestones);
   return process.stdout.write(
     `brd-adopt: ${adopted.requirements.length} requirements adopted verbatim, `
     + `${acceptance.length} acceptance criteria, ${safeguards.length} forbidden actions, `

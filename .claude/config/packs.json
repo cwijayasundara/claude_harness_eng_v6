@@ -177,6 +177,7 @@
         "contract-schema",
         "decision-record",
         "gate-receipt-sensor",
+        "prd-milestones",
         "gates-planning",
         "plan-confidence-freshness",
         "story-graph"

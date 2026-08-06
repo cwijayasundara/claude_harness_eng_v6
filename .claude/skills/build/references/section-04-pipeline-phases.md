@@ -171,6 +171,31 @@ The final acceptance run on the **integrated** build, against a **locally deploy
 
 Only when the applicable suites are all green does the pipeline proceed. Full loop detail: `.claude/skills/build/references/autonomous-lane.md`.
 
+### Phase 9.9 — Write the milestone log [when a milestone plan exists]
+
+If `specs/brd/brd-milestones.json` is non-empty, copy
+`.claude/templates/milestone-log.template.md` to
+`specs/milestones/<milestone-id>-log.md` for the milestone just built, and fill
+it in. Skip only when the project has no milestone plan at all.
+
+This is the cross-session link. The next milestone's `/spec` reads these logs to
+know what actually exists, rather than re-deriving the state of the system from
+the PRD — a document that describes what was *intended*. Two sections carry the
+weight:
+
+- **Decisions taken that the PRD did not specify.** Each is a constraint the
+  next milestone inherits. An implementer who does not know about it will
+  contradict it, and nothing downstream will notice.
+- **Deviations from the PRD, and why.** The one people skip. An unrecorded
+  deviation is a silent divergence between the document the pipeline grounds
+  against and the system that exists — after which every traceability gate is
+  faithfully proving something about the wrong thing. Write "none" explicitly
+  rather than deleting the section; an absent section and no deviations are
+  different facts.
+
+Write it from evidence — the sprint contract results, the E2E verdict, the
+grounding verdicts — not from memory of the run.
+
 ### Phase 10 — Generate README.md
 
 After E2E tests pass, generate a `README.md` for the built application. This is the developer-facing guide for running, understanding, and contributing to the generated project.
