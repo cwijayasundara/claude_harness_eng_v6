@@ -179,7 +179,23 @@ Before beginning the interview, invoke `superpowers:brainstorming` to explore th
 
 ### Step 0.5 — Apply the Clarification Budget (and log every answer)
 
-Before asking interview questions, invoke `.claude/skills/clarify/SKILL.md`. Use it to cap the total clarification burden:
+**Start from `specs/brd/brd-open-questions.json`.** Adoption (Step 0.1) extracts
+the PRD's own Open Questions section into it — the author wrote those down
+*because they did not know the answer*, which makes them the highest-value
+questions in the budget and the ones you did not have to invent. Put them first,
+before anything you thought of yourself.
+
+This is the loop the audited run left open: that PRD stated five open questions
+and the clarification log recorded six entries, every one of which the planner
+had written both sides of. The document's actual unknowns were never
+systematically asked.
+
+An open question the human resolves becomes a normal `C-n` clarification with
+`basis: "user decision"`. One they decline to resolve stays open and must appear
+in the BRD's Open Questions section — deferred is a valid answer, silently
+dropped is not.
+
+Then invoke `.claude/skills/clarify/SKILL.md`. Use it to cap the total clarification burden:
 - Ask only load-bearing questions that affect requirements, scope, data, security, architecture, or story readiness.
 - Default to 10 total questions across the BRD interview.
 - Continue to 15 only if the user explicitly asks to keep going.

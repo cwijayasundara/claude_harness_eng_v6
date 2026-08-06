@@ -105,6 +105,8 @@ Rules:
 - **AC Coverage Matrix** proves every extracted FRD/PRD/`INT-n` requirement has at least one observable acceptance criterion before the grounding gate runs.
 - **Risk & Gap Table** records risks and missing inputs without turning them into hidden implementation scope.
 
+  **Seed it from `specs/brd/brd-risks.json`.** Adoption extracts the PRD's own Risks section into that file, and every entry belongs in `risk_gap_table` with its source id in `trace`. The author already identified those risks; a table that omits them while inventing others is describing a different project. Add risks you find beyond them — never replace them.
+
 **Seed the domain glossary.** After writing `domain_concepts`, create or update `CONTEXT.md` at the repo root from it: for each entry, add or update a `### <name>` heading under `## Terms` using `notes` as the definition (use the template at `.claude/templates/context.template.md` if `CONTEXT.md` does not exist yet). Do this for greenfield BRDs too — `CONTEXT.md` must exist after this step whenever `domain_concepts` is non-empty, which it always is. If `/brownfield` already created `CONTEXT.md`, merge into it rather than overwriting existing terms.
 
 If this pack exposes a dropped requirement, unresolved high-risk ambiguity, or uncovered acceptance criterion, fix the interview/clarification log before proceeding. Do not paper over it in the BRD.
