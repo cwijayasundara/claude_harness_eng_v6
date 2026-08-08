@@ -8,6 +8,8 @@
 >
 > **Doc map:** this file is canonical for the *control system* (gates/sensors). For architecture rationale see `design.md`; for install/usage see `README.md`; for the "which doc for what" index see `CODEBASE_MAP.md`.
 
+> **Authority narrowing (2026-08).** `merge` is a privileged action **only when `.claude/trust/issuers.json` is provisioned**. With no approval service no capability can be issued, so gating merge offered no path to yes: it blocked every merge — including ones the repository owner had explicitly authorized — and the only way past was to switch the control off, which is strictly worse than never having gated it. `deploy`, `modify_branch_protection` and `execute_production_change` are unchanged and remain gated either way; production execution stays non-delegable and is refused before the envelope check. Provision an issuer per `docs/zero-trust-authority.md` to restore merge gating.
+
 ## Why this exists
 
 The harness already has most of the pieces a good control system needs — they were just scattered across hooks, skills, agents, and scripts, with no one place to answer *"what is my behaviour harness?"* or *"is anything ungoverned?"*. This registry is that place. Read it to:

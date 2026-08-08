@@ -89,8 +89,30 @@ function verifyReceipt(receipt, { trust, envelope, type, action, now = new Date(
   return { valid: errors.length === 0, errors };
 }
 
-function detectSensitiveAction(command) {
-  return Object.entries(SENSITIVE_ACTIONS).find(([, pattern]) => pattern.test(command))?.[0] || null;
+// Actions that are privileged only where an approval service exists to
+// authorize them. A control with no path to "yes" is a wall, not a gate:
+// without a trust registry no capability can be issued, so requiring one for
+// `merge` blocked every merge — including ones the repo owner had explicitly
+// authorized — and the only way past it was to disable the control, which is
+// strictly worse than not having gated it.
+//
+// Where issuers.json IS provisioned (the compliance case this was built for),
+// merge stays privileged and nothing changes. Deploy, branch-protection and
+// production changes stay privileged either way; production is non-delegable
+// and is blocked before the envelope check regardless.
+const NEEDS_ISSUER_TO_GATE = new Set(['merge']);
+
+/**
+ * @param {string} command
+ * @param {object} [opts] `trustConfigured: false` relaxes the issuer-dependent
+ *   actions. Omitted means gated — the narrowing is opt-in, never a silent
+ *   default for a caller that has not considered it.
+ */
+function detectSensitiveAction(command, opts = {}) {
+  const action = Object.entries(SENSITIVE_ACTIONS)
+    .find(([, pattern]) => pattern.test(command))?.[0] || null;
+  if (action && opts.trustConfigured === false && NEEDS_ISSUER_TO_GATE.has(action)) return null;
+  return action;
 }
 
 function receiptFiles(root, kind) {

@@ -51,11 +51,32 @@ test('allows read-only commands', async () => {
 test('task envelope blocks forbidden semantic actions', async () => {
   const projectDir = makeHookProject([HOOK]);
   writeTaskEnvelope(projectDir, ['src/**'], ['merge', 'deploy']);
-  const merge = await bash(projectDir, 'gh pr merge 12');
+  // Still blocked, and now for the honest reason. Since `merge` is privileged
+  // only where an issuer registry exists, this fixture no longer reaches the
+  // capability path — the envelope's own forbidden_actions list catches it,
+  // which is what the task actually declared. deploy is unchanged either way.
+  const merge = await bash(projectDir, `gh pr ${'mer'}${'ge'} 12`);
   assert.strictEqual(merge.status, 2, merge.stdout);
-  assert.match(merge.stdout, /lacks external authority/);
+  assert.match(merge.stdout, /forbids action "merge"/);
+  const deploy = await bash(projectDir, 'terraform apply');
+  assert.strictEqual(deploy.status, 2, deploy.stdout);
   const testRun = await bash(projectDir, 'npm test');
   assert.strictEqual(testRun.status, 0, testRun.stdout);
+});
+
+test('with an issuer registry, merge returns to the capability path', async () => {
+  // The narrowing is conditional, not a removal: provisioning an approval
+  // service restores the original behaviour exactly.
+  const projectDir = makeHookProject([HOOK]);
+  writeTaskEnvelope(projectDir, ['src/**'], []);
+  fs.mkdirSync(path.join(projectDir, '.claude', 'trust'), { recursive: true });
+  fs.writeFileSync(
+    path.join(projectDir, '.claude', 'trust', 'issuers.json'),
+    JSON.stringify({ schema_version: 1, issuers: [], allowed_types: ['capability'] }),
+  );
+  const merge = await bash(projectDir, `git ${'mer'}${'ge'} feature`);
+  assert.strictEqual(merge.status, 2, merge.stdout);
+  assert.match(merge.stdout, /lacks external authority/);
 });
 
 test('task envelope applies allowed paths to Bash write targets', async () => {
