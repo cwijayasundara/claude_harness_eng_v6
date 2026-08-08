@@ -30,7 +30,10 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const PHASES = ['spec', 'design', 'test'];
+// brd joined the list when /brd was de-forked: before that its approval could
+// not reach a human, so a receipt would have recorded a stop that never
+// happened. A real gated run produced no brd-approval.json at all.
+const PHASES = ['brd', 'spec', 'design', 'test'];
 
 // Where each phase's work lands. `--phase all` gates a phase only when its
 // artifacts exist: /sprint and /feature reach /auto through lanes that never run
@@ -38,6 +41,7 @@ const PHASES = ['spec', 'design', 'test'];
 // artifact it was never supposed to produce is a broken gate, not a strict one.
 // An explicitly named phase is always required — naming it is the assertion.
 const PHASE_ARTIFACTS = {
+  brd: path.join('specs', 'brd'),
   spec: path.join('specs', 'stories'),
   design: path.join('specs', 'design'),
   test: path.join('specs', 'test_artefacts'),

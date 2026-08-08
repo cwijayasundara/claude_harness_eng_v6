@@ -25,22 +25,11 @@ const RATE_USD = Object.freeze({
 });
 
 // Approximate USD per token [input, output] when a receipt carries real counts.
-// Cache read ≈ 10% of input rate; cache creation ≈ full input rate (Anthropic).
-// The whole Opus tier (5, 4.8, 4.7) is $5/$25 per MTok; Sonnet 5 is listed at
-// its $3/$15 sticker, not the lower intro rate. Retired pins (opus-4-8/4-7,
-// sonnet-4-6) stay so historical receipts price correctly; fable-5 is reserved.
-const MODEL_PRICE = Object.freeze({
-  'claude-opus-5': [5e-6, 25e-6],
-  'claude-opus-4-8': [5e-6, 25e-6],
-  'claude-opus-4-7': [5e-6, 25e-6],
-  'claude-sonnet-5': [3e-6, 15e-6],
-  'claude-sonnet-4-6': [3e-6, 15e-6],
-  'claude-haiku-4-5': [1e-6, 5e-6],
-  'claude-fable-5': [10e-6, 50e-6],
-  default: [5e-6, 25e-6],
-});
-
-const CACHE_READ_FRACTION = 0.1;
+// Token pricing lives in one place so the /auto estimate and the
+// transcript-derived bill cannot diverge (they had, on the cache-write rate).
+const {
+  MODEL_PRICE, CACHE_READ_FRACTION, CACHE_WRITE_MULTIPLIER, costOf,
+} = require('../hooks/lib/model-pricing.js');
 
 // Default caps per model tier (burn rate scales with tier).
 const TIER_DEFAULTS = Object.freeze({
@@ -63,14 +52,7 @@ function hasTokenFields(r) {
 }
 
 function receiptCost(r, tier) {
-  if (hasTokenFields(r)) {
-    const price = MODEL_PRICE[r.model] || MODEL_PRICE.default;
-    const input = (r.input_tokens || 0) * price[0];
-    const output = (r.output_tokens || 0) * price[1];
-    const cacheRead = (r.cache_read_tokens || 0) * price[0] * CACHE_READ_FRACTION;
-    const cacheCreate = (r.cache_creation_tokens || 0) * price[0];
-    return input + output + cacheRead + cacheCreate;
-  }
+  if (hasTokenFields(r)) return costOf(r, r.model);
   const rates = RATE_USD[tier] || RATE_USD.default;
   const r2 = rates[agentBucket(r.agent)];
   return r2 != null ? r2 : rates.default;
@@ -258,6 +240,7 @@ function fmtBudget(b) {
 }
 
 module.exports = {
+  CACHE_WRITE_MULTIPLIER,
   DEFAULT_WARN_PCT,
   RATE_USD,
   MODEL_PRICE,

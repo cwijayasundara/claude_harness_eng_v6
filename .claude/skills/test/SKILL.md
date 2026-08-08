@@ -16,11 +16,13 @@ agent: generator
 /test --e2e-only
 /test --from-cr <file.md>
 /test --from-cr --issue N
+/test --deployed
 ```
 
 - `/test` — generate all test artefacts: plan, cases, fixtures, and E2E tests.
 - `/test --plan-only` — generate test plan, test cases, and test data fixtures (everything in `specs/test_artefacts/`). Stop before writing Playwright files. Does NOT require source code — only needs stories from `/spec`.
 - `/test --e2e-only` — skip plan/cases, go straight to Playwright E2E generation from `specs/test_artefacts/verification-matrix.json`; record `specs/test_artefacts/e2e-traces.json`. Use when plan already exists and source code has been built.
+- `/test --deployed` — **post-deploy lane.** Generate a Playwright suite that runs against an environment that is already deployed, instead of one this suite starts itself. Writes `playwright.deployed.config.ts`, `e2e/auth.setup.ts`, `.github/workflows/e2e-deployed.yml`, and `specs/test_artefacts/e2e-deployed-traces.json`. See "Post-Deploy Lane" below and `references/e2e-deployed.md` for the authoring rules. Run after `/deploy` and after the app is live in a test environment.
 - `/test --from-cr <file.md>` / `--from-cr --issue N` — **brownfield CR lane.** Turn a change request (a markdown file, or a GitHub issue) against existing code into a **regression-pin set** (behavior that must stay identical) plus a **delta test plan** (new behavior the CR introduces), grounded against the CR. See "Brownfield CR Lane" below. Run this *before* `/change` when a CR document exists.
 
 ---
@@ -167,9 +169,39 @@ Write acceptance tests to `specs/test_artefacts/acceptance/{story-id}.<ext>` (ex
 
 Every implementation-ready AC should have a corresponding AT before the story is handed to implementation. `at-traces.json` is the deterministic signal downstream review should check for. As of gap G23, this is also mechanically enforced at commit time: `at-first-gate.js` (pre-commit) blocks a story's NEW production source files from being committed unless both the AT file and a `record-at-red.js` receipt exist for that story (see `HARNESS.md` G20/G23).
 
+### Step 4.75 — Phase Evaluation Gate [`--plan-only`]
+
+Spawn the `evaluator` agent in **artifact mode** against
+`.claude/templates/phase-eval-rubrics.json#phases.test`:
+
+| Input | Value |
+|---|---|
+| `phase` | `test` |
+| `artifact_paths` | `specs/test_artefacts/test-plan.md`, `test-cases.md`, `verification-matrix.json`, `test-traces.json`, and `constraint-obligations.json` when Step 4.4 ran |
+| `upstream_paths` | `specs/stories/story-traces.json` (the acceptance-criterion index) |
+| `verdict_path` | `specs/reviews/phase-test-eval.json` |
+
+Threshold: weighted average >= 7.0, every criterion >= 5, max 3 iterations —
+the same contract as `/brd`, `/spec` and `/design`. On FAIL, fix the findings
+and re-run; on the third failure, carry the unresolved findings into Step 4.8's
+brief rather than looping further.
+
+**The grounding verdict is a hard gate.** When `specs/stories/story-traces.json`
+exists, `specs/reviews/test-grounding.json#pass` must be `true`. A `dropped`
+entry is an acceptance criterion with no test case — an untested requirement —
+and it fails the phase regardless of the weighted average.
+
+This step generates on the sidekick model and reviews on the frontier one. The
+review is what makes the cheap generation safe: `/test` produces the definition
+of "done" that `/auto` ratchets against for the rest of the build, and until
+this gate existed it was the only planning phase with no independent review at
+all. Whatever the plan omits, no later gate ever asks for.
+
 ### Step 4.8 — Human Review Loop [REQUIRED SUB-SKILL: `plan-review-loop`] [`--plan-only`]
 
 The test plan is the definition of "done" that `/auto` will ratchet against for the rest of the build. Whatever it omits, no gate will ever ask for. Review it with the human before that becomes load-bearing — follow `.claude/skills/plan-review-loop/SKILL.md` with `--phase test`.
+
+**Who runs this loop.** `/test` is a forked skill and a fork cannot pause for `AskUserQuestion`, so this dialogue only reaches a human when the **caller** runs it in the main session. Under `/build` it does: Phase 3 runs both `--phase design` and `--phase test` itself after the two agents return. Invoked directly as `/test --plan-only`, prepare the brief below, write the artifacts, and **return it to the caller** — do not attempt to hold the dialogue from inside the fork, which would mean answering your own questions and recording a receipt no human saw.
 
 The brief leads with coverage judgement, not the case list: which acceptance criteria you covered at which layer and why, where you chose a cheap unit test over an expensive E2E, and — the part worth their attention — **what you decided not to test**, each with a reason. A plan is far more often wrong in what it silently omits than in what it contains.
 
@@ -242,6 +274,79 @@ All tests must pass on the first run against the target environment. A failing t
 
 ---
 
+## Post-Deploy Lane (`--deployed`)
+
+Automates the regression pass that would otherwise be done by hand every time
+something ships to a test environment.
+
+**Read `references/e2e-deployed.md` before generating a single spec.** The
+default E2E suite owns its environment — it starts the stack and seeds fixtures.
+This one owns none of that: shared data, no reset, real latency, live third
+parties. A spec written for the build loop and pointed at a deployed target does
+not fail honestly, it goes flaky, and a flaky suite gets ignored.
+
+### Prerequisites
+
+- `specs/test_artefacts/verification-matrix.json` exists (from `/test --plan-only`).
+- The app is deployed and reachable at a target listed in
+  `project-manifest.json#verification.e2e_targets`. Add the allowlist if it is
+  absent — the guard fails closed and will refuse every target until it exists.
+
+### Steps
+
+1. **Copy the templates** (skip any target that already exists — never overwrite
+   a team's edited file):
+   - `.claude/templates/playwright.config.deployed.template.ts` → `playwright.deployed.config.ts`
+   - `.claude/templates/e2e-auth.setup.template.ts` → `e2e/auth.setup.ts`
+   - `.claude/templates/github-workflows/e2e-deployed.yml` → `.github/workflows/e2e-deployed.yml`
+
+   Adapt `auth.setup.ts` to the project's real sign-in flow. It is the only file
+   that reads credentials, and it must never carry a fallback default.
+
+2. **Classify every matrix row** before writing specs. For each `matrix_id`,
+   decide whether its acceptance criterion is reachable against a shared
+   environment with no fixture control. Anything needing seeded edge-case data,
+   clock manipulation, or a forced third-party failure is `@needs-fixture` and
+   stays in the build-loop suite. Do not weaken an assertion to make a row
+   technically pass post-deploy — that manufactures a green that means nothing.
+
+3. **Generate specs** from the matrix, one per row, applying the authoring rules
+   in `references/e2e-deployed.md`: self-provisioning data, `e2e-`-namespaced
+   records, cleanup that nothing depends on, assertions on observable state
+   rather than timers, and a tag on every test.
+
+4. **Mark the critical path `@smoke`.** This is the subset that gates a deploy,
+   so keep it to the journeys that must work for the product to be usable at
+   all. If everything is `@smoke`, nothing is.
+
+5. **Record traces** to `specs/test_artefacts/e2e-deployed-traces.json`, same
+   contract as `e2e-traces.json` — each entry names its `matrix_id`.
+
+6. **Verify the guard, then the suite:**
+
+   ```bash
+   E2E_BASE_URL=https://test.example.com node .claude/scripts/e2e-target-guard.js --require-deployed
+   E2E_BASE_URL=https://test.example.com npx playwright test --config=playwright.deployed.config.ts --project=smoke
+   ```
+
+   Run `smoke` before `full`. A failing smoke run means the environment or the
+   auth setup is wrong, and running the full suite on top of that produces a
+   wall of failures that hides the one real cause.
+
+### Report
+
+Close with the number that decides how much manual testing can actually be
+retired:
+
+> *N of M acceptance criteria are covered post-deploy; K are `@needs-fixture`
+> and remain build-loop only.*
+
+List the `@needs-fixture` rows with the reason each cannot run. A large K is
+usually a missing test API rather than a law of nature, and it is the backlog
+for making the automated pass complete.
+
+---
+
 ## Brownfield CR Lane (`--from-cr`)
 
 The greenfield lane grounds tests against story acceptance criteria. The brownfield lane grounds them against a **change request** over existing code, and splits the work in two: pin the behavior that must *not* change, and prove the behavior that *must*. Composes existing skills — it does not re-implement them.
@@ -304,6 +409,7 @@ Any `net_new` (a delta test tracing to no CR line — scope creep) or `dropped` 
 | `specs/test_artefacts/constraint-obligations.json` | (when design schemas exist) one negative-test obligation per schema constraint |
 | `specs/test_artefacts/obligation-index.json` | (when design schemas exist) obligation upstream index for the grounding gate |
 | `specs/reviews/test-grounding.json` | (when story-traces exists) deterministic AC + obligation coverage verdict |
+| `specs/reviews/phase-test-eval.json` | Evaluator verdict for the test-planning phase (Step 4.75) |
 | `specs/reviews/verification-matrix-verdict.json` | Deterministic matrix gate verdict |
 | `e2e/{story-id}.spec.ts` | Playwright tests per story |
 | `playwright.config.ts` | Playwright configuration |

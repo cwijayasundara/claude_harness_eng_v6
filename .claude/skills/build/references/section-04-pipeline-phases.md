@@ -26,13 +26,13 @@ Run `/brd` with the provided requirements document. Outputs are written to `spec
 
 **Stop and wait for explicit human approval before proceeding.** Present a summary of the BRD and ask: "Approve BRD to proceed to Phase 2?"
 
-Do NOT proceed without a clear "yes" or "approved" from the user. *(In `--autonomous` mode, do not stop here — the BRD is approved together with everything else at the consolidated Plan Approval gate, Phase 3.5.)*
+Record the outcome with `node .claude/scripts/plan-approval.js record --phase brd` so the stop is verifiable rather than prose — Phase 3 checks `--phase all`, which now includes it. Do NOT proceed without a clear "yes" or "approved" from the user. *(In `--autonomous` mode, do not stop here — the BRD is approved together with everything else at the consolidated Plan Approval gate, Phase 3.5.)*
 
 ### Phase 2 — Story Specification [HUMAN APPROVAL]
 
 Run `/spec` using the approved BRD. Outputs are written to `specs/stories/` and root `features.json`.
 
-**Stop and run `/spec`'s Step 7 review loop before proceeding** — a `plan-review-loop` dialogue over the decomposition, not a single approve/reject question. It ends by recording `plan-approval.js record --phase spec`, which Phase 3 hard-blocks on.
+**Stop and run `/spec`'s Step 8 review loop before proceeding** — a `plan-review-loop` dialogue over the decomposition, not a single approve/reject question. It ends by recording `plan-approval.js record --phase spec`, which Phase 3 hard-blocks on.
 
 Do NOT proceed without an approving round on the receipt. *(In `--autonomous` mode, do not stop here — deferred to the consolidated Plan Approval gate, Phase 3.5.)*
 
@@ -49,11 +49,27 @@ Wait for BOTH to complete before presenting results.
 
 **Then compute plan confidence.** Run `node .claude/scripts/plan-confidence.js`, which writes `specs/plan-confidence.json` — a band (high/medium/low), a score, and its risk drivers, derived deterministically from the BRD's open questions and assumptions, the needs-breakdown backlog, the epic count, hollow definitions in the design schemas, and unmitigated high/critical seams in the brownfield risk map. This gates **planning only** and never touches the machine verification gates; it just makes the planner's own uncertainty visible to the gate that follows.
 
-**Stop and run both review loops before proceeding.** `/design` and `/test --plan-only` each run their own `plan-review-loop` dialogue (`--phase design`, `--phase test`) — they review different decisions and are not collapsed into one question. Run them in sequence, design first, since the test plan's obligations follow from the approved schemas. Each brief carries:
+**Stop and run both review loops before proceeding — in this session, not in the sub-skills.** `/design` and `/test --plan-only` are dispatched as forked agents, and a forked skill cannot pause for `AskUserQuestion`; a review loop delegated into one of them can only ask itself. **`/build` runs both `plan-review-loop` dialogues itself** (`--phase design`, `--phase test`) after the two agents return, reading the artifacts they wrote. They review different decisions and are not collapsed into one question. Run them in sequence, design first, since the test plan's obligations follow from the approved schemas. Each brief carries:
 
 1. Architecture summary: tech stack, component count, API surface area.
 2. Test plan summary: test case count, story coverage, fixture count — and what was deliberately left untested.
 3. **Plan confidence** from `specs/plan-confidence.json`: the band and its drivers — present it here too, not only in the `--autonomous` Phase 3.5 gate, so the human reviews with the planner's uncertainty in view.
+
+**Enforce the confidence gate here, not only in `--auto`.** *(Gated lane only. In `--auto` / `--autonomous` the gate runs once at Phase 3.5 with its own single-`/clarify` retry — running it here as well would invoke `/clarify` twice for the same drivers.)* Run:
+
+```bash
+node .claude/scripts/plan-confidence.js . --gate
+```
+
+Exit 2 (band LOW) **blocks**. The gated lane gets the same treatment `--auto` already has: run `/clarify` on the drivers, recompute, retry once. If it is still LOW, present the drivers and let the human decide explicitly — approving a LOW plan is a decision they may take, but it has to be taken, not defaulted into. A real run recorded `score: 0, band: low, hardLow: true` and proceeded to `/design` fifteen hours later, because nothing in this lane ever read it.
+
+**Before quoting `specs/plan-confidence.json` in any brief, check it still describes the current plan:**
+
+```bash
+node .claude/scripts/plan-confidence.js . --verify
+```
+
+Exit 1 means stale — the verdict was computed from planning files that have since changed. That same run's artifact still claimed 7 undecomposable stories after the review round had brought it to 6. A stale verdict is worse than none, because it reads as current: recompute rather than quoting it.
 
 **When confidence is LOW, lead with the drivers and recommend `/clarify` first** — e.g. *"Plan confidence is LOW (2 open questions, 1 undecomposable story). Recommend `/clarify` before building. Clarify now, review anyway, or stop?"* (This mirrors what `--auto` does automatically; in the gated model the human makes the call.)
 
@@ -86,7 +102,7 @@ Ask once: **"Approve this plan to build autonomously through to an open PR?"** O
 **Satisfy `/auto`'s review gate for the collapsed lanes.** `/auto` blocks on `plan-approval.js check --phase all`, so a lane that skipped the per-phase loops records *why* rather than leaving the receipt absent — an absent receipt and a deliberately-headless run are different facts, and the audit trail should say which one this was:
 
 ```bash
-for phase in spec design test; do
+for phase in brd spec design test; do
   node .claude/scripts/plan-approval.js waive --phase "$phase" --lane --autonomous   # or --lane --auto
 done
 ```
@@ -154,6 +170,31 @@ The final acceptance run on the **integrated** build, against a **locally deploy
    **On give-up, write a structured failure report** to `specs/verification/failure-report.md` before stopping: which suite failed, the final failing assertion(s), the captured diagnostics, the attempt count, and the last implementation diff tried. In `--auto`/`--autonomous` mode no human is watching the loop live, so this artifact is the only durable record of *why* the run halted — without it the failure is invisible until someone re-derives it. A human (or a later resumed run) reads this report instead of re-running the loop from scratch.
 
 Only when the applicable suites are all green does the pipeline proceed. Full loop detail: `.claude/skills/build/references/autonomous-lane.md`.
+
+### Phase 9.9 — Write the milestone log [when a milestone plan exists]
+
+If `specs/brd/brd-milestones.json` is non-empty, copy
+`.claude/templates/milestone-log.template.md` to
+`specs/milestones/<milestone-id>-log.md` for the milestone just built, and fill
+it in. Skip only when the project has no milestone plan at all.
+
+This is the cross-session link. The next milestone's `/spec` reads these logs to
+know what actually exists, rather than re-deriving the state of the system from
+the PRD — a document that describes what was *intended*. Two sections carry the
+weight:
+
+- **Decisions taken that the PRD did not specify.** Each is a constraint the
+  next milestone inherits. An implementer who does not know about it will
+  contradict it, and nothing downstream will notice.
+- **Deviations from the PRD, and why.** The one people skip. An unrecorded
+  deviation is a silent divergence between the document the pipeline grounds
+  against and the system that exists — after which every traceability gate is
+  faithfully proving something about the wrong thing. Write "none" explicitly
+  rather than deleting the section; an absent section and no deviations are
+  different facts.
+
+Write it from evidence — the sprint contract results, the E2E verdict, the
+grounding verdicts — not from memory of the run.
 
 ### Phase 10 — Generate README.md
 

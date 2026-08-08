@@ -76,7 +76,7 @@ silent requirement regression.
 
 ## Phase 2 — Story Decomposition
 
-Run `/spec specs/brd/sprint-N/brd.md --sprint N` (see `spec/SKILL.md`'s
+Run `/spec specs/brd/sprint-N/brd.md --sprint N` (see `spec-render/SKILL.md`'s
 sprint addendum). Writes `specs/stories/sprint-N/`.
 
 **Reuse-or-justify — REQUIRED SUB-SKILL: `reuse-or-justify`** when the PRD

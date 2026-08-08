@@ -71,6 +71,14 @@ and required security scanners. A warning is not sufficient in headless mode.
 node .claude/scripts/plan-approval.js check --phase all
 ```
 
+**One-time migration for in-flight projects.** `brd` joined the gated phases when `/brd` was de-forked, so a project whose `specs/brd/` predates that change has no receipt and this check will block. Record or waive it once:
+
+```bash
+node .claude/scripts/plan-approval.js record --phase brd --verdict approved --artifact specs/brd/brd.md
+# or, for a lane that legitimately had no human intake:
+node .claude/scripts/plan-approval.js waive --phase brd --lane --auto
+```
+
 A non-zero exit means a phase was never reviewed, is still in `changes-requested`, or — the case worth catching — was edited after approval, so the plan `/auto` is about to build is not the plan the human signed off. Stop and report which phase; do not build past it.
 
 `--phase all` gates each of `spec`, `design`, and `test` **only when that phase produced artifacts** in this project, and prints the ones it skipped. The delta lanes that reach `/auto` through `/sprint` and `/feature` never run a test-planning phase, and blocking them for not producing an artifact they were never meant to produce would make the gate wrong rather than strict. Where a lane *does* carry a phase forward unchanged from an earlier sprint, its existing approval still holds — the digests match; regenerate the artifact and it needs review again.

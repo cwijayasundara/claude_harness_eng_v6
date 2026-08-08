@@ -53,9 +53,15 @@ function scriptPattern(name, fromKind) {
   return new RegExp(`scripts/${n}\\.js|npm run [\\w:-]*\\b${n}\\b`);
 }
 
+// `(?:\\.js)?` before the closing quote is load-bearing. Without it the pattern
+// demanded the quote immediately after the unit name, so a require written with
+// the extension — require('../hooks/lib/model-pricing.js') — was invisible while
+// the extensionless form matched. That blind spot let a real kernel -> pack hard
+// reference ship: a kernel script requiring a pack-registered lib, which broke
+// every kernel-only install while this checker reported OK.
 function libPattern(name, fromKind) {
   const n = escapeRe(name);
-  if (CODE_KINDS.has(fromKind)) return new RegExp(`${EXEC_CALL}[^)]*['"][^'"]*${n}['"]`);
+  if (CODE_KINDS.has(fromKind)) return new RegExp(`${EXEC_CALL}[^)]*['"][^'"]*${n}(?:\\.js)?['"]`);
   return new RegExp(`lib/${n}\\b`);
 }
 

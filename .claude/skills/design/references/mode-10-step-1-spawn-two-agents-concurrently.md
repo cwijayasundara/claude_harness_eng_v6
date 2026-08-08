@@ -1,63 +1,83 @@
-## Step 1 — Spawn Two Agents Concurrently
+## Step 0.9 — Record the decisions, then dispatch the renderer
 
-In a single message, invoke both agents using the Agent tool. Do not wait for the planner to finish before starting the generator.
+The architecture dialogue (Step 0) and the load-bearing clarifications
+(Step 0.5) have happened. Write down what was decided, gate it, and hand the
+expansion to the sidekick.
 
----
+This step used to spawn a `planner` (frontier) to write all nine documents and a
+`generator` (sidekick) to write only the mockups. That put the frontier model on
+the transcription and asked the human to review the result — 632 KB of output on
+a run whose durable human input was six confirmations.
 
-### Agent 1 — planner
+### 1. Write `specs/decisions/design-decisions.json`
 
-**Prompt:**
+```json
+{
+  "version": 1,
+  "phase": "design",
+  "source": "specs/stories/stories.json",
+  "confirmed_at": "<ISO 8601>",
+  "stack": {
+    "backend": "Python 3.12 / FastAPI / uv",
+    "frontend": "Next.js / TypeScript",
+    "datastores": ["Postgres (primary)", "Neo4j (secondary)"]
+  },
+  "decisions": [
+    {
+      "id": "D-A",
+      "question": "How is engagement isolation enforced?",
+      "options": ["One shared database, isolation as a repository contract", "Database per engagement"],
+      "proposed_default": "One shared database, isolation as a repository contract",
+      "chosen": "One shared database; isolation is the repository contract.",
+      "rules_out": "Database-per-engagement provisioning. Query-level inexpressibility is explicitly not delivered in v1.",
+      "rationale": "Per-engagement provisioning cannot be operated by one part-time person.",
+      "basis": "human",
+      "load_bearing": true
+    }
+  ]
+}
+```
 
-> Read all ready story files in specs/stories/ plus specs/stories/epics.md and specs/stories/dependency-graph.md. If present, also read `specs/brd/brd-analysis.json` and use its `domain_concepts`, `ambiguity_table`, `edge_case_table`, `ac_coverage_matrix`, and `risk_gap_table` as design inputs. Ignore any story listed in specs/stories/backlog-needs-breakdown.md. Design the full system architecture for this project.
->
-> When `specs/brd/brd-analysis.json` exists: carry unresolved `ambiguity_table` entries into architecture assumptions or open questions, map `edge_case_table` entries to API/UI/error-state design, use `risk_gap_table` to drive Safeguards, and ensure `domain_concepts` align with Entities in the REASONS Canvas.
->
-> Write the following files to specs/design/:
->
-> 1. **architecture.md** — High-level architecture overview: components, data flows, infrastructure topology, key design decisions and rationale.
->    For every major module, describe its public interface, invariants, error modes, and why it is deep enough to justify existing as a module. Avoid pass-through modules that only forward calls.
->
-> 2. **api-contracts.md** — Every API endpoint in detail: method, path, request schema (headers, params, body), response schema (success and error shapes), authentication requirements, rate limits. Use a consistent format for each endpoint.
->
-> 3. **api-contracts.schema.json** — OpenAPI 3.0 JSON Schema representing all endpoints defined in api-contracts.md. Must be valid and parseable.
->
-> 4. **data-models.md** — Every data entity: field names, types, constraints, relationships, indexes, and example records.
->
-> 5. **data-models.schema.json** — JSON Schema (draft-07 or later) for every entity in data-models.md. Must be valid and parseable.
->
-> 6. **folder-structure.md** — Full proposed directory tree for the implementation, with a one-line annotation for each directory explaining its purpose.
->
-> 7. **component-map.md** — A table mapping every ready story ID (from specs/stories/) to the specific files that will be created or modified to implement it. Include `Produces:` and `Consumes:` notes for cross-story interfaces, and identify the owning story for every shared file. Wrap every file/directory path in backticks — the ownership sensor (`ownership-check.js`) parses only backticked tokens, and a map it cannot parse blocks commits loudly (`empty_map`).
->
-> **Seam metadata (optional, for the reuse-or-justify loop):** a component that is a designed extension point may also carry `seam: true`, an `extension_mechanism` of `config | strategy | node | subclass`, an `instances:` note listing the story ids that already extend it, and a `budget:` note (e.g. latency/memory/cost). Write these as plain table cells or prose — do NOT wrap non-path values (mechanism, instances, budget numbers) in backticks, because the ownership sensor treats backticked tokens as owned file paths.
->
-> 8. **deployment.md** — Deployment architecture: environments (dev/staging/prod), CI/CD pipeline steps, infrastructure-as-code approach, secrets management strategy, rollback procedure.
->
-> 9. **reasons-canvas.md** — The SPDD **REASONS Canvas**: the design's single narrative spine, consolidating the above into eight sections — **R**equirements, **E**ntities, **A**pproach, **S**tructure, **O**perations, **N**orms, **S**afeguards, and **Governs**. Follow `.claude/skills/design/references/reasons-canvas-template.md` exactly. The `Entities` section marks each entity **existing** (citing a `specs/brownfield/code-graph.json` node) or **new** when that graph is present, so the design extends real code. The `Governs` section is a machine-read bullet list of every source path this design creates or modifies (derive it from `component-map.md`) — the drift monitor uses it to detect Canvas↔code drift, so it must be accurate.
->
-> Include the Step 0.7 modularity assessment in `architecture.md` and the Canvas: domain classification (`core/supporting/generic`), volatility, module boundaries, integration contracts, Balanced Coupling trade-offs, and coupling risks that the implementation must guard against.
+`basis` means what it means in `/spec`: `human` when you asked and they answered
+(including accepting your proposed default), `default-accepted` when you did not
+ask, `headless-default` in `--auto` / `--autonomous`. Do not write `human` for a
+decision you never put to them.
 
----
+**`rules_out` is the field that matters.** A load-bearing decision must name what
+it forecloses, and the gate rejects `n/a`, `none`, `TBD`. This is not
+bookkeeping: the audited design's most useful content was its
+`| Decision | What it rules out |` table and its alternatives-rejected section,
+because those are what stop an implementer three phases later quietly doing the
+thing the design ruled out. A decision that forecloses nothing is a preference.
 
-### Agent 2 — generator (UI mockups)
+Record the **stack** too — it is committed, and naming it here is what stops the
+renderer re-selecting technologies.
 
-Spawn the `generator` agent for the mockup step, pointed at `.claude/skills/design/references/ui-mockups.md` for the full self-contained-HTML / CDN-React+Tailwind / aesthetic / data-fidelity guidance.
+### 2. Gate
 
-**Prompt:**
+```bash
+node .claude/scripts/validate-design-decisions.js
+```
 
-> Read `.claude/skills/design/references/ui-mockups.md`, then read all ready story files in specs/stories/ and specs/design/api-contracts.md (if it exists; wait or proceed with story context if not yet available).
->
-> For every story with layer "UI", create a self-contained HTML mockup:
->
-> - The mockup must be a single .html file with all CSS and JavaScript inlined (no external dependencies).
-> - Use realistic mock data that matches the field names and types defined in api-contracts.md.
-> - Show the primary happy-path state. Include at least one empty/error state as a toggle or commented section.
-> - Label each interactive element with its API call (e.g., "POST /api/auth/register").
-> - The filename must match the story ID: E{n}-S{n}.html
->
-> Write all mockups to specs/design/mockups/.
+Fix what it reports by asking, not by editing `basis` or padding `rules_out`.
 
----
+### 3. Dispatch `design-render`
+
+Invoke the `design-render` skill (forked, sidekick model), passing any
+`--sprint N`. It re-runs the gate at its own Step 0 and renders the nine
+documents, the two schemas, the REASONS Canvas, and one mockup per UI story.
+
+**One dispatch, not one per document.** Coarse handoffs keep the renderer's
+context cached; per-document round-trips pay cache creation on every switch and
+can cost more than the cheaper model saves.
+
+When it returns, read `specs/decisions/design-unresolved.json` if present. Each
+entry is a call the renderer refused to invent. Put them to the human as in
+Step 0.5, append them to `decisions[]`, and re-dispatch. A renderer that returns
+unresolved items is working correctly.
+
+Then continue with Step 1.9 below — the deterministic gates and the evaluator
+run here, in the main session, not inside the fork.
 
 ### Step 1.9 — Emit the trace spine + Grounding Gate [HARD BLOCK — when `specs/stories/story-traces.json` exists]
 
@@ -114,7 +134,7 @@ Exit code 1 means a real vocabulary mismatch: an entity/model name in `domain_co
 
 ### Step 2 — Phase Evaluation Gate
 
-After both agents (planner + generator) complete, spawn the `evaluator` agent (artifact mode). This replaces and extends the previous field-shape validation.
+After `design-render` returns and Step 1.9 is green, spawn the `evaluator` agent (artifact mode) here in the main session. Evaluation stays on the frontier model — the point of a cheap renderer is an expensive reviewer. This replaces and extends the previous field-shape validation.
 
 **Agent invocation:**
 
@@ -133,7 +153,7 @@ Spawn Agent with subagent_type="evaluator" and prompt:
 **Ratchet loop (max 3 iterations):**
 
 1. If verdict is **PASS** — proceed to human approval with eval summary + traceability report.
-2. If verdict is **FAIL** — revise design artifacts. May re-invoke planner or generator for specific fixes. Re-run evaluator.
+2. If verdict is **FAIL** — fix the findings, re-dispatching `design-render` when the fix is structural rather than editorial. Re-run the evaluator. `Previous score` is load-bearing: the evaluator applies the ratchet rule only when a caller passes it, so omitting it silently disables regression detection.
 3. **Ratchet rule:** weighted_average must be >= previous iteration. Revert on regression.
 4. After 3 iterations — present best version with findings.
 

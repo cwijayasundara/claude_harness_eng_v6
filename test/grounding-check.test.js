@@ -210,7 +210,7 @@ const pathw = require('path');
 const ROOTW = pathw.join(__dirname, '..');
 
 test('/brd skill documents the --frd flow and runs the grounding gate', () => {
-  const brd = fsw.readFileSync(pathw.join(ROOTW, '.claude', 'skills', 'brd', 'SKILL.md'), 'utf8');
+  const brd = require('./helpers/skill-corpus').readSkillCorpus('brd');
   assert.match(brd, /--frd/);
   assert.match(brd, /source-frd\.md/);
   assert.match(brd, /clarification-log\.json/);

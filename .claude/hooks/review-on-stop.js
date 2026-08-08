@@ -86,6 +86,41 @@ function learningAdvisories(stateDir) {
   return out;
 }
 
+// Skipped-gate sensor (R7). Reports, never blocks — see
+// hooks/lib/gate-receipt-sensor.js for why this cannot be a gate. Rides the
+// already-wired Stop hook rather than adding one, so it needs no settings.json
+// change (which would invalidate the cached prompt prefix mid-session).
+function skippedGateAdvisory(projectDir, stateDir) {
+  try {
+    const { detectSkippedGates, appliesTo } = require('./lib/gate-receipt-sensor');
+    const lane = fs.readFileSync(path.join(stateDir, 'current-lane'), 'utf8').trim();
+    // Record nothing for a lane this sensor cannot say anything about. Logging
+    // ran:true on every Stop would tell the value meter the control is
+    // constantly working when it is constantly inapplicable.
+    if (!appliesTo(lane)) return null;
+    const { readReceipt } = require('../scripts/plan-approval');
+    const { recordOutcome } = require('./lib/sensor-outcomes');
+    const phaseDir = { brd: 'brd', spec: 'stories', design: 'design', test: 'test_artefacts' };
+    const found = detectSkippedGates(lane, {
+      phaseRan: (p) => {
+        try {
+          return fs.readdirSync(path.join(projectDir, 'specs', phaseDir[p])).length > 0;
+        } catch (_) { return false; }
+      },
+      readReceipt: (p) => readReceipt(projectDir, p),
+    });
+    recordOutcome(projectDir, {
+      sensor: 'planning-gate-receipts', ran: true, blocked: false, surface: 'stop',
+      target: found.length ? found.map((f) => f.phase).join(',') : 'none',
+    });
+    if (!found.length) return null;
+    return `${found.length} planning gate(s) left no approving receipt: `
+      + `${found.map((f) => f.reason).join('; ')}. A gate that silently did not run is worse than no gate.`;
+  } catch (_) {
+    return null; // a sensor must never break the session
+  }
+}
+
 try {
   readHookInput();
   const projectDir = resolveProjectDir(path.dirname(path.resolve(__filename)));
@@ -94,6 +129,8 @@ try {
   const advisories = learningAdvisories(stateDir);
   const errAdvisory = hookErrorAdvisory(stateDir);
   if (errAdvisory) advisories.unshift(errAdvisory);
+  const skipped = skippedGateAdvisory(projectDir, stateDir);
+  if (skipped) advisories.unshift(skipped);
   if (advisories.length > 0) {
     process.stdout.write(
       ['Session learnings review:', ...advisories.map((s) => `  - ${s}`),

@@ -251,3 +251,29 @@ test('checkPartition fails loudly on an empty unit set rather than passing vacuo
     'an empty partition must error, not report a clean bill of health'
   );
 });
+
+// A require carrying the .js extension is the shape that slipped through.
+// libPattern demanded the closing quote immediately after the unit name, so
+// `require('../hooks/lib/model-pricing.js')` never matched while
+// `require('../hooks/lib/model-pricing')` did. That blind spot let a real
+// kernel -> pack hard reference ship: budget-state.js (kernel) requiring a lib
+// registered under the telemetry pack, which broke every kernel-only install
+// while check-partition reported "OK: no kernel -> pack hard references".
+test('a lib require is detected with or without the .js extension', () => {
+  const names = { lib: ['model-pricing'] };
+  for (const spec of ['../hooks/lib/model-pricing', '../hooks/lib/model-pricing.js', './lib/model-pricing.js']) {
+    const text = `const { costOf } = require('${spec}');`;
+    assert.deepStrictEqual(
+      hardRefs(text, names, new Set(), 'script'), ['lib:model-pricing'],
+      `require('${spec}') must be seen as a hard reference`,
+    );
+  }
+});
+
+test('a script require is detected with or without the .js extension', () => {
+  const names = { script: ['budget-state'] };
+  for (const spec of ['./budget-state', './budget-state.js']) {
+    const text = `const b = require('${spec}');`;
+    assert.deepStrictEqual(hardRefs(text, names, new Set(), 'script'), ['script:budget-state']);
+  }
+});

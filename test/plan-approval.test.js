@@ -179,11 +179,20 @@ test('--require-human rejects a waiver, so the gated lane cannot be waived into'
 // --- surface -----------------------------------------------------------------
 
 test('every pipeline phase that has a review loop is a valid phase', () => {
+  // brd joined the list when /brd was de-forked. Before that its approval could
+  // not reach a human — a forked skill cannot pause for AskUserQuestion — so a
+  // receipt would have recorded a stop that never happened, and a real gated
+  // run duly produced no brd-approval.json at all.
   const root = tmpRoot();
-  for (const phase of ['spec', 'design', 'test']) {
+  for (const phase of ['brd', 'spec', 'design', 'test']) {
     assert.strictEqual(run(['record', '--phase', phase, '--verdict', 'approved', ...ART], root), 0);
   }
-  assert.strictEqual(run(['record', '--phase', 'brd', '--verdict', 'approved', ...ART], root), 2);
+});
+
+test('a phase with no review loop is still rejected', () => {
+  const root = tmpRoot();
+  assert.strictEqual(run(['record', '--phase', 'deploy', '--verdict', 'approved', ...ART], root), 2);
+  assert.strictEqual(run(['record', '--phase', 'brownfield', '--verdict', 'approved', ...ART], root), 2);
 });
 
 test('check --phase all gates a phase only once that phase has produced artifacts', () => {

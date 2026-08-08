@@ -2,12 +2,35 @@
 name: build
 description: Full SDLC pipeline. Runs all phases end-to-end with human gates on phases 1-3.
 argument-hint: "[path-to-BRD] [--mode full|lean]"
-context: fork
 ---
 
 # Build Skill
 
 Full software development lifecycle pipeline. Orchestrates BRD creation, story specification, architecture design, state initialization, and autonomous build execution across sequential phases (Phase 0 through Phase 10).
+
+**Runs in the main session — do not add `context: fork`.** This conductor owns
+the human gates on Phases 1–3. A forked skill cannot pause for `AskUserQuestion`
+and returns a single result, so a forked `/build` silently converted all four of
+its gated stops into prose the model read to itself: Phase 1's BRD approval,
+Phase 2's `/spec` decision dialogue, and Phase 3's two `plan-review-loop` rounds.
+That is not a hypothetical — a real gated run produced no `brd-approval.json` and
+no `design-approval.json`, and left five design questions queued for a human who
+was never asked.
+
+All three planning phases now share this shape: `/brd`, `/spec` and `/design`
+each run their dialogue in this session and dispatch a forked sidekick
+(`brd-render`, `spec-render`, `design-render`) for the expansion. So Phase 1's
+five-dimension interview, Phase 2's decision dialogue and Phase 3's architecture
+brainstorm all reach the human, and each phase records a `plan-approval`
+receipt — including `brd`, which had no phase at all until the intake was
+de-forked.
+
+The delegated sub-skills (`/brownfield`, the three `*-render` skills, `/test`,
+`/auto`, `/gate`) fork their own work as they already do; the conductor itself
+stays in the main conversation loop. Same rule, same reason, as `/feature` and
+`/sprint`. Nothing else depends on the fork: resumability is file-existence
+checks (Phase 4 re-entry rule), and headless session chaining spawns its own
+`claude -p` links via `build-chain.js`.
 
 ---
 

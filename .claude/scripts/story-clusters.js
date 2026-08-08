@@ -151,7 +151,7 @@ function loadStories(storiesPath) {
   } catch (e) {
     process.stderr.write(
       `story-clusters: cannot read ${storiesPath}: ${e.message}\n`
-      + '  /spec Step 3 writes this machine-readable story index alongside the .md files.\n',
+      + '  spec-render Step 3 writes this machine-readable story index alongside the .md files.\n',
     );
     return process.exit(2);
   }

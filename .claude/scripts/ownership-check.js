@@ -177,7 +177,7 @@ function reportCollisions(verdict, strict) {
 function runClusterMode(root, mapPath, strict) {
   const planPath = path.join(root, 'specs', 'stories', 'story-clusters.json');
   if (!fs.existsSync(planPath)) {
-    process.stdout.write('ownership-clusters: SKIP (no story-clusters.json — run /spec Step 4.5)\n');
+    process.stdout.write('ownership-clusters: SKIP (no story-clusters.json — run spec-render Step 4.5)\n');
     return 0;
   }
   let plan;

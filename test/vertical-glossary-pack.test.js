@@ -230,9 +230,7 @@ test('CLI: writes private-equity-glossary-pack.json (not pe-glossary-pack.json) 
 });
 
 test('brd/SKILL.md Step 2.7 is generalized to any registered vertical, not private-equity-only', () => {
-  const brdSkill = fs.readFileSync(
-    path.join(__dirname, '..', '.claude', 'skills', 'brd', 'SKILL.md'), 'utf8'
-  );
+  const brdSkill = require('./helpers/skill-corpus').readSkillCorpus('brd');
   const step27Index = brdSkill.indexOf('### Step 2.7');
   const step28Index = brdSkill.indexOf('### Step 2.8');
   assert.ok(step27Index > -1, 'expected Step 2.7 in brd/SKILL.md');

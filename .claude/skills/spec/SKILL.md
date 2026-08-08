@@ -1,522 +1,253 @@
 ---
 name: spec
-description: "[Internal pipeline stage — run by /build; invoke directly only as a power user.] Decompose BRD into epics, stories, dependency graph, and feature list for agent team execution."
+description: "[Internal pipeline stage — run by /build; invoke directly only as a power user.] Shape the decomposition with the human — milestone scope, epic boundaries, real-vs-defensive dependencies — then dispatch spec-render to expand those decisions into the story graph."
 argument-hint: "[path-to-BRD]"
-context: fork
-agent: planner
 ---
 
-# Spec Skill — Story Decomposition & Feature Generation
-
-> **Ultracode tip:** Decomposition benefits from broad parallel exploration of stories and dependency edges, so `/effort ultracode` is a good fit here. Drop back to `/effort high` before the execution phases (`/auto`, `/implement`).
+# Spec Skill — Decomposition Shaping
 
 ## Usage
 
 ```
 /spec specs/brd/brd.md
-/spec specs/brd/sprint-N/brd.md --sprint N   # sprint N: write to specs/stories/sprint-N/ instead of the flat path
+/spec specs/brd/sprint-N/brd.md --sprint N   # sprint N: write to specs/stories/sprint-N/
+/spec --render-only                          # re-run the renderer against an existing decisions file
 ```
 
-Pass the path to the approved BRD as the argument. Produces epics, stories, a dependency graph, and a `features.json` for session chaining.
+**Runs in the main session — do not add `context: fork`.** This skill owns the
+decision dialogue and the human review gate. A forked skill cannot pause for
+`AskUserQuestion`, so a forked shaping phase can only answer its own questions.
+The renderer it dispatches forks; the shaping does not.
 
 ---
 
 ## Overview
 
-This is the second gate in the SDLC pipeline. The planner agent reads an approved BRD, or an existing set of user stories, and normalizes them into structured, independently executable units of work. Every implementation-ready story gets testable acceptance criteria, a layer assignment, a dependency group, a readiness marker, and deterministic story-point metadata. A machine-readable root `features.json` is generated from those criteria so the evaluator can track pass/fail state across sessions.
+Decomposition is two different jobs wearing one name.
+
+A small number of calls are genuinely product-shaped and cannot be derived from
+the BRD: which epics are in the next milestone, where an epic splits, which
+dependencies are real rather than defensive, what gets deferred. Everything
+after that — story files, typed edges, ownership clusters, point estimates,
+`features.json`, the trace spines — is transcription of those calls.
+
+This skill does the first job with the human and records the result in
+`specs/decisions/spec-decisions.json`. `spec-render` does the second on the
+sidekick model. The decisions file is the contract between them, and
+`validate-spec-decisions.js` is what stops the renderer running without one.
+
+**Why this order.** The previous shape generated the whole story graph and then
+asked the human to review it. That asks someone to relitigate decisions already
+baked into ten files, and the cheapest correct answer is always "looks fine". A
+measured run produced 84 stories, 257 features and 1.83 MB of artifacts from 14
+real decision points, with 12 of 16 epics landing on exactly 5 stories. Deciding
+first is what stops the harness rendering work nobody chose.
 
 ---
 
 ## Steps
 
-### Step 1 — Read the BRD
+**With `--render-only`, skip to Step 6.** The decisions file already exists and
+was already gated; re-running the dialogue would re-ask settled questions. Use it
+after resolving `spec-unresolved.json`, or to re-expand an amended scope.
 
-Read the file at the path provided as the argument. Confirm the document exists and is an approved BRD. If the file is missing, halt and ask the human to run `/brd` first.
+### Step 1 — Read the BRD and the grounding spine
 
-If `specs/brd/brd-analysis.json` exists, read it before decomposing stories. It is the BRD analysis pack produced by `/brd`, and it carries the ambiguity, edge-case, acceptance-coverage, and risk signals that should shape story boundaries.
+Read the BRD at the given path. If it is missing, halt and ask the human to run
+`/brd` first. Also read `specs/brd/brd-requirements.json` and
+`specs/brd/brd-acceptance.json` when present — they are the requirement spine the
+rendered stories must trace to.
 
-Use the analysis pack this way:
-- Use `ambiguity_table` to avoid converting unresolved ambiguity into implementation scope. A high-risk deferred ambiguity should become `needs_breakdown` or an explicit Open Question, not a guessed story.
-- Use `edge_case_table` to create acceptance criteria for failure, empty, limit, concurrency, and security/privacy paths.
-- Use `ac_coverage_matrix` to preserve every source requirement's observable acceptance criterion.
-- Use `risk_gap_table` to tag stories that need human review, explicit non-goals, or later release deferral.
+Read `specs/plan-confidence.json` if it exists. A `low` band is a signal to spend
+questions on its drivers rather than on general scope.
 
-**Read the domain glossary.** If `CONTEXT.md` exists, read it before writing story titles, descriptions, or acceptance criteria. Reuse its terms verbatim — do not introduce a new name for a concept `CONTEXT.md` already defines. If a story needs a domain concept not yet in `CONTEXT.md`, add a `### <term>` entry there before finalizing the story.
+### Step 2 — Draft the decision set, do not ask it yet
 
-**Sprint addendum.** When the BRD path is under `specs/brd/sprint-N/` (or
-`--sprint N` is passed explicitly), write every output of this skill to
-`specs/stories/sprint-N/` instead of the flat `specs/stories/` path, and
-suffix every `--out` argument in the grounding-gate commands below with
-`-sprint-N` (e.g. `specs/reviews/spec-grounding-sprint-N.json`). For every
-story whose scope overlaps existing code, require a citation to the specific
-DeepWiki page/symbol or code-graph node it extends (the same design-adherence
-discipline `/feature` already applies) — do not decompose a story that
-silently re-implements existing functionality.
+Work out privately which calls are load-bearing. A call is load-bearing when a
+different answer changes what gets built or in what order — not when it merely
+changes wording. Typically:
 
-### Step 1.5 — Clarify Story Readiness Gaps
+1. **Milestone scope** — which epics are in the next milestone, and which are
+   explicitly deferred. This is always load-bearing; it governs everything the
+   renderer will and will not expand.
 
-Invoke `.claude/skills/clarify/SKILL.md` only if the BRD or existing stories contain uncertainty that affects story readiness, dependencies, acceptance criteria, layer assignment, or whether a story must be split.
+   **Read `specs/brd/brd-milestones.json` first.** It is the PRD's own milestone
+   plan, in document order — the build sequence the human already decided when
+   they wrote the PRD. Do not re-derive it from scratch and do not silently
+   depart from it.
 
-Use the clarification budget:
-- Ask at most 10 questions by default.
-- Continue to 15 only if the user explicitly asks.
-- Prefer marking oversized or ambiguous stories as `needs_breakdown` over extending the interview.
-- Capture low-risk assumptions in story `Notes`.
+   - Each entry carries `requirements[]`. Where those are present, propose
+     `milestone.epics` as *the epics containing the next milestone's
+     requirements*, and say which milestone you are scoping to.
+   - Where `requirements[]` is **empty**, the PRD sequenced its milestones
+     without mapping them to requirement ids — common, and `validate-prd`
+     warns about it. The plan still gives you the order and the exit criteria,
+     so propose a mapping from those and ask. Do not treat an unmapped plan as
+     no plan.
+   - Read `specs/milestones/*-log.md` if any exist. A completed milestone's log
+     records what was actually built and where it deviated from the PRD, which
+     is what makes "the next milestone" mean something rather than restarting
+     from the document each time.
 
-### Step 2 — Decompose or Normalize into Epics
+   The milestone that is *not* in scope is the point: a real run expanded 16
+   epics to story depth against a plan-confidence of 0. Everything you defer
+   here is work the renderer will not generate.
+2. **Epic boundaries** — any epic you would split or merge, and why.
+3. **Real vs defensive dependencies** — edges where you are unsure whether the
+   consumer truly needs the producer, or you are adding the edge to be safe.
+4. **Deferrals** — anything you would mark `needs_breakdown` rather than guess at.
 
-Group related functionality into epics. Rules:
-- Each epic represents a coherent vertical slice of the system (e.g., "User Authentication", "Data Ingestion", "Reporting")
-- Each epic contains 3-5 stories. Never fewer than 2, never more than 5.
-- Epic IDs use the format: `E1`, `E2`, `E3` ...
-- Write the epic index to `specs/stories/epics.md`.
-- If the input already contains epics and stories, preserve their intent but normalize IDs, acceptance criteria, dependencies, layers, groups, and readiness fields to this harness format.
+Cap the set at what genuinely changes the outcome. Ten well-chosen decisions
+beat thirty confirmations.
 
-### Step 3 — Write Stories
+### Step 3 — Put them to the human, one at a time
 
-For each story:
+Follow the dialogue discipline in `.claude/skills/clarify/SKILL.md` for budget
+(10 default, 15 hard cap) and `.claude/skills/plan-review-loop/SKILL.md` for how
+to present a contested fork.
 
-**Story ID:** `E{n}-S{n}` (e.g., `E1-S2`)
+Two rules govern how you ask:
 
-**Required fields per story:**
-- `title`: Short imperative phrase (e.g., "User can register with email and password")
-- `description`: 2-4 sentences of context and motivation
-- `user_story`: "As a <persona>, I want <capability> so that <value>."
-- `business_value`: One sentence naming the outcome the business gets. Not a restatement of the capability — "cuts support tickets for locked-out users" is value; "users can reset passwords" is the capability.
-- `scope_in`: 1-3 bullets naming what this story does change.
-- `scope_out`: 1-3 bullets naming what it must **not** change, phrased as checkable prohibitions (e.g. "must not alter the session cookie format"). Seed from the BRD's *Forbidden Actions* section plus this story's own boundary. The reviewer checks the diff against this list, so a vague entry is useless — name a file, contract, or behavior.
-- `acceptance_criteria`: 3-6 items in **Given / When / Then** form. Each criterion is an object with a stable id:
-  ```json
-  { "id": "E1-S1-AC1", "given": "a visitor with no account", "when": "they POST /api/auth/register with a valid email and password", "then": "the response is 201 and the body contains a non-null userId" }
-  ```
-  Each must be testable (verifiable by running code or inspecting output) and specific (concrete values, states, status codes). Vague criteria ("works properly", "loads fast") are rejected. The `then` clause is the observable outcome — that is what `/test` asserts and what `features.json` steps are generated from, so it must not restate the `when`.
-- `layer`: One of `Types` | `Config` | `Repository` | `Service` | `API` | `UI`
-- `group`: Dependency group letter (`A`, `B`, `C` ...) — see Step 4
-- `depends_on`: Typed dependency edges — see Step 3.5. A bare story-id string is still accepted and read as a `behavior` edge, but new stories must use the typed form.
-- `invest`: INVEST scorecard — see Step 3.7
-- `readiness`: `ready` | `needs_breakdown`
-- `breakdown_reason`: Required when readiness is `needs_breakdown`; otherwise `null`
-- `story_points`: One of `1`, `2`, `3`, `5`, `8`, `13` for ready stories; `null` for `needs_breakdown`
-- `estimation_confidence`: `high` | `medium` | `low`
-- `estimation_drivers`: Rubric dimension scores and short evidence for the chosen point value
+**Propose a default with reasoning; never ask an open question you could answer.**
+The human is far better at editing a proposal than generating one. Ask "I'd put
+E1–E3 in milestone 1 and defer E4–E9, because E4 onward all depend on the
+ingestion contract E2 publishes — take it, or move something?" rather than
+"which epics should be in milestone 1?".
 
-**Readiness rule:** A story is `ready` only when it can be implemented by one teammate without further product decomposition and has 3-6 concrete acceptance criteria. Mark it `needs_breakdown` when it combines unrelated workflows, has multiple independent user goals, lacks verifiable criteria, requires unresolved product decisions, or would force multiple teammates to own the same broad scope.
+**Use `AskUserQuestion` for discrete choices**, prose for open ones. Lead with
+your recommendation and say what it costs.
 
-Do not assign `needs_breakdown` stories to an implementation group. Either break them into smaller ready stories before writing the dependency graph, or place them in `specs/stories/backlog-needs-breakdown.md` for human review.
+Record every answer as you go. A decision the human changed is worth more than
+one they accepted — note both, and note *why* in `rationale`.
 
-**Story point rubric:** Assign points deterministically from the story evidence, not from intuition. Use only the scale `1, 2, 3, 5, 8, 13`. Anything above `13` must be marked `needs_breakdown` and excluded from implementation artifacts.
-
-Score each story from `0` to `3` on these dimensions:
-
-| Dimension | 0 | 1 | 2 | 3 |
-|---|---|---|---|---|
-| Functional scope | tiny behavior, one path | one bounded capability | several states or variants | multiple workflows |
-| Technical complexity | known pattern | minor new logic | new integration, model, or API | novel architecture or algorithm |
-| Data/state impact | no persistence | simple CRUD or config | schema/state migration | cross-entity consistency or concurrency |
-| Integration surface | isolated unit | one internal boundary | external API, UI/backend, or storage boundary | multi-service, auth, payments, or async |
-| Uncertainty/risk | fully specified | minor assumptions | unclear edge cases | unresolved product, security, or performance risk |
-
-Map the total score to points:
-
-| Rubric total | Story Points | Meaning |
-|---:|---:|---|
-| 0-2 | 1 | trivial, localized change |
-| 3-4 | 2 | small, known pattern |
-| 5-6 | 3 | normal story, one clear slice |
-| 7-9 | 5 | moderately complex story |
-| 10-12 | 8 | large but still implementable by one teammate |
-| 13-15 | 13 | very large, high risk, should be rare |
-| >15 or any hard blocker | `needs_breakdown` | do not implement yet |
-
-Hard estimation rules:
-- If a story has fewer than 3 concrete acceptance criteria, do not estimate it as ready.
-- If a story has more than 6 acceptance criteria, first try to split it.
-- If it spans more than one independent user goal, mark `needs_breakdown`.
-- If it needs unresolved product decisions, mark `needs_breakdown`.
-- If it touches auth, billing, security, migrations, external APIs, concurrency, or irreversible data changes, add at least +1 risk unless the BRD or design already resolves it.
-- Cap implementation-ready stories at `13`; larger work belongs at epic level.
-
-Set `estimation_confidence` this way:
-- `high`: all acceptance criteria are concrete, dependencies are known, and no unresolved assumptions affect scope.
-- `medium`: minor assumptions or familiar integration risk remain, but the story is implementable.
-- `low`: ambiguity, missing design detail, risky integration, or weak criteria remain. Prefer clarify or breakdown before `/auto`.
-
-### Step 3.5 — Type Every Dependency Edge
-
-A dependency records *that* one story needs another. Typing it records *why*, and the kind decides whether two engineers can work at the same time:
-
-| `kind` | Meaning | Parallelisable? |
-|---|---|---|
-| `contract` | The consumer needs the producer's **shape** — a type, schema, endpoint signature | **Yes** — publish the interface first and both proceed |
-| `ui` | The consumer needs a component/page contract | **Yes** — same mechanism |
-| `data` | The consumer needs data the producer writes | No — real hand-off |
-| `behavior` | The consumer needs the producer's runtime effect | No — real hand-off |
-
-Write each entry as an object:
-
-```json
-{ "story": "E1-S1", "kind": "contract", "artifact": "User type", "reason": "E1-S2 serialises User in its response body" }
-```
-
-`artifact` names the shared thing (a type, table, endpoint, or component). `reason` is one sentence. Default to `behavior` only when the consumer genuinely needs the producer to *run* — over-declaring `behavior` silently destroys parallelism, and under-declaring it invents parallelism that does not exist.
-
-**Every `contract` edge needs a publisher.** If the producer is not a `Types` or `Config` story and has no `Types`/`Config` ancestor, the consumer must wait for the producer's whole implementation and the edge is not really cuttable. Add an interface story (layer `Types` or `Config`) that publishes just the artifact, and place it in the earliest group. Step 4.5 blocks on this mechanically.
-
-### Step 3.7 — INVEST Scorecard
-
-Score each ready story. Record `invest` as six booleans plus one line of evidence each:
-
-| Letter | Passes when |
-|---|---|
-| `independent` | **Computed in Step 4.5, not asserted here** — a story is independent when its cluster has no inbound blocking dependency. Write `null` now; Step 4.5 fills it. |
-| `negotiable` | `scope_in` and `scope_out` are both non-empty, so the boundary is explicit and can be renegotiated |
-| `valuable` | `business_value` names a business outcome, not a capability restatement |
-| `estimable` | `story_points` assigned from the Step 3 rubric with `estimation_confidence` >= `medium` |
-| `small` | `story_points` <= 13 |
-| `testable` | >= 3 acceptance criteria, each a well-formed Given/When/Then with an observable `then` |
-
-Any letter other than `independent` scoring false means the story is not ready — fix it or mark `needs_breakdown`.
-
-### Step 3.9 — Write the Machine-Readable Story Index
-
-Write `specs/stories/stories.json` — the machine view of the same stories whose `.md` files Step 5 renders. Downstream tooling reads this; the `.md` files are for humans. Keep them in sync.
-
-```json
-[
-  {
-    "id": "E1-S1", "title": "User can register with email and password",
-    "epic": "E1", "layer": "API", "group": "A",
-    "story_points": 5, "estimation_confidence": "medium", "readiness": "ready",
-    "business_value": "Cuts drop-off at signup", 
-    "scope_in": ["POST /api/auth/register"], "scope_out": ["must not alter the session cookie format"],
-    "depends_on": [{ "story": "E1-S0", "kind": "contract", "artifact": "User type", "reason": "..." }],
-    "invest": { "independent": null, "negotiable": true, "valuable": true, "estimable": true, "small": true, "testable": true }
-  }
-]
-```
-
-Include `needs_breakdown` stories with `readiness: "needs_breakdown"` and `story_points: null` — the clusterer excludes them, but recording them keeps the index a complete picture of the decomposition.
-
-### Step 4 — Build the Dependency Graph
-
-Write `specs/stories/dependency-graph.md` with:
-- Group A: stories with no dependencies (can run in parallel)
-- Group B: stories that depend only on Group A
-- Group C: stories that depend on Group B (and/or A)
-- ... and so on
-
-Format each group as a table showing Story ID, Title, Layer, Story Points, Estimation Confidence, and Dependencies.
-
-Then, directly below the tables, render the same graph visually as a Mermaid `flowchart TD` so reviewers see the parallelism and critical path at a glance (not just rows). One node per story (label `E{n}-S{n}`), one edge per `depends_on` (`dependency --> story`), and group the nodes with `subgraph Group A`/`Group B`/… blocks matching the tables. Example:
-
-```mermaid
-flowchart TD
-  subgraph GroupA[Group A]
-    E1S1[E1-S1 Types]
-    E1S2[E1-S2 Config]
-  end
-  subgraph GroupB[Group B]
-    E2S1[E2-S1 Repository]
-  end
-  E1S1 --> E2S1
-  E1S2 --> E2S1
-```
-
-Then write a machine-readable sibling `specs/stories/dependency-graph.json` with the
-exact same groups, for deterministic downstream wave planning (`.claude/scripts/wave-plan.js`):
+### Step 4 — Write `specs/decisions/spec-decisions.json`
 
 ```json
 {
-  "groups": [
-    { "id": "A", "stories": ["E1-S1", "E1-S2"], "blockedBy": [] },
-    { "id": "B", "stories": ["E1-S3"], "blockedBy": ["A"] }
+  "version": 1,
+  "phase": "spec",
+  "source": "specs/brd/brd.md",
+  "confirmed_at": "<ISO 8601>",
+  "milestone": {
+    "name": "M1 — ingestion",
+    "epics": ["E1", "E2", "E3"],
+    "deferred_epics": ["E4", "E5"]
+  },
+  "decisions": [
+    {
+      "id": "D1",
+      "question": "Which epics are in milestone 1?",
+      "options": ["E1-E3 (ingestion only)", "E1-E5 (ingestion + ranking)"],
+      "proposed_default": "E1-E3 (ingestion only)",
+      "chosen": "E1-E3 (ingestion only)",
+      "rationale": "E4 onward depend on the ingestion contract E2 publishes.",
+      "basis": "human",
+      "load_bearing": true
+    }
   ]
 }
 ```
 
-`id` is the group letter, `stories` lists its story IDs, and `blockedBy` lists the
-group IDs it depends on (empty for roots). The `.md` is the human artifact; the
-`.json` is the contract code reads — keep them in sync.
+`basis` is the honest record of who decided:
 
-The Mermaid block must stay consistent with the tables — every story and every dependency edge appears in both. The tables remain the machine-checkable source; the diagram is the human-readable view of the same data.
+| value | meaning |
+|---|---|
+| `human` | you asked, the human answered — including accepting your proposed default |
+| `default-accepted` | you did **not** ask; you recorded your own default as an assumption |
+| `headless-default` | `--auto` / `--autonomous`; no human was available |
 
-Rules:
-- No circular dependencies. Validate before writing.
-- Stories in the same group must be independently executable in parallel.
-- Foundation layers (Types, Config, Repository) should appear in earlier groups.
-- UI stories typically appear in later groups.
+Do not write `human` for a decision you never put to them. The gate exists
+because a previous run recorded six clarifications whose every basis ended
+"Original planner reasoning: …" — model-authored on both sides.
 
-**Groups are not owners.** A group is a scheduling wave — "these can run next" — and its members are frequently unrelated. Do not read a group as a work package for one engineer; Step 4.5 computes that separately and the two views deliberately cross-cut each other.
+Mark `load_bearing: true` on the calls that change what gets built. Every one of
+those must be `basis: "human"` outside headless lanes, or the gate blocks.
 
-### Step 4.5 — Ownership Clusters [HARD BLOCK]
-
-The groups from Step 4 answer **"what can be scheduled next"**. They do not answer **"what can one engineer own end to end"** — a group mixes unrelated subsystems into one branch, and a vertical feature slice spans three groups. Allocation needs the orthogonal view: connected components over the dependency edges.
-
-Run the clusterer over the Step 3.9 index:
+### Step 5 — Verify the gate passes before dispatching
 
 ```bash
-node .claude/scripts/story-clusters.js \
-  --stories specs/stories/stories.json \
-  --out specs/stories/story-clusters.json \
-  --edges-out specs/stories/dependency-edges.json
+node .claude/scripts/validate-spec-decisions.js
 ```
 
-Tune with `--max-points N` (default 21 — one engineer's comfortable slice) and `--min-points N` (default 5). For a team of *K* engineers, aim for `cluster_count >= K`; if it comes back lower, the work is more coupled than the team is wide, and the honest answer is fewer parallel owners, not a forced split.
+Fix what it reports — by asking, not by editing the basis field.
 
-It writes `story-clusters.json`, whose fields carry the allocation decision:
+### Step 6 — Dispatch `spec-render`
 
-- `clusters[]` — each with `stories`, `story_points`, `layers`, `epics`, `waves` (which Step 4 groups it spans), `internal_edges`, `external_edges`, `coordination_cost`, and `independently_startable`.
-- `interface_contracts[]` — cuttable edges crossing a cluster boundary, each naming the `artifact` and the `contract_story` that publishes it. **These are the things to build first**, before the owners split up.
-- `blocking_dependencies[]` — hard edges crossing a boundary. Each is a genuine hand-off: the `blocked_cluster` cannot start until the producer ships.
-- `warnings[]` — oversized tightly-coupled clusters and unpublishable contracts.
+Invoke the `spec-render` skill, passing the BRD path and any `--sprint N`. It
+forks onto the sidekick model, re-runs the gate itself, and expands the decided
+scope into the full artifact set.
 
-**Hard block on exit 1** — one or more `interface_contracts` has `contract_story: null`, meaning the consumer must wait for the producer's full implementation and the "independent" clusters are not independent. Fix it at the source: add a `Types`/`Config` story publishing that artifact (Step 3.5), re-run Step 3.9, and re-run this step. Do not proceed with an unresolved contract.
+**One dispatch, not one per story.** Coarse handoffs keep the renderer's context
+cached; per-story round-trips pay cache creation on every switch and can cost
+more than the cheaper model saves.
 
-Exit 2 is a malformed index (unknown story id, unknown edge kind, or an empty story set) — a Step 3.9 bug, not a legacy condition. Fix and re-run.
+When it returns, read `specs/decisions/spec-unresolved.json` if present. Each
+entry is a judgement the renderer refused to invent. Put them to the human as in
+Step 3, append them to `decisions[]`, and re-dispatch with `--render-only`.
+A renderer that returns unresolved items is working correctly.
 
-**Backfill `invest.independent`** into `stories.json` and the story files: `true` when the story's cluster has `independently_startable: true`, `false` otherwise. This is the one INVEST letter that is measured rather than judged.
+### Step 7 — Phase Evaluation Gate
 
-Append a cluster view to `specs/stories/dependency-graph.md` — clusters as `subgraph` blocks, cut edges dashed — so the reviewer sees allocation and coordination surface together:
+Spawn the `evaluator` agent in artifact mode with:
 
-```mermaid
-flowchart TD
-  subgraph C1[C1 · 13 pts · owner ?]
-    E1S1[E1-S1 Types]
-    E1S2[E1-S2 Service]
-  end
-  subgraph C2[C2 · 11 pts · owner ?]
-    E2S1[E2-S1 API]
-  end
-  E1S1 --> E1S2
-  E1S1 -.->|User type| E2S1
-```
-
-Solid edges are internal; dashed edges are interface contracts (label them with the `artifact`). A `blocking_dependencies` edge is drawn solid **between** subgraphs — it is the visual signal that two clusters are not truly parallel.
-
-### Step 5 — Write Individual Story Files
-
-Write each story to: `specs/stories/E{n}-S{n}.md`
-
-Each file includes: ID, title, description, user_story, business value, scope in/out, acceptance criteria, layer, group, cluster, depends_on, INVEST, readiness, breakdown_reason, story_points, estimation_confidence, and estimation_drivers.
-
-Use this shape:
-
-```markdown
-# E1-S1 — User can register with email and password
-
-## Metadata
-- Epic: E1 — User Authentication
-- Layer: API
-- Group: A
-- Cluster: C1 (independently startable: yes)
-- Depends On: [{ story: E1-S0, kind: contract, artifact: User type }]
-- INVEST: independent ✓ · negotiable ✓ · valuable ✓ · estimable ✓ · small ✓ · testable ✓
-- Readiness: ready
-- Breakdown Reason: null
-- Story Points: 5
-- Estimation Confidence: medium
-- Estimation Drivers:
-  - Functional scope: 2 — registration has success and validation paths
-  - Technical complexity: 1 — known endpoint pattern
-  - Data/state impact: 1 — persists one user record
-  - Integration surface: 1 — API to service boundary
-  - Uncertainty/risk: 1 — minor password-policy assumption
-
-## User Story
-As a visitor, I want to create an account with email and password so that I can access protected features.
-
-## Business Value
-Cuts drop-off at signup, the largest funnel loss in the current product.
-
-## Description
-...
-
-## Scope
-**In:** `POST /api/auth/register`, the `users` table insert.
-**Out:** must not alter the session cookie format; must not send marketing email.
-
-## Acceptance Criteria
-- **E1-S1-AC1** — *Given* a visitor with no account, *when* they POST /api/auth/register with a valid email and password, *then* the response is 201 and the body contains a non-null userId.
-- ...
-```
-
-### Step 6 — Generate `features.json`
-
-Transform every acceptance criterion into one or more testable features.
-
-**Mapping rule:** Each acceptance criterion produces 1-3 feature entries. The feature description must be a specific, observable behavior. Each feature has executable steps describing how to verify it.
-
-**Generate the steps from the criterion's Given/When/Then — do not re-author them.** The mapping is mechanical, which is the point of the structured form: `given` becomes the setup step(s), `when` becomes the action step, and `then` becomes one assertion step per observable claim. Re-writing the behavior here instead of transcribing it reintroduces the drift the structure exists to prevent. Every feature carries the `acceptance_criterion` id it came from.
-
-**Output file:** `features.json` at the project root.
-
-Do not write `specs/features.json`. `features.json` is root-level because `/auto`, `/evaluate`, and session chaining read it from the project root.
-
-**Schema for each feature entry:**
-
-```json
-{
-  "id": "F001",
-  "category": "functional",
-  "story": "E1-S1",
-  "group": "A",
-  "cluster": "C1",
-  "acceptance_criterion": "E1-S1-AC1",
-  "description": "User registration endpoint returns 201 with user ID on valid input",
-  "steps": [
-    "POST /api/auth/register with valid email and password",
-    "Assert response status is 201",
-    "Assert response body contains a non-null userId field"
-  ],
-  "passes": false,
-  "last_evaluated": null,
-  "failure_reason": null,
-  "failure_layer": null
-}
-```
-
-**Field rules:**
-- `id`: Sequential, zero-padded to 3 digits (`F001`, `F002` ...)
-- `category`: `functional` | `integration` | `ui` | `security` | `performance`
-- `story`: Story ID this feature belongs to
-- `group`: Inherited from the story's dependency group (the scheduling wave)
-- `cluster`: Inherited from the story's ownership cluster in `story-clusters.json`
-- `acceptance_criterion`: The `{story}-AC{n}` id this feature verifies
-- `description`: Single sentence, specific and observable
-- `steps`: Ordered list of verification steps (at least 2)
-- `passes`: Always `false` at generation time
-- `last_evaluated`: Always `null` at generation time
-- `failure_reason`: Always `null` at generation time
-- `failure_layer`: Always `null` at generation time
-
-Every acceptance criterion must map to at least one feature. No criteria may be omitted.
-
-### Step 6.4 — Emit the trace spine `specs/stories/story-traces.json`
-
-Write the machine-readable spine that grounds the stories to the BRD requirements and seeds the test layer. One entry per story, each with a stable id, its BRD-requirement traces, and the stable ids of its acceptance criteria:
-
-```json
-[
-  { "id": "E1-S1", "text": "User registration endpoint", "traces": ["BR-1"],
-    "acs": ["E1-S1-AC1", "E1-S1-AC2"] },
-  { "id": "E1-S2", "text": "Login endpoint", "traces": ["BR-1", "BR-3"],
-    "acs": ["E1-S2-AC1"] }
-]
-```
-
-**Every story must carry at least one `BR-n` trace** (the ids in `specs/brd/brd-requirements.json`). A story that traces to no BRD requirement is scope the BRD never authorized — either remove it, or escalate to the human and add the requirement to the BRD first (re-run `/brd`). Give each acceptance criterion a stable `{story}-AC{n}` id; `/test` traces its test cases to these.
-
-Also write `specs/stories/acceptance-criteria.json` — the criterion-level spine, one entry per AC, each tracing to the **BRD acceptance id** (`BR-n-ACm`) it realizes:
-
-```json
-[
-  { "id": "E1-S1-AC1", "story": "E1-S1", "traces": ["BR-1-AC1"],
-    "given": "a visitor with no account",
-    "when": "they POST /api/auth/register with a valid email and password",
-    "then": "the response is 201 and the body contains a non-null userId" }
-]
-```
-
-Story-level tracing proves a requirement has *a* story. It does not prove the story's criteria actually cover what the requirement demanded — that gap is where a requirement gets nominally covered and substantively lost. This file is what Step 6.46 checks.
-
-### Step 6.45 — Grounding Gate [HARD BLOCK — when `specs/brd/brd-requirements.json` exists]
-
-If the BRD was produced with a machine-readable spine (FRD-grounded `/brd`), prove mechanically — not by judgement — that the stories invented and dropped nothing relative to it:
-
-```bash
-node .claude/scripts/trace-check.js \
-  --required specs/brd/brd-requirements.json \
-  --downstream specs/stories/story-traces.json \
-  --layer spec \
-  --out specs/reviews/spec-grounding.json
-```
-
-**Sprint addendum.** In sprint mode, point `--required` at
-`specs/brd/sprint-N/brd-requirements.json`, `--downstream` at
-`specs/stories/sprint-N/story-traces.json`, and `--out` at
-`specs/reviews/spec-grounding-sprint-N.json`.
-
-The verdict (`specs/reviews/spec-grounding.json` — `{ pass, required_covered, net_new[], dropped[] }`) is a **hard gate, independent of the rubric score**:
-- **`net_new` non-empty** → a story introduces scope tracing to no BRD requirement. Remove it, or get the requirement into the BRD first.
-- **`dropped` non-empty** → a BRD requirement that no story realizes. Add a story covering it (or, if intentionally deferred, record the deferral and re-run `/brd` so the BRD reflects it).
-
-Only proceed to Step 6.5 when `spec-grounding.json#pass === true`. (Skip this step if `brd-requirements.json` does not exist — an older or interview-only BRD; fall back to the LLM traceability check in Step 6.5 alone.)
-
-### Step 6.46 — Acceptance-Criterion Grounding [HARD BLOCK — when `specs/brd/brd-acceptance.json` exists]
-
-Step 6.45 proves every BRD requirement has a story. This proves every BRD **acceptance postcondition** has a criterion that realizes it — the same engine, one level finer:
-
-```bash
-node .claude/scripts/trace-check.js \
-  --required specs/brd/brd-acceptance.json \
-  --downstream specs/stories/acceptance-criteria.json \
-  --layer spec-acceptance \
-  --out specs/reviews/spec-acceptance-grounding.json
-```
-
-- **`dropped` non-empty** → a BRD acceptance postcondition no criterion asserts. The requirement is covered on paper and unverifiable in practice. Add a criterion (or, if genuinely out of scope, retire the postcondition in `/brd`).
-- **`net_new` non-empty** → a criterion asserting something the BRD never required. Either it is scope creep, or the BRD is missing a postcondition — resolve at the source, not here.
-
-**Sprint addendum.** Point `--required` and `--downstream` at the `sprint-N/` paths and suffix `--out` with `-sprint-N`.
-
-Skip only when `brd-acceptance.json` does not exist (a BRD authored before this gate); note the skip in the human review.
-
-### Step 6.5 — Phase Evaluation Gate
-
-Spawn the `evaluator` agent (artifact mode) to validate the spec against the BRD.
-
-**Agent invocation:**
-
-Spawn Agent with subagent_type="evaluator" and prompt:
-- Phase: spec
-- Artifacts: specs/stories/epics.md, specs/stories/dependency-graph.md, all specs/stories/E*-S*.md files, features.json, specs/stories/story-traces.json
-- Upstream: specs/brd/brd.md (and specs/brd/brd-requirements.json when present)
-- Grounding verdict: specs/reviews/spec-grounding.json when present (already PASS from Step 6.45 — anchor the traceability criterion to it instead of re-judging from prose)
-- Rubric: Read .claude/templates/phase-eval-rubrics.json, key "spec"
-- Iteration: 1 (increment on retry)
-- Previous score: null (or previous iteration's weighted_average)
-- Cross-phase traceability: with a grounding verdict, confirm it; otherwise parse BRD goals and verify every story traces to one, flagging orphan stories and uncovered goals.
-- Write result to specs/reviews/phase-spec-eval.json
+- Phase: `spec`
+- Artifacts: `specs/stories/epics.md`, `specs/stories/E*-S*.md`, `specs/stories/stories.json`, `specs/stories/dependency-graph.md`, `features.json`
+- Upstream: `specs/brd/brd.md` (+ `brd-requirements.json` when present)
+- Grounding verdict: `specs/reviews/spec-grounding.json` when present (already PASS from `spec-render`'s Step 6.45 — anchor the traceability criterion to it)
+- Rubric: read `.claude/templates/phase-eval-rubrics.json`, key `"spec"`
+- **Iteration: 1** (increment on retry)
+- **Previous score: null** (or the previous iteration's `weighted_average`)
+- Write result to `specs/reviews/phase-spec-eval.json`
 
 **Ratchet loop (max 3 iterations):**
 
-1. If verdict is **PASS** — proceed to Step 7. Attach eval summary + traceability report.
-2. If verdict is **FAIL** — revise stories to address ALL error-severity findings. Re-run evaluator with incremented iteration.
-3. **Ratchet rule:** weighted_average must be >= previous iteration. Revert on regression.
-4. After 3 iterations — present best version with findings to human.
+1. If verdict is **PASS** — proceed to Step 8 with the eval summary.
+2. If verdict is **FAIL** — fix the findings and re-run. Re-dispatch `spec-render` when the fix is structural rather than editorial.
+3. **Ratchet rule:** `weighted_average` must be >= the previous iteration. Revert on regression.
+4. After 3 iterations — carry the unresolved findings into Step 8's brief rather than looping further.
 
-**Traceability report shown to human:**
-- "X/Y BRD goals covered by stories"
-- List of orphan stories (not tracing to any BRD goal)
-- List of uncovered goals (BRD goals with no stories)
+`Previous score` is load-bearing: the evaluator only applies the ratchet rule
+when a caller passes it, so omitting it silently disables regression detection.
 
-### Step 7 — Human Review Loop [REQUIRED SUB-SKILL: `plan-review-loop`]
+Evaluation stays on the frontier model. This is the "final review" half of the
+split — the point of a cheap renderer is an expensive reviewer.
 
-Follow `.claude/skills/plan-review-loop/SKILL.md`. The decomposition is the cheapest artifact in the pipeline to change and the most expensive to get wrong — a mis-cut story graph is re-litigated as merge conflicts three phases later — so this gate is a dialogue, not an approve/reject prompt.
+### Step 8 — Human Review Loop [REQUIRED SUB-SKILL: `plan-review-loop`]
 
-Open the review brief with:
+Follow `.claude/skills/plan-review-loop/SKILL.md`. This review is now narrower
+than it used to be: the human already set scope and boundaries in Step 3, so do
+not re-ask them. Lead the brief with what *rendering* revealed that shaping could
+not — clusters that came out coupled, edges that forced a wave boundary,
+estimates that landed heavier than the milestone assumed.
 
-1. Epic summary table (ID, title, story count, groups covered)
+Open with:
+
+1. Epic summary table (ID, title, story count, groups covered) — flag any epic
+   whose story count you would not defend
 2. Dependency graph overview
 3. Story point summary by epic and dependency group
-4. **Allocation summary** — one row per cluster: id, story count, points, epics, layers, waves spanned, `coordination_cost`, and whether it is independently startable. Follow it with:
-   - *"N clusters for a team of K"* — and, when `N < K`, say plainly that the work is more coupled than the team is wide rather than proposing a split the graph does not support.
-   - **Build-first list:** every `interface_contracts` entry as `artifact → contract_story`. These land before the owners split up.
-   - **Hand-offs:** every `blocking_dependencies` entry as `blocked_cluster waits on producer_cluster (story)`. Each is a scheduling constraint the allocation cannot remove.
-   - Any `warnings[]` verbatim.
-5. Total story count, total story points, total feature count
+4. **Allocation summary** — one row per cluster: id, story count, points, epics,
+   layers, waves spanned, `coordination_cost`, independently startable or not.
+   Then: *"N clusters for a team of K"* (and when `N < K`, say the work is more
+   coupled than the team is wide rather than proposing a split the graph does not
+   support); the **build-first list** of `interface_contracts` as
+   `artifact → contract_story`; **hand-offs** as
+   `blocked_cluster waits on producer_cluster (story)`; and any `warnings[]` verbatim.
+5. Totals: stories, points, features
 
-**Challenge sources for this phase** — read these before asking anything, and lead the brief with what they say rather than with the tables above:
+**Challenge sources** — read before asking, and lead with these rather than the tables:
 
-- `specs/plan-confidence.json` — band and drivers, when it exists
+- `specs/plan-confidence.json` — band and drivers
 - `risk_gap_table` entries carried from the BRD
-- `specs/reviews/phase-spec-eval.json` — findings you accepted without fixing, and why
-- `story-clusters.json#warnings` and any cluster that is not `independently_startable`
-- Stories where you chose a `depends_on` edge type that collapses parallelism
+- `specs/reviews/phase-spec-eval.json` — findings accepted without a fix, and why
+- `story-clusters.json#warnings`, and any cluster not `independently_startable`
+- Any decision from Step 3 that rendering contradicted
 
-The load-bearing decisions worth putting to the human are typically: where you drew story boundaries, which dependencies you judged real versus defensive, and the cluster allocation. Those are product-shaped calls the machine gates cannot make.
-
-Record each round with `plan-approval.js` as the sub-skill describes, naming `specs/stories/epics.md`, `specs/stories/dependency-graph.md`, `specs/stories/stories.json`, and `features.json` on the approving round. In `--auto` / `--autonomous`, waive instead (`--lane`), per that skill's *Headless lanes* rule.
+Record each round with `plan-approval.js`, naming `specs/stories/epics.md`,
+`specs/stories/dependency-graph.md`, `specs/stories/stories.json`,
+`features.json`, and `specs/decisions/spec-decisions.json` on the approving
+round. In `--auto` / `--autonomous`, waive with `--lane` per that skill's
+*Headless lanes* rule.
 
 ---
 
@@ -524,71 +255,44 @@ Record each round with `plan-approval.js` as the sub-skill describes, naming `sp
 
 | File | Purpose |
 |------|---------|
-| `specs/stories/epics.md` | Epic index with story membership and readiness summary |
-| `specs/stories/dependency-graph.md` | Scheduling waves with dependency mapping, plus the ownership-cluster view |
-| `specs/stories/E{n}-S{n}.md` | One file per story |
-| `specs/stories/stories.json` | Machine-readable story index (the `.md` files are the human view) |
-| `specs/stories/dependency-edges.json` | Flat typed edge list derived from `stories.json#depends_on` |
-| `specs/stories/story-clusters.json` | Ownership clusters, interface contracts, blocking dependencies — the allocation contract |
-| `specs/stories/backlog-needs-breakdown.md` | Optional list of oversized or ambiguous stories that cannot enter implementation |
-| `features.json` | Machine-readable feature list for evaluator |
-| `specs/stories/story-traces.json` | Trace spine: each story's `BR-n` traces + stable AC ids (grounds spec to BRD, seeds `/test`) |
-| `specs/stories/acceptance-criteria.json` | Criterion-level spine: each AC's Given/When/Then + `BR-n-ACm` traces |
-| `specs/reviews/spec-grounding.json` | (FRD-grounded BRD) deterministic spec-vs-BRD verdict (`pass`, `net_new[]`, `dropped[]`) |
-| `specs/reviews/spec-acceptance-grounding.json` | Criterion-level spec-vs-BRD verdict |
-| `specs/stories/sprint-N/*` | (sprint mode) same artifact set as the flat layout, scoped to sprint N |
+| `specs/decisions/spec-decisions.json` | **This skill's artifact** — the recorded human calls the renderer expands |
+| `specs/decisions/spec-unresolved.json` | Judgements the renderer refused to invent; resolved here and re-dispatched |
+| *(all story-graph artifacts)* | Written by `spec-render` — see that skill's Output table |
 
 ---
 
 ## Gate
 
-**Grounding gate (FRD-grounded BRD) — hard block.** `trace-check.js` proves mechanically that no story invented scope (`net_new`) and no BRD requirement was dropped (`dropped`) — see Step 6.45. Any violation blocks before the rubric runs, independent of quality score. Step 6.46 repeats the check at acceptance-criterion granularity when `brd-acceptance.json` exists.
+**Decisions gate — hard block.** `validate-spec-decisions.js` fails when no
+decision is `basis: "human"`, when a `load_bearing` decision is not, when
+`milestone.epics` is empty, or when the file is malformed. `spec-render` re-runs
+it at its own Step 0, so the block holds even if this skill is bypassed.
+Headless lanes waive only the human requirement — never the structural checks —
+and the waiver is recorded in the verdict.
 
-**Ownership-cluster gate — hard block.** `story-clusters.js` (Step 4.5) exits non-zero when an interface contract has no story that can publish it. The clusters are then not independent, and allocating them to separate engineers would produce a hidden serial dependency discovered mid-sprint.
+**Grounding, ownership-cluster, and phase-evaluation gates** are unchanged and
+run inside `spec-render` (grounding, clusters) and Step 7 (evaluation). See
+`spec-render/SKILL.md#gate`.
 
-**Phase evaluation gate runs before human review.** The evaluator agent (artifact mode) validates:
-- Cross-phase traceability (anchored to `spec-grounding.json` when present, else every story traces to a BRD goal)
-- Acceptance criteria quality (no vague language)
-- Dependency graph consistency (acyclic, valid groups)
-- Feature coverage (every AC maps to features.json)
-
-**Human review is still required before proceeding to `/design`.** The evaluator validates structure and traceability; the human validates product intent. Step 7 runs that review as a `plan-review-loop` dialogue and records it — `/design` hard-blocks on the receipt:
+**Human review is still required before `/design`,** which hard-blocks on:
 
 ```bash
 node .claude/scripts/plan-approval.js check --phase spec
 ```
 
-Pre-approval checklist (verified by evaluator, confirmed by human):
-- [ ] Every story has 3-6 specific, testable acceptance criteria in Given/When/Then form with stable `{story}-AC{n}` ids
-- [ ] Every story has `business_value`, `scope_in`, and `scope_out`
-- [ ] Every dependency is typed (`contract` | `data` | `behavior` | `ui`) with an `artifact` and a `reason`
-- [ ] Every story has an INVEST scorecard, with `independent` backfilled from `story-clusters.json`
-- [ ] `story-clusters.json` exists and has no unresolved interface contracts
-- [ ] Every interface contract names the `contract_story` that publishes it
-- [ ] Every story has a layer assignment
-- [ ] Every story has a group assignment
-- [ ] Every ready story has Story Points on the `1, 2, 3, 5, 8, 13` scale
-- [ ] Every ready story has Estimation Confidence and Estimation Drivers
-- [ ] Any story estimated above `13` is marked `needs_breakdown` and excluded from implementation artifacts
-- [ ] Every story has `readiness: ready` before it appears in `dependency-graph.md`
-- [ ] No circular dependencies in the graph
-- [ ] Every acceptance criterion maps to at least one feature in `features.json`
-- [ ] All `passes` fields are `false`
-- [ ] Every story traces to a BRD goal (evaluator-enforced)
-
-Do not auto-advance. The loop ends on an explicit approving round, not on silence or a lack of objections.
+Do not auto-advance. The loop ends on an explicit approving round, not on silence.
 
 ---
 
 ## Gotchas
 
-- **Vague criteria are rejected.** "The system works properly" fails the gate. Rewrite as an observable behavior.
-- **Missing layers break agent routing.** Every story needs a layer so the builder knows which agent handles it.
-- **Unready stories block implementation.** If a story is marked `needs_breakdown`, it must not appear in a dependency group or `features.json`. Break it down first.
-- **Circular dependencies deadlock the pipeline.** Validate the graph before writing.
-- **More than 5 stories per epic** signals the epic is too broad — split it.
-- **Do not skip human review.** The dependency graph must be confirmed before design begins.
-- **Do not allocate by group.** A group is a scheduling wave, not a work package. Allocate by cluster (`story-clusters.json`); the two views cross-cut each other by design.
-- **Do not type every edge `behavior` to be safe.** It is not safe — it collapses the cluster count and serialises a team that could have worked in parallel. Type the edge by what the consumer actually needs.
-- **A cluster that is not `independently_startable` is a hand-off, not a parallel stream.** Report it as such in the allocation summary instead of presenting it as an independent slice.
-- **features.json must cover all criteria.** The evaluator uses this file to track pipeline health across sessions.
+- **Do not fork this skill.** `context: fork` would silently disable every
+  question in Step 3 and leave the model answering itself.
+- **Do not write `basis: "human"` for a decision you did not ask.** It is the one
+  field the gate cannot verify, and the whole split rests on it being honest.
+- **Do not re-ask in Step 8 what was settled in Step 3.** Review what rendering
+  revealed, not what the human already decided.
+- **Do not expand deferred epics.** Deferring was a decision; a renderer that
+  decomposes them anyway has overruled the human.
+- **Unresolved items are a success signal.** A renderer that returns questions is
+  refusing to guess. Answer them and re-dispatch rather than lowering the bar.
