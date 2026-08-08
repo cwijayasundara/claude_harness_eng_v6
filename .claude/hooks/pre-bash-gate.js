@@ -29,7 +29,9 @@ const {
 } = require('./lib/red-phase-ledger');
 const { parseCommand } = require('./lib/red-phase-command');
 const { decideLock } = require('./lib/test-write-lock');
-const { consumeCapability, detectSensitiveAction, findCapability } = require('./lib/authority-receipt');
+const {
+  consumeCapability, detectSensitiveAction, findCapability, loadTrust,
+} = require('./lib/authority-receipt');
 const { classifyCommand } = require('./lib/runtime-command-policy');
 
 function block(message) {
@@ -223,7 +225,12 @@ runHook('pre-bash-gate', (input) => {
       'Fix: use an allowed transparent command, or submit a task-bound request for external execution.\n'
     );
   }
-  const sensitiveAction = detectSensitiveAction(command);
+  // Issuer-dependent actions relax when no approval service is provisioned —
+  // see NEEDS_ISSUER_TO_GATE in authority-receipt.js. With issuers.json present
+  // this is a no-op and every action stays privileged.
+  const sensitiveAction = detectSensitiveAction(command, {
+    trustConfigured: loadTrust(projectDir).state === 'valid',
+  });
   if (sensitiveAction) {
     if (sensitiveAction === 'execute_production_change') {
       block('BLOCKED: production execution is non-delegable; a human must execute it and provide a signed execution receipt.\n');

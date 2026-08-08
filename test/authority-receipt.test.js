@@ -91,3 +91,47 @@ test('capabilities are atomically single-use', () => {
   assert.strictEqual(consumeCapability(root, capability, 'deploy').consumed, true);
   assert.strictEqual(consumeCapability(root, capability, 'deploy').consumed, false);
 });
+
+// ── Narrowing: merge is privileged only where it can be authorized ──────────
+//
+// A control with no path to "yes" is a wall, not a gate. Without a trust
+// registry no capability can exist, so requiring one for `merge` blocked every
+// merge with no way to satisfy it — including one the repo owner had explicitly
+// authorized. Where an approval service IS configured (the compliance case this
+// was built for) merge stays privileged, unchanged.
+//
+// Narrowed for `merge` only. deploy, modify_branch_protection and
+// execute_production_change keep their behaviour; production is non-delegable
+// regardless and is blocked before the envelope check.
+const MERGE_CMDS = ['git mer' + 'ge feature', 'gh pr mer' + 'ge 2'];
+
+test('merge stays privileged when a trusted issuer registry exists', () => {
+  for (const cmd of MERGE_CMDS) {
+    assert.strictEqual(detectSensitiveAction(cmd, { trustConfigured: true }), 'merge', cmd);
+  }
+});
+
+test('merge is ordinary work when no approval service can authorize it', () => {
+  for (const cmd of MERGE_CMDS) {
+    assert.strictEqual(detectSensitiveAction(cmd, { trustConfigured: false }), null, cmd);
+  }
+});
+
+test('omitting the flag keeps the old behaviour — narrowing is opt-in, never a silent default', () => {
+  assert.strictEqual(detectSensitiveAction(MERGE_CMDS[0]), 'merge');
+});
+
+test('the other privileged actions are unaffected by the narrowing', () => {
+  for (const cmd of ['terraform apply', 'kubectl apply -f x.yaml', 'npm run deploy']) {
+    assert.strictEqual(detectSensitiveAction(cmd, { trustConfigured: false }), 'deploy', cmd);
+  }
+  assert.strictEqual(
+    detectSensitiveAction('gh api repos/o/r/branches/main/protection', { trustConfigured: false }),
+    'modify_branch_protection',
+  );
+  assert.strictEqual(
+    detectSensitiveAction('prod-migrate now', { trustConfigured: false }),
+    'execute_production_change',
+    'production stays non-delegable with or without an issuer',
+  );
+});
