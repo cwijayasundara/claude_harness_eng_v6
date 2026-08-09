@@ -20,6 +20,16 @@ judgement the decisions file does not contain, stop and report it as an
 `unresolved[]` entry rather than inventing an answer; `/spec` will put it to the
 human and re-dispatch. Guessing here is the exact failure this split removes.
 
+**This applies to gate inputs, not just to decisions.** If a hard gate below
+cannot be run as written — its `--required` file is the wrong scope, a path does
+not exist, a flag seems not to fit this run — that is an `unresolved[]` entry.
+Constructing an input the skill did not specify, in order to get a gate to pass,
+is the one move you must never make: the gate then reports green against data
+you chose, which is indistinguishable from a real pass and strictly worse than a
+red gate. A live run did exactly this at Step 6.45 — it hand-built a narrowed
+requirements file, passed, and left 18 of 24 requirements unchecked with nothing
+recording it. The supported route for that case is the Milestone addendum below.
+
 `/spec` dispatches this skill once its decisions gate passes. Reached on its own
 without a shaped decisions file, it stops at Step 0 rather than rendering.
 
@@ -471,6 +481,26 @@ node .claude/scripts/trace-check.js \
   --out specs/reviews/spec-grounding.json
 ```
 
+**Milestone addendum [use this whenever D1 scoped the run to one milestone].**
+Run as written above, a milestone-scoped story set fails: every requirement D1
+deferred shows as `dropped`. Do **not** narrow `--required` by hand — add
+`--scope`, which reads the in-scope set from the decisions file you were
+dispatched with:
+
+```bash
+node .claude/scripts/trace-check.js \
+  --required specs/brd/brd-requirements.json \
+  --scope specs/decisions/spec-decisions.json \
+  --downstream specs/stories/story-traces.json \
+  --layer spec \
+  --out specs/reviews/spec-grounding.json
+```
+
+Deferred requirements become valid trace targets that need not be covered, and
+the verdict records `scope.deferred_ids` so the narrowing is visible to the
+human review and to the next `/spec` run. A hand-built `--required` file does
+none of that: it makes the gate green against inputs you chose.
+
 **Sprint addendum.** In sprint mode, point `--required` at
 `specs/brd/sprint-N/brd-requirements.json`, `--downstream` at
 `specs/stories/sprint-N/story-traces.json`, and `--out` at
@@ -496,6 +526,17 @@ node .claude/scripts/trace-check.js \
 
 - **`dropped` non-empty** → a BRD acceptance postcondition no criterion asserts. The requirement is covered on paper and unverifiable in practice. Add a criterion (or, if genuinely out of scope, retire the postcondition in `/brd`).
 - **`net_new` non-empty** → a criterion asserting something the BRD never required. Either it is scope creep, or the BRD is missing a postcondition — resolve at the source, not here.
+
+**Milestone addendum.** As in Step 6.45, add
+`--scope specs/decisions/spec-decisions.json` when D1 scoped the run to one
+milestone. Acceptance ids are scoped by the requirement they gate, so the same
+decisions file drives both gates.
+
+Expect an `UNMATCHED` line here naming in-scope requirements with no acceptance
+record. That is not a failure — it is the un-oracled-requirement set the BRD
+already tracks, surfacing where it is actionable. Carry those ids into the
+`unresolved[]` you return: they are requirements `/spec` scoped into this
+milestone that no criterion can verify.
 
 **Sprint addendum.** Point `--required` and `--downstream` at the `sprint-N/` paths and suffix `--out` with `-sprint-N`.
 

@@ -32,6 +32,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { handoffOn } = require('../hooks/lib/phase-handoff.js');
+const { liveSessionId } = require('../hooks/lib/live-session.js');
 
 // brd joined the list when /brd was de-forked: before that its approval could
 // not reach a human, so a receipt would have recorded a stop that never
@@ -171,6 +172,25 @@ function validateRound(round, receipt, artifactRels) {
   return null;
 }
 
+function buildReceipt({ root, phase, verdict, artifacts, round, receipt, inSession }) {
+  const rounds = [...(receipt ? receipt.rounds : []), round];
+  return {
+    phase,
+    status: verdict,
+    rounds,
+    artifacts,
+    low_engagement: verdict === 'approved' ? lowEngagement(rounds) : false,
+    waived_by: null,
+    approvedAt: verdict === 'approved' ? round.recordedAt : null,
+    // Which conversation approved this, so the successor phase can refuse to
+    // start inside it. Null when undeterminable — see live-session.js.
+    session_id: liveSessionId(root),
+    // A conductor that owns every phase (/build) cannot clear between them.
+    // Recording that here exempts the successor without a second flag.
+    in_session: inSession === true,
+  };
+}
+
 function recordRound(argv, root, phase, now) {
   const verdict = arg(argv, '--verdict', null);
   if (!VERDICTS.has(verdict)) return fail(`--verdict must be one of ${[...VERDICTS].join(' | ')}`);
@@ -185,16 +205,9 @@ function recordRound(argv, root, phase, now) {
   if (error) return fail(error);
 
   round.recordedAt = now();
-  const rounds = [...(receipt ? receipt.rounds : []), round];
-  writeReceipt(root, phase, {
-    phase,
-    status: verdict,
-    rounds,
-    artifacts,
-    low_engagement: verdict === 'approved' ? lowEngagement(rounds) : false,
-    waived_by: null,
-    approvedAt: verdict === 'approved' ? round.recordedAt : null,
-  });
+  writeReceipt(root, phase, buildReceipt({
+    root, phase, verdict, artifacts, round, receipt, inSession: argv.includes('--in-session'),
+  }));
   process.stdout.write(`plan-approval: ${phase} round ${round.round} recorded as ${verdict}.\n`);
   process.stdout.write(handoffOn(phase, verdict, argv.includes('--in-session')));
   return 0;

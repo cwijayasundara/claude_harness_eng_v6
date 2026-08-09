@@ -50,6 +50,19 @@ If required prerequisites are missing, stop and report what is absent.
 
 ## Steps
 
+### Step 0 — Context Handoff [HARD BLOCK]
+
+```bash
+node .claude/scripts/handoff-check.js --phase test
+```
+
+Exit 1 means this session is the one that approved `/design`. Stop and tell the
+human to run `/clear`, then `/test` again — do not work around it. The digest in
+Prerequisites is why clearing is free: this phase re-reads from disk, and
+carrying the previous phase's conversation is what re-bills it on every turn.
+
+Add `--in-session` only when `/build` is conducting every phase from one session.
+
 ### Step 1 — Read Patterns
 
 Read `.claude/skills/code-gen/SKILL.md` for quality principles (typing, error handling, test structure), plus `.claude/skills/code-gen/references/test-strategy.md` for the test-layer model and boundary checklist.

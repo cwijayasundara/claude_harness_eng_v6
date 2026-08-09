@@ -83,3 +83,174 @@ test('/build passes --in-session at the gates it conducts', () => {
   assert.match(phases, /separate invocations/,
     '/build must state that the standalone route is the cheaper one');
 });
+
+// --- enforcement --------------------------------------------------------------
+//
+// The handoff above is advisory, and on a live run it was printed and ignored:
+// /spec ran on in the same session, at a 273K average context against ~110K for
+// a fresh one. Printing louder is not a control. The successor phase refusing to
+// start until the context is actually clear is.
+//
+// The signal is deterministic: the approving session's id is stamped into the
+// receipt, and the live session's id is on the run receipts the hooks already
+// write. Same id => the approving conversation is still resident.
+
+const { PREV_PHASE, staleContext } = require(
+  path.join(ROOT, '.claude/hooks/lib/phase-handoff.js'),
+);
+
+test('every hop the handoff advertises has an inverse the successor can check', () => {
+  for (const [phase, hop] of Object.entries(NEXT_PHASE)) {
+    const next = hop.next.replace('/', '');
+    if (!Object.prototype.hasOwnProperty.call(PREV_PHASE, next)) continue;
+    assert.strictEqual(PREV_PHASE[next], phase,
+      `${next} must know ${phase} is what it has to be clear of`);
+  }
+});
+
+test('the successor is blocked when the upstream phase was approved in this session', () => {
+  const v = staleContext({
+    phase: 'spec',
+    receipt: { phase: 'brd', session_id: 'S1' },
+    sessionId: 'S1',
+  });
+  assert.strictEqual(v.blocked, true);
+  assert.match(v.message, /\/clear/);
+  assert.match(v.message, /brd/);
+});
+
+test('a fresh session passes', () => {
+  const v = staleContext({
+    phase: 'spec',
+    receipt: { phase: 'brd', session_id: 'S1' },
+    sessionId: 'S2',
+  });
+  assert.strictEqual(v.blocked, false);
+});
+
+// Each of these would turn the control into a block that fires on the wrong
+// thing, which is worse than no block: it trains operators to bypass it.
+test('the entry phase has no predecessor and is never blocked', () => {
+  assert.strictEqual(staleContext({ phase: 'brd', receipt: null, sessionId: 'S1' }).blocked, false);
+});
+
+test('a missing upstream receipt is not this control\'s business', () => {
+  // The approval gate already fails an unapproved upstream phase. Blocking here
+  // too would report a context problem for what is actually a missing approval.
+  assert.strictEqual(staleContext({ phase: 'spec', receipt: null, sessionId: 'S1' }).blocked, false);
+});
+
+test('an unknown live session id does not block — absence of evidence is not evidence', () => {
+  assert.strictEqual(
+    staleContext({ phase: 'spec', receipt: { session_id: 'S1' }, sessionId: null }).blocked,
+    false,
+  );
+});
+
+test('a receipt written before session stamping existed does not block', () => {
+  assert.strictEqual(
+    staleContext({ phase: 'spec', receipt: { phase: 'brd' }, sessionId: 'S1' }).blocked,
+    false,
+  );
+});
+
+test('/build conducts every phase from one session and is exempt', () => {
+  const v = staleContext({
+    phase: 'spec',
+    receipt: { phase: 'brd', session_id: 'S1' },
+    sessionId: 'S1',
+    inSession: true,
+  });
+  assert.strictEqual(v.blocked, false);
+});
+
+// --- the control end to end ---------------------------------------------------
+
+const { run: handoffCheck } = require(path.join(ROOT, '.claude/scripts/handoff-check.js'));
+const { run: approval } = require(path.join(ROOT, '.claude/scripts/plan-approval.js'));
+
+/** A project whose /brd was approved by `sessionId`. */
+function approvedBrd(sessionId) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'handoff-e2e-'));
+  fs.mkdirSync(path.join(dir, 'specs/brd'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'specs/brd/brd.md'), '# BRD\n');
+  fs.mkdirSync(path.join(dir, '.claude/runs'), { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, '.claude/runs/2026-08-09.jsonl'),
+    `${JSON.stringify({ kind: 'tool', session_id: sessionId })}\n`,
+  );
+  const code = approval([
+    'record', '--phase', 'brd', '--verdict', 'approved',
+    '--artifact', 'specs/brd/brd.md', '--root', dir,
+  ], dir);
+  assert.strictEqual(code, 0, 'the fixture must actually record an approval');
+  return dir;
+}
+
+test('the approving session is stamped into the receipt', () => {
+  const dir = approvedBrd('SESSION-A');
+  const receipt = JSON.parse(fs.readFileSync(path.join(dir, 'specs/reviews/brd-approval.json'), 'utf8'));
+  assert.strictEqual(receipt.session_id, 'SESSION-A');
+});
+
+test('/spec is blocked in the session that approved /brd, and cleared in a fresh one', () => {
+  const dir = approvedBrd('SESSION-A');
+  assert.strictEqual(handoffCheck(['--phase', 'spec', '--root', dir], dir,
+    { liveSessionId: () => 'SESSION-A' }), 1);
+  assert.strictEqual(handoffCheck(['--phase', 'spec', '--root', dir], dir,
+    { liveSessionId: () => 'SESSION-B' }), 0);
+});
+
+test('the block reads the live session from the run receipts, with nothing injected', () => {
+  // The real path: no dependency override, the id resolved from .claude/runs.
+  const dir = approvedBrd('SESSION-A');
+  assert.strictEqual(handoffCheck(['--phase', 'spec', '--root', dir], dir), 1,
+    'the fixture writes SESSION-A as the newest receipt, so this IS the approving session');
+});
+
+test('--in-session exempts /build, which cannot clear itself mid-run', () => {
+  const dir = approvedBrd('SESSION-A');
+  assert.strictEqual(
+    handoffCheck(['--phase', 'spec', '--root', dir, '--in-session'], dir), 0,
+  );
+});
+
+test('a phase with no approved predecessor is not blocked', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'handoff-none-'));
+  assert.strictEqual(handoffCheck(['--phase', 'spec', '--root', dir], dir), 0);
+});
+
+test('an unknown phase is a usage error, not a silent pass', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'handoff-bad-'));
+  assert.strictEqual(handoffCheck(['--phase', 'brd', '--root', dir], dir), 2,
+    'brd is the entry phase — asking it to be clear of something is a caller bug');
+  assert.strictEqual(handoffCheck(['--root', dir], dir), 2);
+});
+
+// /build's exemption must not depend on the model remembering a second flag at
+// a different call site. It already records approvals with --in-session; that
+// fact rides in the receipt, so the successor phase exempts itself.
+test('an approval recorded --in-session exempts the successor without any flag', () => {
+  const v = staleContext({
+    phase: 'spec',
+    receipt: { phase: 'brd', session_id: 'S1', in_session: true },
+    sessionId: 'S1',
+  });
+  assert.strictEqual(v.blocked, false);
+});
+
+test('the --in-session fact is recorded on the receipt', () => {
+  const dir = approvedBrd('SESSION-A');
+  const plain = JSON.parse(fs.readFileSync(path.join(dir, 'specs/reviews/brd-approval.json'), 'utf8'));
+  assert.strictEqual(plain.in_session, false);
+
+  fs.writeFileSync(path.join(dir, 'specs/brd/brd.md'), '# BRD v2\n');
+  approval([
+    'record', '--phase', 'brd', '--verdict', 'approved',
+    '--artifact', 'specs/brd/brd.md', '--root', dir, '--in-session',
+  ], dir);
+  const built = JSON.parse(fs.readFileSync(path.join(dir, 'specs/reviews/brd-approval.json'), 'utf8'));
+  assert.strictEqual(built.in_session, true);
+  assert.strictEqual(handoffCheck(['--phase', 'spec', '--root', dir], dir), 0,
+    '/build must not block itself');
+});

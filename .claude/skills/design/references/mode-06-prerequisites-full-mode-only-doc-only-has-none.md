@@ -1,5 +1,13 @@
 ## Prerequisites (full mode only — `--doc-only` has none)
 
+**This must not be the session that approved `/spec` [HARD BLOCK]:**
+
+```bash
+node .claude/scripts/handoff-check.js --phase design
+```
+
+Exit 1 means `/spec`'s conversation is still resident and would be re-billed on every turn of this phase. Halt and tell the human to run `/clear`, then `/design` again — do not work around it. The digest below is exactly why clearing is free: this phase re-reads what it needs from disk. Add `--in-session` only when `/build` is conducting every phase from one session.
+
 `specs/stories/` must exist and contain story files. If it does not, halt and tell the human to run `/spec` first.
 
 **Orient from the digest, not the story set:**

@@ -209,3 +209,223 @@ test('verification matrix gate is wired through test, auto, generator, evaluator
   assert.match(files.evaluateSkill, /Submit button not clickable.*matrix_ids/);
   assert.match(files.evaluateSkill, /Success message visible after form submit.*matrix_ids/);
 });
+
+// --- milestone scoping --------------------------------------------------------
+//
+// /spec's D1 routinely scopes a run to ONE milestone: it expands that
+// milestone's requirements to story depth and leaves the rest at epic
+// granularity. Run unscoped against a milestone-scoped story set, this gate
+// reports every deferred requirement as `dropped` and can never pass — so the
+// only supported route was to re-run /brd, or to hand-build a narrowed
+// `--required` file. A live run took the second option: the renderer fabricated
+// `m1-requirements-in-scope.json`, the gate went green on inputs the renderer
+// invented, and nothing recorded that 18 of 24 requirements were never checked.
+//
+// `--scope` makes the narrowing declared, deterministic, and visible in the
+// verdict instead of improvised.
+
+const { applyScope } = require(SCRIPT);
+
+const allReqs = [
+  { id: 'FR-1', text: 'sign in' },
+  { id: 'FR-2', text: 'create link' },
+  { id: 'FR-4', text: 'list links' },
+  { id: 'NFR-2', text: 'list page latency' },
+];
+const m1Stories = [
+  { id: 'E1-S1', text: 'sign in', traces: ['FR-1'] },
+  { id: 'E2-S1', text: 'create link', traces: ['FR-2'] },
+];
+
+test('scope narrows required to the in-scope ids and defers the rest to optional', () => {
+  const scoped = applyScope({
+    required: allReqs,
+    optional: [],
+    scope: { milestone: { name: 'M1', requirements_in_scope: ['FR-1', 'FR-2'] } },
+    source: 'specs/decisions/spec-decisions.json',
+  });
+  assert.deepStrictEqual(scoped.required.map((r) => r.id), ['FR-1', 'FR-2']);
+  assert.deepStrictEqual(scoped.optional.map((r) => r.id), ['FR-4', 'NFR-2']);
+});
+
+test('a milestone-scoped story set passes the gate under --scope and fails without it', () => {
+  const unscoped = checkTraces({ required: allReqs, downstream: m1Stories });
+  assert.strictEqual(unscoped.pass, false);
+  assert.deepStrictEqual(unscoped.dropped.map((d) => d.id), ['FR-4', 'NFR-2']);
+
+  const s = applyScope({
+    required: allReqs,
+    optional: [],
+    scope: { milestone: { name: 'M1', requirements_in_scope: ['FR-1', 'FR-2'] } },
+    source: 'specs/decisions/spec-decisions.json',
+  });
+  const v = checkTraces({ required: s.required, optional: s.optional, downstream: m1Stories, scope: s.scope });
+  assert.strictEqual(v.pass, true);
+  assert.strictEqual(v.required_covered, 2);
+});
+
+// A narrowed gate that does not say what it stopped checking reads as full
+// coverage. The deferred ids travel in the verdict so the human review and the
+// next /spec run can both see them.
+test('the verdict records what the scope deferred, by id', () => {
+  const s = applyScope({
+    required: allReqs,
+    optional: [],
+    scope: { milestone: { name: 'M1', requirements_in_scope: ['FR-1', 'FR-2'] } },
+    source: 'specs/decisions/spec-decisions.json',
+  });
+  const v = checkTraces({ required: s.required, optional: s.optional, downstream: m1Stories, scope: s.scope });
+  assert.strictEqual(v.scope.milestone, 'M1');
+  assert.strictEqual(v.scope.source, 'specs/decisions/spec-decisions.json');
+  assert.strictEqual(v.scope.in_scope, 2);
+  assert.deepStrictEqual(v.scope.deferred_ids, ['FR-4', 'NFR-2']);
+});
+
+test('an unscoped verdict carries scope: null rather than omitting the field', () => {
+  const v = checkTraces({ required: allReqs, downstream: m1Stories });
+  assert.strictEqual(v.scope, null);
+});
+
+// The vacuous-pass guards. Each of these would otherwise turn a hard gate into
+// a no-op that reports PASS.
+test('a scope naming no requirement is an error, not an empty-and-passing gate', () => {
+  assert.throws(
+    () => applyScope({
+      required: allReqs,
+      optional: [],
+      scope: { milestone: { name: 'M1', requirements_in_scope: [] } },
+      source: 'd.json',
+    }),
+    /requirements_in_scope is empty/
+  );
+});
+
+test('a scope file with no milestone block is an error', () => {
+  assert.throws(
+    () => applyScope({ required: allReqs, optional: [], scope: { decisions: [] }, source: 'd.json' }),
+    /no milestone\.requirements_in_scope/
+  );
+});
+
+// A scope id matching no record is reported rather than thrown: against
+// brd-requirements.json it means a stale decisions file, but against
+// brd-acceptance.json it is the ordinary case of a requirement carrying no
+// postcondition. Throwing would block the acceptance gate for doing its job, so
+// the id travels in the verdict instead — visible either way, never silent.
+test('a scope id matching no record is reported as unmatched, not thrown', () => {
+  const s = applyScope({
+    required: allReqs,
+    optional: [],
+    scope: { milestone: { name: 'M1', requirements_in_scope: ['FR-1', 'FR-99'] } },
+    source: 'd.json',
+  });
+  assert.deepStrictEqual(s.scope.unmatched_ids, ['FR-99']);
+  assert.deepStrictEqual(s.required.map((r) => r.id), ['FR-1']);
+});
+
+test('a scope matching NOTHING still throws — an empty required set passes vacuously', () => {
+  assert.throws(
+    () => applyScope({
+      required: allReqs,
+      optional: [],
+      scope: { milestone: { name: 'M1', requirements_in_scope: ['FR-98', 'FR-99'] } },
+      source: 'd.json',
+    }),
+    /matches no record/
+  );
+});
+
+test('unmatched ids print, so a stale decisions file cannot pass unnoticed', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'trace-unmatched-'));
+  const w = (name, data) => {
+    const p = path.join(dir, name);
+    fs.writeFileSync(p, JSON.stringify(data));
+    return p;
+  };
+  const stdout = execFileSync('node', [
+    SCRIPT,
+    '--required', w('required.json', allReqs),
+    '--downstream', w('downstream.json', m1Stories),
+    '--scope', w('scope.json', { milestone: { name: 'M1', requirements_in_scope: ['FR-1', 'FR-2', 'FR-99'] } }),
+  ], { encoding: 'utf8' });
+  assert.match(stdout, /UNMATCHED \(in scope, no record in --required\): FR-99/);
+});
+
+test('--scope end to end: narrows the run and writes the deferral into the verdict file', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'trace-scope-'));
+  const w = (name, data) => {
+    const p = path.join(dir, name);
+    fs.writeFileSync(p, JSON.stringify(data));
+    return p;
+  };
+  const required = w('required.json', allReqs);
+  const downstream = w('downstream.json', m1Stories);
+  const scope = w('spec-decisions.json', { milestone: { name: 'M1', requirements_in_scope: ['FR-1', 'FR-2'] } });
+  const out = path.join(dir, 'verdict.json');
+
+  const stdout = execFileSync('node', [
+    SCRIPT, '--required', required, '--downstream', downstream,
+    '--scope', scope, '--layer', 'spec', '--out', out,
+  ], { encoding: 'utf8' });
+
+  assert.match(stdout, /PASS/);
+  assert.match(stdout, /scoped to M1/);
+  assert.match(stdout, /2 deferred/);
+  const verdict = JSON.parse(fs.readFileSync(out, 'utf8'));
+  assert.strictEqual(verdict.pass, true);
+  assert.deepStrictEqual(verdict.scope.deferred_ids, ['FR-4', 'NFR-2']);
+});
+
+test('--scope pointed at a file with an empty in-scope list exits 2, not 0', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'trace-scope-bad-'));
+  const w = (name, data) => {
+    const p = path.join(dir, name);
+    fs.writeFileSync(p, JSON.stringify(data));
+    return p;
+  };
+  const required = w('required.json', allReqs);
+  const downstream = w('downstream.json', m1Stories);
+  const scope = w('spec-decisions.json', { milestone: { name: 'M1', requirements_in_scope: [] } });
+
+  assert.throws(
+    () => execFileSync('node', [SCRIPT, '--required', required, '--downstream', downstream, '--scope', scope], { encoding: 'utf8', stdio: 'pipe' }),
+    (err) => err.status === 2
+  );
+});
+
+// Step 6.46 scopes acceptance criteria with the SAME decisions file, but
+// brd-acceptance.json keys on `FR-1-AC` and carries the requirement it gates in
+// a `requirement` field. Matching on `id` alone rejects every one of them, so
+// the milestone addendum for 6.46 would have been inert on arrival.
+const m1Acceptance = [
+  { id: 'FR-1-AC', requirement: 'FR-1', text: 'signing in sets a cookie' },
+  { id: 'FR-2-AC', requirement: 'FR-2', text: 'creating returns 201' },
+  { id: 'FR-4-AC', requirement: 'FR-4', text: 'page 1 returns 20 links' },
+];
+
+test('scope matches acceptance items by the requirement they gate, not only by id', () => {
+  const s = applyScope({
+    required: m1Acceptance,
+    optional: [],
+    scope: { milestone: { name: 'M1', requirements_in_scope: ['FR-1', 'FR-2'] } },
+    source: 'specs/decisions/spec-decisions.json',
+  });
+  assert.deepStrictEqual(s.required.map((r) => r.id), ['FR-1-AC', 'FR-2-AC']);
+  assert.deepStrictEqual(s.scope.deferred_ids, ['FR-4-AC']);
+});
+
+// The shortlink BRD reaches /spec with seven requirements carrying no
+// postcondition. Scoping the acceptance gate by the milestone therefore always
+// names ids absent from brd-acceptance.json — the un-oracled-NFR condition the
+// BRD already tracks, not a broken scope. It must be named, and must not block.
+test('a requirement with no acceptance record is reported, and the rest still gate', () => {
+  const s = applyScope({
+    required: m1Acceptance,
+    optional: [],
+    scope: { milestone: { name: 'M1', requirements_in_scope: ['FR-1', 'FR-2', 'NFR-3'] } },
+    source: 'd.json',
+  });
+  assert.deepStrictEqual(s.required.map((r) => r.id), ['FR-1-AC', 'FR-2-AC']);
+  assert.deepStrictEqual(s.scope.unmatched_ids, ['NFR-3'],
+    'the requirement with no oracle must be named, not silently dropped');
+});

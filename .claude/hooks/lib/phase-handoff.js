@@ -26,6 +26,61 @@ const NEXT_PHASE = Object.freeze({
   test: { next: '/auto', reads: 'specs/test_artefacts/ and the four approval receipts' },
 });
 
+// The inverse of NEXT_PHASE: what each phase must be clear OF before it starts.
+// The entry phase is absent on purpose — it has nothing upstream to be clear of.
+const PREV_PHASE = Object.freeze({
+  spec: 'brd',
+  design: 'spec',
+  test: 'design',
+});
+
+/**
+ * Whether `phase` is starting inside the conversation that approved its
+ * predecessor — the case the printed handoff asks the operator to avoid, and
+ * which a live run ignored, carrying /brd's context through /spec at a 273K
+ * average turn against ~110K for a fresh session.
+ *
+ * Every uncertain case passes. A control that blocks on missing evidence
+ * (no receipt, no session id, a receipt predating stamping) reports a context
+ * problem for something else's failure, and teaches operators to bypass it.
+ *
+ * @param {object} args
+ * @param {string} args.phase phase about to start
+ * @param {object|null} args.receipt the predecessor's approval receipt
+ * @param {string|null} args.sessionId the live session id
+ * @param {boolean} [args.inSession] caller orchestrates all phases in one session
+ * @returns {{blocked: boolean, message: string}}
+ */
+function staleContext({ phase, receipt, sessionId, inSession }) {
+  const upstream = PREV_PHASE[phase];
+  const pass = { blocked: false, message: '' };
+  if (!upstream || inSession) return pass;
+  if (!receipt || !receipt.session_id || !sessionId) return pass;
+  // The predecessor was approved by a conductor that owns every phase (/build).
+  // Carrying that on the receipt keeps the exemption deterministic instead of
+  // depending on the caller passing --in-session at a second call site too.
+  if (receipt.in_session === true) return pass;
+  if (receipt.session_id !== sessionId) return pass;
+  return {
+    blocked: true,
+    message: [
+      '',
+      `  /${phase} is starting in the same session that approved /${upstream}.`,
+      '',
+      `  Run /clear, then /${phase} again.`,
+      '',
+      `  Every input /${phase} needs is on disk — ${upstream === 'brd' ? 'specs/brd/' : `specs/${upstream === 'spec' ? 'stories' : 'design'}/`}`,
+      `  and the ${upstream} approval receipt — so clearing loses no state. It stops`,
+      `  /${upstream}'s conversation being re-billed on every turn of this phase,`,
+      '  which is where most front-half spend goes when phases share a session.',
+      '',
+      '  Conducting the whole pipeline from one session on purpose (/build)?',
+      '  Pass --in-session.',
+      '',
+    ].join('\n'),
+  };
+}
+
 /**
  * The handoff block for an approved phase.
  * @param {string} phase one of brd | spec | design | test
@@ -70,4 +125,4 @@ function handoffOn(phase, verdict, inSession) {
   return handoffBlock(phase);
 }
 
-module.exports = { NEXT_PHASE, handoffBlock, handoffOn };
+module.exports = { NEXT_PHASE, PREV_PHASE, handoffBlock, handoffOn, staleContext };

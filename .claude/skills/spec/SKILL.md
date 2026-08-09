@@ -51,6 +51,20 @@ first is what stops the harness rendering work nobody chose.
 was already gated; re-running the dialogue would re-ask settled questions. Use it
 after resolving `spec-unresolved.json`, or to re-expand an amended scope.
 
+### Step 0 — Context Handoff [HARD BLOCK]
+
+```bash
+node .claude/scripts/handoff-check.js --phase spec
+```
+
+Exit 1 means this session is the one that approved `/brd`. Stop and tell the
+human to run `/clear`, then `/spec` again — do not continue and do not work
+around it. Everything this phase needs is on disk, so clearing loses nothing; it
+stops `/brd`'s conversation being re-billed on every turn of this one, which on
+a metered run was the difference between a 273K and a ~110K average turn.
+
+Add `--in-session` only when `/build` is conducting every phase from one session.
+
 ### Step 1 — Digest the BRD, do not read it whole
 
 ```bash

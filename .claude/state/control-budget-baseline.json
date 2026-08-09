@@ -1,5 +1,5 @@
 {
-  "count": 160,
+  "count": 161,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -99,6 +99,7 @@
     "ownership-check",
     "perf-ratchet",
     "perf-smell-static",
+    "phase-context-handoff",
     "plan-approval",
     "plan-confidence",
     "plan-review-loop",

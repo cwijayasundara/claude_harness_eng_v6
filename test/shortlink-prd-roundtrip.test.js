@@ -120,3 +120,114 @@ test('taxonomy is left unassigned for the session that has the human', () => {
   assert.ok(adopt().requirements.every((r) => r.taxonomy === null),
     'slot classification is a judgement; adopting a guess would satisfy the floor with nobody deciding');
 });
+
+// --- milestone-scoped grounding, end to end -----------------------------------
+//
+// The gate `/spec` actually hits, on the artifacts `/brd` actually produces.
+// A live run scoped to M1 could not pass Step 6.45 as the skill specified it —
+// the 18 requirements M1 defers all read as `dropped` — so the renderer
+// hand-built a narrowed `--required` file and the gate went green on inputs it
+// had chosen for itself. These assert the supported route instead, against the
+// real adopter output rather than a fixture that could encode the wrong shape.
+
+const TRACE_CHECK = path.join(ROOT, '.claude/scripts/trace-check.js');
+
+// The PRD label a requirement carries, as brd-adopt.js records it. The adopter
+// keys requirements on the spine id (`FRD-1`) and preserves the label only in
+// `section`, while milestones name the label — so this join is what the scope
+// has to perform, and what a hand-built in-scope file was standing in for.
+const labelOf = (req) => (req.section.match(/\/\s*((?:FR|NFR)-[\w.]+)\s*$/) || [])[1];
+
+function writerInto(dir) {
+  return (name, data) => {
+    const p = path.join(dir, name);
+    fs.writeFileSync(p, JSON.stringify(data, null, 1));
+    return p;
+  };
+}
+
+/** The real BRD artifacts on disk, plus an M1-scoped story set traced to them. */
+function m1Workspace() {
+  const a = adopt();
+  const write = writerInto(fs.mkdtempSync(path.join(os.tmpdir(), 'shortlink-m1-')));
+  const m1 = a.milestones.find((m) => /M1/.test(m.id) || /M1/.test(m.name || ''));
+  assert.ok(m1, 'the fixture must carry an M1 for this to mean anything');
+
+  const inScope = a.requirements.filter((r) => m1.requirements.includes(labelOf(r)));
+  assert.strictEqual(inScope.length, m1.requirements.length,
+    'every requirement M1 names must resolve to a requirement record');
+
+  return {
+    m1,
+    all: a,
+    inScope,
+    deferred: a.requirements.filter((r) => !m1.requirements.includes(labelOf(r))),
+    required: write('brd-requirements.json', a.requirements),
+    acceptanceRequired: write('brd-acceptance.json', a.acceptance),
+    // One story per in-scope requirement — the shape spec-render emits, traced
+    // by the requirement's own id while the scope below names PRD labels.
+    storyTraces: write('story-traces.json', inScope.map((r, i) => ({
+      id: `E${i}-S1`, text: `story for ${r.id}`, traces: [r.id],
+    }))),
+    acceptanceCriteria: write('acceptance-criteria.json', a.acceptance
+      .filter((c) => m1.requirements.includes(c.requirement))
+      .map((c, i) => ({ id: `AC-${i}`, text: c.text, traces: [c.id] }))),
+    decisions: write('spec-decisions.json', {
+      milestone: { name: m1.name || m1.id, requirements_in_scope: m1.requirements },
+    }),
+  };
+}
+
+const runGate = (args) => {
+  try {
+    return { status: 0, out: execFileSync('node', [TRACE_CHECK, ...args], { encoding: 'utf8' }) };
+  } catch (err) {
+    return { status: err.status, out: String(err.stdout || '') };
+  }
+};
+
+test('unscoped, a real M1 story set fails Step 6.45 — every deferred requirement reads as dropped', () => {
+  const w = m1Workspace();
+  const r = runGate(['--required', w.required, '--downstream', w.storyTraces, '--layer', 'spec']);
+  assert.strictEqual(r.status, 1, 'this is the failure that pushed a live run into hand-built inputs');
+  assert.match(r.out, /FAIL/);
+  assert.strictEqual((r.out.match(/DROPPED/g) || []).length, w.deferred.length);
+  assert.doesNotMatch(r.out, /NET-NEW/, 'the stories are grounded; only the deferred set is the problem');
+});
+
+test('scoped by the real decisions file, the same story set passes and names what it deferred', () => {
+  const w = m1Workspace();
+  const r = runGate([
+    '--required', w.required, '--scope', w.decisions,
+    '--downstream', w.storyTraces, '--layer', 'spec',
+  ]);
+  assert.strictEqual(r.status, 0, r.out);
+  assert.match(r.out, /PASS/);
+  assert.match(r.out, /DEFERRED \(not checked here\)/);
+  for (const req of w.deferred) {
+    assert.ok(r.out.includes(req.id), `${req.id} was deferred silently — the narrowing must be visible`);
+  }
+});
+
+test('the same decisions file scopes Step 6.46, whose ids are acceptance ids not requirement ids', () => {
+  const w = m1Workspace();
+  const r = runGate([
+    '--required', w.acceptanceRequired, '--scope', w.decisions,
+    '--downstream', w.acceptanceCriteria, '--layer', 'spec-acceptance',
+  ]);
+  assert.strictEqual(r.status, 0, r.out);
+  assert.match(r.out, /PASS/);
+});
+
+test('a story tracing to a deferred requirement is not net-new — deferred ids stay valid targets', () => {
+  const w = m1Workspace();
+  const deferred = w.deferred[0];
+  const extra = path.join(path.dirname(w.storyTraces), 'story-traces-extra.json');
+  fs.writeFileSync(extra, JSON.stringify([
+    ...JSON.parse(fs.readFileSync(w.storyTraces, 'utf8')),
+    { id: 'E9-S1', text: 'touches a deferred requirement', traces: [deferred.id] },
+  ]));
+  const r = runGate(['--required', w.required, '--scope', w.decisions, '--downstream', extra, '--layer', 'spec']);
+  assert.strictEqual(r.status, 0, r.out);
+  assert.doesNotMatch(r.out, /NET-NEW/);
+});

@@ -53,8 +53,92 @@ function classify(downstream, groundedIds) {
   return { net_new, covered };
 }
 
+// The BRD carries two id spaces, and a milestone scope has to join across them.
+//   brd-adopt.js  -> requirements keyed on the spine id (`FRD-1`), the PRD label
+//                    surviving only inside `section` ("4. Functional … / FR-1").
+//   brd-milestones.json#requirements and brd-acceptance.json#requirement -> the
+//                    PRD label (`FR-1`).
+// `/spec` copies the milestone's list into `requirements_in_scope`, so a scope
+// always arrives in label space while `--required` may be in either. Matching on
+// `id` alone selects nothing on adopter output and rejects every acceptance
+// item — which is what left milestone scoping with no supported route.
+const SECTION_LABEL = /\/\s*((?:FR|NFR)-[\w.]+)(?:\s+AC)?\s*$/;
+
+function labelFromSection(section) {
+  const m = String(section || '').match(SECTION_LABEL);
+  return m ? m[1] : null;
+}
+
+// Every id an item can legitimately be selected by. `label` is honoured first so
+// an artifact that states its label explicitly never depends on the section
+// convention; parsing `section` is the fallback for adopter output, which builds
+// that string deterministically and has it pinned by shortlink-prd-roundtrip.
+function scopeKeysOf(item) {
+  return [item.id, item.label, item.requirement, labelFromSection(item.section)].filter(Boolean);
+}
+
+// The declared in-scope id list, or a thrown error naming why it cannot be used.
+// Both throws are vacuous-pass guards: a scope that selects nothing would leave
+// the gate reporting PASS over an empty required set.
+function scopeIdsFrom(scope, source) {
+  const inScope = scope && scope.milestone && scope.milestone.requirements_in_scope;
+  if (!Array.isArray(inScope)) {
+    throw new Error(`${source}: no milestone.requirements_in_scope — not a /spec decisions file`);
+  }
+  if (inScope.length === 0) {
+    throw new Error(`${source}: milestone.requirements_in_scope is empty — a scope covering nothing would pass this gate vacuously`);
+  }
+  return inScope;
+}
+
+// A scope id matching no record is REPORTED, not thrown, because the two gates
+// this scopes differ on what it means. Against brd-requirements.json it is a
+// stale decisions file. Against brd-acceptance.json it is the ordinary case of a
+// requirement with no postcondition — the shortlink BRD reaches /spec with seven
+// of them, and throwing would block the acceptance gate for doing its job.
+// Either way the ids travel in the verdict and print, so neither disappears.
+/**
+ * Narrow `required` to one milestone's requirement set.
+ *
+ * /spec's D1 routinely expands a single milestone to story depth and leaves the
+ * rest at epic granularity. Run unscoped against that story set, this gate
+ * reports every deferred requirement as `dropped` and can never pass — so the
+ * only routes were re-running /brd or hand-building a narrowed `--required`
+ * file. A live run took the second: the renderer fabricated an in-scope file the
+ * skill never specified, the gate went green on inputs it had chosen, and
+ * nothing recorded that 18 of 24 requirements went unchecked.
+ *
+ * Deferred ids become `optional` — still valid trace targets, so a story may
+ * legitimately reference one, but no longer required to be covered. The
+ * narrowing travels in the verdict, because a gate that does not say what it
+ * stopped checking reads as full coverage.
+ */
+function applyScope({ required, optional, scope, source }) {
+  const requiredItems = asArray(required);
+  const wanted = new Set(scopeIdsFrom(scope, source));
+  const isWanted = (r) => scopeKeysOf(r).some((k) => wanted.has(k));
+  const matched = requiredItems.filter(isWanted);
+  if (matched.length === 0) {
+    throw new Error(`${source}: milestone.requirements_in_scope matches no record in --required — nothing would be checked`);
+  }
+  const known = new Set(requiredItems.flatMap(scopeKeysOf));
+  const deferred = requiredItems.filter((r) => !isWanted(r));
+  return {
+    required: matched,
+    optional: [...asArray(optional), ...deferred],
+    scope: {
+      source,
+      milestone: (scope.milestone.name || null),
+      in_scope: matched.length,
+      deferred: deferred.length,
+      deferred_ids: deferred.map((r) => r.id),
+      unmatched_ids: [...wanted].filter((id) => !known.has(id)),
+    },
+  };
+}
+
 // Pure core. required/optional/downstream are arrays of { id, text?, traces? }.
-function checkTraces({ required, optional, downstream, layer }) {
+function checkTraces({ required, optional, downstream, layer, scope }) {
   const requiredItems = asArray(required);
   const optionalItems = asArray(optional);
   const groundedIds = new Set([...idSet(requiredItems), ...idSet(optionalItems)]);
@@ -70,6 +154,7 @@ function checkTraces({ required, optional, downstream, layer }) {
     required_total: requiredItems.length,
     required_covered: requiredItems.filter((r) => covered.has(r.id)).length,
     downstream_total: asArray(downstream).length,
+    scope: scope || null,
     net_new,
     dropped,
   };
@@ -103,22 +188,45 @@ function loadRequired(files) {
 
 function printVerdict(v) {
   const label = v.layer ? `${v.layer} grounding` : 'grounding';
+  const scoped = v.scope
+    ? ` [scoped to ${v.scope.milestone || 'milestone'}, ${v.scope.deferred} deferred]`
+    : '';
   process.stdout.write(
-    `${label}: ${v.pass ? 'PASS' : 'FAIL'} — ` +
+    `${label}: ${v.pass ? 'PASS' : 'FAIL'}${scoped} — ` +
       `${v.required_covered}/${v.required_total} upstream covered, ` +
       `${v.net_new.length} net-new, ${v.dropped.length} dropped\n`
   );
+  if (v.scope && v.scope.deferred) {
+    process.stdout.write(`  DEFERRED (not checked here): ${v.scope.deferred_ids.join(', ')}\n`);
+  }
+  if (v.scope && v.scope.unmatched_ids.length) {
+    process.stdout.write(`  UNMATCHED (in scope, no record in --required): ${v.scope.unmatched_ids.join(', ')}\n`);
+  }
   for (const n of v.net_new) process.stdout.write(`  NET-NEW  ${n.id}: ${n.reason}\n`);
   for (const d of v.dropped) process.stdout.write(`  DROPPED  ${d.id}: ${d.text}\n`);
+}
+
+// The upstream side of the run: every `--required` file pooled, `--optional`
+// if given, and the `--scope` narrowing applied when asked for.
+function loadUpstream(args) {
+  const required = loadRequired(args.required);
+  const optional = readJson(args.optional, true);
+  if (!args.scope) return { required, optional, scope: null };
+  return applyScope({
+    required,
+    optional,
+    scope: readJson(args.scope, false),
+    source: args.scope,
+  });
 }
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
   let verdict;
   try {
+    const upstream = loadUpstream(args);
     verdict = checkTraces({
-      required: loadRequired(args.required),
-      optional: readJson(args.optional, true),
+      ...upstream,
       downstream: readJson(args.downstream, false),
       layer: args.layer,
     });
@@ -134,6 +242,6 @@ function main() {
   process.exit(verdict.pass ? 0 : 1);
 }
 
-module.exports = { checkTraces };
+module.exports = { checkTraces, applyScope };
 
 if (require.main === module) main();
