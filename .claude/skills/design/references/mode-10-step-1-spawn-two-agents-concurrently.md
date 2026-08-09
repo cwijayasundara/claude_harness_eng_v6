@@ -134,11 +134,15 @@ Exit code 1 means a real vocabulary mismatch: an entity/model name in `domain_co
 
 ### Step 2 — Phase Evaluation Gate
 
-After `design-render` returns and Step 1.9 is green, spawn the `evaluator` agent (artifact mode) here in the main session. Evaluation stays on the frontier model — the point of a cheap renderer is an expensive reviewer. This replaces and extends the previous field-shape validation.
+After `design-render` returns and Step 1.9 is green, spawn the `evaluator` agent (artifact mode) here in the main session. This replaces and extends the previous field-shape validation.
+
+**Model tier — this is the one planning phase where the choice is real.** Default to `model: "sonnet"`: the traceability property is already proven deterministically by Step 1.9's grounding gate, and what the rubric adds on top is prose-level consistency plus the mockup/contract field-shape comparison. **Escalate to `model: "opus"` when this design introduces a security or data boundary the deterministic gates do not cover** — an authn/authz model, a tenant-isolation decision, a schema migration or a persisted-data reshape, an external trust boundary, or any area a `specs/brownfield/` risk map marks high-risk. Architecture is where a wrong call is most expensive to unwind, so escalate on doubt rather than on certainty. Record which tier ran in the Step 3 review brief.
+
+**Take the verdict from the return message; do not read `specs/reviews/phase-design-eval.json` back into this session.** The actionable findings are in the return.
 
 **Agent invocation:**
 
-Spawn Agent with subagent_type="evaluator" and prompt:
+Spawn Agent with subagent_type="evaluator", the model chosen above, and prompt:
 - Phase: design
 - Artifacts: specs/design/architecture.md, specs/design/api-contracts.md, specs/design/api-contracts.schema.json, specs/design/data-models.md, specs/design/data-models.schema.json, specs/design/folder-structure.md, specs/design/component-map.md, specs/design/deployment.md, specs/design/reasons-canvas.md, all specs/design/mockups/*.html files
 - Upstream: specs/stories/ (all story files; and specs/stories/story-traces.json when present)

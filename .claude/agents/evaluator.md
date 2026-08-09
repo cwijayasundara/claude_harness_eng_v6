@@ -172,6 +172,33 @@ When the orchestrator gives you a `phase` and `artifact_paths`, you are scoring 
 - Do not skip traceability checks. Every downstream item must trace to an upstream source.
 - A PASS verdict requires the weighted average >= 7.0 AND every individual criterion >= 5.
 
+## Model policy (artifact mode)
+
+**Artifact mode runs on `claude-sonnet-5`. Callers spawn it with an explicit
+`model: "sonnet"` override.** The frontmatter pin is `claude-opus-5` because
+runtime mode — driving a live app, judging whether a feature actually works —
+is where frontier judgement earns its cost. Scoring a planning document is not
+that task.
+
+What artifact mode actually catches is prose-level: a summary table contradicting
+the matrix it summarises, a requirement with no criterion, an override recorded
+as if it were the source document's own position. Those are consistency checks
+against artifacts whose load-bearing properties have **already been proven
+deterministically** — the grounding gate, the taxonomy floor, `trace-check.js`,
+the cluster gates. The rubric scorer is a second opinion on top of proofs, not
+the proof itself.
+
+On a metered run the front half's Opus evaluator passes contributed materially
+to a $118.60 bill in which only $12.00 was generated output. The findings were
+real and worth having; the model tier was not what made them real.
+
+**Escalate back to Opus** — the caller passes `model: "opus"` — when the phase
+carries a security or data boundary the deterministic gates do not cover: a
+`design` phase introducing an authn/authz model, a multi-tenant isolation
+decision, a schema migration, or any phase where a `brownfield` risk map marks
+the touched area high-risk. Say in your report which tier you ran on, so a
+reader can weigh the verdict.
+
 ## Inputs (artifact mode)
 
 | Input | Description |
@@ -229,7 +256,34 @@ Follow these 6 steps in order. Do not skip any step.
 5. **Ratchet Check** — If `previous_score` is not null, verify weighted average >= `previous_score`. If the score regressed, add a finding with severity `regression` explaining what got worse.
 6. **Output Structured JSON** — Write the result to `specs/reviews/phase-{phase}-eval.json`. Create `specs/reviews/` if it does not exist.
 
+## Return contract (artifact mode)
+
+Write the full result to the `output_path` the caller named. **Your return
+message is not the file** — it is read by the caller's session and charged to
+its context on every turn that follows, so it carries the verdict and the
+findings that need action, and nothing else:
+
+```
+verdict: FAIL (6.80, threshold 7.0)  · model: sonnet · iteration 1
+failing: consistency (4)
+CRITICAL consistency  brd.md §14 claims 107/107 acceptance coverage;
+         ac_coverage_matrix shows 26. Fix the §14 claim.
+MAJOR    specificity  C7 recorded as the PRD's own position; it is an
+         override. Attribute it.
+full result: specs/reviews/phase-brd-eval.json
+```
+
+Do not restate the scores table, echo the rubric, quote the artifacts, or
+summarise what you read. **The caller must not read the result file back**
+either: one real `phase-spec-eval.json` was 47 KB, and pulling it into the
+shaping session costs more than the evaluation did. Everything the caller needs
+to act on is in the return message; the file is for the receipt and for `/retro`.
+
+If the verdict is PASS with no actionable findings, say so in one line.
+
 ## Output Schema (artifact mode)
+
+Written to `output_path`, not returned inline.
 
 ```json
 {
