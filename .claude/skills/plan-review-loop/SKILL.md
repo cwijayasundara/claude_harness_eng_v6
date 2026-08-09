@@ -1,24 +1,26 @@
 ---
 name: plan-review-loop
-description: "[Internal discipline — invoked by /spec, /design, and /test at their human gates; direct use is a power-user path.] Run the human review of a planning artifact as a brainstorming dialogue rather than an approve/reject prompt, and record the rounds so downstream phases can gate on the result."
+description: "[Internal discipline — invoked by /brd, /spec, /design, and /test at their human gates; direct use is a power-user path.] Run the human review of a planning artifact as a brainstorming dialogue rather than an approve/reject prompt, and record the rounds so downstream phases can gate on the result."
 ---
 
 # Plan Review Loop
 
 The pipeline's planning gates exist so a human shapes the plan *before* `/auto` turns it into code, where review is far more expensive. A gate that asks "approve, or provide corrections?" does not achieve that — it offers a yes/no on a wall of artifacts, and the cheapest correct answer is always "yes."
 
-This skill replaces that single question with a bounded dialogue, then records what happened. `/spec`, `/design`, and `/test` each invoke it at their gate; `plan-approval.js` writes the receipt the next phase checks.
+This skill replaces that single question with a bounded dialogue, then records what happened. `/brd`, `/spec`, `/design`, and `/test` each invoke it at their gate; `plan-approval.js` writes the receipt the next phase checks, and prints the `/clear` handoff to the next phase on the approving round.
+
+**Carrying the header is not running the loop.** `/brd` cited this skill at its gate while its body still said "display the BRD and ask: approve, or provide corrections" — and a real run behaved the way the body said, closing in one round on a one-word reply while four PRD overrides and 79 requirements with no observable criterion went unasked. If a phase's gate can be satisfied by one question, the loop is not wired there yet.
 
 <caller_contract>
 
 The calling skill supplies four things:
 
-| Input | Example (`/spec`) |
-|---|---|
-| `phase` | `spec` |
-| Artifacts under review | `specs/stories/epics.md`, `dependency-graph.md`, `E*-S*.md`, `features.json` |
-| Challenge sources — where this phase's uncertainty already lives | `specs/plan-confidence.json` band + drivers, `risk_gap_table` entries, `phase-spec-eval.json` findings accepted without a fix, `story-clusters.json` warnings |
-| Terminal action on approval | proceed to `/design` |
+| Input | Example (`/spec`) | Example (`/brd`) |
+|---|---|---|
+| `phase` | `spec` | `brd` |
+| Artifacts under review | `specs/stories/epics.md`, `dependency-graph.md`, `E*-S*.md`, `features.json` | `specs/brd/brd.md`, `brd-requirements.json`, `clarification-log.json` |
+| Challenge sources — where this phase's uncertainty already lives | `specs/plan-confidence.json` band + drivers, `risk_gap_table` entries, `phase-spec-eval.json` findings accepted without a fix, `story-clusters.json` warnings | unresolved `brd-open-questions.json` entries, clarifications whose `basis` is an assumption, clarifications that *override* the source document, requirements with no observable criterion, `phase-brd-eval.json` findings accepted without a fix |
+| Terminal action on approval | `/clear`, then `/design` | `/clear`, then `/spec` |
 
 </caller_contract>
 

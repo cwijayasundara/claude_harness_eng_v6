@@ -26,13 +26,15 @@ Run `/brd` with the provided requirements document. Outputs are written to `spec
 
 **Stop and wait for explicit human approval before proceeding.** Present a summary of the BRD and ask: "Approve BRD to proceed to Phase 2?"
 
-Record the outcome with `node .claude/scripts/plan-approval.js record --phase brd` so the stop is verifiable rather than prose — Phase 3 checks `--phase all`, which now includes it. Do NOT proceed without a clear "yes" or "approved" from the user. *(In `--autonomous` mode, do not stop here — the BRD is approved together with everything else at the consolidated Plan Approval gate, Phase 3.5.)*
+Record the outcome with `node .claude/scripts/plan-approval.js record --phase brd --in-session` so the stop is verifiable rather than prose — Phase 3 checks `--phase all`, which now includes it. Do NOT proceed without a clear "yes" or "approved" from the user. *(In `--autonomous` mode, do not stop here — the BRD is approved together with everything else at the consolidated Plan Approval gate, Phase 3.5.)*
+
+**Why `--in-session` here and nowhere else.** Every approving round normally prints a handoff telling the human to `/clear` before the next phase — that clear is where most of the front half's cost savings live, because a phase's artifacts otherwise stay resident and get re-billed on every turn of the next phase. This conductor runs all phases from one session and cannot clear itself mid-run, so it suppresses the handoff rather than printing an instruction the human cannot follow. That is a real cost `/build` pays for its continuity: **running `/brd` → `/spec` → `/design` → `/test` as separate invocations, clearing between each, is the cheaper interactive route.** Prefer it when a human is present anyway; `--autonomous` chaining already gets fresh contexts via `build-chain.js`.
 
 ### Phase 2 — Story Specification [HUMAN APPROVAL]
 
 Run `/spec` using the approved BRD. Outputs are written to `specs/stories/` and root `features.json`.
 
-**Stop and run `/spec`'s Step 8 review loop before proceeding** — a `plan-review-loop` dialogue over the decomposition, not a single approve/reject question. It ends by recording `plan-approval.js record --phase spec`, which Phase 3 hard-blocks on.
+**Stop and run `/spec`'s Step 8 review loop before proceeding** — a `plan-review-loop` dialogue over the decomposition, not a single approve/reject question. It ends by recording `plan-approval.js record --phase spec --in-session`, which Phase 3 hard-blocks on.
 
 Do NOT proceed without an approving round on the receipt. *(In `--autonomous` mode, do not stop here — deferred to the consolidated Plan Approval gate, Phase 3.5.)*
 

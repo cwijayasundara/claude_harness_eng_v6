@@ -13,8 +13,8 @@ _Source: `README.md`_
 
 | Metric | Value |
 |---|---|
-| Indexed files | 471 |
-| Graph edges | 2169 |
+| Indexed files | 482 |
+| Graph edges | 2222 |
 | Concept pages | 20 |
 | Wiki cluster pages | 20 |
 
@@ -34,7 +34,7 @@ npm run ask -- "..."     # ask the codebase
 | Module | fan-in | fan-out |
 |---|---|---|
 | `test/helpers/hook-fixture.js` | 25 | 0 |
-| `test/helpers/skill-corpus.js` | 23 | 0 |
+| `test/helpers/skill-corpus.js` | 24 | 0 |
 | `test/e2e/helpers/claude-runner.js` | 17 | 0 |
 | `test/e2e/helpers/project-suite.js` | 9 | 0 |
 | `test/helpers/pre-commit-fixtures.js` | 9 | 0 |
@@ -74,7 +74,7 @@ npm run ask -- "..."     # ask the codebase
 - [test/approve-fixtures.test.js](specs/brownfield/wiki/concepts/test__approve-fixtures.test.js.md)
 - [test/approved-fixtures-gate.test.js](specs/brownfield/wiki/concepts/test__approved-fixtures-gate.test.js.md)
 - [test/archive-state.test.js](specs/brownfield/wiki/concepts/test__archive-state.test.js.md)
-- [test/ask-codebase-readiness-digest.test.js](specs/brownfield/wiki/concepts/test__ask-codebase-readiness-digest.test.js.md)
+- [test/artifact-eval-tier.test.js](specs/brownfield/wiki/concepts/test__artifact-eval-tier.test.js.md)
 
 ## DeepWiki cluster pages
 

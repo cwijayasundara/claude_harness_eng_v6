@@ -161,7 +161,7 @@ change before Step D6.
 
 ### Step D6 — Design-delta Evaluation Gate
 
-Spawn Agent with subagent_type="evaluator" and prompt:
+Spawn Agent with subagent_type="evaluator" and prompt. Default `model: "sonnet"`; escalate to `"opus"` when the amendment touches an authn/authz model, tenant isolation, a persisted-schema change, or an area the brownfield risk map marks high-risk. Take the verdict from the return message rather than reading the result file back.
 - Phase: design-delta
 - Artifacts: specs/design/amendments/<amendment-id>.md, specs/design/architecture.md, specs/design/api-contracts.md, specs/design/api-contracts.schema.json, specs/design/data-models.md, specs/design/data-models.schema.json, specs/design/component-map.md, specs/design/reasons-canvas.md
 - Upstream: the story file(s) passed in, specs/design/constitution.md, specs/brownfield/wiki/, specs/brownfield/code-graph.json

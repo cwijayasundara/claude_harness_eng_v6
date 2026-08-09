@@ -138,9 +138,42 @@ Run the narrowest useful checks:
 
 If verification fails, fix within the micro-contract. If the fix expands beyond the eligibility rules, stop and escalate.
 
-### Step 7 — Review
+### Step 7 — Review [REQUIRED]
 
-The existing hooks mark production-code writes for review and the Stop hook requires reviewer agents before the turn ends. Do not bypass this. If hooks are unavailable, manually invoke clean-code and security review for changed production files.
+Spawn one `code-reviewer` on the diff. Not optional, and not delegated to a hook:
+
+```bash
+node .claude/scripts/review-tier.js --files <n> --lines <n>
+```
+
+`/vibe`'s eligibility rules cap the change at 3 files and 150 lines, so this
+resolves to **standard** — one reviewer, fresh context, reading only the diff,
+the micro-contract from Step 3, and the files it touches. Never the
+implementation transcript. Write the verdict to
+`specs/reviews/code-review-verdict.json`.
+
+Findings: **BLOCK** must be fixed before Step 8; **WARN** should be fixed or
+explicitly deferred in the Step 8 report; **INFO** optional. Maximum 3 fix
+cycles — if a BLOCK survives three, stop and escalate to `/change`, because a
+small change that cannot be reviewed clean three times running is not a small
+change.
+
+**If `review-tier.js` reports `--security-boundary`, or the reviewer raises an
+auth / secrets / input-handling / persistence finding, stop.** That is evidence
+this change was misclassified at Step 1 — those areas are explicit `/vibe`
+exclusions. Escalate to `/change` (or `/change --issue N`) and let the full lane
+run its `security-reviewer`. Do not add a security review here; a lane that
+starts reviewing security work is a lane that will start accepting it.
+
+**Why this is spelled out rather than inherited.** This step used to read: *"the
+existing hooks mark production-code writes for review and the Stop hook requires
+reviewer agents before the turn ends."* That stopped being true — the per-turn
+review gate was removed from `review-on-stop.js`, which is now purely advisory —
+and because `/vibe` named no reviewer of its own, the lightest lane silently
+became the only one with **no** agentic review at all. Its own fallback ("if
+hooks are unavailable, manually invoke…") never fired either, because the hook
+was still present; it just no longer reviewed. Wire review into the lane that
+needs it, never into a shared mechanism the lane cannot see change.
 
 ### Step 8 — Report
 
@@ -149,6 +182,8 @@ Report:
 - Class
 - Files changed
 - Verification commands and results
+- **Review verdict** — the `code-reviewer` outcome, plus any WARN findings you
+  chose to defer and why. A report with no verdict line means Step 7 did not run.
 - Any follow-up work that should become a story
 
 ---

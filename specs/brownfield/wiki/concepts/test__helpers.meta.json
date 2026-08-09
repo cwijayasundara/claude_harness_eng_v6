@@ -2,20 +2,20 @@
   "cluster_id": "test/helpers",
   "member_paths": [
     "test/helpers/hook-fixture.js",
+    "test/helpers/pack-membership.js",
     "test/helpers/pipeline-status-fixtures.js",
     "test/helpers/pre-commit-fixtures.js",
     "test/helpers/record-run-fixture.js",
-    "test/helpers/skill-corpus.js",
-    "test/helpers/pack-membership.js"
+    "test/helpers/skill-corpus.js"
   ],
   "content_hashes": {
     "test/helpers/hook-fixture.js": "d2bff8c6a7516435",
+    "test/helpers/pack-membership.js": "3eeba718efbfbeb9",
     "test/helpers/pipeline-status-fixtures.js": "aef89497cb41d312",
     "test/helpers/pre-commit-fixtures.js": "a5714f16842662e2",
-    "test/helpers/record-run-fixture.js": "82ee1e77fbf922f4",
-    "test/helpers/skill-corpus.js": "3610a6955dc068ab",
-    "test/helpers/pack-membership.js": "3eeba718efbfbeb9"
+    "test/helpers/record-run-fixture.js": "99ffa57ef59f53c8",
+    "test/helpers/skill-corpus.js": "7a6412042ad969d1"
   },
-  "content_hash": "bc196be7dab1d764",
+  "content_hash": "a1ccfe85d5714166",
   "stale": false
 }

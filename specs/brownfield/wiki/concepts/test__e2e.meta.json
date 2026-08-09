@@ -60,25 +60,11 @@
     "test/e2e/vibe-output/test/calc.test.js"
   ],
   "content_hashes": {
-    "test/e2e/auto-output/index.js": "f24d601ec406c02d",
-    "test/e2e/auto-output/index.test.js": "3c0bebeca67af1a7",
-    "test/e2e/brownfield-run-output/calc.js": "f11e571db3e0039a",
-    "test/e2e/brownfield-run-output/main.js": "21667b18f095526f",
-    "test/e2e/feature-output/calc.js": "28bda2e5df3eada9",
-    "test/e2e/feature-output/test/calc.test.js": "72715013e1290dea",
     "test/e2e/fixtures/adversarial/brownfield/file-ledger/src/ledger.js": "22e0a9ad51fcf3f4",
     "test/e2e/fixtures/adversarial/brownfield/file-ledger/test/ledger.test.js": "0f3e3bcfd88577cf",
     "test/e2e/fixtures/adversarial/brownfield/legacy-expressish/src/public-api.js": "b877233a1bebab03",
     "test/e2e/fixtures/adversarial/brownfield/legacy-expressish/src/router.js": "cf1fef18b03cbbb2",
     "test/e2e/fixtures/adversarial/brownfield/legacy-expressish/test/public-api.test.js": "88a574cd04003f09",
-    "test/e2e/full-auto-output/specs/test_artefacts/acceptance/E1-S1.test.js": "a40fe9f9fbaa6f48",
-    "test/e2e/full-auto-output/specs/test_artefacts/acceptance/E1-S2.test.js": "96a445c56ef53e2b",
-    "test/e2e/full-auto-output/src/counter.js": "d5b5e0f7997fccd2",
-    "test/e2e/full-auto-output/src/index.js": "1d93b3b617cd1660",
-    "test/e2e/full-auto-output/src/server.js": "361652f3991ebec9",
-    "test/e2e/full-auto-output/tests/counter.test.js": "0b7600a3460f9fae",
-    "test/e2e/full-auto-output/tests/index.test.js": "a6470e3a906cb68d",
-    "test/e2e/full-auto-output/tests/server.test.js": "3e0f78e6952a1bec",
     "test/e2e/harness-adversarial-fixtures.test.js": "cd641cd127b8641b",
     "test/e2e/harness-adversarial-live.test.js": "cca0795a44067809",
     "test/e2e/harness-auto-run.test.js": "28e42e4b65fadf10",
@@ -110,14 +96,8 @@
     "test/e2e/helpers/prometheus-checker.js": "10e41a3760169d5b",
     "test/e2e/helpers/specs-summary.js": "c24a4ad7e88d1599",
     "test/e2e/helpers/specs-summary.test.js": "c98815a76bfa0741",
-    "test/e2e/run-pack.js": "9855df0e4f602b33",
-    "test/e2e/semi-auto-output/index.js": "cfc01ffea27c19e4",
-    "test/e2e/semi-auto-output/test/index.test.js": "1f909afe4abb7115",
-    "test/e2e/smoke-output/server.js": "b2d3fb10cc58f9ff",
-    "test/e2e/smoke-output/test/server.test.js": "e70fa000e98bd4fc",
-    "test/e2e/vibe-output/calc.js": "3d1c55de48274cfe",
-    "test/e2e/vibe-output/test/calc.test.js": "525a4a33dc38cee1"
+    "test/e2e/run-pack.js": "9855df0e4f602b33"
   },
-  "content_hash": "8a76cab8a7dfd749",
+  "content_hash": "86eb71943dcac0f5",
   "stale": false
 }

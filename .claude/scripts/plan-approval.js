@@ -21,6 +21,8 @@
 //   plan-approval.js record --phase <spec|design|test> --verdict <changes-requested|approved>
 //        [--feedback "<verbatim>"]... [--changes "<what changed>"]... [--declined "<why not>"]...
 //        [--questions N] [--answered N] [--artifact <path>]... [--root DIR]
+//        [--in-session]   suppress the /clear handoff; for /build, which
+//                         conducts every phase from one session
 //   plan-approval.js waive --phase <p> --lane <--auto|--autonomous> [--root DIR]
 //   plan-approval.js check --phase <spec|design|test|all> [--require-human] [--root DIR]
 //
@@ -29,6 +31,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { handoffOn } = require('../hooks/lib/phase-handoff.js');
 
 // brd joined the list when /brd was de-forked: before that its approval could
 // not reach a human, so a receipt would have recorded a stop that never
@@ -193,6 +196,7 @@ function recordRound(argv, root, phase, now) {
     approvedAt: verdict === 'approved' ? round.recordedAt : null,
   });
   process.stdout.write(`plan-approval: ${phase} round ${round.round} recorded as ${verdict}.\n`);
+  process.stdout.write(handoffOn(phase, verdict, argv.includes('--in-session')));
   return 0;
 }
 

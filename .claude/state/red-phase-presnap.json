@@ -1,1 +1,1 @@
-{"command":"cd /Users/chamindawijayasundara/Documents/rnd_2026/claude_scaffold_research/claude_harness_eng_v5\nnpm test 2>&1 | grep -E \"^✖|^test at |ℹ (tests|pass|fail)\" | head -6\nnode tools/check-partition.js --strict >/dev/null 2>&1 && echo \"partition OK\"\nnode .claude/scripts/control-budget-gate.js 2>&1 | tail -1","hashes":{}}
+{"command":"npm test 2>&1 | tail -8","hashes":{}}

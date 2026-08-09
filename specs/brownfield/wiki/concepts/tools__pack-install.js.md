@@ -8,7 +8,7 @@ Cluster `tools/pack-install.js` groups **1** file(s) (hub fan-in hint 2).
 
 ## Files
 
-- `tools/pack-install.js` (hash 4ba540adb28b44f0)
+- `tools/pack-install.js` (hash ef6825c065523dc2)
 
 ## Symbols
 
@@ -30,8 +30,8 @@ Cluster `tools/pack-install.js` groups **1** file(s) (hub fan-in hint 2).
 
 ## Inbound edges (sample)
 
-- tools/pack-install.test.js → tools/pack-install.js (imports)
-- tools/pack-install-smoke.test.js → tools/pack-install.js (imports)
+- test/pack-install-smoke.test.js → tools/pack-install.js (imports)
+- test/pack-install.test.js → tools/pack-install.js (imports)
 
 ## Citations
 

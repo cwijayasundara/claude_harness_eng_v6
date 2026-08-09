@@ -51,15 +51,36 @@ first is what stops the harness rendering work nobody chose.
 was already gated; re-running the dialogue would re-ask settled questions. Use it
 after resolving `spec-unresolved.json`, or to re-expand an amended scope.
 
-### Step 1 — Read the BRD and the grounding spine
+### Step 1 — Digest the BRD, do not read it whole
 
-Read the BRD at the given path. If it is missing, halt and ask the human to run
-`/brd` first. Also read `specs/brd/brd-requirements.json` and
-`specs/brd/brd-acceptance.json` when present — they are the requirement spine the
-rendered stories must trace to.
+```bash
+node .claude/scripts/phase-digest.js --phase spec
+```
 
-Read `specs/plan-confidence.json` if it exists. A `low` band is a signal to spend
-questions on its drivers rather than on general scope.
+Exit 1 means `/brd` has not run — halt and ask the human to run it first.
+
+The digest carries what this phase actually decides against: requirement count
+and id range, the taxonomy spread, **how many requirements have no observable
+acceptance criterion**, the PRD's own milestone order, the deny-list, the open
+questions, the High risks, and the confidence band. That is the whole shaping
+input, in about 4 KB.
+
+**Do not read `brd-requirements.json`, `brd-acceptance.json` or `brd.md` in
+full here.** Together they are ~62 KB, and this session does not decide anything
+by requirement wording — it decides milestone scope, epic boundaries and which
+dependencies are real. `spec-render` reads the spine in full when it expands the
+stories, which is where the text is genuinely needed. Read a specific
+requirement only when a decision turns on its exact wording, and read that
+requirement, not the file.
+
+Why this matters more than it looks: a blob pulled in at Step 1 is not paid for
+once. It is re-billed on every remaining turn of the phase. A metered run of the
+front half spent $74.10 of its $118.60 on cache reads alone.
+
+The uncovered-criteria count is this phase's work-list, not a warning to note
+and move past — `spec-render`'s Step 6.46 gate checks only the criteria that
+already exist, so a requirement that reaches `/auto` without one is never
+challenged by any gate.
 
 ### Step 2 — Draft the decision set, do not ask it yet
 
@@ -188,7 +209,7 @@ A renderer that returns unresolved items is working correctly.
 
 ### Step 7 — Phase Evaluation Gate
 
-Spawn the `evaluator` agent in artifact mode with:
+Spawn the `evaluator` agent in artifact mode **with `model: "sonnet"`**, and:
 
 - Phase: `spec`
 - Artifacts: `specs/stories/epics.md`, `specs/stories/E*-S*.md`, `specs/stories/stories.json`, `specs/stories/dependency-graph.md`, `features.json`
@@ -209,8 +230,21 @@ Spawn the `evaluator` agent in artifact mode with:
 `Previous score` is load-bearing: the evaluator only applies the ratchet rule
 when a caller passes it, so omitting it silently disables regression detection.
 
-Evaluation stays on the frontier model. This is the "final review" half of the
-split — the point of a cheap renderer is an expensive reviewer.
+**Take the verdict from the agent's return message. Do not read
+`specs/reviews/phase-spec-eval.json` back into this session** — one real one was
+47 KB, more than the evaluation itself cost, and it then rides in context for
+every remaining turn of the phase. The return message carries the verdict, the
+failing criteria and the findings that need action; the file is for the receipt
+and for `/retro`.
+
+**Why Sonnet and not the frontier model.** The load-bearing checks on this
+artifact are already deterministic and already passed before the evaluator runs:
+the grounding gate, `trace-check.js`, the cluster gates. What the rubric scorer
+adds on top is prose-level consistency — a summary contradicting its own matrix,
+a story with no criterion, an override recorded as if it were the BRD's position.
+Those findings are real and worth having, but the model tier is not what makes
+them real. Escalate to `model: "opus"` when the decomposition itself carries a
+security or data boundary the deterministic gates do not cover.
 
 ### Step 8 — Human Review Loop [REQUIRED SUB-SKILL: `plan-review-loop`]
 
