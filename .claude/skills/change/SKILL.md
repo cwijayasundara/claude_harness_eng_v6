@@ -1,7 +1,7 @@
 ---
 name: change
 description: Change the behavior of existing code — story-driven by default, or --issue N for a GitHub bug fix. Test-first, full verification, code review.
-argument-hint: "[description | story-id | --issue N]"
+argument-hint: "[description | story-id | --issue N | --linear KEY | --jira KEY]"
 context: fork
 ---
 
@@ -14,10 +14,13 @@ One lane for changing what existing code *does*: adding to or altering observabl
 ```
 /change "add confidence scores to extraction"   # story-driven enhancement
 /change E2-S3                                    # implement an existing story
+/change --linear ENG-123                         # seed the story from a Linear ticket
+/change --jira PROJ-45                           # seed the story from a Jira ticket
 /change --issue 42                               # fix GitHub issue #42
 ```
 
 - **Description or story ID** → story-driven mode (Steps S1–S7). The change is traceable to a story with acceptance criteria.
+- **`--linear KEY` / `--jira KEY`** → story-driven mode, with Step S1's story seeded from the ticket and linked back to it. This is the inbound counterpart to `tracker-publish`, which only ever pushed.
 - **`--issue N`** → issue mode (Steps I1–I9). The change is a test-first bug fix that branches, reproduces, fixes, and opens a PR.
 
 Both modes are **test-first**: no production code changes until a test that captures the desired behavior (or reproduces the bug) has been written and observed failing.
@@ -49,6 +52,28 @@ Every behavior change must have a story file in `specs/stories/` before implemen
 
 - If a story ID was provided (e.g. `E2-S3`): read `specs/stories/E2-S3.md` and confirm it has acceptance criteria.
 - If a description was provided: check for a matching story. If none exists, create `specs/stories/{next-id}.md` with Title, Problem statement, Acceptance criteria (numbered, each testable), and Out of scope (explicit).
+- **If `--linear <KEY>` or `--jira <KEY>` was provided**, seed the story from the ticket:
+
+  ```bash
+  node .claude/scripts/tracker-fetch.js --linear ENG-123 > specs/stories/{next-id}.md
+  ```
+
+  The seed carries the ticket's title, description and any acceptance criteria it
+  stated, plus a **`Source:` link back to the ticket** — so the story, the branch
+  and the PR all trace to the work item the team actually tracks. Read the seed,
+  fill the Out of scope section, and confirm the criteria with the human before
+  Step S2. Credentials come from `<project-root>/.env` or the shell, the same
+  ones `tracker-publish` uses.
+
+  **A ticket is an intent, not a specification.** `tracker-fetch` warns on stderr
+  when the ticket states no acceptance criteria, and most do not. Author them
+  with the human then — an unstated criterion is not a criterion the tests can
+  verify, and this lane is test-first.
+
+  The fetch is **read-only**: it never transitions, comments on, or closes the
+  ticket. `/change` opens a PR and a human merges it, so moving the ticket here
+  would assert an outcome the harness does not control. Publish status back with
+  `tracker-publish` when you want it.
 
 Do not proceed until acceptance criteria are written and confirmed.
 

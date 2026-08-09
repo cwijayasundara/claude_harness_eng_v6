@@ -251,7 +251,7 @@ The other commands below are still available, but the harness should usually rou
 | `/brownfield` | Discovery-only map of an existing repo | Delegates graph/wiki generation to `/code-map`, writes short architecture/test/risk/change strategy, stops before code |
 | `/code-map` | Agent needs deterministic repo map only | Produces `code-graph.json`, `symbol-map.md`, and `wiki/WIKI.md` |
 | `/vibe` | Very small safe edit | Controlled fast lane for tiny changes |
-| `/change` | Behavior change in existing code | Test-first change route; use `--issue N` for a GitHub bug |
+| `/change` | Behavior change in existing code | Test-first change route; `--issue N` for a GitHub bug, `--linear KEY` / `--jira KEY` to seed the story from a tracker ticket (read-only fetch, story links back to the ticket) |
 | `/refactor` | No behavior change | Behavior-preserving cleanup with coverage and refactor-purity gates; use **`/refactor --mechanical`** for bulk pattern→pattern ports (`specs/migrate/` mapping + 3-file canary) |
 | `/gate` | Before merge or after manual edits | Evaluator + **tiered dual** fresh-context code review (auto on large/security/`strict` diffs) + observability/perf-smell ratchets; security review when the diff crosses a security/data/API boundary (3-instance majority vote when triggered); always ends with **quality-card** + logical **walkthrough** + `docs/CODEBASE.md` refresh. Renamed from old harness `/review` to avoid native `/review` collision |
 | `/fix-diagnostics` | Large lint/type walls | Dynamic workflow over the diagnostics work queue (tsc/eslint/ruff/mypy → shards → fix); skill form: `fix-from-diagnostics`. Not a substitute for `/gate` |

@@ -65,6 +65,7 @@
       "task-envelope",
       "task-lifecycle",
       "toolchain",
+      "tracker-fetch",
       "trust-boundary"
     ],
     "script": [
@@ -86,7 +87,8 @@
       "review-commit-msg",
       "review-tier",
       "run-gate-checks",
-      "security-scan"
+      "security-scan",
+      "tracker-fetch"
     ]
   },
   "packs": {
@@ -96,6 +98,7 @@
         "advise",
         "auto",
         "brd",
+        "brd-extract",
         "brd-render",
         "build",
         "clarify",
@@ -141,6 +144,7 @@
         "flag-scan",
         "model-tier",
         "ownership-check",
+        "phase-digest",
         "pipeline-snapshot",
         "pipeline-state-readers",
         "pipeline-status",
@@ -179,6 +183,8 @@
         "gate-receipt-sensor",
         "prd-milestones",
         "gates-planning",
+        "phase-digest",
+        "phase-handoff",
         "plan-confidence-freshness",
         "story-graph"
       ],

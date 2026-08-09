@@ -176,11 +176,15 @@ Fence it with the same behavior-preservation discipline as the rest of this skil
 
 Skip this step when the refactor's entire purpose *was* a single mechanical change `/simplify` would itself propose — there is nothing left to clean.
 
-### Step 7 — Spawn code-reviewer
+### Step 7 — Spawn code-reviewer (and security-reviewer at a boundary)
 
 After all changes are complete, spawn the `code-reviewer` agent (harness-provided: `.claude/agents/code-reviewer.md`) on the full diff. Native `/simplify` (Step 6) already absorbed the mechanical cleanups; the reviewer now judges **structure** — SOLID, module depth, abstraction quality, public-interface testing — which `/simplify` does not touch.
 
-The reviewer will return findings at three severity levels:
+**Also spawn `security-reviewer` when the diff touches** authentication, authorization, secrets, user input handling, uploads/downloads, network fetch/redirect/proxy code, payments/billing, persistence/schema/migrations, API routes/controllers/middleware, or configured security patterns — the same trigger `/gate` and `/change` use. Run both reviewers in parallel in a single message. If no file crosses that boundary, run neither the security reviewer nor the scan, and record `security_review: skipped_no_boundary`.
+
+**"Behavior-preserving" is not "security-preserving."** This step had no security path at all, on the reasoning that a refactor changes no behavior. But the refactors most worth doing are exactly the ones that move code across trust boundaries: extracting a duplicated authorization check into a shared helper (now one call site short of a bypass), widening a module's export surface so an internal validator becomes reachable, collapsing two persistence paths that sanitized input differently, or moving a secret from a constant into config. Every one of those preserves behavior under test and changes the security posture. The behavior-preservation gates prove the tests still pass; they cannot prove the trust boundary did not move.
+
+The reviewers return findings at three severity levels:
 - **BLOCK** — must fix before this refactor is considered complete.
 - **WARN** — should fix; document if deferring.
 - **INFO** — optional improvement.
