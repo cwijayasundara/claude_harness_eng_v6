@@ -85,7 +85,13 @@ test('the loop keeps the dialogue shape that distinguishes it from approve/rejec
 });
 
 test('each phase names where its own uncertainty already lives', () => {
+  // brd joined this list late. It carried the [REQUIRED SUB-SKILL] header while
+  // its body still said "display the BRD and ask: approve, or provide
+  // corrections" — and a real run behaved the way the body said, closing in one
+  // round on a one-word reply. A phase with no challenge sources has nothing to
+  // build a dialogue out of, so the header alone was never going to hold.
   const sources = {
+    brd: /brd-open-questions\.json/,
     spec: /plan-confidence\.json/,
     design: /reasons-canvas\.md/,
     test: /constraint-obligations\.json/,
@@ -94,6 +100,16 @@ test('each phase names where its own uncertainty already lives', () => {
     const corpus = readSkillCorpus(phase);
     assert.match(corpus, /[Cc]hallenge sources/, `/${phase} must list what to challenge`);
     assert.match(corpus, pattern, `/${phase} must draw on its own uncertainty signal`);
+  }
+});
+
+test('no phase gate degrades into the single approve/reject question', () => {
+  for (const phase of PHASES) {
+    assert.doesNotMatch(
+      readSkillCorpus(phase),
+      /Approve to proceed to `?\/\w+`?, or provide corrections/,
+      `/${phase} must run the loop, not ask one question the human can close with "yes"`,
+    );
   }
 });
 

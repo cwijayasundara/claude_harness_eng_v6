@@ -31,6 +31,8 @@ agent: generator
 
 **For `--plan-only` (test planning phase — runs parallel with `/design`):**
 - `specs/stories/` — user stories with acceptance criteria (one file per story).
+
+  Orient with `node .claude/scripts/phase-digest.js --phase test` — criteria count, story count and the design schemas on disk. Do **not** read `acceptance-criteria.json` whole (54 KB) to plan coverage; read the criteria for the story you are currently writing cases for. A blob read here is re-billed on every later turn of the phase.
 - `project-manifest.json` — for service configuration context.
 - An approved story set — `node .claude/scripts/plan-approval.js check --phase spec` must exit 0. Test cases trace to acceptance criteria, so planning against an unreviewed decomposition writes obligations for stories that may still change.
 
@@ -171,7 +173,7 @@ Every implementation-ready AC should have a corresponding AT before the story is
 
 ### Step 4.75 — Phase Evaluation Gate [`--plan-only`]
 
-Spawn the `evaluator` agent in **artifact mode** against
+Spawn the `evaluator` agent in **artifact mode** with `model: "sonnet"`, against
 `.claude/templates/phase-eval-rubrics.json#phases.test`:
 
 | Input | Value |
@@ -191,11 +193,18 @@ exists, `specs/reviews/test-grounding.json#pass` must be `true`. A `dropped`
 entry is an acceptance criterion with no test case — an untested requirement —
 and it fails the phase regardless of the weighted average.
 
-This step generates on the sidekick model and reviews on the frontier one. The
-review is what makes the cheap generation safe: `/test` produces the definition
+**Take the verdict from the return message; do not read
+`specs/reviews/phase-test-eval.json` back into this session.** The findings that
+need action are in the return; the file is for the receipt and for `/retro`.
+
+The review is what makes cheap generation safe: `/test` produces the definition
 of "done" that `/auto` ratchets against for the rest of the build, and until
 this gate existed it was the only planning phase with no independent review at
-all. Whatever the plan omits, no later gate ever asks for.
+all. Whatever the plan omits, no later gate ever asks for. That argument is
+about *having* an independent reviewer, not about its model tier — the
+grounding gate above already proves the load-bearing property (every acceptance
+criterion has a test case), and what the rubric adds is prose-level judgement.
+Escalate to `model: "opus"` when the plan covers a security or data boundary.
 
 ### Step 4.8 — Human Review Loop [REQUIRED SUB-SKILL: `plan-review-loop`] [`--plan-only`]
 

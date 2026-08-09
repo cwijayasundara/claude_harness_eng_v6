@@ -122,50 +122,94 @@ property is the whole point of the receipt.
 
 ## Steps
 
-### Step 0.0 — Ingest the FRD (only when `--frd <path>` was given)
-
-If an FRD path was provided:
-
-1. **Copy it verbatim** to `specs/brd/source-frd.md` — this is the immutable grounding baseline. Never edit it.
-2. **Extract its requirements** into `specs/brd/frd-requirements.json` — one entry per discrete functional requirement, with a stable id, the requirement text, and the source section:
-   ```json
-   [
-     { "id": "FRD-1", "text": "Users can reset their password via an emailed link", "section": "3.2 Authentication" },
-     { "id": "FRD-2", "text": "Users can view their order history", "section": "4.1 Orders" }
-   ]
-   ```
-   Be exhaustive and faithful — every "the system must / shall / should" statement, every user-facing behavior, every business rule becomes one `FRD-n`. Do not paraphrase away constraints. This list is what the BRD will be checked against, so a requirement you fail to extract here is a requirement that can be silently dropped.
-
-If no `--frd` was given, skip this step; the BRD's grounding baseline is then the confirmed `INT-n` interview requirements captured in Step 2 (`specs/brd/interview-requirements.json`), plus the Step 0.5 clarification log.
-
-### Step 0.1 — Adopt the spine, do not re-express it [`--frd` / `--prd` only]
+### Step 0.0a — Check the PRD's shape first [`--prd` / `--frd` only]
 
 ```bash
-node .claude/scripts/brd-adopt.js
+node .claude/scripts/validate-prd.js <path-to-prd.md>
 ```
 
-This derives `brd-requirements.json`, `brd-acceptance.json` and
-`brd-safeguards.json` **deterministically** from the spine you just extracted:
-requirement text carried verbatim, each entry tracing to its own source id,
-`Out of Scope` / `Non-goals` sections becoming Forbidden Actions, and per-
-requirement `… AC` sections becoming acceptance criteria linked to their
-requirement. **Do not write these three files by hand in `--frd` mode.**
+Run this **before** dispatching the extractor. This document is about to become
+the immutable grounding baseline, and every downstream gate measures against it:
+a requirement with no id can be dropped with nothing to notice, and a
+requirement with no acceptance postcondition gives the evaluator no oracle — so
+its check passes by default, forever.
 
-**Why.** On a real run this phase turned 149 source requirements into 88 BRD
-ones, and the grounding gate then proved the mapping lossless in both
-directions — 149/149, 0 net-new, 0 dropped. That is a formal proof that the
-re-expression added no requirement content: `BR-1` was a paraphrase of `FRD-1`.
-It cost 258 KB of frontier output, and every paraphrase is a chance to shift a
-constraint the gate cannot detect because the gate checks coverage, not meaning.
-Adopting makes grounding an identity — there is nothing to prove because
-nothing was transformed.
+A non-zero exit is **not** a hard stop; a real PRD is a human document and may be
+worth adopting as it stands. But you must put the errors to the human before
+extraction, because this is the last cheap moment to fix them:
+
+- **Requirements with no acceptance postcondition** — these become the "no
+  observable criterion" work-list that `/spec` inherits, and nothing downstream
+  will challenge them mechanically. Ask whether to add postconditions to the PRD
+  now, or to accept the list and author criteria in `/spec`. Record the answer
+  as a `C-n` clarification either way.
+- **Structural errors** (duplicate ids, an empty Out of Scope, placeholder text,
+  a section that parses to zero ids) — fix these in the source document before
+  adopting. An empty Out of Scope in particular is read as *nothing is
+  forbidden* by the autonomous gate.
+- **Warnings** (an unmeasurable NFR, a milestone with no `Done when:`, a
+  milestone naming no requirements) — carry them into the Step 5 review brief.
+
+On a real run this step did not exist. The PRD had **35 structural errors**,
+34 of them requirements with no postcondition; adoption carried them faithfully
+into the spine, and the gap was found by hand three hours later, after the BRD
+had already been rendered and scored. `docs/prd-format.md` is what to point the
+human at, and `docs/shortlink-prd.md` is a worked example that passes clean.
+
+### Step 0.0 — Dispatch `brd-extract` (only in `--prd` / `--frd` mode)
+
+Invoke the `brd-extract` skill, passing the same `--prd` / `--frd` path and any
+`--sprint N`. It copies the source verbatim to `specs/brd/source-frd.md`,
+extracts the spine into `specs/brd/frd-requirements.json`, and runs
+`brd-adopt.js`. It returns counts.
+
+**Do not extract the spine yourself.** Extraction is transcription — every
+MUST/SHALL/SHOULD statement copied verbatim with a stable id — and it needs
+none of this session's context. On a real run the main session did it here and
+wrote a **34 KB** JSON file with the frontier model before the interview had
+even begun; that blob was the largest single thing in the session and it was
+then re-billed on all 337 remaining turns. The phase cost $15.58 and the
+sidekick produced 8.6% of it.
+
+**Do not read `frd-requirements.json` when it returns.** You need its counts,
+which are in the return message, and its open questions, which you read in
+Step 0.5 from `brd-open-questions.json`. Everything else you need arrives via
+`phase-digest.js`. Reading the spine back in is the same cost as having written
+it, paid a second time.
+
+If no `--prd` / `--frd` was given, skip this step. The BRD's grounding baseline
+is then the confirmed `INT-n` interview requirements captured in Step 2
+(`specs/brd/interview-requirements.json`), plus the Step 0.5 clarification log.
+
+### Step 0.1 — Tag the taxonomy [`--frd` / `--prd` only]
+
+Adoption (inside `brd-extract`) derives `brd-requirements.json`,
+`brd-acceptance.json`, `brd-safeguards.json`, `brd-open-questions.json`,
+`brd-milestones.json` and `brd-risks.json` **deterministically** from the spine:
+requirement text carried verbatim, each entry tracing to its own source id,
+`Out of Scope` / `Non-goals` becoming Forbidden Actions, and per-requirement
+`… AC` sections becoming acceptance criteria linked to their requirement.
+**Never write those files by hand in `--frd` mode.**
+
+**Why adoption rather than re-expression.** On an earlier run this phase turned
+149 source requirements into 88 BRD ones, and the grounding gate then proved the
+mapping lossless both ways — 149/149, 0 net-new, 0 dropped. That is a formal
+proof that the re-expression added no requirement content: `BR-1` was a
+paraphrase of `FRD-1`. It cost 258 KB of frontier output, and every paraphrase
+is a chance to shift a constraint the gate cannot detect, because the gate
+checks coverage rather than meaning. Adopting makes grounding an identity —
+there is nothing to prove because nothing was transformed.
 
 **What still needs you.** Adoption deliberately leaves `taxonomy: null` on every
 requirement. Slot classification is a judgement, and the ten-slot floor
 (Step 4.45) still has to be satisfied — that gate, the analysis pack, and the
-clarification log are what this phase actually contributes over the PRD. Fill
-the taxonomy tags and record `na_reason` entries where a slot genuinely does not
-apply. Where adoption prints a warning, resolve it rather than ignoring it: an
+clarification log are what this phase contributes over the PRD. Fill the
+taxonomy tags and record `na_reason` entries where a slot genuinely does not
+apply. Tag from each requirement's id and section, which `brd-extract` reports;
+where a slot is genuinely unclear, read that one requirement rather than the
+file.
+
+Resolve any warning `brd-extract` reports rather than carrying it forward: an
 acceptance criterion naming a requirement outside the spine is an untraceable
 postcondition.
 
@@ -328,9 +372,22 @@ paraphrase, and paraphrase is what R2 removed.
 
 Spawn the `evaluator` agent (artifact mode) to validate the BRD before human review.
 
+Run it with **`model: "sonnet"`**. The BRD's load-bearing properties are already
+proven deterministically before this gate — grounding is an identity in adopt
+mode, and the ten-slot taxonomy floor is a hard block. What the rubric adds is
+prose-level consistency, which is exactly what it caught on a real run: a §14
+summary claiming 107/107 acceptance coverage when the matrix showed 26. A real
+and valuable finding — and not one that needed the frontier model. Escalate to
+`model: "opus"` only when the requirements carry a security or data boundary the
+deterministic gates do not cover.
+
+**Take the verdict from the agent's return message. Do not read
+`specs/reviews/phase-brd-eval.json` back into this session** — it is for the
+receipt and for `/retro`, and pulling it in costs more than the evaluation did.
+
 **Agent invocation:**
 
-Spawn Agent with subagent_type="evaluator" and prompt:
+Spawn Agent with subagent_type="evaluator", model "sonnet", and prompt:
 - Phase: brd
 - Artifact: the BRD file path (specs/brd/brd.md or specs/brd/feature-{name}.md)
 - Upstream: in FRD mode, `specs/brd/source-frd.md` + `specs/brd/frd-requirements.json` + `specs/brd/clarification-log.json`; in interview mode, `specs/brd/interview-requirements.json` + `specs/brd/clarification-log.json`
@@ -349,13 +406,52 @@ Spawn Agent with subagent_type="evaluator" and prompt:
 
 ### Step 5 — Present for Human Approval [REQUIRED SUB-SKILL: `plan-review-loop`]
 
-Record the outcome with `plan-approval.js record --phase brd`, naming
+Follow `.claude/skills/plan-review-loop/SKILL.md` with `--phase brd`. This is a
+**dialogue across rounds**, not a single approve/reject question.
+
+**Do not end this phase by displaying the BRD and asking "does this capture the
+requirements? Approve, or provide corrections."** That is precisely the shape
+the loop skill exists to replace: it offers a yes/no on a wall of artifacts,
+where the cheapest correct answer is always "yes". A real run ended exactly that
+way and closed in one round on a one-word reply — while the document still
+carried four decisions that overrode the source PRD, an unconfirmed
+accessibility assumption, and 79 requirements with no observable criterion.
+Everything the human most needed to weigh was in the artifacts and none of it
+was put to them as a question.
+
+Open with the review brief the loop describes — what was built, the load-bearing
+decisions with the alternatives you rejected, what the machine gates already
+proved (so they do not re-check grounding or the taxonomy floor), and where you
+would push back if you were reviewing this.
+
+**Challenge sources for this phase** — where this phase's uncertainty already
+lives, so you ask about it rather than re-deriving it:
+
+- `specs/brd/brd-open-questions.json` — the source document's own unknowns. Any
+  entry still unresolved at this gate is the highest-value question in the room:
+  its author wrote it down *because they did not know the answer*.
+- `clarification-log.json` entries whose `basis` is an assumption rather than a
+  user decision — you chose these instead of asking. Each is a question you
+  deferred, and this is the last cheap moment to ask it.
+- Clarifications that **override** the source document rather than resolving it.
+  An override is a decision to depart from what the human wrote, and it must be
+  put to them as one, not recorded as if the document had said it.
+- The uncovered-criteria count from `phase-digest.js --phase spec`. Requirements
+  with no observable criterion are not protected by the `brd-acceptance.json`
+  hard gate, so nothing downstream will challenge them mechanically.
+- `phase-brd-eval.json` findings you accepted without a fix.
+- Risks this analysis added that the source document did not carry — you
+  inferred them, so they need confirming.
+
+Record each round with `plan-approval.js record --phase brd`, naming
 `specs/brd/brd.md`, `brd-requirements.json` and `clarification-log.json` on the
 approving round; in `--auto` / `--autonomous`, waive with `--lane`. Until this
 phase was de-forked its approval could not reach a human, so no receipt existed
 and nothing downstream could tell whether the requirements were ever agreed.
 
-Display the BRD and ask: "Does this BRD accurately capture the requirements? Approve to proceed to `/spec`, or provide corrections."
+On approval the recorder prints the handoff: **`/clear` before `/spec`**. `/spec`
+re-reads what it needs from disk, so clearing costs nothing and stops this
+phase's context being re-billed through the next one.
 
 ---
 
