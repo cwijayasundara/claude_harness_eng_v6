@@ -1,0 +1,11 @@
+{
+  "cluster_id": "test/artifact-eval-tier.test.js",
+  "member_paths": [
+    "test/artifact-eval-tier.test.js"
+  ],
+  "content_hashes": {
+    "test/artifact-eval-tier.test.js": "186da3c4eefcd582"
+  },
+  "content_hash": "7c109316939a91db",
+  "stale": false
+}

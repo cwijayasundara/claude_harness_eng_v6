@@ -1,6 +1,6 @@
-# `test/` — 312 module(s)
+# `test/` — 338 module(s)
 
-312 module(s).
+338 module(s).
 
 ## Dependencies
 
@@ -15,6 +15,7 @@ flowchart LR
   n_js_test_approve_fixtures_test_js["approve-fixtures.test.js"]
   n_js_test_approved_fixtures_gate_test_js["approved-fixtures-gate.test.js"]
   n_js_test_archive_state_test_js["archive-state.test.js"]
+  n_js_test_artifact_eval_tier_test_js["artifact-eval-tier.test.js"]
   n_js_test_ask_codebase_readiness_digest_test_js["ask-codebase-readiness-digest.test.js"]
   n_js_test_assert_readiness_ratchet_test_js["assert-readiness-ratchet.test.js"]
   n_js_test_at_first_gate_wiring_contract_test_js["at-first-gate-wiring-contract.test.js"]
@@ -22,6 +23,7 @@ flowchart LR
   n_js_test_attestation_hardening_test_js["attestation-hardening.test.js"]
   n_js_test_attestation_intoto_test_js["attestation-intoto.test.js"]
   n_js_test_attestation_test_js["attestation.test.js"]
+  n_js_test_authority_receipt_test_js["authority-receipt.test.js"]
   n_js_test_auto_continue_on_stop_test_js["auto-continue-on-stop.test.js"]
   n_js_test_auto_merge_test_js["auto-merge.test.js"]
   n_js_test_auto_multi_context_window_test_js["auto-multi-context-window.test.js"]
@@ -30,6 +32,8 @@ flowchart LR
   n_js_test_bash_targets_test_js["bash-targets.test.js"]
   n_js_test_boundary_doubles_roundtrip_test_js["boundary-doubles-roundtrip.test.js"]
   n_js_test_boundary_doubles_ts_roundtrip_test_js["boundary-doubles-ts-roundtrip.test.js"]
+  n_js_test_brd_adopt_test_js["brd-adopt.test.js"]
+  n_js_test_brd_extract_fork_test_js["brd-extract-fork.test.js"]
   n_js_test_brd_taxonomy_check_test_js["brd-taxonomy-check.test.js"]
   n_js_test_brd_taxonomy_wiring_contract_test_js["brd-taxonomy-wiring-contract.test.js"]
   n_js_test_budget_state_test_js["budget-state.test.js"]
@@ -82,10 +86,6 @@ flowchart LR
   n_js_test_diagnostics_parse_test_js["diagnostics-parse.test.js"]
   n_js_test_diff_hunks_test_js["diff-hunks.test.js"]
   n_js_test_dogfood_manifest_test_js["dogfood-manifest.test.js"]
-  n_js_test_drift_wiring_contract_test_js["drift-wiring-contract.test.js"]
-  n_js_test_drift_test_js["drift.test.js"]
-  n_js_test_duplication_gate_wiring_contract_test_js["duplication-gate-wiring-contract.test.js"]
-  n_js_test_duplication_gate_test_js["duplication-gate.test.js"]
 ```
 
 ## `js:test/accessibility-contract.test.js`
@@ -165,6 +165,13 @@ flowchart LR
   - `recJsonl` (function) → js:test/archive-state.test.js:61 — `function recJsonl(entries)`
   - `rec` (function) → js:test/archive-state.test.js:65 — `function rec(id, status)`
 
+## `js:test/artifact-eval-tier.test.js`
+
+- fan-in: 0, fan-out: 4
+
+### Symbols
+  - `read` (function) → js:test/artifact-eval-tier.test.js:20 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
+
 ## `js:test/ask-codebase-readiness-digest.test.js`
 
 - fan-in: 0, fan-out: 7
@@ -220,6 +227,14 @@ flowchart LR
   - `makeRoot` (function) → js:test/attestation.test.js:38 — `function makeRoot(opts = {})`
   - `readTemplateStandardMap` (function) → js:test/attestation.test.js:57 — `function readTemplateStandardMap()`
   - `gen` (function) → js:test/attestation.test.js:61 — `function gen(root, extra = {})`
+
+## `js:test/authority-receipt.test.js`
+
+- fan-in: 0, fan-out: 8
+
+### Symbols
+  - `fixture` (function) → js:test/authority-receipt.test.js:14 — `function fixture()`
+  - `body` (function) → js:test/authority-receipt.test.js:39 — `function body(type, envelope, extra = {})`
 
 ## `js:test/auto-continue-on-stop.test.js`
 
@@ -282,6 +297,21 @@ flowchart LR
 ### Symbols
   - `hasTsx` (function) → js:test/boundary-doubles-ts-roundtrip.test.js:9 — `function hasTsx()`
   - `runTs` (function) → js:test/boundary-doubles-ts-roundtrip.test.js:15 — `function runTs(files, lines)`
+
+## `js:test/brd-adopt.test.js`
+
+- fan-in: 0, fan-out: 3
+
+### Symbols
+  _(no extracted symbols)_
+
+## `js:test/brd-extract-fork.test.js`
+
+- fan-in: 0, fan-out: 4
+
+### Symbols
+  - `read` (function) → js:test/brd-extract-fork.test.js:21 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
+  - `frontmatter` (function) → js:test/brd-extract-fork.test.js:24 — `function frontmatter(rel)`
 
 ## `js:test/brd-taxonomy-check.test.js`
 
@@ -684,32 +714,4 @@ flowchart LR
 ### Symbols
   _(no extracted symbols)_
 
-## `js:test/drift-wiring-contract.test.js`
-
-- fan-in: 0, fan-out: 4
-
-### Symbols
-  - `read` (function) → js:test/drift-wiring-contract.test.js:13 — `read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')`
-
-## `js:test/drift.test.js`
-
-- fan-in: 0, fan-out: 3
-
-### Symbols
-  - `graph` (function) → js:test/drift.test.js:10 — `function graph()`
-
-## `js:test/duplication-gate-wiring-contract.test.js`
-
-- fan-in: 0, fan-out: 7
-
-### Symbols
-  - `read` (function) → js:test/duplication-gate-wiring-contract.test.js:9 — `read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8')`
-
-## `js:test/duplication-gate.test.js`
-
-- fan-in: 0, fan-out: 3
-
-### Symbols
-  _(no extracted symbols)_
-
-_+ 232 more module(s) not shown (page capped at 80)._
+_+ 258 more module(s) not shown (page capped at 80)._

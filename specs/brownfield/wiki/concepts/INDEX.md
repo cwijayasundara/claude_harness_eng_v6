@@ -27,4 +27,4 @@ Hash-cached, deterministic cluster summaries. Regenerated when member file hashe
 - [test/approve-fixtures.test.js](test__approve-fixtures.test.js.md)
 - [test/approved-fixtures-gate.test.js](test__approved-fixtures-gate.test.js.md)
 - [test/archive-state.test.js](test__archive-state.test.js.md)
-- [test/ask-codebase-readiness-digest.test.js](test__ask-codebase-readiness-digest.test.js.md)
+- [test/artifact-eval-tier.test.js](test__artifact-eval-tier.test.js.md)
