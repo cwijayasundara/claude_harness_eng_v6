@@ -22,6 +22,8 @@ const path = require('path');
 const {
   checkShape, checkDecisions, checkHumanShaping, laneDisagreement, normalizeLane, BASIS,
 } = require('../hooks/lib/decision-record.js');
+const { renderHandoffBlock } = require('../hooks/lib/phase-handoff.js');
+const { liveSessionId } = require('../hooks/lib/live-session.js');
 
 const REL = path.join('specs', 'decisions', 'spec-decisions.json');
 
@@ -75,7 +77,11 @@ function sessionLane(root) {
 // A verdict written to stdout is gone the moment the run ends. Persist it so a
 // later step — or a human asking "was this waived?" — can check, the way
 // plan-approval.js leaves a receipt.
-function writeVerdict(root, result, lane) {
+//
+// `session_id` is what makes the render checkpoint work: once this gate passes,
+// spec-decisions.json is the state, and handoff-check --stage render refuses to
+// run the rest of the phase inside the conversation that shaped it.
+function writeVerdict(root, result, lane, inSession) {
   const out = path.join(root, 'specs', 'reviews', 'spec-decisions-verdict.json');
   try {
     fs.mkdirSync(path.dirname(out), { recursive: true });
@@ -85,10 +91,18 @@ function writeVerdict(root, result, lane) {
       waived_by: result.waived,
       claimed_lane: lane || null,
       session_lane: sessionLane(root),
+      session_id: liveSessionId(root),
+      in_session: inSession === true,
       errors: result.errors,
       checked_at: new Date().toISOString(),
     }, null, 2)}\n`);
   } catch (_) { /* a receipt we cannot write must not block the gate */ }
+}
+
+// The checkpoint prints only when there is a human who can act on it: a waived
+// headless lane has nobody to run /clear, and /build cannot clear itself.
+function checkpointOn(result, inSession) {
+  return result.waived || inSession ? '' : renderHandoffBlock();
 }
 
 function main(argv) {
@@ -98,8 +112,9 @@ function main(argv) {
   const lane = laneIdx >= 0 ? argv[laneIdx + 1] : null;
   const file = path.join(root, REL);
 
+  const inSession = argv.includes('--in-session');
   const result = validateDecisions(readDoc(file), { lane, sessionLane: sessionLane(root) });
-  writeVerdict(root, result, lane);
+  writeVerdict(root, result, lane, inSession);
   if (!result.ok) {
     process.stderr.write(`validate-spec-decisions: BLOCKED (${file})\n`);
     for (const e of result.errors) process.stderr.write(`  - ${e}\n`);
@@ -108,6 +123,7 @@ function main(argv) {
   }
   const suffix = result.waived ? ` (human shaping waived by ${result.waived})` : '';
   process.stdout.write(`validate-spec-decisions: OK${suffix}\n`);
+  process.stdout.write(checkpointOn(result, inSession));
 }
 
 if (require.main === module) main(process.argv.slice(2));

@@ -137,3 +137,79 @@ test('a headless waiver never excuses structural errors', () => {
   const res = validateDecisions(doc({ decisions: [] }), { lane: '--auto' });
   assert.strictEqual(res.ok, false, 'structure is not waivable — only the human requirement is');
 });
+
+// --- the render checkpoint ----------------------------------------------------
+//
+// Once this gate passes, spec-decisions.json IS the state: spec-render and every
+// gate after it read the file, not the shaping dialogue. On the audited run the
+// stretch after this point was 40 of /spec's 47 turns at a 284K average context.
+// The instruction to clear has to arrive here, at the moment the state becomes
+// durable — the same reason the phase handoff prints inside plan-approval.
+
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { execFileSync } = require('child_process');
+
+const SCRIPT = path.join(__dirname, '..', '.claude', 'scripts', 'validate-spec-decisions.js');
+
+/** A project whose decisions file is valid, with `sessionId` as the live session. */
+function decisionsRoot(sessionId, docOver = {}) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'spec-decisions-'));
+  fs.mkdirSync(path.join(dir, 'specs/decisions'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'specs/decisions/spec-decisions.json'),
+    JSON.stringify(doc(docOver), null, 2));
+  fs.mkdirSync(path.join(dir, '.claude/runs'), { recursive: true });
+  fs.writeFileSync(path.join(dir, '.claude/runs/2026-08-09.jsonl'),
+    `${JSON.stringify({ kind: 'tool', session_id: sessionId })}\n`);
+  return dir;
+}
+
+const gate = (dir, extra = []) =>
+  execFileSync('node', [SCRIPT, '--root', dir, ...extra], { encoding: 'utf8' });
+
+const verdictOf = (dir) => JSON.parse(
+  fs.readFileSync(path.join(dir, 'specs/reviews/spec-decisions-verdict.json'), 'utf8'),
+);
+
+test('the shaping session is stamped into the verdict', () => {
+  const dir = decisionsRoot('SESSION-A');
+  gate(dir);
+  assert.strictEqual(verdictOf(dir).session_id, 'SESSION-A');
+  assert.strictEqual(verdictOf(dir).in_session, false);
+});
+
+test('passing the gate prints the clear-and-render-only checkpoint', () => {
+  const out = gate(decisionsRoot('SESSION-A'));
+  assert.match(out, /OK/);
+  assert.match(out, /\/clear/);
+  assert.match(out, /\/spec --render-only/);
+});
+
+// /build cannot clear itself mid-run, so it must neither be told to nor blocked.
+test('--in-session suppresses the checkpoint and records why', () => {
+  const dir = decisionsRoot('SESSION-A');
+  const out = gate(dir, ['--in-session']);
+  assert.match(out, /OK/);
+  assert.doesNotMatch(out, /\/clear/);
+  assert.strictEqual(verdictOf(dir).in_session, true);
+});
+
+// A headless lane has no human to run /clear. Telling it to is noise at best.
+test('a waived headless lane gets no checkpoint', () => {
+  const dir = decisionsRoot('SESSION-A', { decisions: [decision({ basis: 'headless-default' })] });
+  const out = gate(dir, ['--lane', '--autonomous']);
+  assert.match(out, /waived/);
+  assert.doesNotMatch(out, /\/clear/);
+});
+
+test('a failing gate prints no checkpoint — there is nothing durable yet', () => {
+  const dir = decisionsRoot('SESSION-A', { decisions: [] });
+  assert.throws(
+    () => gate(dir),
+    (err) => {
+      assert.doesNotMatch(String(err.stdout || ''), /\/clear/);
+      return err.status === 1;
+    },
+  );
+});

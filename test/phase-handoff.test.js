@@ -254,3 +254,125 @@ test('the --in-session fact is recorded on the receipt', () => {
   assert.strictEqual(handoffCheck(['--phase', 'spec', '--root', dir], dir), 0,
     '/build must not block itself');
 });
+
+// --- the intra-phase checkpoint ----------------------------------------------
+//
+// The phase-boundary clear above is not the whole win. /spec's decisions gate is
+// a durable checkpoint MID-phase: once spec-decisions.json passes, everything
+// after it — dispatching spec-render, the grounding gates, the evaluation — runs
+// off that file and needs none of the shaping dialogue.
+//
+// On the audited run, 40 of /spec's 47 turns fell after the gate, at a 284K
+// average context, costing $5.67. The same stretch re-entered fresh via the
+// already-existing `/spec --render-only` would cost ~$2.20.
+
+const { staleRenderContext, renderHandoffBlock } = require(
+  path.join(ROOT, '.claude/hooks/lib/phase-handoff.js'),
+);
+
+test('the render handoff names the clear and the re-entry command', () => {
+  const block = renderHandoffBlock();
+  assert.match(block, /\/clear/);
+  assert.match(block, /\/spec --render-only/);
+});
+
+test('the render stretch is blocked in the session that shaped the decisions', () => {
+  const v = staleRenderContext({ verdict: { session_id: 'S1' }, sessionId: 'S1' });
+  assert.strictEqual(v.blocked, true);
+  assert.match(v.message, /--render-only/);
+});
+
+test('a fresh session may render', () => {
+  assert.strictEqual(
+    staleRenderContext({ verdict: { session_id: 'S1' }, sessionId: 'S2' }).blocked, false,
+  );
+});
+
+// A lane with no human cannot clear, and a gate that stops it is a broken gate.
+test('a waived (headless) decisions gate never blocks the render', () => {
+  assert.strictEqual(
+    staleRenderContext({ verdict: { session_id: 'S1', waived_by: '--autonomous' }, sessionId: 'S1' }).blocked,
+    false,
+  );
+});
+
+test('an --in-session conductor is exempt, as at the phase boundary', () => {
+  assert.strictEqual(
+    staleRenderContext({ verdict: { session_id: 'S1', in_session: true }, sessionId: 'S1' }).blocked,
+    false,
+  );
+});
+
+test('every uncertain case passes, as at the phase boundary', () => {
+  for (const args of [
+    { verdict: null, sessionId: 'S1' },
+    { verdict: { session_id: 'S1' }, sessionId: null },
+    { verdict: {}, sessionId: 'S1' },
+  ]) {
+    assert.strictEqual(staleRenderContext(args).blocked, false, JSON.stringify(args));
+  }
+});
+
+// --- the render checkpoint, end to end ---------------------------------------
+
+const { execFileSync } = require('node:child_process');
+
+/** A project whose decisions gate has passed in `sessionId`. */
+function gatedDecisions(sessionId, extra = []) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'render-e2e-'));
+  fs.mkdirSync(path.join(dir, 'specs/decisions'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'specs/decisions/spec-decisions.json'), JSON.stringify({
+    version: 1,
+    phase: 'spec',
+    source: 'specs/brd/brd.md',
+    confirmed_at: '2026-08-09T10:00:00.000Z',
+    milestone: { name: 'M1', epics: ['E1'], deferred_epics: [] },
+    decisions: [{
+      id: 'D1',
+      question: 'Which epics are in milestone 1?',
+      chosen: 'E1',
+      rationale: 'It is the only one with no upstream dependency.',
+      basis: 'human',
+      load_bearing: true,
+    }],
+  }, null, 2));
+  fs.mkdirSync(path.join(dir, '.claude/runs'), { recursive: true });
+  fs.writeFileSync(path.join(dir, '.claude/runs/2026-08-09.jsonl'),
+    `${JSON.stringify({ kind: 'tool', session_id: sessionId })}\n`);
+  execFileSync('node', [
+    path.join(ROOT, '.claude/scripts/validate-spec-decisions.js'), '--root', dir, ...extra,
+  ], { encoding: 'utf8' });
+  return dir;
+}
+
+test('--stage render blocks in the shaping session and clears in a fresh one', () => {
+  const dir = gatedDecisions('SESSION-A');
+  assert.strictEqual(handoffCheck(['--phase', 'spec', '--stage', 'render', '--root', dir], dir,
+    { liveSessionId: () => 'SESSION-A' }), 1);
+  assert.strictEqual(handoffCheck(['--phase', 'spec', '--stage', 'render', '--root', dir], dir,
+    { liveSessionId: () => 'SESSION-B' }), 0);
+});
+
+test('--stage render reads the live session for real, with nothing injected', () => {
+  const dir = gatedDecisions('SESSION-A');
+  assert.strictEqual(handoffCheck(['--phase', 'spec', '--stage', 'render', '--root', dir], dir), 1);
+});
+
+test('a decisions gate passed --in-session does not block the render', () => {
+  const dir = gatedDecisions('SESSION-A', ['--in-session']);
+  assert.strictEqual(handoffCheck(['--phase', 'spec', '--stage', 'render', '--root', dir], dir), 0);
+});
+
+test('--stage render with no decisions verdict yet does not block', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'render-none-'));
+  assert.strictEqual(handoffCheck(['--phase', 'spec', '--stage', 'render', '--root', dir], dir), 0);
+});
+
+// The two checkpoints are distinct: the boundary one reads the /brd receipt,
+// this one reads the decisions verdict. Confusing them would block the wrong
+// stretch, so the stage must be explicit rather than inferred.
+test('--stage render is only defined for /spec', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'render-phase-'));
+  assert.strictEqual(handoffCheck(['--phase', 'design', '--stage', 'render', '--root', dir], dir), 2);
+  assert.strictEqual(handoffCheck(['--phase', 'spec', '--stage', 'bogus', '--root', dir], dir), 2);
+});

@@ -25,35 +25,78 @@
 //
 // Exit: 0 = clear to proceed, 1 = stale context, 2 = usage error.
 
+const fs = require('fs');
 const path = require('path');
-const { staleContext, PREV_PHASE } = require('../hooks/lib/phase-handoff.js');
+const { staleContext, staleRenderContext, PREV_PHASE } = require('../hooks/lib/phase-handoff.js');
 const { liveSessionId } = require('../hooks/lib/live-session.js');
 const { readReceipt } = require('./plan-approval.js');
+
+// The second checkpoint is /spec-only: it re-enters via `--render-only`, and
+// /design has no equivalent flag to re-enter with.
+const RENDER_STAGE_PHASES = new Set(['spec']);
 
 function arg(argv, name, fallback) {
   const i = argv.indexOf(name);
   return i === -1 || argv[i + 1] === undefined ? fallback : argv[i + 1];
 }
 
+function readJson(file) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch (_) {
+    return null;
+  }
+}
+
+/** Usage error message for a bad --phase/--stage pair, or null when valid. */
+function usageError(phase, stage) {
+  if (stage !== 'boundary' && stage !== 'render') {
+    return `--stage must be boundary | render (default boundary), got "${stage}"`;
+  }
+  if (stage === 'render' && !RENDER_STAGE_PHASES.has(phase)) {
+    return `--stage render is defined only for ${[...RENDER_STAGE_PHASES].join(', ')}`;
+  }
+  if (stage === 'boundary' && !Object.prototype.hasOwnProperty.call(PREV_PHASE, phase)) {
+    return `--phase must be one of ${Object.keys(PREV_PHASE).join(' | ')}`;
+  }
+  return null;
+}
+
+// The two checkpoints read different records: the boundary one reads the
+// predecessor's approval receipt, the render one reads the decisions verdict.
+function verdictFor(stage, root, phase, sessionId, inSession) {
+  if (stage === 'render') {
+    return staleRenderContext({
+      verdict: readJson(path.join(root, 'specs', 'reviews', 'spec-decisions-verdict.json')),
+      sessionId,
+      inSession,
+    });
+  }
+  return staleContext({ phase, receipt: readReceipt(root, PREV_PHASE[phase]), sessionId, inSession });
+}
+
+function okLine(stage, phase) {
+  return stage === 'render'
+    ? `handoff-check: ${phase} render OK — not the session that shaped the decisions.\n`
+    : `handoff-check: ${phase} OK — not the session that approved /${PREV_PHASE[phase]}.\n`;
+}
+
 function run(argv, cwd, deps = {}) {
   const phase = arg(argv, '--phase', null);
-  if (!phase || !Object.prototype.hasOwnProperty.call(PREV_PHASE, phase)) {
-    process.stderr.write(
-      `handoff-check: --phase must be one of ${Object.keys(PREV_PHASE).join(' | ')}\n`
-    );
+  const stage = arg(argv, '--stage', 'boundary');
+  const problem = usageError(phase, stage);
+  if (problem) {
+    process.stderr.write(`handoff-check: ${problem}\n`);
     return 2;
   }
   const root = path.resolve(arg(argv, '--root', cwd) || cwd);
-  const verdict = staleContext({
-    phase,
-    receipt: readReceipt(root, PREV_PHASE[phase]),
-    sessionId: (deps.liveSessionId || liveSessionId)(root),
-    inSession: argv.includes('--in-session'),
-  });
+  const verdict = verdictFor(
+    stage, root, phase,
+    (deps.liveSessionId || liveSessionId)(root),
+    argv.includes('--in-session'),
+  );
   if (!verdict.blocked) {
-    process.stdout.write(
-      `handoff-check: ${phase} OK — not the session that approved /${PREV_PHASE[phase]}.\n`
-    );
+    process.stdout.write(okLine(stage, phase));
     return 0;
   }
   process.stderr.write(`handoff-check: ${phase} BLOCKED — stale context.\n${verdict.message}`);

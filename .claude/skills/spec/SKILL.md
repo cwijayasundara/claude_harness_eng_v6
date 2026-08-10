@@ -206,7 +206,32 @@ node .claude/scripts/validate-spec-decisions.js
 
 Fix what it reports — by asking, not by editing the basis field.
 
+Add `--in-session` only when `/build` is conducting every phase from one session.
+
+### Step 5.5 — Checkpoint: stop here and clear [HARD BLOCK]
+
+When Step 5 passes it prints a checkpoint. **Obey it: stop, and tell the human to
+run `/clear` then `/spec --render-only`.** Do not continue into Step 6 in this
+session.
+
+This is not politeness about context — it is the most expensive stretch of the
+front half. Everything from Step 6 on reads
+`specs/decisions/spec-decisions.json`, not this conversation. On a metered run,
+40 of `/spec`'s 47 turns fell after this point at a **284K average context**;
+re-entered fresh they run at ~110K.
+
+No checkpoint is printed when the gate was waived by a headless lane or run
+`--in-session` — neither has a human who can clear, and both continue straight
+into Step 6.
+
 ### Step 6 — Dispatch `spec-render`
+
+```bash
+node .claude/scripts/handoff-check.js --phase spec --stage render
+```
+
+Exit 1 means Step 5.5 was skipped and this is still the shaping session. Stop and
+hand off as above rather than working around it.
 
 Invoke the `spec-render` skill, passing the BRD path and any `--sprint N`. It
 forks onto the sidekick model, re-runs the gate itself, and expands the decided

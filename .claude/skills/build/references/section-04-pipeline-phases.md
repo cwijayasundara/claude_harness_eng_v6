@@ -34,6 +34,8 @@ Record the outcome with `node .claude/scripts/plan-approval.js record --phase br
 
 Run `/spec` using the approved BRD. Outputs are written to `specs/stories/` and root `features.json`.
 
+**Pass `--in-session` to `/spec`'s decisions gate** (`validate-spec-decisions.js --in-session`, Step 5). That gate now prints a checkpoint telling the human to `/clear` and re-enter with `/spec --render-only` before the render stretch — the same instruction this conductor cannot follow, for the same reason as `--in-session` on the approval rounds above. Without the flag, `/spec` Step 6's `handoff-check --stage render` blocks this lane. It is the same trade recorded below: the separate-invocation route is cheaper, and this is another place `/build` pays for continuity.
+
 **Stop and run `/spec`'s Step 8 review loop before proceeding** — a `plan-review-loop` dialogue over the decomposition, not a single approve/reject question. It ends by recording `plan-approval.js record --phase spec --in-session`, which Phase 3 hard-blocks on.
 
 Do NOT proceed without an approving round on the receipt. *(In `--autonomous` mode, do not stop here — deferred to the consolidated Plan Approval gate, Phase 3.5.)*

@@ -51,16 +51,27 @@ const PREV_PHASE = Object.freeze({
  * @param {boolean} [args.inSession] caller orchestrates all phases in one session
  * @returns {{blocked: boolean, message: string}}
  */
+// Is the conversation that produced `record` the one running now?
+//
+// Shared by both checkpoints. Every uncertain case answers false — no record, no
+// session id, a record predating stamping. A control that fires on missing
+// evidence reports a context problem for another control's failure.
+//
+// Two exemptions ride on the record itself rather than on a flag the caller must
+// remember at a second call site: `in_session` (a conductor that owns every
+// phase and cannot clear between them, i.e. /build) and `waived_by` (a headless
+// lane with no human to run /clear).
+function isResident(record, sessionId) {
+  if (!record || !record.session_id || !sessionId) return false;
+  if (record.in_session === true || record.waived_by) return false;
+  return record.session_id === sessionId;
+}
+
 function staleContext({ phase, receipt, sessionId, inSession }) {
   const upstream = PREV_PHASE[phase];
   const pass = { blocked: false, message: '' };
   if (!upstream || inSession) return pass;
-  if (!receipt || !receipt.session_id || !sessionId) return pass;
-  // The predecessor was approved by a conductor that owns every phase (/build).
-  // Carrying that on the receipt keeps the exemption deterministic instead of
-  // depending on the caller passing --in-session at a second call site too.
-  if (receipt.in_session === true) return pass;
-  if (receipt.session_id !== sessionId) return pass;
+  if (!isResident(receipt, sessionId)) return pass;
   return {
     blocked: true,
     message: [
@@ -73,6 +84,68 @@ function staleContext({ phase, receipt, sessionId, inSession }) {
       `  and the ${upstream} approval receipt — so clearing loses no state. It stops`,
       `  /${upstream}'s conversation being re-billed on every turn of this phase,`,
       '  which is where most front-half spend goes when phases share a session.',
+      '',
+      '  Conducting the whole pipeline from one session on purpose (/build)?',
+      '  Pass --in-session.',
+      '',
+    ].join('\n'),
+  };
+}
+
+// The second checkpoint, inside /spec.
+//
+// The phase boundary is not the only place the state becomes durable. Once
+// spec-decisions.json passes its gate, everything after it — dispatching
+// spec-render, the grounding gates, the phase evaluation — runs off that file
+// and needs none of the shaping dialogue that produced it. On the audited run
+// that was 40 of /spec's 47 turns, at a 284K average context against ~110K for a
+// fresh session: the single most expensive stretch of the front half.
+//
+// /spec already carries the re-entry: `--render-only` skips to Step 6.
+// /design has no equivalent flag, so this deliberately covers /spec only.
+const RENDER_RULE = '─'.repeat(58);
+
+function renderHandoffBlock() {
+  return [
+    '',
+    `  ${RENDER_RULE}`,
+    '  CHECKPOINT — decisions gated and written to disk.',
+    '',
+    '  Run /clear, then /spec --render-only.',
+    '',
+    '  Everything left in this phase reads specs/decisions/spec-decisions.json,',
+    '  not this conversation, so clearing loses no state. On a metered run this',
+    '  stretch was 40 of 47 turns at a 284K average context — the most expensive',
+    '  part of the front half, and all of it re-reading a dialogue already',
+    '  recorded in the decisions file.',
+    `  ${RENDER_RULE}`,
+    '',
+  ].join('\n');
+}
+
+/**
+ * Whether the render stretch is starting in the session that shaped the
+ * decisions. Same rules as staleContext — see isResident.
+ *
+ * @param {object} args
+ * @param {object|null} args.verdict specs/reviews/spec-decisions-verdict.json
+ * @param {string|null} args.sessionId the live session id
+ * @param {boolean} [args.inSession]
+ * @returns {{blocked: boolean, message: string}}
+ */
+function staleRenderContext({ verdict, sessionId, inSession }) {
+  if (inSession || !isResident(verdict, sessionId)) return { blocked: false, message: '' };
+  return {
+    blocked: true,
+    message: [
+      '',
+      '  This is the session that shaped specs/decisions/spec-decisions.json.',
+      '',
+      '  Run /clear, then /spec --render-only.',
+      '',
+      '  The renderer and the gates after it read the decisions file, not this',
+      "  conversation. Continuing here re-bills the whole shaping dialogue on",
+      '  every remaining turn of the phase.',
       '',
       '  Conducting the whole pipeline from one session on purpose (/build)?',
       '  Pass --in-session.',
@@ -125,4 +198,7 @@ function handoffOn(phase, verdict, inSession) {
   return handoffBlock(phase);
 }
 
-module.exports = { NEXT_PHASE, PREV_PHASE, handoffBlock, handoffOn, staleContext };
+module.exports = {
+  NEXT_PHASE, PREV_PHASE, handoffBlock, handoffOn,
+  staleContext, staleRenderContext, renderHandoffBlock,
+};
