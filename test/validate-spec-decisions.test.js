@@ -213,3 +213,49 @@ test('a failing gate prints no checkpoint — there is nothing durable yet', () 
     },
   );
 });
+
+// The stamp must record who SHAPED the decisions, not who last validated them.
+//
+// spec-render re-runs this gate at its own Step 0. Without this, the happy path
+// self-sabotages: the human clears, re-enters with `/spec --render-only`, the
+// renderer re-runs the gate, and the verdict is restamped with the FRESH
+// session — so the next `handoff-check --stage render` blocks the very session
+// the clear just created. /spec's documented unresolved-items loop ("append them
+// to decisions[] and re-dispatch with --render-only") walks straight into it.
+//
+// Same idiom as plan-approval's artifact digests: content unchanged means the
+// record still describes the same decisions.
+
+test('re-running the gate on unchanged decisions preserves the shaping session', () => {
+  const dir = decisionsRoot('SESSION-SHAPING');
+  gate(dir);
+  assert.strictEqual(verdictOf(dir).session_id, 'SESSION-SHAPING');
+
+  // The human clears; the renderer re-runs the gate from the fresh session.
+  fs.appendFileSync(path.join(dir, '.claude/runs/2026-08-09.jsonl'),
+    `${JSON.stringify({ kind: 'tool', session_id: 'SESSION-FRESH' })}\n`);
+  gate(dir);
+  assert.strictEqual(verdictOf(dir).session_id, 'SESSION-SHAPING',
+    'the renderer re-running the gate must not claim to have shaped the decisions');
+});
+
+test('changed decisions re-stamp — a new shaping dialogue happened', () => {
+  const dir = decisionsRoot('SESSION-SHAPING');
+  gate(dir);
+
+  fs.appendFileSync(path.join(dir, '.claude/runs/2026-08-09.jsonl'),
+    `${JSON.stringify({ kind: 'tool', session_id: 'SESSION-SECOND' })}\n`);
+  const file = path.join(dir, 'specs/decisions/spec-decisions.json');
+  const d = JSON.parse(fs.readFileSync(file, 'utf8'));
+  d.decisions.push(decision({ id: 'D2', question: 'Resolve the unresolved item?' }));
+  fs.writeFileSync(file, JSON.stringify(d, null, 2));
+
+  gate(dir);
+  assert.strictEqual(verdictOf(dir).session_id, 'SESSION-SECOND');
+});
+
+test('the verdict records the decisions digest it was stamped against', () => {
+  const dir = decisionsRoot('SESSION-SHAPING');
+  gate(dir);
+  assert.match(verdictOf(dir).decisions_sha256, /^[0-9a-f]{64}$/);
+});
