@@ -61,7 +61,31 @@ node .claude/scripts/validate-design-decisions.js
 
 Fix what it reports by asking, not by editing `basis` or padding `rules_out`.
 
+Add `--in-session` only when `/build` is conducting every phase from one session.
+
+### 2.5. Checkpoint: stop here and clear [HARD BLOCK]
+
+When the gate passes it prints a checkpoint. **Obey it: stop, and tell the human
+to run `/clear` then `/design --render-only`.** Do not continue into §3 in this
+session.
+
+Everything from §3 on — the renderer, Step 1.9's gates, the Step 2 evaluator —
+reads `specs/decisions/design-decisions.json`, not this conversation. The
+equivalent stretch in `/spec` was 40 of 47 turns at a **284K average context**;
+`/design` carries the same shape, and its dialogue (Step 0 brainstorm, Step 0.5
+clarify, Step 0.7 modularity) is the largest of any planning phase.
+
+No checkpoint is printed when the gate was waived by a headless lane or run
+`--in-session` — neither has a human who can clear, and both continue into §3.
+
 ### 3. Dispatch `design-render`
+
+```bash
+node .claude/scripts/handoff-check.js --phase design --stage render
+```
+
+Exit 1 means §2.5 was skipped and this is still the shaping session. Stop and
+hand off as above rather than working around it.
 
 Invoke the `design-render` skill (forked, sidekick model), passing any
 `--sprint N`. It re-runs the gate at its own Step 0 and renders the nine
@@ -73,8 +97,8 @@ can cost more than the cheaper model saves.
 
 When it returns, read `specs/decisions/design-unresolved.json` if present. Each
 entry is a call the renderer refused to invent. Put them to the human as in
-Step 0.5, append them to `decisions[]`, and re-dispatch. A renderer that returns
-unresolved items is working correctly.
+Step 0.5, append them to `decisions[]`, and re-dispatch with `--render-only`.
+A renderer that returns unresolved items is working correctly.
 
 Then continue with Step 1.9 below — the deterministic gates and the evaluator
 run here, in the main session, not inside the fork.

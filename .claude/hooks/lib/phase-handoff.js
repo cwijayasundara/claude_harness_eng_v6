@@ -92,32 +92,57 @@ function staleContext({ phase, receipt, sessionId, inSession }) {
   };
 }
 
-// The second checkpoint, inside /spec.
+// The second checkpoint, inside a shaping phase.
 //
-// The phase boundary is not the only place the state becomes durable. Once
-// spec-decisions.json passes its gate, everything after it — dispatching
-// spec-render, the grounding gates, the phase evaluation — runs off that file
-// and needs none of the shaping dialogue that produced it. On the audited run
-// that was 40 of /spec's 47 turns, at a 284K average context against ~110K for a
+// The phase boundary is not the only place the state becomes durable. Once a
+// decisions file passes its gate, everything after it — dispatching the
+// renderer, the grounding gates, the phase evaluation — runs off that file and
+// needs none of the shaping dialogue that produced it. On the audited run that
+// was 40 of /spec's 47 turns, at a 284K average context against ~110K for a
 // fresh session: the single most expensive stretch of the front half.
 //
-// /spec already carries the re-entry: `--render-only` skips to Step 6.
-// /design has no equivalent flag, so this deliberately covers /spec only.
+// Defined only for phases that can re-enter after the clear. A block on a phase
+// with no `--render-only` would strand it rather than save anything.
+// `evidence` is what was actually measured for THAT phase. /spec's number is a
+// real metered run; /design has not been metered, so it says so rather than
+// borrowing /spec's figure and presenting it as its own.
+const RENDER_PHASES = Object.freeze({
+  spec: {
+    decisions: 'specs/decisions/spec-decisions.json',
+    verdict: 'specs/reviews/spec-decisions-verdict.json',
+    evidence: [
+      '  not this conversation, so clearing loses no state. On a metered run this',
+      '  stretch was 40 of 47 turns at a 284K average context — the most expensive',
+      '  part of the front half, and all of it re-reading a dialogue already',
+      '  recorded in the decisions file.',
+    ],
+  },
+  design: {
+    decisions: 'specs/decisions/design-decisions.json',
+    verdict: 'specs/reviews/design-decisions-verdict.json',
+    evidence: [
+      '  not this conversation, so clearing loses no state. The equivalent stretch',
+      '  in /spec was 40 of 47 turns at a 284K average context; /design has the',
+      '  same shape and the largest shaping dialogue of any planning phase',
+      '  (Step 0 brainstorm, Step 0.5 clarify, Step 0.7 modularity).',
+    ],
+  },
+});
+
 const RENDER_RULE = '─'.repeat(58);
 
-function renderHandoffBlock() {
+function renderHandoffBlock(phase) {
+  const hop = RENDER_PHASES[phase];
+  if (!hop) return '';
   return [
     '',
     `  ${RENDER_RULE}`,
     '  CHECKPOINT — decisions gated and written to disk.',
     '',
-    '  Run /clear, then /spec --render-only.',
+    `  Run /clear, then /${phase} --render-only.`,
     '',
-    '  Everything left in this phase reads specs/decisions/spec-decisions.json,',
-    '  not this conversation, so clearing loses no state. On a metered run this',
-    '  stretch was 40 of 47 turns at a 284K average context — the most expensive',
-    '  part of the front half, and all of it re-reading a dialogue already',
-    '  recorded in the decisions file.',
+    `  Everything left in this phase reads ${hop.decisions},`,
+    ...hop.evidence,
     `  ${RENDER_RULE}`,
     '',
   ].join('\n');
@@ -128,23 +153,25 @@ function renderHandoffBlock() {
  * decisions. Same rules as staleContext — see isResident.
  *
  * @param {object} args
- * @param {object|null} args.verdict specs/reviews/spec-decisions-verdict.json
+ * @param {string} args.phase spec | design
+ * @param {object|null} args.verdict the phase's decisions verdict
  * @param {string|null} args.sessionId the live session id
  * @param {boolean} [args.inSession]
  * @returns {{blocked: boolean, message: string}}
  */
-function staleRenderContext({ verdict, sessionId, inSession }) {
-  if (inSession || !isResident(verdict, sessionId)) return { blocked: false, message: '' };
+function staleRenderContext({ phase, verdict, sessionId, inSession }) {
+  const hop = RENDER_PHASES[phase];
+  if (!hop || inSession || !isResident(verdict, sessionId)) return { blocked: false, message: '' };
   return {
     blocked: true,
     message: [
       '',
-      '  This is the session that shaped specs/decisions/spec-decisions.json.',
+      `  This is the session that shaped ${hop.decisions}.`,
       '',
-      '  Run /clear, then /spec --render-only.',
+      `  Run /clear, then /${phase} --render-only.`,
       '',
       '  The renderer and the gates after it read the decisions file, not this',
-      "  conversation. Continuing here re-bills the whole shaping dialogue on",
+      '  conversation. Continuing here re-bills the whole shaping dialogue on',
       '  every remaining turn of the phase.',
       '',
       '  Conducting the whole pipeline from one session on purpose (/build)?',
@@ -199,6 +226,6 @@ function handoffOn(phase, verdict, inSession) {
 }
 
 module.exports = {
-  NEXT_PHASE, PREV_PHASE, handoffBlock, handoffOn,
+  NEXT_PHASE, PREV_PHASE, RENDER_PHASES, handoffBlock, handoffOn,
   staleContext, staleRenderContext, renderHandoffBlock,
 };

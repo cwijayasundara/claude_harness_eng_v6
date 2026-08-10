@@ -24,6 +24,8 @@ const path = require('path');
 const {
   checkShape, checkDecisions, checkHumanShaping, laneDisagreement, normalizeLane,
 } = require('../hooks/lib/decision-record.js');
+const { renderHandoffBlock } = require('../hooks/lib/phase-handoff.js');
+const { writeDecisionVerdict, sessionLane } = require('../hooks/lib/decision-verdict.js');
 
 const REL = path.join('specs', 'decisions', 'design-decisions.json');
 const VERDICT_REL = path.join('specs', 'reviews', 'design-decisions-verdict.json');
@@ -80,28 +82,31 @@ function validateDesignDecisions(doc, opts = {}) {
   return { ok: errors.length === 0, errors, waived: effectiveLane };
 }
 
-function sessionLane(root) {
+// The checkpoint prints only when there is a human who can act on it: a waived
+// headless lane has nobody to run /clear, and /build cannot clear itself.
+function checkpointOn(result, inSession) {
+  return result.waived || inSession ? '' : renderHandoffBlock('design');
+}
+
+function readDoc(file) {
   try {
-    return fs.readFileSync(path.join(root, '.claude', 'state', 'current-lane'), 'utf8').trim();
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch (_) {
-    return null;
+    return null; // validated as missing by checkShape
   }
 }
 
-function writeVerdict(root, result, lane) {
-  const out = path.join(root, VERDICT_REL);
-  try {
-    fs.mkdirSync(path.dirname(out), { recursive: true });
-    fs.writeFileSync(out, `${JSON.stringify({
-      gate: 'design-decisions',
-      pass: result.ok,
-      waived_by: result.waived,
-      claimed_lane: lane || null,
-      session_lane: sessionLane(root),
-      errors: result.errors,
-      checked_at: new Date().toISOString(),
-    }, null, 2)}\n`);
-  } catch (_) { /* a receipt we cannot write must not block the gate */ }
+function report(result, file, inSession) {
+  if (!result.ok) {
+    process.stderr.write(`validate-design-decisions: BLOCKED (${file})\n`);
+    for (const e of result.errors) process.stderr.write(`  - ${e}\n`);
+    process.stderr.write('\nRun /design to shape the architecture decisions before rendering.\n');
+    return 1;
+  }
+  const suffix = result.waived ? ` (human shaping waived by ${result.waived})` : '';
+  process.stdout.write(`validate-design-decisions: OK${suffix}\n`);
+  process.stdout.write(checkpointOn(result, inSession));
+  return 0;
 }
 
 function main(argv) {
@@ -111,23 +116,15 @@ function main(argv) {
   };
   const root = arg('--root') || process.cwd();
   const lane = arg('--lane');
+  const inSession = argv.includes('--in-session');
   const file = path.join(root, REL);
 
-  let doc = null;
-  try {
-    doc = JSON.parse(fs.readFileSync(file, 'utf8'));
-  } catch (_) { /* validated as missing below */ }
-
-  const result = validateDesignDecisions(doc, { lane, sessionLane: sessionLane(root) });
-  writeVerdict(root, result, lane);
-  if (!result.ok) {
-    process.stderr.write(`validate-design-decisions: BLOCKED (${file})\n`);
-    for (const e of result.errors) process.stderr.write(`  - ${e}\n`);
-    process.stderr.write('\nRun /design to shape the architecture decisions before rendering.\n');
-    return process.exit(1);
-  }
-  const suffix = result.waived ? ` (human shaping waived by ${result.waived})` : '';
-  return process.stdout.write(`validate-design-decisions: OK${suffix}\n`);
+  const result = validateDesignDecisions(readDoc(file), { lane, sessionLane: sessionLane(root) });
+  writeDecisionVerdict({
+    root, gate: 'design-decisions', verdictRel: VERDICT_REL, decisionsRel: REL, result, lane, inSession,
+  });
+  const code = report(result, file, inSession);
+  if (code !== 0) process.exit(code);
 }
 
 if (require.main === module) main(process.argv.slice(2));

@@ -1,7 +1,7 @@
 ---
 name: design
 description: "[Internal pipeline stage — run by /build (use --doc-only standalone for an ARB narrative); invoke directly only as a power user.] Generate system architecture, machine-readable schemas, and UI mockups. Spawns planner + generator concurrently."
-argument-hint: "[--doc-only [path] | --delta --stories <dir> | --story <file> --amendment-id <id> | --baseline-recovery]"
+argument-hint: "[--doc-only [path] | --delta --stories <dir> | --story <file> --amendment-id <id> | --baseline-recovery | --render-only]"
 ---
 
 # Design Skill — Architecture Shaping
@@ -41,9 +41,10 @@ This skill is an **orchestrator index**. Read only the reference file for the mo
 
 ### Route
 
-1. Parse flags (`--doc-only`, `--delta`, `--baseline-recovery`, default full).
+1. Parse flags (`--doc-only`, `--delta`, `--baseline-recovery`, `--render-only`, default full).
 2. Load **only** that mode's reference file and execute it.
 3. Do not load delta/full procedure when running `--doc-only`.
+4. **With `--render-only`, run full mode from Step 0.9 §3 onward** — load `references/mode-10-step-1-spawn-two-agents-concurrently.md` and skip Steps 0, 0.5 and 0.7. The decisions file already exists and was already gated; re-running the dialogue would re-ask settled questions. Do not load the Step 0/0.5/0.7 reference files at all.
 
 ### Load-bearing names (always visible)
 

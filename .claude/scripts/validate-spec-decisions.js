@@ -18,13 +18,12 @@
 
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 
 const {
   checkShape, checkDecisions, checkHumanShaping, laneDisagreement, normalizeLane, BASIS,
 } = require('../hooks/lib/decision-record.js');
-const { renderHandoffBlock } = require('../hooks/lib/phase-handoff.js');
-const { liveSessionId } = require('../hooks/lib/live-session.js');
+const { renderHandoffBlock, RENDER_PHASES } = require('../hooks/lib/phase-handoff.js');
+const { writeDecisionVerdict, sessionLane } = require('../hooks/lib/decision-verdict.js');
 
 const REL = path.join('specs', 'decisions', 'spec-decisions.json');
 
@@ -67,13 +66,6 @@ function readDoc(file) {
   }
 }
 
-function sessionLane(root) {
-  try {
-    return fs.readFileSync(path.join(root, '.claude', 'state', 'current-lane'), 'utf8').trim();
-  } catch (_) {
-    return null;
-  }
-}
 
 // A verdict written to stdout is gone the moment the run ends. Persist it so a
 // later step — or a human asking "was this waived?" — can check, the way
@@ -82,54 +74,10 @@ function sessionLane(root) {
 // `session_id` is what makes the render checkpoint work: once this gate passes,
 // spec-decisions.json is the state, and handoff-check --stage render refuses to
 // run the rest of the phase inside the conversation that shaped it.
-// Who SHAPED these decisions — not who last validated them.
-//
-// spec-render re-runs this gate at its own Step 0. Restamping there would make
-// the happy path self-defeating: the human clears, re-enters with `/spec
-// --render-only`, the renderer re-runs the gate, and the verdict now names the
-// fresh session — so the next `handoff-check --stage render` blocks the very
-// session the clear created. So the stamp is carried forward while the
-// decisions themselves are unchanged, by digest, the way plan-approval.js keeps
-// an approval tied to the artifacts it approved.
-function stampFor(root, prior, decisionsSha, inSession) {
-  if (prior && prior.decisions_sha256 === decisionsSha && prior.session_id) {
-    return { session_id: prior.session_id, in_session: prior.in_session === true };
-  }
-  return { session_id: liveSessionId(root), in_session: inSession === true };
-}
-
-function sha256Of(file) {
-  try {
-    return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-  } catch (_) {
-    return null;
-  }
-}
-
-function writeVerdict(root, result, lane, inSession) {
-  const out = path.join(root, 'specs', 'reviews', 'spec-decisions-verdict.json');
-  const decisionsSha = sha256Of(path.join(root, REL));
-  const stamp = stampFor(root, readDoc(out), decisionsSha, inSession);
-  try {
-    fs.mkdirSync(path.dirname(out), { recursive: true });
-    fs.writeFileSync(out, `${JSON.stringify({
-      gate: 'spec-decisions',
-      pass: result.ok,
-      waived_by: result.waived,
-      claimed_lane: lane || null,
-      session_lane: sessionLane(root),
-      decisions_sha256: decisionsSha,
-      ...stamp,
-      errors: result.errors,
-      checked_at: new Date().toISOString(),
-    }, null, 2)}\n`);
-  } catch (_) { /* a receipt we cannot write must not block the gate */ }
-}
-
 // The checkpoint prints only when there is a human who can act on it: a waived
 // headless lane has nobody to run /clear, and /build cannot clear itself.
 function checkpointOn(result, inSession) {
-  return result.waived || inSession ? '' : renderHandoffBlock();
+  return result.waived || inSession ? '' : renderHandoffBlock('spec');
 }
 
 function main(argv) {
@@ -141,7 +89,15 @@ function main(argv) {
 
   const inSession = argv.includes('--in-session');
   const result = validateDecisions(readDoc(file), { lane, sessionLane: sessionLane(root) });
-  writeVerdict(root, result, lane, inSession);
+  writeDecisionVerdict({
+    root,
+    gate: 'spec-decisions',
+    verdictRel: RENDER_PHASES.spec.verdict,
+    decisionsRel: REL,
+    result,
+    lane,
+    inSession,
+  });
   if (!result.ok) {
     process.stderr.write(`validate-spec-decisions: BLOCKED (${file})\n`);
     for (const e of result.errors) process.stderr.write(`  - ${e}\n`);

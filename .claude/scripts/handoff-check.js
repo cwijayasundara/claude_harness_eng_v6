@@ -27,13 +27,15 @@
 
 const fs = require('fs');
 const path = require('path');
-const { staleContext, staleRenderContext, PREV_PHASE } = require('../hooks/lib/phase-handoff.js');
+const {
+  staleContext, staleRenderContext, PREV_PHASE, RENDER_PHASES,
+} = require('../hooks/lib/phase-handoff.js');
 const { liveSessionId } = require('../hooks/lib/live-session.js');
 const { readReceipt } = require('./plan-approval.js');
 
-// The second checkpoint is /spec-only: it re-enters via `--render-only`, and
-// /design has no equivalent flag to re-enter with.
-const RENDER_STAGE_PHASES = new Set(['spec']);
+// The render stage is defined for the phases that can re-enter after the clear
+// via `--render-only`. A block on a phase with no such flag would strand it.
+const RENDER_STAGE_PHASES = new Set(Object.keys(RENDER_PHASES));
 
 function arg(argv, name, fallback) {
   const i = argv.indexOf(name);
@@ -67,7 +69,8 @@ function usageError(phase, stage) {
 function verdictFor(stage, root, phase, sessionId, inSession) {
   if (stage === 'render') {
     return staleRenderContext({
-      verdict: readJson(path.join(root, 'specs', 'reviews', 'spec-decisions-verdict.json')),
+      phase,
+      verdict: readJson(path.join(root, RENDER_PHASES[phase].verdict)),
       sessionId,
       inSession,
     });

@@ -44,6 +44,8 @@ If the user already has product stories, `/spec` may normalize those existing st
 
 ### Phase 3 — Architecture Design + Test Planning [HUMAN APPROVAL]
 
+**Pass `--in-session` to `/design`'s decisions gate too** (`validate-design-decisions.js --in-session`, Step 0.9 §2) — same reason as `/spec`'s above: that gate now prints a checkpoint asking the human to `/clear` and re-enter with `/design --render-only`, which this conductor cannot do. Without the flag, §3's `handoff-check --stage render` blocks this lane.
+
 Run `/design` and `/test --plan-only` **in parallel** using two concurrent Agent calls. Both consume `/spec` output independently:
 
 - **`/design`** — produces architecture artifacts in `specs/design/` (architecture, api-contracts, component-map, data-models, schemas).

@@ -271,43 +271,43 @@ const { staleRenderContext, renderHandoffBlock } = require(
 );
 
 test('the render handoff names the clear and the re-entry command', () => {
-  const block = renderHandoffBlock();
+  const block = renderHandoffBlock('spec');
   assert.match(block, /\/clear/);
   assert.match(block, /\/spec --render-only/);
 });
 
 test('the render stretch is blocked in the session that shaped the decisions', () => {
-  const v = staleRenderContext({ verdict: { session_id: 'S1' }, sessionId: 'S1' });
+  const v = staleRenderContext({ phase: 'spec', verdict: { session_id: 'S1' }, sessionId: 'S1' });
   assert.strictEqual(v.blocked, true);
   assert.match(v.message, /--render-only/);
 });
 
 test('a fresh session may render', () => {
   assert.strictEqual(
-    staleRenderContext({ verdict: { session_id: 'S1' }, sessionId: 'S2' }).blocked, false,
+    staleRenderContext({ phase: 'spec', verdict: { session_id: 'S1' }, sessionId: 'S2' }).blocked, false,
   );
 });
 
 // A lane with no human cannot clear, and a gate that stops it is a broken gate.
 test('a waived (headless) decisions gate never blocks the render', () => {
   assert.strictEqual(
-    staleRenderContext({ verdict: { session_id: 'S1', waived_by: '--autonomous' }, sessionId: 'S1' }).blocked,
+    staleRenderContext({ phase: 'spec', verdict: { session_id: 'S1', waived_by: '--autonomous' }, sessionId: 'S1' }).blocked,
     false,
   );
 });
 
 test('an --in-session conductor is exempt, as at the phase boundary', () => {
   assert.strictEqual(
-    staleRenderContext({ verdict: { session_id: 'S1', in_session: true }, sessionId: 'S1' }).blocked,
+    staleRenderContext({ phase: 'spec', verdict: { session_id: 'S1', in_session: true }, sessionId: 'S1' }).blocked,
     false,
   );
 });
 
 test('every uncertain case passes, as at the phase boundary', () => {
   for (const args of [
-    { verdict: null, sessionId: 'S1' },
-    { verdict: { session_id: 'S1' }, sessionId: null },
-    { verdict: {}, sessionId: 'S1' },
+    { phase: 'spec', verdict: null, sessionId: 'S1' },
+    { phase: 'spec', verdict: { session_id: 'S1' }, sessionId: null },
+    { phase: 'spec', verdict: {}, sessionId: 'S1' },
   ]) {
     assert.strictEqual(staleRenderContext(args).blocked, false, JSON.stringify(args));
   }
@@ -371,8 +371,20 @@ test('--stage render with no decisions verdict yet does not block', () => {
 // The two checkpoints are distinct: the boundary one reads the /brd receipt,
 // this one reads the decisions verdict. Confusing them would block the wrong
 // stretch, so the stage must be explicit rather than inferred.
-test('--stage render is only defined for /spec', () => {
+test('--stage render is defined for the phases that can re-enter, and only those', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'render-phase-'));
-  assert.strictEqual(handoffCheck(['--phase', 'design', '--stage', 'render', '--root', dir], dir), 2);
+  // /test renders nothing and has no --render-only to come back through.
+  assert.strictEqual(handoffCheck(['--phase', 'test', '--stage', 'render', '--root', dir], dir), 2);
   assert.strictEqual(handoffCheck(['--phase', 'spec', '--stage', 'bogus', '--root', dir], dir), 2);
+  assert.strictEqual(handoffCheck(['--phase', 'design', '--stage', 'render', '--root', dir], dir), 0,
+    'design has --render-only, so its render stage is defined');
+});
+
+// The measurement is /spec's. /design has never been metered, so its block must
+// not present /spec's figure as its own — a control that cites evidence it does
+// not have is the same class of defect as a gate that passes on invented input.
+test('each phase cites evidence it actually has', () => {
+  assert.match(renderHandoffBlock('spec'), /On a metered run this/);
+  assert.match(renderHandoffBlock('design'), /The equivalent stretch\s+in \/spec was/);
+  assert.doesNotMatch(renderHandoffBlock('design'), /On a metered run this/);
 });

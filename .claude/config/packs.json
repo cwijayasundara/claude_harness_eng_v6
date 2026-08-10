@@ -181,6 +181,7 @@
         "canvas-sync",
         "contract-schema",
         "decision-record",
+        "decision-verdict",
         "gate-receipt-sensor",
         "prd-milestones",
         "gates-planning",
