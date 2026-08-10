@@ -231,3 +231,78 @@ test('a story tracing to a deferred requirement is not net-new — deferred ids 
   assert.strictEqual(r.status, 0, r.out);
   assert.doesNotMatch(r.out, /NET-NEW/);
 });
+
+// --- the adopted spine survives the render ------------------------------------
+//
+// Reproduces the live failure on the real fixture: a run whose renderer re-keyed
+// every requirement from the spine id (FRD-n) to the PRD label (FR-n). Both
+// existing hard gates passed it — grounding is satisfied by any spine that
+// traces — and the result was two runs of the same pipeline emitting
+// brd-requirements.json in two different id spaces.
+
+const ADOPT = path.join(ROOT, '.claude/scripts/brd-adopt.js');
+
+/** A real adopted workspace, from the real PRD through the real adopter. */
+function adoptedRoot() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'shortlink-adopt-'));
+  fs.mkdirSync(path.join(dir, 'specs/brd'), { recursive: true });
+  const markdown = fs.readFileSync(PRD, 'utf8');
+  fs.writeFileSync(path.join(dir, 'specs/brd/source-frd.md'), markdown);
+  fs.writeFileSync(path.join(dir, 'specs/brd/frd-requirements.json'),
+    JSON.stringify(extractSpine(markdown), null, 1));
+  execFileSync('node', [ADOPT, '--root', dir]);
+  return dir;
+}
+
+const spinePath = (dir) => path.join(dir, 'specs/brd/brd-requirements.json');
+const readSpine = (dir) => JSON.parse(fs.readFileSync(spinePath(dir), 'utf8'));
+
+const verifySpine = (dir) => {
+  try {
+    return { status: 0, out: execFileSync('node', [ADOPT, '--root', dir, '--verify'], { encoding: 'utf8' }) };
+  } catch (err) {
+    return { status: err.status, out: `${err.stdout || ''}${err.stderr || ''}` };
+  }
+};
+
+test('every adopted requirement carries its PRD label, so the two id spaces join', () => {
+  const spine = readSpine(adoptedRoot());
+  assert.strictEqual(spine.length, 24);
+  for (const req of spine) {
+    assert.match(req.label, /^(FR|NFR)-\d+$/,
+      `${req.id} has no label; milestones and acceptance key on it`);
+  }
+  // The join the milestone scope actually performs.
+  const milestones = JSON.parse(fs.readFileSync(
+    path.join(path.dirname(spinePath(adoptedRoot())), 'brd-milestones.json'), 'utf8'));
+  const labels = new Set(spine.map((r) => r.label));
+  for (const m of milestones) {
+    for (const id of m.requirements) {
+      assert.ok(labels.has(id), `${m.id} names ${id}, which resolves to no requirement label`);
+    }
+  }
+});
+
+test('--verify passes on the untouched adopted spine', () => {
+  const r = verifySpine(adoptedRoot());
+  assert.strictEqual(r.status, 0, r.out);
+  assert.match(r.out, /24 adopted requirements intact/);
+});
+
+test('--verify catches the live failure: the spine re-keyed to PRD labels', () => {
+  const dir = adoptedRoot();
+  fs.writeFileSync(spinePath(dir), JSON.stringify(
+    readSpine(dir).map((r) => ({ ...r, id: r.label, traces: [r.label] })), null, 1));
+  const r = verifySpine(dir);
+  assert.strictEqual(r.status, 1, 'this is exactly what shipped unnoticed');
+  assert.match(r.out, /re-keyed/);
+});
+
+// What the renderer is supposed to do must keep passing, or the gate is a
+// blocker on correct behaviour rather than a check on incorrect behaviour.
+test('--verify passes after the renderer fills the taxonomy slots it owns', () => {
+  const dir = adoptedRoot();
+  fs.writeFileSync(spinePath(dir), JSON.stringify(
+    readSpine(dir).map((r) => ({ ...r, taxonomy: ['functional'] })), null, 1));
+  assert.strictEqual(verifySpine(dir).status, 0);
+});

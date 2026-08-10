@@ -339,3 +339,140 @@ test('the milestone plan comes from the PRD beside the spine being adopted', () 
   assert.deepStrictEqual(plan.map((m) => m.id), ['M2'],
     "sprint 2 must read its own PRD, not the previous sprint's");
 });
+
+// --- the PRD label ------------------------------------------------------------
+//
+// The BRD carried two id spaces with no machine-readable join. Requirements were
+// keyed on the extractor's spine id (FRD-1) with the PRD's own identifier
+// surviving only inside the free-text `section` ("4. Functional … / FR-1"),
+// while brd-milestones.json#requirements and brd-acceptance.json#requirement
+// both key on that identifier (FR-1).
+//
+// The adopter already resolved the identifier internally to link acceptance —
+// it simply never wrote it down. So every consumer that needed to join the two
+// spaces had to re-parse the section prose, and a live /spec run instead
+// hand-built a mapping file and passed a hard gate against it.
+
+const LABELLED = [
+  { id: 'FRD-1', text: 'Register and sign in.', section: '4. Functional Requirements / FR-1' },
+  { id: 'FRD-2', text: 'Create a short link.', section: '4. Functional Requirements / FR-2' },
+  { id: 'FRD-3', text: 'p95 under 50ms.', section: '5. Non-Functional Requirements / NFR-1' },
+];
+
+test('an adopted requirement carries the PRD identifier as a field, not only in prose', () => {
+  const { requirements } = adoptRequirements(LABELLED);
+  assert.deepStrictEqual(requirements.map((r) => r.label), ['FR-1', 'FR-2', 'NFR-1']);
+});
+
+test('the label is what milestones and acceptance already key on', () => {
+  const { requirements } = adoptRequirements(LABELLED);
+  const acceptance = adoptAcceptance([
+    ...LABELLED,
+    { id: 'FRD-4', text: 'Given …, then 201.', section: '6. Acceptance / FR-2 AC' },
+  ]);
+  const gated = acceptance[0];
+  assert.strictEqual(gated.requirement, 'FR-2');
+  assert.ok(requirements.some((r) => r.label === gated.requirement),
+    'the acceptance link must resolve against a requirement field, not a parsed section');
+});
+
+// A plain section heading carries no per-requirement identifier. Inventing one
+// would be worse than none: downstream would join on a label nobody wrote.
+test('a requirement whose section names no identifier gets label null', () => {
+  const { requirements } = adoptRequirements(FRD);
+  assert.ok(requirements.every((r) => r.label === null));
+});
+
+test('the spine id is still the id — the label is additive, not a rename', () => {
+  const { requirements } = adoptRequirements(LABELLED);
+  assert.deepStrictEqual(requirements.map((r) => r.id), ['FRD-1', 'FRD-2', 'FRD-3']);
+  assert.deepStrictEqual(requirements.map((r) => r.traces), [['FRD-1'], ['FRD-2'], ['FRD-3']]);
+});
+
+// --- the adopted spine must survive the render --------------------------------
+//
+// brd-render is told in plain words to leave `id` and `text` untouched in
+// --prd/--frd mode, and its own SKILL admits "neither hard gate can catch it"
+// if it does not: an adopted spine passes the grounding gate as an identity,
+// and a re-keyed spine that still carries `traces` passes it as coverage.
+//
+// A live run re-keyed all 24 requirements from the spine ids to the PRD labels.
+// Nothing noticed, and the result was that two runs of the same pipeline emitted
+// brd-requirements.json in two different id spaces. --verify re-derives the
+// spine from the immutable source and compares, so the rule is checkable rather
+// than merely stated.
+
+const LABELLED_CLI = [
+  { id: 'FRD-1', text: 'Register and sign in.', section: '4. Functional Requirements / FR-1' },
+  { id: 'FRD-2', text: 'Create a short link.', section: '4. Functional Requirements / FR-2' },
+];
+
+function verify(root, args = []) {
+  try {
+    const stdout = execFileSync('node', [CLI, '--root', root, '--verify', ...args], { encoding: 'utf8' });
+    return { status: 0, out: stdout };
+  } catch (err) {
+    return { status: err.status, out: `${err.stdout || ''}${err.stderr || ''}` };
+  }
+}
+
+const reqPath = (root) => path.join(root, 'specs', 'brd', 'brd-requirements.json');
+const readReq = (root) => JSON.parse(fs.readFileSync(reqPath(root), 'utf8'));
+const writeReq = (root, data) => fs.writeFileSync(reqPath(root), JSON.stringify(data, null, 1));
+
+test('--verify passes on a freshly adopted spine', () => {
+  const r = verify(runAdopt(LABELLED_CLI));
+  assert.strictEqual(r.status, 0, r.out);
+  assert.match(r.out, /OK/);
+});
+
+// What brd-render is SUPPOSED to do: fill taxonomy, leave id and text alone.
+test('--verify passes after the renderer fills the taxonomy slots', () => {
+  const root = runAdopt(LABELLED_CLI);
+  writeReq(root, readReq(root).map((r) => ({ ...r, taxonomy: ['functional'] })));
+  const r = verify(root);
+  assert.strictEqual(r.status, 0, r.out);
+});
+
+// The live failure, now catchable.
+test('--verify fails when the renderer re-keys the spine to the PRD labels', () => {
+  const root = runAdopt(LABELLED_CLI);
+  writeReq(root, readReq(root).map((r) => ({ ...r, id: r.label, traces: [r.label] })));
+  const r = verify(root);
+  assert.strictEqual(r.status, 1);
+  assert.match(r.out, /FRD-1/);
+});
+
+test('--verify fails when a requirement is dropped or invented', () => {
+  const dropped = runAdopt(LABELLED_CLI);
+  writeReq(dropped, readReq(dropped).slice(1));
+  assert.strictEqual(verify(dropped).status, 1);
+
+  const invented = runAdopt(LABELLED_CLI);
+  writeReq(invented, [...readReq(invented), { id: 'FRD-99', text: 'invented', label: null, traces: ['FRD-99'] }]);
+  const r = verify(invented);
+  assert.strictEqual(r.status, 1);
+  assert.match(r.out, /FRD-99/);
+});
+
+// The paraphrase R2 exists to remove. Re-wording is exactly as undetectable as
+// re-keying was, and just as much a silent change to the immutable baseline.
+test('--verify fails when a requirement is silently re-worded', () => {
+  const root = runAdopt(LABELLED_CLI);
+  writeReq(root, readReq(root).map((r, i) => (i ? r : { ...r, text: 'Register, sign in, and reset a password.' })));
+  const r = verify(root);
+  assert.strictEqual(r.status, 1);
+  assert.match(r.out, /text/i);
+});
+
+test('--verify fails loudly when there is nothing to verify against', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'brd-verify-none-'));
+  fs.mkdirSync(path.join(root, 'specs', 'brd'), { recursive: true });
+  const r = verify(root);
+  assert.strictEqual(r.status, 2, 'a missing source must not read as a clean bill of health');
+});
+
+test('--verify honours --out-dir, so delta sprints are checkable too', () => {
+  const root = runAdopt(LABELLED_CLI, ['--out-dir', 'specs/brd/sprint-2']);
+  assert.strictEqual(verify(root, ['--out-dir', 'specs/brd/sprint-2']).status, 0);
+});

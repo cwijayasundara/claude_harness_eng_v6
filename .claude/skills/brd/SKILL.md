@@ -364,9 +364,29 @@ using the Step 0.5 budget, append the confirmed answers to
 items is working correctly.
 
 In `--prd` / `--frd` mode the spine is already adopted deterministically
-(Step 0.1), so the renderer is expanding, never re-deriving. Check its return
-against that: a BRD requirement whose text differs from its adopted source is a
-paraphrase, and paraphrase is what R2 removed.
+(Step 0.1), so the renderer is expanding, never re-deriving.
+
+**Prove it — do not read for it [HARD BLOCK, `--prd` / `--frd` only]:**
+
+```bash
+node .claude/scripts/brd-adopt.js --verify
+```
+
+This re-derives the spine from the immutable source and compares `id`, `text`
+and `label` against what is on disk. Exit 1 means the renderer changed the
+baseline it was told to leave alone — restore it from the source, or fix the
+source document and re-adopt. Exit 2 means there is nothing to verify against,
+which is a setup problem, not a pass.
+
+Neither existing hard gate can catch this: an adopted spine passes the grounding
+gate as an identity, and a re-keyed spine that still carries `traces` passes it
+as coverage. A live run re-keyed all 24 requirements from the spine ids
+(`FRD-n`) to the PRD labels (`FR-n`) and nothing noticed — leaving two runs of
+the same pipeline emitting `brd-requirements.json` in two different id spaces,
+which is what stranded a milestone-scoped gate downstream with no way to join
+them.
+
+(In delta mode add the same `--out-dir specs/brd/sprint-N` you adopted with.)
 
 ### Step 4.5 — Phase Evaluation Gate
 
@@ -480,6 +500,8 @@ phase's context being re-billed through the next one.
 ## Gate
 
 **Grounding gate — hard block (both modes).** `grounding-check.js` proves mechanically that the BRD invented nothing (`net_new`) and dropped nothing (`dropped`) relative to the FRD spine (FRD mode) or the confirmed interview spine (interview mode), plus clarifications. Any violation blocks before the rubric even runs, regardless of quality score — see Step 4.4.
+
+**Adopted-spine integrity — hard block (`--prd` / `--frd` only).** `brd-adopt.js --verify` proves the renderer left `id`, `text` and `label` exactly as adoption produced them, filling only `taxonomy`. This is the one property the grounding gate structurally cannot check, because grounding is satisfied by any spine that traces — including a re-keyed or re-worded one. See Step 4.2.
 
 **Taxonomy floor — hard block (both modes).** `brd-taxonomy-check.js` proves every one of the ten requirement slots is either covered by a tagged requirement or excused with a substantive, committed reason — the check the grounding gate structurally cannot make, since grounding is relative to a source that may itself be silent. See Step 4.45.
 

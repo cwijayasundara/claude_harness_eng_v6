@@ -1,8 +1,9 @@
 {
-  "count": 161,
+  "count": 162,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
+    "adopted-spine-integrity",
     "adversarial-code-review",
     "adversarial-security-certification",
     "advisor",

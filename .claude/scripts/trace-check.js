@@ -54,14 +54,16 @@ function classify(downstream, groundedIds) {
 }
 
 // The BRD carries two id spaces, and a milestone scope has to join across them.
-//   brd-adopt.js  -> requirements keyed on the spine id (`FRD-1`), the PRD label
-//                    surviving only inside `section` ("4. Functional … / FR-1").
+//   brd-requirements.json -> keyed on the spine id (`FRD-1`), carrying the PRD's
+//                    own identifier in `label` (`FR-1`).
 //   brd-milestones.json#requirements and brd-acceptance.json#requirement -> the
-//                    PRD label (`FR-1`).
+//                    PRD label.
 // `/spec` copies the milestone's list into `requirements_in_scope`, so a scope
-// always arrives in label space while `--required` may be in either. Matching on
-// `id` alone selects nothing on adopter output and rejects every acceptance
-// item — which is what left milestone scoping with no supported route.
+// always arrives in label space while `--required` may be in either.
+//
+// `label` is written by brd-adopt.js. Parsing it back out of `section` is the
+// fallback for spines adopted before that field existed: the adopter builds that
+// string deterministically and shortlink-prd-roundtrip pins the format.
 const SECTION_LABEL = /\/\s*((?:FR|NFR)-[\w.]+)(?:\s+AC)?\s*$/;
 
 function labelFromSection(section) {
