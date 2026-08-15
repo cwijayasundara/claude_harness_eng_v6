@@ -171,6 +171,8 @@ function checkLength(toolName, ti, filePath, ext) {
 
 function checkTdd(projectDir, filePath) {
   if ((process.env.HARNESS_TDD_GATE || '').toLowerCase() === 'off') return;
+  const { loadTestDiscipline, tddStackEnabled } = require('./lib/test-discipline');
+  if (!tddStackEnabled(loadTestDiscipline(projectDir, process.env))) return;
   const missing = missingTest(projectDir, filePath.replace(/\\/g, '/'));
   if (!missing) return;
   const shown = missing.slice(0, 4).map((p) => '  - ' + path.relative(projectDir, p)).join('\n');
@@ -195,6 +197,7 @@ function checkTestWriteLock(projectDir, filePath) {
     filePath: path.relative(real, realResolve(filePath)),
     contentHash: hashFile(realResolve(filePath)),
     env: process.env,
+    projectDir,
   });
   if (decision.blocked) block(decision.message);
 }

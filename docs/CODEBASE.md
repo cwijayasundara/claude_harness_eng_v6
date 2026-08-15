@@ -14,7 +14,7 @@ _Source: `README.md`_
 | Metric | Value |
 |---|---|
 | Indexed files | 482 |
-| Graph edges | 2222 |
+| Graph edges | 2228 |
 | Concept pages | 20 |
 | Wiki cluster pages | 20 |
 
@@ -34,7 +34,7 @@ npm run ask -- "..."     # ask the codebase
 | Module | fan-in | fan-out |
 |---|---|---|
 | `test/helpers/hook-fixture.js` | 25 | 0 |
-| `test/helpers/skill-corpus.js` | 24 | 0 |
+| `test/helpers/skill-corpus.js` | 25 | 0 |
 | `test/e2e/helpers/claude-runner.js` | 17 | 0 |
 | `test/e2e/helpers/project-suite.js` | 9 | 0 |
 | `test/helpers/pre-commit-fixtures.js` | 9 | 0 |

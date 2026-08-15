@@ -3,14 +3,14 @@
 > Deterministic, always-current map rendered from `code-graph.json`. No LLM — re-rendered on graph change.
 
 - Producer: `vendored-ast`  ·  Language: `mixed`
-- Modules: 482  ·  Edges: 2222  ·  Clusters: 50
+- Modules: 482  ·  Edges: 2228  ·  Clusters: 50
 
 ## Hubs (most-depended-on)
 
 | Module | fan-in | fan-out |
 |---|---|---|
 | `js:test/helpers/hook-fixture.js` | 25 | 5 |
-| `js:test/helpers/skill-corpus.js` | 24 | 2 |
+| `js:test/helpers/skill-corpus.js` | 25 | 2 |
 | `js:test/e2e/helpers/claude-runner.js` | 17 | 4 |
 | `js:test/e2e/helpers/project-suite.js` | 9 | 3 |
 | `js:test/helpers/pre-commit-fixtures.js` | 9 | 3 |
@@ -62,7 +62,6 @@ _(none)_
 - [test/e2e](concepts/test__e2e.md)
 - [symphony_clone/src](concepts/symphony_clone__src.md)
 - [dsl-packs/private-equity](concepts/dsl-packs__private-equity.md)
-- [tools/partition-report.js](concepts/tools__partition-report.js.md)
 - [test/fixtures](concepts/test__fixtures.md)
 - [symphony_clone/test](concepts/symphony_clone__test.md)
 - [test/evals](concepts/test__evals.md)
@@ -78,6 +77,7 @@ _(none)_
 - [test/approve-fixtures.test.js](concepts/test__approve-fixtures.test.js.md)
 - [test/approved-fixtures-gate.test.js](concepts/test__approved-fixtures-gate.test.js.md)
 - [test/archive-state.test.js](concepts/test__archive-state.test.js.md)
+- [test/artifact-eval-tier.test.js](concepts/test__artifact-eval-tier.test.js.md)
 
 _(Hash-cached concept pages from `nav-concepts.js`.)_
 

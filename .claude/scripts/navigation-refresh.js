@@ -123,6 +123,15 @@ function runIndexer(projectDir) {
     'render', '--graph', graph, '--out', path.join(projectDir, 'specs/brownfield/wiki'),
   ], { encoding: 'utf8', timeout: 30000 });
   if (wiki.status !== 0) return { ok: false, error: (wiki.stderr || wiki.stdout || '').trim() };
+  try {
+    const built = JSON.parse(fs.readFileSync(graph, 'utf8'));
+    if (built.meta) {
+      fs.writeFileSync(
+        path.join(projectDir, 'specs/brownfield/code-graph.meta.json'),
+        `${JSON.stringify(built.meta, null, 2)}\n`,
+      );
+    }
+  } catch (_) { /* indexer already wrote meta, or graph is unreadable */ }
   return { ok: true };
 }
 

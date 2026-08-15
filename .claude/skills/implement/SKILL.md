@@ -44,7 +44,7 @@ If any prerequisite is missing, stop and report what is absent. Do not proceed w
 
 ### Step -1 — Load Brownfield Constraints + Context-First
 
-**Context-first (Iron Law).** When `specs/brownfield/code-graph.json` is real, for each story (or the group goal) run before broad source exploration:
+**Context-first (Iron Law).** When `specs/brownfield/code-graph.json` is real (`code-graph.meta.json#status` is not `empty` and `producer` is not `none` — a scaffold placeholder is not brownfield-ready), for each story (or the group goal) run before broad source exploration:
 
 ```bash
 node .claude/scripts/context-pack.js --diff --budget 1600 "<story problem / AC summary>"
@@ -85,7 +85,11 @@ A canary failure means fix the pattern (or escalate) before spawning the full te
 
 ### Step 1 — Load Quality Principles
 
-Read `.claude/skills/code-gen/SKILL.md` in full. Its core quality principles apply to every line of code produced. Inject the full text into every teammate prompt.
+Read `project-manifest.json#quality.test_discipline` (`outcomes` | `tdd` | `at-first`; default `outcomes` on new scaffolds). Inject the matching **Testing Rules** excerpt from `.claude/skills/code-gen/SKILL.md` plus Core Quality Principles 1–10 — not the whole skill file (API wrappers, LLM, production-standards wait until the story needs them).
+
+- **`outcomes`** — tests and production code together at the named seams in `specs/test_artefacts/test-plan.md`. Coverage and test-deletion still apply. Mutation-smoke is `sensor_tier=strict` only.
+- **`tdd`** — write-lock / red-phase / test-integrity: failing test first, then the minimum code.
+- **`at-first`** — for behavior stories, run `writing-acceptance-tests-first` (AT + red receipt) before production edits.
 
 Pay particular attention to deep modules and public-interface testing:
 - New modules must hide meaningful behavior behind a small interface.
@@ -128,19 +132,24 @@ Also read `CONTEXT.md` when present and inject it into every teammate spawn prom
 
 The agent-team execution protocol is defined **once**, in `/auto` SECTION 4 (Agent Team Execution) — `.claude/skills/auto/SKILL.md`. Follow it verbatim in **standalone mode** (skip SECTION 3's sprint-contract negotiation): the mandatory team spawn for 2+ story groups (1 teammate per story, max 5 concurrent, batch the remainder), the orchestrator and teammate spawn prompt templates, model tiering, the shared-type dependency handshake, and the spawn-evidence logging to `.claude/state/iteration-log.md`. Do not restate or improvise that protocol here — if this skill and SECTION 4 ever disagree, SECTION 4 wins.
 
-For a **single-story** group, skip the team: use the generator agent directly — present a plan, await approval, write the failing test first, watch it fail, then implement the minimum to pass.
+For a **single-story** group, skip the team: use the generator agent directly — present a plan, await approval, then follow `quality.test_discipline` (outcomes: tests and code together at the named seam; tdd: failing test first; at-first: AT + red receipt, then implement).
 
-> **Ratchet warning:** `/implement` runs outside the `/auto` loop, so its output bypasses auto's ratchet Gates 1–7 (contract negotiation, evaluator scoring, regression ratchet, security gate). Steps 6–7 below cover validation and clean-code review only. **Run `/evaluate` (or `/gate`) on the group after this skill completes** before treating it as merge-ready.
+> **Ratchet warning:** `/implement` runs outside the `/auto` loop. Step 6 runs tests + `run-gate-checks.js`; Step 7 is the 2-axis review. Spawn `/evaluate` (or `/gate`) after this skill completes — the evaluator is end-of-run, not per group.
 
 ### Step 6 — Validation Gate
 
 After all teammates (or the generator) complete:
 
 1. Run the full test suite: `npm test` or `pytest` (whichever applies to the project).
-2. Run the linter: `npm run lint` or `ruff check .`.
-3. Run the type checker: `tsc --noEmit` or `mypy .`.
+2. Run the sensor runner (same registry as `/auto` SECTION 5 and the git pre-commit hook):
 
-All three must pass with zero errors before proceeding. If any fails:
+```bash
+node .claude/scripts/run-gate-checks.js
+```
+
+Honor a non-zero exit. Do not restate lint, types, coverage, or mutation as a second list — the runner already applies `sensor_tier`.
+
+All of the above must pass before proceeding. If tests or the runner fail:
 
 - **Few errors (≤ ~15, mostly one package):** return the failure output to the responsible teammate for a fix, then re-run the validation gate.
 - **Many lint/type errors (≥ ~15 findings or ≥ 3 packages):** invoke **REQUIRED SUB-SKILL: `fix-from-diagnostics`** — capture tool output, run `diagnostics-shard.js`, fix by shard, then re-run this gate. Do not thrash the full suite between shards.
@@ -153,8 +162,11 @@ Resolve review mode before spawning reviewers:
 node .claude/scripts/review-tier.js --files <changed_production_file_count> --lines <changed_line_count> [--security-boundary]
 ```
 
-- **`mode: standard`** (default under auto thresholds): spawn **one** `code-reviewer` on the changed files; it writes `specs/reviews/code-review-verdict.json` as today.
-- **`mode: adversarial`**: spawn **two independent** `code-reviewer` instances in parallel (fresh context per instance via the Agent tool — no shared conversation). Each receives only the diff/changed-file list, acceptance criteria, and `specs/reviews/review-context-pack.md` when present — **nothing** from the builder's reasoning, progress logs, or teammate chat. Write:
+- **`mode: standard`** (default under auto thresholds): spawn **one** `code-reviewer` that runs two parallel axis sub-agents. Do not merge their scores.
+  - **Standards** — code-gen excerpt, learned rules. Axis: `standards`.
+  - **Spec** — sealed stories in this group + `specs/design/program-design.md`. Not the builder transcript. Axis: `spec`.
+  Concatenate findings into `specs/reviews/code-review-verdict.json`. `pass` is false if either axis has a BLOCK.
+- **`mode: adversarial`**: only when `review-tier.js` says so (size or `--security-boundary`). Spawn **two independent** `code-reviewer` instances in parallel (fresh context per instance via the Agent tool — no shared conversation). Each receives only the diff/changed-file list, acceptance criteria, sealed stories, `program-design.md`, and `specs/reviews/review-context-pack.md` when present — **nothing** from the builder's reasoning, progress logs, or teammate chat. Each instance runs both axes. Write:
   - instance A → `specs/reviews/code-review-verdict-a.json` (+ optional `code-review-a.md`)
   - instance B → `specs/reviews/code-review-verdict-b.json` (+ optional `code-review-b.md`)
   Then merge with the policy from `review-tier.js` (default **union** — any BLOCK fails):
@@ -189,7 +201,7 @@ If the reviewer still emits BLOCK findings after 3 retries, escalate to the user
 ## Rules
 
 - Every file produced must trace to a story in the current group. No story, no code.
-- Tests are written first, against the public interface. No implementation code may be written until the failing test has been observed.
+- Tests verify public interfaces at the named seams. Under `tdd`, no implementation until the failing test has been observed. Under `outcomes`, land tests and code together. Under `at-first`, the AT + red receipt come first for behavior stories.
 - No speculative code ("might need later"). If it is not in an acceptance criterion, it does not exist.
 - No implementation for stories marked `needs_breakdown`. Break the story down and update `specs/stories/`, `dependency-graph.md`, `component-map.md`, and `features.json` first.
 - Teammates may not edit files outside their ownership assignment without coordinator approval.

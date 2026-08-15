@@ -72,7 +72,7 @@ function evaluationBlock() {
     ui_base_url: 'http://localhost:3000',
     health_check: '/health',
     design_score_threshold: 7,
-    design_max_iterations: 10,
+    design_max_iterations: 3,
     test_corpus_dir: 'specs/test_artefacts',
   };
 }
@@ -137,9 +137,17 @@ function defaultSensorTier(profile, topology) {
   return 'standard';
 }
 
+function defaultTestDiscipline(profile) {
+  const explicit = profile.testDiscipline
+    || (profile.quality && profile.quality.test_discipline);
+  if (explicit === 'outcomes' || explicit === 'tdd' || explicit === 'at-first') return explicit;
+  return 'outcomes';
+}
+
 function qualityBlock(profile, topology) {
   const quality = {
     sensor_tier: defaultSensorTier(profile, topology),
+    test_discipline: defaultTestDiscipline(profile),
     agent_readiness: {
       mode: 'report',
       min_active_pillars: 3,
@@ -317,11 +325,11 @@ function calibrationProfile(projectType) {
       threshold: consumer ? 8 : 6,
       per_criterion_minimum: consumer ? 5 : 4,
     },
-    iteration: { max_iterations: consumer ? 10 : 5, plateau_window: 3, plateau_delta: 0.3, pivot_after_plateau: consumer },
+    iteration: { max_iterations: 3, plateau_window: 3, plateau_delta: 0.3, pivot_after_plateau: consumer },
   };
 }
 
 module.exports = {
   lspServers, buildManifest, renderClaudeMd, renderTemplate, initShValues, calibrationProfile,
-  renderProjectReadme, deriveFrameworkPacks, defaultSensorTier, qualityBlock,
+  renderProjectReadme, deriveFrameworkPacks, defaultSensorTier, defaultTestDiscipline, qualityBlock,
 };

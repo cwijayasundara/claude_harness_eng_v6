@@ -91,7 +91,7 @@ describe('Harness E2E — Real Workflow Certification', { timeout: 1800000 }, ()
     });
     logResult('brd', { exitCode: brd.exitCode, signal: brd.signal });
     assertArtifact('specs/brd/brd.md', 'BRD');
-    assertArtifact('specs/reviews/phase-brd-eval.json', 'BRD phase evaluation');
+    assertArtifact('specs/brd/brd-requirements.json', 'BRD requirement spine');
 
     const spec = runClaude('/spec', {
       cwd: PROJECT_DIR,
@@ -105,7 +105,6 @@ describe('Harness E2E — Real Workflow Certification', { timeout: 1800000 }, ()
     logResult('spec', { exitCode: spec.exitCode, signal: spec.signal });
     assert.ok(listFiles('specs/stories', /^E\d+-S\d+.*\.md$/).length >= 1, 'spec must write at least one story');
     assertArtifact('features.json', 'features registry');
-    assertArtifact('specs/reviews/phase-spec-eval.json', 'spec phase evaluation');
 
     const design = runClaude('/design', {
       cwd: PROJECT_DIR,
@@ -119,7 +118,7 @@ describe('Harness E2E — Real Workflow Certification', { timeout: 1800000 }, ()
     logResult('design', { exitCode: design.exitCode, signal: design.signal });
     assertArtifact('specs/design/component-map.md', 'component map');
     assertArtifact('specs/design/api-contracts.md', 'API contracts');
-    assertArtifact('specs/reviews/phase-design-eval.json', 'design phase evaluation');
+    assertArtifact('specs/design/program-design.md', 'program design');
 
     const build = runClaude('/build --lite implement the approved Node.js CLI todo app with add, list, complete, and delete commands', {
       cwd: PROJECT_DIR,

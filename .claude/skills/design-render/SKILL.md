@@ -1,6 +1,6 @@
 ---
 name: design-render
-description: "[Internal pipeline stage — dispatched by /design after its decisions gate passes; invoke directly only to re-render an approved decisions file.] Expand design-decisions.json into the architecture documents, machine-readable schemas, REASONS Canvas and UI mockups."
+description: "[Internal pipeline stage — dispatched by /design after its decisions gate passes; invoke directly only to re-render an approved decisions file.] Expand design-decisions.json into architecture, program-design.md, contracts, component-map, and UI mockups only when UI stories exist."
 argument-hint: "[--sprint N]"
 context: fork
 agent: generator
@@ -65,12 +65,17 @@ Read all ready story files in `specs/stories/`, plus `epics.md` and
 as inputs. Ignore anything listed in `backlog-needs-breakdown.md`. Read
 `CONTEXT.md` and reuse its vocabulary verbatim.
 
-Write to `specs/design/`:
+Write to `specs/design/`. The **review surface** is `architecture.md` +
+`program-design.md` + `component-map.md` — see
+`plan-review-loop/references/lean-review-surface.md`.
 
-1. **architecture.md** — the recorded-decisions table first, then components,
-   data flows, infrastructure topology. For every major module: its public
-   interface, invariants, error modes, and why it is deep enough to justify
-   existing. No pass-through modules that only forward calls.
+1. **architecture.md** — the recorded-decisions table first, then a sequence
+   diagram, components, and data flows. Keep it short enough to review in one
+   sitting. No pass-through modules that only forward calls.
+1b. **program-design.md** — **required.** Copy the shape from
+   `.claude/templates/program-design.template.md`: types, method signatures,
+   call-stack tree (diff syntax for changes), file-tree diff. This is what the
+   human approves instead of implied internals.
 2. **api-contracts.md** — every endpoint: method, path, request schema
    (headers, params, body), response schema for success *and* error, auth
    requirements, rate limits.
@@ -100,11 +105,15 @@ Carry the Step 0.7 modularity assessment from the decisions file into
 `architecture.md` and the Canvas: domain classification, volatility, module
 boundaries, integration contracts, coupling risks.
 
-### Step 2 — Render the UI mockups
+### Step 2 — Render the UI mockups [UI stories only]
 
-Read `.claude/skills/design/references/ui-mockups.md` and follow it. One
-self-contained `.html` per UI-layer story, named `E{n}-S{n}.html`, into
-`specs/design/mockups/`. Field names must match `api-contracts.md`.
+Skip this step when no ready story has `layer: UI`. Do not invent mockups for
+API-only work.
+
+When UI stories exist, read `.claude/skills/design/references/ui-mockups.md`
+and follow it. One self-contained `.html` per UI-layer story, named
+`E{n}-S{n}.html`, into `specs/design/mockups/`. Field names must match
+`api-contracts.md`.
 
 ### Step 3 — Machine-readable artifacts, then hand back
 

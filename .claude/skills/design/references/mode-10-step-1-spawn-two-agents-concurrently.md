@@ -88,8 +88,9 @@ Exit 1 means §2.5 was skipped and this is still the shaping session. Stop and
 hand off as above rather than working around it.
 
 Invoke the `design-render` skill (forked, sidekick model), passing any
-`--sprint N`. It re-runs the gate at its own Step 0 and renders the nine
-documents, the two schemas, the REASONS Canvas, and one mockup per UI story.
+`--sprint N`. It re-runs the gate at its own Step 0 and renders the lean
+set: architecture, **program-design**, contracts, component-map, schemas, the
+REASONS Canvas when written, and one mockup per **UI** story only.
 
 **One dispatch, not one per document.** Coarse handoffs keep the renderer's
 context cached; per-document round-trips pay cache creation on every switch and
@@ -156,9 +157,13 @@ Exit code 1 means a real vocabulary mismatch: an entity/model name in `domain_co
 
 > **Living artifact — fix the prompt first (gap G4).** The Canvas is not write-once. When a later `/change` or `/refactor` alters behavior or moves code, update `reasons-canvas.md` *with the same change* — change the design, then the code — and keep its `Governs` list accurate. The G2 drift monitor (`drift-report.js`) flags governed paths that vanished as **design-vs-code drift**, so a Canvas left to rot will surface in the next drift run rather than silently misleading the next reader.
 
-### Step 2 — Phase Evaluation Gate
+### Step 2 — Phase Evaluation Gate [`--eval` only]
 
-After `design-render` returns and Step 1.9 is green, spawn the `evaluator` agent (artifact mode) here in the main session. This replaces and extends the previous field-shape validation.
+Skip unless `--eval` or this design introduces an auth, tenant, migration, or
+external-trust boundary. Step 1.9's grounding, canvas, and vocabulary gates
+already proved the load-bearing properties.
+
+When `--eval` is on, after `design-render` returns and Step 1.9 is green, spawn the `evaluator` agent (artifact mode) here in the main session. This replaces and extends the previous field-shape validation.
 
 **Model tier — this is the one planning phase where the choice is real.** Default to `model: "sonnet"`: the traceability property is already proven deterministically by Step 1.9's grounding gate, and what the rubric adds on top is prose-level consistency plus the mockup/contract field-shape comparison. **Escalate to `model: "opus"` when this design introduces a security or data boundary the deterministic gates do not cover** — an authn/authz model, a tenant-isolation decision, a schema migration or a persisted-data reshape, an external trust boundary, or any area a `specs/brownfield/` risk map marks high-risk. Architecture is where a wrong call is most expensive to unwind, so escalate on doubt rather than on certainty. Record which tier ran in the Step 3 review brief.
 

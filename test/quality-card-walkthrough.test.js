@@ -101,6 +101,39 @@ test('pr-walkthrough groups files logically not alphabetically', () => {
   assert.ok(data.high_signal.some((f) => f.level === 'WARN'));
 });
 
+test('pr-walkthrough groups files by component-map story and attaches program-design', () => {
+  const root = tmp();
+  write(root, 'specs/design/component-map.md', [
+    '| Story | Files |',
+    '|-------|-------|',
+    '| E1-S1 | `src/services/orders.py` `src/api/routes.py` |',
+  ].join('\n'));
+  write(root, 'specs/design/program-design.md', [
+    '# Program design',
+    '',
+    '## Signatures',
+    '',
+    '```',
+    'createOrder(userId) -> Order',
+    '```',
+    '',
+    '## File tree',
+    '',
+    '```',
+    'src/services/orders.py',
+    '```',
+  ].join('\n'));
+  const { data, md } = walkthrough.buildWalkthrough({
+    root,
+    files: ['src/services/orders.py', 'src/api/routes.py'],
+    exec: () => { throw new Error('should not git'); },
+  });
+  assert.ok(data.slices.some((s) => s.story === 'E1-S1'));
+  assert.match(md, /Story \/ slice groups/);
+  assert.match(md, /Program design/);
+  assert.match(md, /File tree/);
+});
+
 test('classifyFile assigns entry/domain/test', () => {
   assert.equal(walkthrough.classifyFile('src/api/routes.ts'), 'entry');
   assert.equal(walkthrough.classifyFile('src/domain/order.py'), 'domain');

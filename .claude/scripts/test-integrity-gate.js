@@ -51,6 +51,10 @@ function renderFindings(findings) {
 
 /** @returns {{pass: boolean, findings: object[], reason: string}} */
 function evaluate(root) {
+  const { loadTestDiscipline, tddStackEnabled } = require('../hooks/lib/test-discipline');
+  if (!tddStackEnabled(loadTestDiscipline(root))) {
+    return { pass: true, vacuous: false, reason: 'discipline-not-tdd', findings: [] };
+  }
   const ledger = readLedger(root);
   if (ledger.state === 'invalid') {
     // A gate that cannot read its evidence must fail loud, never open.

@@ -29,8 +29,8 @@
     },
     "sensor_tiers": {
       "minimal": "Secrets + structural basics when configured; low-ceremony CLI/library work.",
-      "standard": "Default product posture — historical pre-commit set (including sprout-diff).",
-      "strict": "Standard plus architecture ratchets at commit (cycle-detection, coupling-ratchet, duplication-ratchet)."
+      "standard": "Default product posture — secrets, test-deletion, types, coverage, stub-smell, live-externals.",
+      "strict": "Standard plus mutation-smoke, cycle-detection, coupling-ratchet, duplication-ratchet, and security-baseline."
     },
     "sensor_tier_loader": ".claude/hooks/lib/sensor-tier.js",
     "gate_registry": ".claude/hooks/lib/gate-registry.js"
@@ -75,7 +75,16 @@
       "kind": "feedforward",
       "wired_at": ".claude/scripts/review-tier.js",
       "status": "active",
-      "description": "Tiered dual adversarial code review (Bun Phase A): review-tier.js resolves standard vs adversarial; adversarial spawns two independent code-reviewer instances and merge-review-verdicts.js (default union). Wired into /implement Step 7, /auto Gate 8, /change S6/I8. Defaults: review.adversarial=auto, min 8 files / 200 lines, or security-boundary / sensor_tier=strict."
+      "description": "Tiered dual adversarial code review (Bun Phase A): review-tier.js resolves standard vs adversarial. Standard mode is one code-reviewer with two parallel axes (Standards vs Spec; scores are not merged). Dual independent reviewers only when review-tier.js says so (size, security-boundary, sensor_tier=strict). Wired into /implement Step 7, /auto Gate 8, /change S6/I8. Defaults: review.adversarial=auto, min 8 files / 200 lines."
+    },
+    {
+      "id": "sealed-auto-pack",
+      "axis": "traceability",
+      "kind": "feedforward",
+      "wired_at": ".claude/skills/auto/references/section-2-2-context-recovery-step-1-of-every-iteration.md",
+      "status": "active",
+      "net_add_justification": "After the plan seal, /auto was still free to reload /brd and the full code-gen skill into the coding session — the plan/code split existed on disk but not in context. This guide names the sealed pack (plan-seal artifact list, features.json, program-design, component-map, test-plan seams, verification-matrix) and forbids reloading planning skills in full.",
+      "description": "Sealed context pack for /auto SECTION 2 after plan-seal.js check. Planning reads are the pack only; operational state (program.md, learned-rules, progress) stays. Draft PR is the coding-loop stop."
     },
     {
       "id": "git-safety-parallel",

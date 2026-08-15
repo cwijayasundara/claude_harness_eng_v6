@@ -15,6 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # OpenWiki reads git history to see what changed; a shallow clone
+          # starves it. Upstream fixed the same defect in its 0.3.0 example.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -24,6 +28,13 @@ jobs:
 
       - name: Install OpenWiki
         run: npm ci --prefix open_wiki
+
+      # Optional peer dependencies. Without them OpenWiki falls back to a
+      # lightweight Mermaid check; with them, validation matches what GitHub
+      # actually renders, so no broken diagram ships. CI-only on purpose —
+      # --no-save keeps them out of package.json and the lockfile.
+      - name: Install Mermaid validation peers
+        run: npm install --no-save --prefix open_wiki mermaid@11.16.0 jsdom@29.1.1
 
       - name: Refresh wiki with OpenAI
         run: npm run wiki:update --prefix open_wiki

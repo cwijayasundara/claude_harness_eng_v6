@@ -21,13 +21,14 @@ test('full auto and lite flags are order-independent', () => {
   assert.strictEqual(a.requiresPrd, true);
 });
 
-test('gated build keeps the per-phase human gates', () => {
+test('gated build keeps the per-phase human gates and stops after seal', () => {
   const r = parseBuildInvocation('/build docs/prd.md');
 
   assert.strictEqual(r.lane, 'gated');
   assert.strictEqual(r.prdPath, 'docs/prd.md');
   assert.strictEqual(r.humanGates, 3);
   assert.strictEqual(r.auto, false);
+  assert.strictEqual(r.stopsAfterSeal, true);
 });
 
 test('autonomous build has one consolidated approval gate', () => {
@@ -37,6 +38,7 @@ test('autonomous build has one consolidated approval gate', () => {
   assert.strictEqual(r.mode, 'lean');
   assert.strictEqual(r.pod, 3);
   assert.strictEqual(r.humanGates, 1);
+  assert.strictEqual(r.stopsAfterSeal, true);
 });
 
 test('full auto requires a PRD path', () => {
@@ -52,6 +54,13 @@ test('finalize is an explicit terminal lane', () => {
   assert.strictEqual(r.lane, 'finalize');
   assert.strictEqual(r.humanGates, 0);
   assert.strictEqual(r.requiresPrd, false);
+  assert.strictEqual(r.stopsAfterSeal, false);
+});
+
+test('headless --auto does not stop after seal', () => {
+  const r = parseBuildInvocation('/build docs/prd.md --auto');
+  assert.strictEqual(r.lane, 'auto');
+  assert.strictEqual(r.stopsAfterSeal, false);
 });
 
 test('PRD path is extracted when it precedes the flags (regression)', () => {

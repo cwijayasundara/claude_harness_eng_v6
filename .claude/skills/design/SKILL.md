@@ -1,6 +1,6 @@
 ---
 name: design
-description: "[Internal pipeline stage — run by /build (use --doc-only standalone for an ARB narrative); invoke directly only as a power user.] Generate system architecture, machine-readable schemas, and UI mockups. Spawns planner + generator concurrently."
+description: "[Internal pipeline stage — run by /build (use --doc-only standalone for an ARB narrative); invoke directly only as a power user.] Generate system architecture, program-design.md, machine-readable schemas, and UI mockups only for UI stories."
 argument-hint: "[--doc-only [path] | --delta --stories <dir> | --story <file> --amendment-id <id> | --baseline-recovery | --render-only]"
 ---
 
@@ -48,5 +48,5 @@ This skill is an **orchestrator index**. Read only the reference file for the mo
 
 ### Load-bearing names (always visible)
 
-Full/delta modes still run `trace-check.js`, `validate-canvas.js`, `vocabulary-check.js`, `modularity-pack.js`, `record-modularity-review.js`, and `contract-drift-gate.js` where the mode file specifies them. Wiring tests scan this entry file **and** `references/*.md` as one corpus.
+Full/delta modes still run `trace-check.js`, `validate-canvas.js`, `vocabulary-check.js`, `modularity-pack.js`, `record-modularity-review.js`, and `contract-drift-gate.js` where the mode file specifies them. The review surface is `architecture.md` + `program-design.md` + `component-map.md` (`plan-review-loop/references/lean-review-surface.md`). Wiring tests scan this entry file **and** `references/*.md` as one corpus.
 

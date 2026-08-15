@@ -81,6 +81,21 @@ Exit 1 means stale — the verdict was computed from planning files that have si
 
 Do NOT proceed until `node .claude/scripts/plan-approval.js check --phase all` exits 0. *(In `--autonomous` mode, do not present a design-only gate here — go to Phase 3.5, which presents the whole plan at once.)*
 
+**Seal and stop (gated only).** After that check is green and the lane is `gated` (or interactive `--lite`), run:
+
+```bash
+node .claude/scripts/plan-seal.js write
+```
+
+Then **end the session**. Do not run Phase 4 or `/auto`. Print:
+
+```text
+Plan sealed. /clear, then:
+  /auto --sealed
+```
+
+Coding in this session would re-bill the planning context on every turn. `--autonomous` seals after Phase 3.5. `--auto` writes a waived seal and continues.
+
 ### Phase 3.5 — Consolidated Plan Approval [`--autonomous` ONLY]
 
 **Skipped entirely in `--auto` (full-auto).** In full-auto there is no human approval gate — Phases 1–3 produce the plan and the pipeline proceeds straight to Phase 4. (In `--auto` you may still print the plan summary below for the log, but do **not** stop for approval.)
@@ -103,7 +118,7 @@ In `--autonomous` mode this is the **single** human gate. After Phases 1–3 hav
 6. **Plan confidence** from `specs/plan-confidence.json`: the band (high/medium/low) and its drivers — so the human approves with the planner's own uncertainty in view, not blind.
 7. **Projected spend** vs the budget cap: a rough estimate from the story/group count (`~N min · ~M agents · ~$K`, same rate table as `budget-state.js`) against the resolved cap — so the human sees the likely cost before approving. In `--auto`, if the projection already exceeds the cap before a single group runs, stop and surface it rather than starting a run that cannot finish in budget.
 
-Ask once: **"Approve this plan to build autonomously through to an open PR?"** On a clear "yes/approved", proceed through Phases 4–11 with **no further human stops** — the machine gates carry the rest. On anything else, fall back to the gated model (treat the remaining phases as gated). In the default (non-`--autonomous`) model, skip Phase 3.5 entirely; the per-phase gates above already ran.
+Ask once: **"Approve this plan?"** On a clear "yes/approved", record the approvals, run `node .claude/scripts/plan-seal.js write`, and **stop** (`stopsAfterSeal: true`). Print `/clear` then `/auto --sealed`. Do not run Phases 4–11 in this session. On anything else, fall back to the gated model. In the default (non-`--autonomous`) model, skip Phase 3.5; the per-phase gates above already ran.
 
 **Satisfy `/auto`'s review gate for the collapsed lanes.** `/auto` blocks on `plan-approval.js check --phase all`, so a lane that skipped the per-phase loops records *why* rather than leaving the receipt absent — an absent receipt and a deliberately-headless run are different facts, and the audit trail should say which one this was:
 
@@ -113,7 +128,7 @@ for phase in brd spec design test; do
 done
 ```
 
-Write the `--autonomous` waivers only **after** the consolidated approval above is given; on a fallback to the gated model, do not write them — the per-phase loops run instead. In `--auto`, write the `--auto` waivers once Phase 3 completes.
+Write the `--autonomous` waivers only **after** the consolidated approval above is given; on a fallback to the gated model, do not write them — the per-phase loops run instead. In `--auto`, write the `--auto` waivers once Phase 3 completes, then `node .claude/scripts/plan-seal.js write --lane --auto`, then continue to Phase 4.
 
 When confidence is **low**, do not present the bare approve/reject question — lead with the drivers and recommend resolving them first, e.g. *"Plan confidence is LOW (2 open questions, 1 undecomposable story). Recommend `/clarify` before an unattended run. Clarify now, approve anyway, or stop?"* High/medium confidence keeps the single question above.
 

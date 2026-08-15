@@ -1,9 +1,17 @@
 # OpenWiki for Claude Harness Engine
 
-This package runs [OpenWiki 0.2](https://github.com/langchain-ai/openwiki) against
+This package runs [OpenWiki 0.3](https://github.com/langchain-ai/openwiki) against
 the repository while keeping generated documentation in `open_wiki/wiki/` rather
 than OpenWiki's default root-level `openwiki/` directory. It uses OpenAI with
 `gpt-5.6-terra` by default.
+
+Pages are emitted as an
+[Open Knowledge Format (OKF) v0.1](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
+bundle: every concept document carries YAML front matter with a non-empty `type`,
+Markdown links express relationships, and `index.md` is a reserved document
+rather than a concept. Mermaid diagrams are embedded where they beat prose and
+are validated after each run; a diagram that fails validation degrades to a
+commented `text` fence and is repaired on the next `wiki:update`.
 
 ## One-time setup
 
@@ -41,9 +49,17 @@ npm run wiki:update --prefix open_wiki
 # Regenerate the browser-ready context graph from the committed wiki.
 npm run wiki:graph --prefix open_wiki
 
+# Explore the wiki live in OpenWiki's native visualizer (local server).
+npm run wiki:visualize --prefix open_wiki
+
 # Ask a one-off documentation question in OpenWiki's code mode.
 npm run wiki:ask --prefix open_wiki -- "How does the brownfield route work?"
 ```
+
+`.openwikiignore` at the repository root keeps generated output and runtime
+state out of doc runs. Paths listed there are hard-excluded from the agent's
+reads, so widen it rather than relying on the brief alone when new generated
+trees appear.
 
 If your shell is already in `open_wiki/`, omit `--prefix open_wiki`:
 
@@ -52,6 +68,7 @@ npm run wiki:check
 npm run wiki:init
 npm run wiki:update
 npm run wiki:graph
+npm run wiki:visualize
 ```
 
 The content brief lives in `INSTRUCTIONS.md`. Edit it before the first run to
@@ -74,6 +91,25 @@ network-connected browser to view it. `wiki:graph` regenerates the artifact
 without calling a model, which is useful after reviewing or manually correcting a
 generated page.
 
+### Versus OpenWiki's native visualizer
+
+OpenWiki 0.3 ships its own visualizer (`npm run wiki:visualize`, exposed here
+over `open_wiki/wiki/`). The two are complementary, not redundant, so both are
+kept:
+
+| | `wiki:graph` (this package) | `wiki:visualize` (OpenWiki) |
+| --- | --- | --- |
+| Output | Committed static `context-graph.html` | Local server on `127.0.0.1`, nothing committed |
+| Nodes | Wiki pages **and repository source files** | Wiki pages only |
+| Edges | Page→page links **and page→source citations** | Page→page links, with backlinks |
+| Reading | Graph only | Graph beside a live Markdown reader |
+| Index pages | Skipped (OKF reserved documents) | Shown as `Section` nodes |
+
+The documentation-to-source dimension is the reason to keep `wiki:graph`: it is
+what turns the verified citations the brief asks for into a reviewable map of
+which wiki page explains which part of the repository. Use `wiki:visualize` to
+read and navigate, `wiki:graph` for the committed, review-time artifact.
+
 ## Configuration
 
 Defaults are in `.env.example`:
@@ -92,7 +128,7 @@ as a GitHub Actions repository secret.
 
 ## Important implementation detail
 
-OpenWiki 0.2 currently hard-codes `openwiki/` as its code-mode output directory.
+OpenWiki 0.3 still hard-codes `openwiki/` as its code-mode output directory.
 The wrapper temporarily stages `open_wiki/wiki/` at that location during a run and
 moves it back atomically afterward. It refuses to run if an unrelated root
 `openwiki/` directory is present, preventing accidental overwrites.

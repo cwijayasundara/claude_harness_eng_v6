@@ -1,28 +1,29 @@
 #!/usr/bin/env node
 'use strict';
 
-// Runs the /gate deterministic checks declared in .claude/config/gate-checks.json.
+// One CLI, two lanes:
 //
-// Why a registry rather than a list of script names in the skill: each check belongs
-// to a PACK (brownfield, verification, telemetry, ...). With the names inline, the
-// kernel skill instructed the agent to run scripts that do not exist once a pack is
-// uninstalled. Here an absent script is reported as `skipped: pack not installed` —
-// visible and attributable, never silently dropped and never counted as a pass.
+//   (default) sensors — GATE_CATALOG in hooks/lib/gate-registry.js, filtered by
+//   sensor_tier. This is /auto Gate 5 and /implement Step 6. Same list the
+//   git pre-commit hook runs. Writes specs/reviews/sensor-checks.json.
 //
-// Distinct from run-custom-sensors.js, which runs PROJECT-declared sensors from
-// project-manifest.json#custom_sensors[]. That is the user's extension point; this is
-// the harness's own shipped check set. Same mechanics, different ownership.
+//   --lane gate       — pack checks in .claude/config/gate-checks.json. This is
+//   /gate Step 2. --only <id> also selects this lane so /vibe and evidence-integrity
+//   keep working. Writes specs/reviews/gate-checks.json.
 //
 //   node .claude/scripts/run-gate-checks.js [--root <dir>] [--files a b ...] [--json]
+//   node .claude/scripts/run-gate-checks.js --lane gate --files a b ...
 
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const { recordOutcome } = require('../hooks/lib/sensor-outcomes');
+const { isGateEnabled, loadSensorTier, GATE_TIERS, isBrownfieldGraphReal } = require('../hooks/lib/sensor-tier');
+const { runSensorCatalog } = require('../hooks/lib/gate-registry');
 
 const REGISTRY_REL = path.join('.claude', 'config', 'gate-checks.json');
-const GRAPH_REL = path.join('specs', 'brownfield', 'code-graph.json');
 const OUT_REL = path.join('specs', 'reviews', 'gate-checks.json');
+const SENSOR_OUT_REL = path.join('specs', 'reviews', 'sensor-checks.json');
 
 function loadRegistry(projectDir) {
   const file = path.join(projectDir, REGISTRY_REL);
@@ -65,7 +66,16 @@ function selectChecks(checks, ctx) {
   const scoped = only.length
     ? checks.filter((c) => only.includes(c.id))
     : checks.filter((c) => !c.lane_only);
-  return scoped.filter((c) => triggerFires(c.when, ctx));
+  const tier = (ctx && ctx.tier) || 'standard';
+  return scoped
+    .filter((c) => triggerFires(c.when, ctx))
+    .filter((c) => {
+      // Checks that declare a GATE_TIERS row honor the dial. Other /gate
+      // registry ids stay on their `when` trigger — they are not silent
+      // pre-commit growth.
+      if (!GATE_TIERS[c.id]) return true;
+      return isGateEnabled(tier, c.id);
+    });
 }
 
 function defaultRun(scriptPath, args, projectDir) {
@@ -139,37 +149,63 @@ function argList(argv, flag) {
   return out;
 }
 
-function report(results, summary) {
+function report(results, summary, label = 'gate-checks') {
   for (const r of results) {
     const mark = { passed: 'ok  ', blocked: 'BLOCK', warn: 'warn', skipped: 'skip' }[r.status];
     console.log(`  ${mark}  ${r.id.padEnd(28)} [${r.pack}]${r.detail ? ` — ${r.detail.split('\n')[0]}` : ''}`);
   }
   console.log(
-    `gate-checks: ${summary.passed} passed, ${summary.blocked} blocked, ` +
-    `${summary.warn} warn, ${summary.skipped} skipped (pack not installed)`
+    `${label}: ${summary.passed} passed, ${summary.blocked} blocked, ` +
+    `${summary.warn} warn, ${summary.skipped} skipped`
   );
+}
+
+function resolveLane(argv) {
+  const explicit = argValue(argv, '--lane');
+  if (explicit === 'gate' || explicit === 'sensors') return explicit;
+  if (explicit) throw new Error(`run-gate-checks: unknown --lane ${explicit} (use sensors|gate)`);
+  if (argList(argv, '--only').length) return 'gate';
+  return 'sensors';
 }
 
 function main(argv = process.argv.slice(2)) {
   const root = argValue(argv, '--root') || process.cwd();
   const changedFiles = argList(argv, '--files');
   const only = argList(argv, '--only');
+  const lane = resolveLane(argv);
+
+  if (lane === 'sensors') {
+    const { results, summary } = runSensorCatalog(root, {
+      files: changedFiles.length ? changedFiles : undefined,
+    });
+    if (!results.length) {
+      throw new Error('run-gate-checks: no sensors were run — refusing to report a vacuous pass');
+    }
+    const out = { schema_version: 1, lane: 'sensors', summary, results };
+    fs.mkdirSync(path.join(root, 'specs', 'reviews'), { recursive: true });
+    fs.writeFileSync(path.join(root, SENSOR_OUT_REL), JSON.stringify(out, null, 2) + '\n');
+    if (argv.includes('--json')) console.log(JSON.stringify(out, null, 2));
+    else report(results, summary, 'sensor-checks');
+    return summary.pass ? 0 : 1;
+  }
+
   const checks = selectChecks(loadRegistry(root), {
-    hasCodeGraph: fs.existsSync(path.join(root, GRAPH_REL)),
+    hasCodeGraph: isBrownfieldGraphReal(root),
     changedFiles,
     projectDir: root,
     only,
+    tier: loadSensorTier(root),
   });
   const results = runChecks(checks, root, { changedFiles });
   const summary = summarize(results);
-  const out = { schema_version: 1, summary, results };
+  const out = { schema_version: 1, lane: 'gate', summary, results };
   fs.mkdirSync(path.join(root, 'specs', 'reviews'), { recursive: true });
   fs.writeFileSync(path.join(root, OUT_REL), JSON.stringify(out, null, 2) + '\n');
   if (argv.includes('--json')) console.log(JSON.stringify(out, null, 2));
-  else report(results, summary);
+  else report(results, summary, 'gate-checks');
   return summary.pass ? 0 : 1;
 }
 
 if (require.main === module) process.exit(main());
 
-module.exports = { selectChecks, runChecks, summarize, triggerFires, globMatch, loadRegistry };
+module.exports = { selectChecks, runChecks, summarize, triggerFires, globMatch, loadRegistry, resolveLane };

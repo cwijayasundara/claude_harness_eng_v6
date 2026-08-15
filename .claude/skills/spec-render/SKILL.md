@@ -113,7 +113,8 @@ capture low-risk assumptions in story `Notes` so the reviewer can see them.
 ### Step 2 — Decompose or Normalize into Epics
 
 Group related functionality into epics. Rules:
-- Each epic represents a coherent vertical slice of the system (e.g., "User Authentication", "Data Ingestion", "Reporting")
+- Each epic represents a coherent **user-visible** capability (e.g., "User Authentication", "Data Ingestion", "Reporting"), not a technical layer
+- Each story is a **tracer bullet**: one demoable path through every layer it needs. Do not emit a Types story, then a Config story, then a Repository story for the same capability.
 - Let the story count follow the work. Do not decompose toward a number: a real
   run produced 12 of 16 epics with exactly 5 stories, which is a target being hit,
   not a domain being decomposed. An epic that genuinely resists splitting is
@@ -140,7 +141,7 @@ For each story:
   { "id": "E1-S1-AC1", "given": "a visitor with no account", "when": "they POST /api/auth/register with a valid email and password", "then": "the response is 201 and the body contains a non-null userId" }
   ```
   Each must be testable (verifiable by running code or inspecting output) and specific (concrete values, states, status codes). Vague criteria ("works properly", "loads fast") are rejected. The `then` clause is the observable outcome — that is what `/test` asserts and what `features.json` steps are generated from, so it must not restate the `when`.
-- `layer`: One of `Types` | `Config` | `Repository` | `Service` | `API` | `UI`
+- `layer`: Tag for the **primary** surface — one of `Types` | `Config` | `Repository` | `Service` | `API` | `UI`. Not a reason to split the story. A story that only exists so a later story can have a layer is a layer-ladder story — merge it into the tracer bullet that a user can demo.
 - `group`: Dependency group letter (`A`, `B`, `C` ...) — see Step 4
 - `depends_on`: Typed dependency edges — see Step 3.5. A bare story-id string is still accepted and read as a `behavior` edge, but new stories must use the typed form.
 - `invest`: INVEST scorecard — see Step 3.7
@@ -293,8 +294,7 @@ The Mermaid block must stay consistent with the tables — every story and every
 Rules:
 - No circular dependencies. Validate before writing.
 - Stories in the same group must be independently executable in parallel.
-- Foundation layers (Types, Config, Repository) should appear in earlier groups.
-- UI stories typically appear in later groups.
+- Schedule by demoable tracer bullets, not by layer. A Group A of only `Types` stories and a Group B of only `API` stories is a layer ladder — rewrite so the first group already includes an observable behavior.
 
 **Groups are not owners.** A group is a scheduling wave — "these can run next" — and its members are frequently unrelated. Do not read a group as a work package for one engineer; Step 4.5 computes that separately and the two views deliberately cross-cut each other.
 
@@ -607,7 +607,7 @@ Do not auto-advance. The loop ends on an explicit approving round, not on silenc
 ## Gotchas
 
 - **Vague criteria are rejected.** "The system works properly" fails the gate. Rewrite as an observable behavior.
-- **Missing layers break agent routing.** Every story needs a layer so the builder knows which agent handles it.
+- **Missing layers break agent routing.** Every story needs a `layer` **tag**. That tag is not permission to split one capability into six layer stories.
 - **Unready stories block implementation.** If a story is marked `needs_breakdown`, it must not appear in a dependency group or `features.json`. Break it down first.
 - **Circular dependencies deadlock the pipeline.** Validate the graph before writing.
 - **Story count per epic is an observation, not a target.** If an epic keeps

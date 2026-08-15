@@ -58,12 +58,18 @@ This skill is an **orchestrator index**. Load only the section file for the step
 
 Headless modes use `plan-confidence.js` (and `--gate`), `build-lane.js`, `budget-state.js`, `build-chain.js`, `/auto`, `/gate`, `/pr-respond`. Full procedure is in the section files. Wiring tests scan entry + `references/*.md` as one corpus.
 
-### Iron law — `--auto` / `--autonomous` (never stop after planning)
+### Iron law — gated `--full` stops at the seal; only `--auto` codes in-session
 
-When the invocation includes **`--auto`** (or **`--autonomous`** after its single plan gate is satisfied, or is headless with no human):
+When `build-lane.js` reports `stopsAfterSeal: true` (gated, `--autonomous`, interactive `--lite`):
+
+1. Finish Phases 1–3 and the human approvals.
+2. Run `node .claude/scripts/plan-seal.js write`.
+3. **Stop.** Print: `/clear`, then `/auto --sealed` (and `--mode` if set). Do not enter Phase 4 or `/auto` in this session.
+
+When the invocation includes **`--auto`** (`stopsAfterSeal: false`):
 
 1. Completing BRD / stories / design / test plan is **not** done. That is only Phases 1–3.
-2. **Immediately** continue into Phase 4 (state init) and invoke **`/auto`** (with `--mode` if set) so production code and the project test suite exist.
-3. Do **not** end the session with only `specs/` written. A successful `--auto` leaves a green app (or a machine-gate failure with code attempted) — never “plan only” unless `--plan-only` was passed.
-4. Read `references/autonomous-lane.md` and `references/section-04-pipeline-phases.md` for the tail (Phases 4–11).
+2. Write phase waivers, then `node .claude/scripts/plan-seal.js write --lane --auto`.
+3. **Immediately** continue into Phase 4 and invoke **`/auto`** so production code exists.
+4. Do **not** end the session with only `specs/` written unless `--plan-only` was passed.
 

@@ -21,6 +21,17 @@ On-demand, pre-merge entry point to the harness's **one** quality gate. It keeps
 > **Not** Claude Code's native `/review` (which reviews a GitHub PR). This is the harness's
 > local pre-merge quality gate. See the command-boundary notes in `README.md`.
 
+## Agent pre-read — never approve or merge
+
+This skill is a pre-read for a human. Post review comments (or write
+`specs/reviews/code-review-verdict.json` + the walkthrough). Do **not** approve
+the PR, do **not** merge, and do **not** enable auto-merge. The human reads the
+grouped walkthrough next to `program-design.md`. `/pr-respond` already patches
+comments — do not rebuild it.
+
+Use this when `/auto --sealed` has opened a draft PR, or when a human asks for
+a slice-grouped review of the current branch.
+
 ## Execution
 
 ### Step 1 — Build the Review Context Pack
@@ -60,8 +71,11 @@ Use the Agent tool to spawn the selected agents **in a single call**:
 - **Pack-contributed deterministic checks — run them all with one command:**
 
   ```bash
-  node .claude/scripts/run-gate-checks.js --files <changed files>
+  node .claude/scripts/run-gate-checks.js --lane gate --files <changed files>
   ```
+
+  `--lane gate` is the pack registry (canvas, ownership, observability, …).
+  The default (no `--lane`) is the pre-commit sensor catalog used by `/auto`.
 
   The check set is **data**, not prose: `.claude/config/gate-checks.json` declares each check,
   the pack that owns it, when it fires, whether it blocks, and the remediation to print when it
@@ -113,6 +127,14 @@ evaluator reported.
 
 Severity levels (BLOCK/WARN/INFO), the BLOCK self-healing loop (generator fix → full re-run, max 3 cycles, then escalate), and the security verdict format are defined once in `/evaluate` (`.claude/skills/evaluate/SKILL.md`) — follow them exactly from there. Do not merge or mark a group complete while any BLOCK finding remains open, and always re-run the full review after fixes.
 
+### Step 3.5 — Group the diff by story/slice
+
+`pr-walkthrough.js` groups changed files by story from `specs/design/component-map.md`
+and prints the matching `specs/design/program-design.md` section beside each slice.
+Run it (Step 4 also runs it via `pr-body.js`) and put that grouping in the review
+brief. Review one slice at a time: files, then the program-design excerpt, then
+Standards/Spec findings. Do not ask the human to read an alphabetical GitHub file list.
+
 ### Step 4 — Human trust surfaces (always, end of gate)
 
 After all reviewers and static gates settle (including after fix cycles), **always** emit the human-facing receipts. Missing these is itself a BLOCK for PR-open:
@@ -132,7 +154,7 @@ After all reviewers and static gates settle (including after fix cycles), **alwa
    `node .claude/scripts/task-lifecycle.js transition completed "gate and task evidence passed"`.
    Completed and aborted tasks cannot perform more writes.
 
-A quality-card with `pass: false` or missing core inputs (evaluator report / code-review verdict) means the gate is not green — do not open a PR.
+A quality-card with `pass: false` or missing core inputs (evaluator report / code-review verdict) means the gate is not green — do not open a PR. Opening a draft PR is `/auto --sealed`'s job; this skill never merges it.
 
 ## Output Files
 

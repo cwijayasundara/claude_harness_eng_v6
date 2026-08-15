@@ -1,0 +1,37 @@
+# Paths OpenWiki must not read or document (gitignore-style rules).
+#
+# Scope rule: exclude only output that is *generated* or *runtime state*.
+# The hand-authored product surface INSTRUCTIONS.md names as important —
+# .claude/, symphony_clone/, harness-lite/, docs/, telemetry/, test/ — stays
+# readable on purpose.
+
+# Dependencies and build output
+node_modules/
+dist/
+build/
+.venv/
+venv/
+
+# Generated SKU trees (npm run package:skus); source of truth is .claude/ + harness-lite/
+packages/harness-core/
+packages/harness-lite/
+packages/harness-full/
+
+# Harness runtime state, not product surface
+.claude/state/
+.claude/runs/
+.claude/tdd-guard/
+
+# Generated documentation — documenting generated docs is duplicative noise.
+# The living wiki this repo maintains is open_wiki/wiki/ (staged to openwiki/
+# during a run), which OpenWiki owns directly.
+specs/brownfield/wiki/
+specs/brownfield/graph-explorer.html
+specs/brownfield/wiki-browser.html
+
+# Superseded planning records
+docs/archive/
+
+# Lockfiles carry no design signal
+package-lock.json
+open_wiki/package-lock.json

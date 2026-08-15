@@ -131,6 +131,7 @@ changes wording. Typically:
 3. **Real vs defensive dependencies** — edges where you are unsure whether the
    consumer truly needs the producer, or you are adding the edge to be safe.
 4. **Deferrals** — anything you would mark `needs_breakdown` rather than guess at.
+5. **Vertical slices** — stories are tracer bullets, not a Types→Config→Repository→Service→API→UI ladder. Record that default unless the human asks for a layer split.
 
 Cap the set at what genuinely changes the outcome. Ten well-chosen decisions
 beat thirty confirmations.
@@ -246,9 +247,15 @@ entry is a judgement the renderer refused to invent. Put them to the human as in
 Step 3, append them to `decisions[]`, and re-dispatch with `--render-only`.
 A renderer that returns unresolved items is working correctly.
 
-### Step 7 — Phase Evaluation Gate
+### Step 7 — Phase Evaluation Gate [`--eval` only]
 
-Spawn the `evaluator` agent in artifact mode **with `model: "sonnet"`**, and:
+Skip unless `--eval` or the decomposition introduces an auth, tenant,
+migration, or external-trust boundary. Grounding and cluster gates already
+ran in `spec-render`. Stories must be **vertical slices** (see
+`plan-review-loop/references/lean-review-surface.md`) — do not split a
+capability into a Types / Config / Repository / Service / API / UI ladder.
+
+When `--eval` is on, spawn the `evaluator` agent in artifact mode **with `model: "sonnet"`**, and:
 
 - Phase: `spec`
 - Artifacts: `specs/stories/epics.md`, `specs/stories/E*-S*.md`, `specs/stories/stories.json`, `specs/stories/dependency-graph.md`, `features.json`
@@ -343,9 +350,8 @@ it at its own Step 0, so the block holds even if this skill is bypassed.
 Headless lanes waive only the human requirement — never the structural checks —
 and the waiver is recorded in the verdict.
 
-**Grounding, ownership-cluster, and phase-evaluation gates** are unchanged and
-run inside `spec-render` (grounding, clusters) and Step 7 (evaluation). See
-`spec-render/SKILL.md#gate`.
+**Grounding and ownership-cluster gates** run inside `spec-render`. Phase
+evaluation is opt-in (`--eval`). See `spec-render/SKILL.md#gate`.
 
 **Human review is still required before `/design`,** which hard-blocks on:
 

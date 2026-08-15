@@ -30,9 +30,9 @@
 
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 const { handoffOn } = require('../hooks/lib/phase-handoff.js');
 const { liveSessionId } = require('../hooks/lib/live-session.js');
+const { digest } = require('./plan-artifact-digest.js');
 
 // brd joined the list when /brd was de-forked: before that its approval could
 // not reach a human, so a receipt would have recorded a stop that never
@@ -106,12 +106,6 @@ function rawArg(argv, name) {
 function isSubstantive(text) {
   const trimmed = String(text == null ? '' : text).trim();
   return trimmed.length >= MIN_FEEDBACK_CHARS && !PLACEHOLDERS.test(trimmed);
-}
-
-function digest(root, rel) {
-  const file = path.join(root, rel);
-  if (!fs.existsSync(file) || !fs.statSync(file).isFile()) return null;
-  return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 }
 
 function fail(message) {

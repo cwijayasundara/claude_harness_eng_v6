@@ -241,6 +241,8 @@ The point of a registry is that gaps are explicit. As of 2026-07 **gaps G1–G30
 
 Commit-time (and, as the registry lands, related) sensors are filtered by **`project-manifest.json#quality.sensor_tier`**: `minimal` · `standard` (default) · `strict`. This is the operability dial so teams do not memorize a dozen `HARNESS_*_GATE=off` env vars. Env vars remain local escape hatches only.
 
+**`quality.test_discipline`** (`outcomes` default on new scaffolds · `tdd` · `at-first`) selects how `/implement` and the write-lock / AT gates behave. `outcomes` lands tests and code together at named seams; coverage, mutation-smoke, and test-deletion stay. `tdd` keeps the write-lock / red-phase / test-integrity stack. After a plan seal, `/auto` SECTION 2 reads only the sealed pack; success stops at a draft PR. `/gate` groups the diff by slice next to `program-design.md` and never approves or merges.
+
 Product install boundaries (what you copy/install) are separate: **harness-lite / harness-core / harness-full** — see [`docs/product-skus-and-tiers.md`](docs/product-skus-and-tiers.md). This monorepo dogfoods itself as Project Zero via the root `project-manifest.json` and `.claude/state/agent-readiness-baseline.json`, with `quality.agent_readiness.mode: "ratchet"` enforced in CI (`npm run agent-readiness:assert`).
 
 ## How to extend the harness

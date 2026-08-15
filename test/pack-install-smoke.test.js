@@ -116,7 +116,7 @@ test('the commit gate registry loads and selects its gates with no pack installe
 test('a kernel-only /gate reports pack checks as not installed, and does not block', () => {
   const out = kernelOnly();
   fs.mkdirSync(path.join(out, 'specs', 'reviews'), { recursive: true });
-  const r = node([path.join(out, '.claude', 'scripts', 'run-gate-checks.js'), '--root', out]);
+  const r = node([path.join(out, '.claude', 'scripts', 'run-gate-checks.js'), '--root', out, '--lane', 'gate']);
   assert.match(r.stdout, /pack not installed/, 'an absent pack must be reported, not silently dropped');
   assert.doesNotMatch(r.stdout, /BLOCK/, 'an uninstalled pack is a configuration, not a failure');
   assert.strictEqual(r.status, 0);

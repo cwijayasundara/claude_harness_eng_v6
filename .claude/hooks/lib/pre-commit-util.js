@@ -22,6 +22,14 @@ function getFailContext() {
   return failContext;
 }
 
+class GateBlocked extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'GateBlocked';
+    this.gateBlocked = true;
+  }
+}
+
 function fail(message) {
   if (failContext.currentSensor && failContext.projectDir) {
     recordOutcome(failContext.projectDir, { sensor: failContext.currentSensor, ran: true, blocked: true, surface: 'commit' });
@@ -29,6 +37,9 @@ function fail(message) {
   const msg = ensureTierFooter(message, failContext.tier);
   process.stdout.write(msg);
   process.stderr.write(msg);
+  // Collect mode (CLI sensor runner) must not process.exit mid-catalog — the
+  // caller writes a report then exits once.
+  if (failContext.collect) throw new GateBlocked(msg);
   process.exit(1);
 }
 
@@ -123,6 +134,36 @@ function stagedFiles(projectDir) {
   return out.split('\n').filter(Boolean);
 }
 
+// Working-tree changes for hosts that are not mid-commit (Grok / `claude -p` /
+// /auto Gate 5). Staged + unstaged vs HEAD, plus untracked. Empty when not a repo.
+function worktreeChangedFiles(projectDir) {
+  const names = new Set();
+  const take = (args) => {
+    try {
+      const out = execFileSync('git', args, {
+        cwd: projectDir, encoding: 'utf8', maxBuffer: GIT_MAX_BUFFER,
+      });
+      for (const f of out.split('\n').filter(Boolean)) names.add(f);
+    } catch (_) { /* not a repo, no HEAD, or git unavailable */ }
+  };
+  take(['diff', '--name-only', 'HEAD', '--diff-filter=ACMR']);
+  take(['diff', '--cached', '--name-only', '--diff-filter=ACMR']);
+  take(['ls-files', '--others', '--exclude-standard']);
+  return [...names];
+}
+
+function contextFromFiles(projectDir, files) {
+  const staged = [...new Set(files || [])].filter(Boolean);
+  const stagedSource = staged.filter((f) => SOURCE_EXTS.has(path.extname(f).toLowerCase()));
+  const stagedPy = stagedSource.filter((f) => f.endsWith('.py'));
+  const stagedTs = stagedSource.filter((f) => f.endsWith('.ts') || f.endsWith('.tsx'));
+  const stagedJs = stagedSource.filter((f) => {
+    const e = path.extname(f).toLowerCase();
+    return e === '.js' || e === '.jsx' || e === '.mjs' || e === '.cjs' || e === '.ts' || e === '.tsx';
+  });
+  return { projectDir, staged, stagedSource, stagedPy, stagedTs, stagedJs };
+}
+
 function inAutoBuild(projectDir) {
   try {
     const progress = fs.readFileSync(path.join(projectDir, 'claude-progress.txt'), 'utf8');
@@ -139,16 +180,9 @@ function requireScript(name) {
   return require(path.join(__dirname, '..', '..', 'scripts', name));
 }
 
-function buildContext(projectDir) {
-  const staged = stagedFiles(projectDir);
-  const stagedSource = staged.filter((f) => SOURCE_EXTS.has(path.extname(f).toLowerCase()));
-  const stagedPy = stagedSource.filter((f) => f.endsWith('.py'));
-  const stagedTs = stagedSource.filter((f) => f.endsWith('.ts') || f.endsWith('.tsx'));
-  const stagedJs = stagedSource.filter((f) => {
-    const e = path.extname(f).toLowerCase();
-    return e === '.js' || e === '.jsx' || e === '.mjs' || e === '.cjs' || e === '.ts' || e === '.tsx';
-  });
-  return { projectDir, staged, stagedSource, stagedPy, stagedTs, stagedJs };
+function buildContext(projectDir, files) {
+  if (files) return contextFromFiles(projectDir, files);
+  return contextFromFiles(projectDir, stagedFiles(projectDir));
 }
 
 /**
@@ -188,7 +222,10 @@ module.exports = {
   setFailContext,
   getFailContext,
   stagedFiles,
+  worktreeChangedFiles,
+  contextFromFiles,
   inAutoBuild,
   requireScript,
   buildContext,
+  GateBlocked,
 };

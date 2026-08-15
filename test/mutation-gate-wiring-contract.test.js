@@ -54,8 +54,9 @@ test('package.json exposes the mutation script and manifest marks it active', ()
   assert.ok(!('gap_ref' in s), 'no longer a gap');
 });
 
-test('/auto Gate 3 documents the mutation-smoke step', () => {
+test('/auto names mutation-smoke as strict-only via the runner', () => {
   const skill = readSkillCorpus('auto');
-  assert.match(skill, /mutation-gate\.js/, 'Gate 3 must reference the mutation gate');
-  assert.match(skill, /survivor/i, 'Gate 3 must explain survivors');
+  assert.match(skill, /mutation-gate\.js/, 'the corpus must still name the mutation script');
+  assert.match(skill, /run-gate-checks\.js/, 'SECTION 5 must name the one runner');
+  assert.match(skill, /strict/, 'mutation must not be required on standard');
 });

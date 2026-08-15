@@ -20,9 +20,8 @@ test('real workflow E2E invokes harness commands instead of direct artifact prom
     assert.match(e2e, new RegExp(`runClaude\\('${command.replace('/', '\\/')}'`));
   }
   assert.match(e2e, /runClaude\('\/build --lite/);
-  assert.match(e2e, /specs\/reviews\/phase-brd-eval\.json/);
-  assert.match(e2e, /specs\/reviews\/phase-spec-eval\.json/);
-  assert.match(e2e, /specs\/reviews\/phase-design-eval\.json/);
+  assert.match(e2e, /specs\/brd\/brd\.md/);
+  assert.match(e2e, /features\.json/);
   assert.match(e2e, /runProjectSuite\(PROJECT_DIR\)/);
 });
 

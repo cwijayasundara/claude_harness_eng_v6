@@ -43,6 +43,21 @@ test('selectChecks includes a code-graph check when the graph exists', () => {
   assert.ok(sel.find((c) => c.id === 'needs-graph'));
 });
 
+test('selectChecks drops GATE_TIERS-strict checks on standard', () => {
+  const { loadRegistry } = require('../.claude/scripts/run-gate-checks.js');
+  const checks = loadRegistry(path.join(__dirname, '..'));
+  const sel = selectChecks(checks, {
+    hasCodeGraph: true, changedFiles: [], tier: 'standard',
+  });
+  assert.ok(!sel.find((c) => c.id === 'cycle-detection'));
+  assert.ok(!sel.find((c) => c.id === 'coupling-ratchet'));
+  assert.ok(!sel.find((c) => c.id === 'duplication-ratchet'));
+  const strict = selectChecks(checks, {
+    hasCodeGraph: true, changedFiles: [], tier: 'strict',
+  });
+  assert.ok(strict.find((c) => c.id === 'cycle-detection'));
+});
+
 test('selectChecks honours a changed-file glob trigger', () => {
   assert.ok(!selectChecks(CHECKS, { hasCodeGraph: false, changedFiles: ['src/a.ts'] })
     .find((c) => c.id === 'needs-snapshots'));

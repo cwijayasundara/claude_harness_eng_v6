@@ -17,10 +17,13 @@ test('cycle-gate CLI reuses the lib and is require-safe', () => {
   assert.match(cli, /require\('\.\.\/hooks\/lib\/cycle-gate'\)/, 'CLI must use the tested lib');
 });
 
-test('package.json exposes the cycles script; /auto Gate 4 runs it', () => {
+test('package.json exposes the cycles script; /auto names it as strict-only', () => {
   const pkg = JSON.parse(read('package.json'));
   assert.strictEqual(pkg.scripts.cycles, 'node .claude/scripts/cycle-gate.js');
-  assert.match(readSkillCorpus('auto'), /cycle-gate\.js/, 'Gate 4 must run the cycle ratchet');
+  const auto = readSkillCorpus('auto');
+  assert.match(auto, /cycle-gate\.js/, 'the corpus must still name the cycle script');
+  assert.match(auto, /run-gate-checks\.js/, 'SECTION 5 must name the one runner');
+  assert.match(auto, /strict/, 'cycle must not be required on standard');
 });
 
 test('manifest marks cycle-detection active and enforced', () => {

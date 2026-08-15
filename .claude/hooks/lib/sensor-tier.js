@@ -26,7 +26,7 @@ const GATE_TIERS = Object.freeze({
   'type-check': new Set(VALID_TIERS),
   'coverage-ratchet-py': new Set(['standard', 'strict']),
   'coverage-ratchet-js': new Set(['standard', 'strict']),
-  'mutation-smoke': new Set(['standard', 'strict']),
+  'mutation-smoke': new Set(['strict']),
   'test-integrity': new Set(['standard', 'strict']),
   'cycle-detection': new Set(['strict']),
   'coupling-ratchet': new Set(['strict']),
@@ -57,8 +57,27 @@ function loadSensorTier(projectDir, env = process.env) {
 function isGateEnabled(tier, gateId) {
   const t = normalizeTier(tier) || 'standard';
   const allowed = GATE_TIERS[gateId];
-  if (!allowed) return true; // unknown gates run (fail-safe: don't drop new gates)
+  // Unknown ids must be added to GATE_TIERS — silent growth of the catalog is
+  // how standard became a second product. Custom sensors use a different runner.
+  if (!allowed) return false;
   return allowed.has(t);
+}
+
+function isBrownfieldGraphReal(projectDir) {
+  if (!projectDir) return false;
+  const readMeta = (file, wrap) => {
+    try {
+      const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+      return wrap ? (data.meta || {}) : data;
+    } catch (_) {
+      return null;
+    }
+  };
+  const meta = readMeta(path.join(projectDir, 'specs', 'brownfield', 'code-graph.meta.json'), false)
+    || readMeta(path.join(projectDir, 'specs', 'brownfield', 'code-graph.json'), true);
+  if (!meta) return false;
+  if (meta.status === 'empty' || meta.producer === 'none') return false;
+  return Boolean(meta.status || meta.producer);
 }
 
 module.exports = {
@@ -66,5 +85,6 @@ module.exports = {
   GATE_TIERS,
   loadSensorTier,
   isGateEnabled,
+  isBrownfieldGraphReal,
   normalizeTier,
 };

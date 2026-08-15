@@ -20,14 +20,14 @@ function selectLane(flags, args, values) {
   const prdPath = args[0] || null;
   const mode = values['--mode'] || 'full';
   const pod = values['--pod'] ? parseInt(values['--pod'], 10) : null;
-  if (finalize) return laneResult({ lane: 'finalize', auto: true, autonomous: true, lite, planOnly, prdPath: null, mode, pod, humanGates: 0, requiresPrd: false });
+  if (finalize) return laneResult({ lane: 'finalize', auto: true, autonomous: true, lite, planOnly, prdPath: null, mode, pod, humanGates: 0, requiresPrd: false, stopsAfterSeal: false });
   if ((auto || autonomous || planOnly) && !prdPath) return { valid: false, error: 'A PRD path is required for --auto, --autonomous, and --plan-only build runs.' };
-  if (lite && auto) return laneResult({ lane: 'lite-auto', auto, autonomous: true, lite, planOnly, prdPath, mode, pod, humanGates: 0, requiresPrd: true });
-  if (lite && autonomous) return laneResult({ lane: 'lite-autonomous', auto, autonomous, lite, planOnly, prdPath, mode, pod, humanGates: 1, requiresPrd: true });
-  if (lite) return laneResult({ lane: 'lite', auto, autonomous, lite, planOnly, prdPath, mode, pod, humanGates: 1, requiresPrd: false });
-  if (auto) return laneResult({ lane: 'auto', auto, autonomous: true, lite, planOnly, prdPath, mode, pod, humanGates: 0, requiresPrd: true });
-  if (autonomous) return laneResult({ lane: 'autonomous', auto, autonomous, lite, planOnly, prdPath, mode, pod, humanGates: 1, requiresPrd: true });
-  return laneResult({ lane: 'gated', auto, autonomous, lite, planOnly, prdPath, mode, pod, humanGates: 3, requiresPrd: false });
+  if (lite && auto) return laneResult({ lane: 'lite-auto', auto, autonomous: true, lite, planOnly, prdPath, mode, pod, humanGates: 0, requiresPrd: true, stopsAfterSeal: false });
+  if (lite && autonomous) return laneResult({ lane: 'lite-autonomous', auto, autonomous, lite, planOnly, prdPath, mode, pod, humanGates: 1, requiresPrd: true, stopsAfterSeal: true });
+  if (lite) return laneResult({ lane: 'lite', auto, autonomous, lite, planOnly, prdPath, mode, pod, humanGates: 1, requiresPrd: false, stopsAfterSeal: true });
+  if (auto) return laneResult({ lane: 'auto', auto, autonomous: true, lite, planOnly, prdPath, mode, pod, humanGates: 0, requiresPrd: true, stopsAfterSeal: false });
+  if (autonomous) return laneResult({ lane: 'autonomous', auto, autonomous, lite, planOnly, prdPath, mode, pod, humanGates: 1, requiresPrd: true, stopsAfterSeal: true });
+  return laneResult({ lane: 'gated', auto, autonomous, lite, planOnly, prdPath, mode, pod, humanGates: 3, requiresPrd: false, stopsAfterSeal: true });
 }
 
 function resolveLane(input) {

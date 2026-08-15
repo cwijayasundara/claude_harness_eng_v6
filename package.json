@@ -102,7 +102,8 @@
     "terraform-emit": "node .claude/scripts/terraform-emit.js",
     "terraform-verify": "node .claude/scripts/terraform-verify.js",
     "oscal-emit": "node .claude/scripts/oscal-emit.js",
-    "plan-approval": "node .claude/scripts/plan-approval.js"
+    "plan-approval": "node .claude/scripts/plan-approval.js",
+    "plan-seal": "node .claude/scripts/plan-seal.js"
   },
   "devDependencies": {
     "eslint": "^9.28.0",

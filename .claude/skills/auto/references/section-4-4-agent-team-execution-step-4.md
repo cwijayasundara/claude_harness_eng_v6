@@ -16,7 +16,7 @@ Concretely:
 4. If team: create `.claude/state/parallel-implement.lock` (empty file) and set env `HARNESS_PARALLEL_AGENTS=1` for the team window so pre-bash git-safety is active; spawn one Agent(subagent_type=implementer) per story — parallel Phase 1, then Phase 2 after Phase 1 commits. You are dispatching, not implementing (except designated Phase 3 integrator). Remove the lock when the team finishes.
 5. If solo_sequential: implement stories one-by-one in this context — do NOT spawn per-story teammates.
 6. If solo (N=1): implement yourself.
-7. After implementation, run the validation gate (pytest, ruff, mypy/tsc, coverage) and hand off to the evaluator.
+7. After implementation, run SECTION 5 (tests, then `node .claude/scripts/run-gate-checks.js`). Do not spawn the evaluator per group — it runs once at the end of the run.
 8. Structural advisor: after 2 consecutive evaluator FAILs on this group, spawn Agent(subagent_type=advisor) with a compact fail brief (cap: execution.advisor_max_per_run, default 3) before the next generator attempt.
 ```
 
@@ -63,7 +63,7 @@ Every teammate receives:
 - File ownership (from `specs/design/component-map.md`)
 - Learned rules (from `.claude/state/learned-rules.md` — inject verbatim)
 - Process rules (from `.claude/state/process-rules.md` when non-empty — inject verbatim; workflow constraints, not code style)
-- Quality principles (from `.claude/skills/code-gen/SKILL.md`)
+- Quality principles excerpt matching `project-manifest.json#quality.test_discipline` (do not inject `.claude/skills/code-gen/SKILL.md` in full)
 - **Git safety (parallel team):** MUST NOT run `git stash`, `git stash pop`, `git reset --hard`, `git clean -fd`, or `git push --force`. MAY `git add <owned paths>` and `git commit`. Pre-bash-gate enforces this while `parallel-implement.lock` exists or `HARNESS_PARALLEL_AGENTS=1` (escape: `HARNESS_GIT_SAFETY=off`, human only).
 - Interface contracts from upstream teammates (Phase 2+ only)
 - If story involves external API: `.claude/skills/code-gen/references/api-integration-patterns.md`

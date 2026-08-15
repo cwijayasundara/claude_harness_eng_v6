@@ -77,3 +77,5 @@ usually announced by the upstream-watch workflow flagging a new
 |---|---|---|---|
 | 2026-06 | Opus 4.8 orchestrator, Sonnet 4.6 teammates | `full` remains default; `trimmed` available per-project | Knob introduced; no measured run yet — first re-baseline owed at next model-generation change |
 | 2026-07-25 | Opus 5 judgment tier, Sonnet 5 teammates | Step 2 (re-pin) done; `full` remains default | Claude 5 generation. Judgment pins moved `claude-opus-4-8` → `claude-opus-5` (`model-tier.js`, 7 agent frontmatters, docs); unit suite 2472/2472. **Ceremony re-baseline still owed** — steps 3 and 6 need a billed two-run comparison on a real story group, which has not been executed. Do not read this row as a measured result. |
+| 2026-08-15 | `--full` lit factory P0 | Gated `/build` stops at `plan-seal`; design-critic default cap **3** | See `docs/proposals/lit-factory-full.md`. Seal is the plan/code session split; critic 10→3. P1–P3 still open. |
+| 2026-08-15 | `--full` lit factory P2 | Sealed `/auto` pack; `quality.test_discipline`; 2-axis review; draft-PR stop | P0+P1+P2 done. P3 (shortlink prove-it) still open. |

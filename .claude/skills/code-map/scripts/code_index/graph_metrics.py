@@ -1,9 +1,9 @@
 """Graph metrics: fan-in/out, hubs, and Tarjan SCC cycle detection (iterative)."""
 
-# Same unstable-hub thresholds hooks/lib/drift.js's UNSTABLE_FAN_IN /
+# Same unstable-hub thresholds the drift sensor's UNSTABLE_FAN_IN /
 # UNSTABLE_INSTABILITY constants use (coupling-report.md's unstableSection,
 # coupling-gate.js's ratchet). Keep these two implementations in lockstep —
-# a drift here silently changes what counts as unstable in only one runtime.
+# a mismatch here silently changes what counts as unstable in only one runtime.
 UNSTABLE_FAN_IN = 5
 UNSTABLE_INSTABILITY = 0.8
 

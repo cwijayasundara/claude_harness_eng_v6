@@ -61,6 +61,7 @@
       "red-phase-ledger",
       "shell-lex",
       "tdd",
+      "test-discipline",
       "test-write-lock",
       "task-envelope",
       "task-lifecycle",
@@ -102,6 +103,7 @@
         "brd-render",
         "build",
         "clarify",
+        "code-map",
         "deploy",
         "design",
         "design-render",
@@ -150,7 +152,10 @@
         "pipeline-state-readers",
         "pipeline-status",
         "plan-approval",
+        "plan-artifact-digest",
+        "plan-seal",
         "plan-confidence",
+        "navigation-refresh",
         "pr-body",
         "pr-poll",
         "record-modularity-review",
@@ -201,7 +206,6 @@
       "why": "Only needed on existing codebases. Includes the 10-control nav/token-governor stack, which false-blocked 3x in one session.",
       "skill": [
         "brownfield",
-        "code-map",
         "context",
         "seam-finder"
       ],
@@ -223,7 +227,6 @@
         "nav-mcp-server",
         "nav-query",
         "nav-telemetry",
-        "navigation-refresh",
         "run-compact",
         "search-compact",
         "tool-output-pack"
@@ -476,7 +479,12 @@
     {
       "from": "skill:refactor",
       "to": "skill:code-map",
-      "why": "Caller lookup for rename/move blast radius. The whole block is already conditional on specs/brownfield/code-graph.json existing, which only happens when the brownfield pack is installed \u2014 /refactor works without it. Prose conditionality the checker cannot see."
+      "why": "Caller lookup for rename/move blast radius. The whole block is already conditional on specs/brownfield/code-graph.json existing. code-map now ships on core (planning) for first-source index; /refactor still skips when the graph is a placeholder."
+    },
+    {
+      "from": "skill:code-map",
+      "to": "script:nav-query",
+      "why": "Step 3.5 secondary nav (TF-IDF / co-change / concepts) is brownfield-only. First-source /auto uses navigation-refresh + the vendored indexer, which do not need nav-query.js. Absent script is a skip, not a crash."
     },
     {
       "from": "skill:design",

@@ -86,31 +86,37 @@ When clarity and speed genuinely conflict on a hot path, keep the readable versi
 
 ---
 
-## Testing Rules — TDD Mandatory
+## Testing Rules — honor `quality.test_discipline`
+
+Read `project-manifest.json#quality.test_discipline`. New scaffolds default to `outcomes`. Missing key on an old project is treated as `tdd` by the hooks.
 
 **"Coverage isn't about bug prevention — it's about guaranteeing the agent has double-checked the behavior of every line of code it wrote."** — Steve Krenzel
 
-1. **Tracer-bullet TDD: one behavior at a time.**
-   - Do not write all tests first, then all implementation.
-   - Write one failing behavior test through the public interface.
-   - Implement the minimum code to pass that test.
-   - Repeat for the next behavior.
-   - This prevents imagined tests for imagined architecture.
-2. **Tests FIRST, then code (TDD):**
-   - Write a failing test that defines expected behavior
-   - Run it — verify it fails for the right reason
-   - Write the minimum code to make it pass
-   - Run it — verify it passes
-   - Refactor if needed, re-run tests
-   - Commit
-3. **100% meaningful coverage** — every branch, every error path. At 100%, any uncovered line is an immediate signal of missing verification. The ratchet gate BLOCKS below 80%.
-4. **Only mock external boundaries:** databases, third-party APIs, file I/O, clocks, payment processors, queues.
-5. **Never mock business logic** — if you mock a service to test another service, you are hiding bugs and testing wiring instead of behavior.
-6. **Isolate tests from .env files:** When testing settings/config that uses pydantic-settings or dotenv, pass `_env_file=None` (pydantic) or mock `dotenv.load_dotenv` to prevent the developer's `.env` from leaking into tests. Tests must be self-contained — they must pass regardless of what's in the local `.env`.
-7. **Use async-compatible connection strings:** When using async frameworks (SQLAlchemy async, asyncpg), defaults must use the async driver scheme (e.g., `postgresql+asyncpg://` not `postgresql://`). The sync scheme will fail at runtime with a cryptic driver error.
-8. **Realistic test data** — use domain-representative values (real-looking emails, valid UUIDs, plausible amounts). Never `"foo"`, `123`, or `"test"`.
-9. Test names describe behavior: `"returns 404 when order does not exist"`, not `"test order"`.
-10. **Integration tests for multi-step flows:** When a route triggers a background task or async flow (e.g., POST creates a record then starts processing), write a test that calls the endpoint and asserts the FINAL state — not just that each unit works alone. Assert exact record counts: `assert db.query(Task).count() == 1` after one API call.
+**Shared (every discipline):** coverage floor + mutation-smoke + test-deletion stay. Tests enter through public interfaces. Only mock external boundaries. Never mock business logic. Isolate tests from `.env`. Realistic test data. Names describe behavior.
+
+### `outcomes` (default)
+
+Tests and production code land together at the **named seams** in `specs/test_artefacts/test-plan.md`. One behavior at a time through the public interface. Do not run the write-lock / red-phase / test-integrity stack. Do not write all tests first, then all implementation.
+
+### `tdd`
+
+Write-lock / red-phase / test-integrity stay on.
+
+1. Write one failing behavior test through the public interface.
+2. Run it — it must fail for the right reason.
+3. Write the minimum code to pass.
+4. Refactor if needed, re-run, commit.
+5. Repeat for the next behavior.
+
+### `at-first`
+
+For **behavior stories only**: write the acceptance test against the Ports-and-Adapters seam, record the red receipt (`record-at-red.js`), then implement. Coverage / mutation-smoke / test-deletion still apply. The write-lock stack stays off.
+
+**Also always:**
+
+- Isolate tests from `.env` files: pass `_env_file=None` (pydantic) or mock `dotenv.load_dotenv`.
+- Async frameworks need async driver schemes (`postgresql+asyncpg://`, not `postgresql://`).
+- Integration tests for multi-step flows assert the final state and exact record counts.
 
 ---
 

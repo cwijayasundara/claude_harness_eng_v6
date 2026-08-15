@@ -20,7 +20,7 @@ agent: generator
 ```
 
 - `/test` — generate all test artefacts: plan, cases, fixtures, and E2E tests.
-- `/test --plan-only` — generate test plan, test cases, and test data fixtures (everything in `specs/test_artefacts/`). Stop before writing Playwright files. Does NOT require source code — only needs stories from `/spec`.
+- `/test --plan-only` — generate the **review surface**: `test-plan.md` (named seams + what is untested) and `verification-matrix.json`. Stop before Playwright. Does NOT require source code. See `plan-review-loop/references/lean-review-surface.md`.
 - `/test --e2e-only` — skip plan/cases, go straight to Playwright E2E generation from `specs/test_artefacts/verification-matrix.json`; record `specs/test_artefacts/e2e-traces.json`. Use when plan already exists and source code has been built.
 - `/test --deployed` — **post-deploy lane.** Generate a Playwright suite that runs against an environment that is already deployed, instead of one this suite starts itself. Writes `playwright.deployed.config.ts`, `e2e/auth.setup.ts`, `.github/workflows/e2e-deployed.yml`, and `specs/test_artefacts/e2e-deployed-traces.json`. See "Post-Deploy Lane" below and `references/e2e-deployed.md` for the authoring rules. Run after `/deploy` and after the app is live in a test environment.
 - `/test --from-cr <file.md>` / `--from-cr --issue N` — **brownfield CR lane.** Turn a change request (a markdown file, or a GitHub issue) against existing code into a **regression-pin set** (behavior that must stay identical) plus a **delta test plan** (new behavior the CR introduces), grounded against the CR. See "Brownfield CR Lane" below. Run this *before* `/change` when a CR document exists.
@@ -92,9 +92,10 @@ The agent operates in the forked context. It must not modify source code.
 
 Create `specs/test_artefacts/` if it does not exist.
 
-**`specs/test_artefacts/test-plan.md`**
-- Scope: what is being tested and what is explicitly out of scope.
-- Test levels: unit, integration, E2E.
+**`specs/test_artefacts/test-plan.md`** (the human review doc)
+- Named **seams** the implementer will test at (confirm with the human).
+- Scope: what is being tested and what is explicitly **untested**, with a reason.
+- Test levels: unit, integration, E2E (E2E planned only — generated later).
 - Environment assumptions: base URLs, test DB, seed state.
 - Pass/fail criteria for the sprint.
 
@@ -169,9 +170,17 @@ node .claude/scripts/verification-matrix-gate.js --phase plan
 
 `specs/reviews/verification-matrix-verdict.json` is also a **HARD BLOCK**: every implementation-ready AC must have a matrix obligation before the plan can be reported.
 
-### Step 4.6 — Acceptance Tests First (AT Layer) [REQUIRED SUB-SKILL: `writing-acceptance-tests-first`]
+### Step 4.6 — Acceptance Tests First (AT Layer)
 
-Before implementation begins on each story, write its acceptance test(s) FIRST — a fast, business-readable layer that verifies the AC directly against business logic via a Ports-and-Adapters seam, bypassing the UI/transport stack. This is additive to Step 5's Playwright E2E generation, not a replacement: ATs become the primary per-story verification loop; E2E remains the final full-stack confirmation layer, generated later once source exists. This step runs even in `--plan-only` mode — writing an AT does not require the full running app, only the seam it targets, and an AT that fails because the target function does not exist yet is a legitimate first red state (see the sub-skill's Process step 5).
+**In `--plan-only`:** name the seam for each story in `test-plan.md`. Do **not**
+write AT source files yet — that belongs to `/implement` / `/auto --sealed`.
+The `at-first-gate` still blocks a story's first production commit until the
+AT and red receipt exist.
+
+**When source exists** (full `/test`, not `--plan-only`), follow
+`.claude/skills/writing-acceptance-tests-first/SKILL.md` [REQUIRED SUB-SKILL]
+before implementation: write the AT against the named seam with a test-double
+adapter and confirm it fails for the right reason.
 
 Follow `.claude/skills/writing-acceptance-tests-first/SKILL.md` in full for each story: locate or request the human-provided AT template (`specs/test_artefacts/at-template.*`), identify the Ports-and-Adapters seam (reuse `/seam-finder` output when `specs/brownfield/seams-<goal-slug>.md` exists for the story's goal; for a brand-new greenfield module, design the port directly from the story's acceptance criteria), write the AT against that seam with a test-double/fake adapter, run it, and confirm it fails for the right reason before implementation starts.
 
@@ -184,9 +193,13 @@ Write acceptance tests to `specs/test_artefacts/acceptance/{story-id}.<ext>` (ex
 
 Every implementation-ready AC should have a corresponding AT before the story is handed to implementation. `at-traces.json` is the deterministic signal downstream review should check for. As of gap G23, this is also mechanically enforced at commit time: `at-first-gate.js` (pre-commit) blocks a story's NEW production source files from being committed unless both the AT file and a `record-at-red.js` receipt exist for that story (see `HARNESS.md` G20/G23).
 
-### Step 4.75 — Phase Evaluation Gate [`--plan-only`]
+### Step 4.75 — Phase Evaluation Gate [`--plan-only` + `--eval` only]
 
-Spawn the `evaluator` agent in **artifact mode** with `model: "sonnet"`, against
+Skip unless `--eval` or the plan covers an auth, tenant, migration, or
+external-trust boundary. The matrix + grounding gates already prove every AC
+has a planned check.
+
+When `--eval` is on, spawn the `evaluator` agent in **artifact mode** with `model: "sonnet"`, against
 `.claude/templates/phase-eval-rubrics.json#phases.test`:
 
 | Input | Value |
@@ -234,9 +247,12 @@ The brief leads with coverage judgement, not the case list: which acceptance cri
 - ACs where the required layers are `unit` only, with no api/e2e evidence planned
 - Fixtures encoding an assumption about real data that only the human can confirm
 
-Record each round with `plan-approval.js`, naming `test-plan.md`, `test-cases.md`, and `verification-matrix.json` on the approving round. In `--auto` / `--autonomous`, waive with `--lane`.
+Record each round with `plan-approval.js`, naming `test-plan.md` and
+`verification-matrix.json` on the approving round. In `--auto` / `--autonomous`, waive with `--lane`.
 
-**If `--plan-only`: STOP HERE.** Steps 4–4.8 (plan + cases + fixtures + trace spine + grounding gate + acceptance tests + human review) are the complete deliverable for the planning phase. Do not proceed to Playwright generation — source code does not exist yet. Report the generated artifacts and exit.
+**If `--plan-only`: STOP HERE.** The deliverable is the named seams, the
+matrix, the traces, and the human review. Do not write Playwright. Do not
+write AT source files. Report the generated artifacts and exit.
 
 ### Step 4.7 — Generate Integration Tests (`tests/integration/`) [when source exists]
 

@@ -1,5 +1,7 @@
 ## SECTION 9: GAN Design Loop (Frontend Groups Only, Full Mode)
 
+Use this when `--mode full` and the UI slice is already green (SECTION 5 tests + runner passed). Cap 3 iterations. Lean skips this section.
+
 Read `calibration-profile.json` for all scoring and iteration parameters. Fall back to defaults if file does not exist.
 
 ### Configuration
@@ -9,7 +11,7 @@ Read `calibration-profile.json` for all scoring and iteration parameters. Fall b
 | Scoring weights | `calibration-profile.json` → `scoring.weights` | DQ=1.5, O=1.5, C=0.75, F=0.75 |
 | Pass threshold | `calibration-profile.json` → `scoring.threshold` | 7 |
 | Per-criterion minimum | `calibration-profile.json` → `scoring.per_criterion_minimum` | 5 |
-| Max iterations | `calibration-profile.json` → `iteration.max_iterations` | 10 |
+| Max iterations | `calibration-profile.json` → `iteration.max_iterations` | 3 |
 | Plateau window | `calibration-profile.json` → `iteration.plateau_window` | 3 |
 | Plateau delta | `calibration-profile.json` → `iteration.plateau_delta` | 0.3 |
 | Pivot on plateau | `calibration-profile.json` → `iteration.pivot_after_plateau` | true |

@@ -155,8 +155,8 @@ test('a brownfield scaffold bootstraps code-map and wiki immediately for source-
     fs.writeFileSync(path.join(target, 'package.json'), JSON.stringify({ scripts: { test: 'node --test' } }));
     fs.writeFileSync(path.join(target, 'src', 'index.py'), 'def greet(name: str) -> str:\n    return f"hello {name}"\n');
     const profilePath = writeProfile(workDir, MINIMAL_NODE_PROFILE);
-    // code-map and navigation-refresh are brownfield-pack, so the bootstrap they drive
-    // only runs when that pack is installed.
+    // Brownfield profile still bootstraps the wiki at scaffold time; core
+    // ships the same indexer and runs it from first-source /auto.
     const result = applyScaffold({ profile: profilePath, pluginSource: PLUGIN_SOURCE, target, scaffoldProfile: 'brownfield' });
 
     assert.strictEqual(result.navigation.status, 'fresh');
@@ -210,15 +210,17 @@ test('core scaffold profile ships the lean product-development spine by default'
     assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'feature', 'SKILL.md')));
     assert.ok(!fs.existsSync(path.join(target, '.claude', 'skills', 'brownfield', 'SKILL.md')),
       'core is greenfield product work — the brownfield pack is not part of it');
-    assert.ok(!fs.existsSync(path.join(target, '.claude', 'skills', 'code-map', 'SKILL.md')),
-      'code-map belongs to the brownfield pack');
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'code-map', 'scripts', 'code_index', 'code_index.py')),
+      'core ships the AST indexer so first-source /auto does not need a hand copy');
     assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'change', 'SKILL.md')));
     assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'refactor', 'SKILL.md')));
     assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'vibe', 'SKILL.md')));
     assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'tracker-publish', 'SKILL.md')));
     assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'build-chain.js')));
-    assert.ok(!fs.existsSync(path.join(target, '.claude', 'scripts', 'navigation-refresh.js')),
-      'navigation-refresh is brownfield-pack; graph-refresh degrades without it rather than requiring it');
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'navigation-refresh.js')),
+      'navigation-refresh ships with core so first-source /auto can index (or skip loudly)');
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'plan-seal.js')),
+      'plan-seal.js must ship with core — do not document a manual copy');
     assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'ci-ingest.js')));
     assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'flag-scan.js')));
     assert.ok(fs.existsSync(path.join(target, '.claude', 'scripts', 'telemetry-memory.js')),
@@ -257,7 +259,9 @@ test('brownfield scaffold profile is core plus the brownfield pack, not an alias
     for (const skill of ['feature', 'change', 'refactor', 'vibe', 'tracker-publish']) {
       assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', skill, 'SKILL.md')), `${skill} (core) should be copied`);
     }
-    for (const skill of ['brownfield', 'code-map', 'seam-finder', 'context']) {
+    assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'code-map', 'SKILL.md')),
+      'code-map ships on core (planning) and therefore on brownfield');
+    for (const skill of ['brownfield', 'seam-finder', 'context']) {
       assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', skill, 'SKILL.md')), `${skill} (brownfield pack) should be copied`);
     }
     assert.ok(fs.existsSync(path.join(target, '.claude', 'agents', 'codebase-explorer.md')));

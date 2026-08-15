@@ -58,6 +58,9 @@ test('refreshNavigation builds graph, symbol map, and wiki for source-bearing re
     assert.ok(status.estimated_tokens_saved_per_orientation > 0, JSON.stringify(status));
 
     const graph = JSON.parse(fs.readFileSync(path.join(dir, 'specs', 'brownfield', 'code-graph.json'), 'utf8'));
+    const meta = JSON.parse(fs.readFileSync(path.join(dir, 'specs', 'brownfield', 'code-graph.meta.json'), 'utf8'));
+    assert.notStrictEqual(meta.status, 'empty');
+    assert.notStrictEqual(meta.producer, 'none');
     assert.ok(graph.files.some((file) => file.path === 'src/math.py'));
     assert.match(fs.readFileSync(path.join(dir, 'specs', 'brownfield', 'symbol-map.md'), 'utf8'), /add_0/);
     assert.match(fs.readFileSync(path.join(dir, 'specs', 'brownfield', 'wiki', 'WIKI.md'), 'utf8'), /Codebase Wiki/);

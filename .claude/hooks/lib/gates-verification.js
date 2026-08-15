@@ -26,7 +26,7 @@ function checkMutation(ctx) {
     detail: `${detail}\n`,
     fix: 'add an assertion that fails when the flipped operator above is applied — test the boundary (off-by-one) or the false branch — then re-commit.',
     envOff: 'HARNESS_MUTATION_GATE',
-    minTier: 'standard',
+    minTier: 'strict',
   });
 }
 
@@ -48,6 +48,8 @@ function blockInvalidLedger(ledger) {
 function checkTestIntegrity(ctx) {
   const { projectDir } = ctx;
   if ((process.env.HARNESS_TEST_INTEGRITY_GATE || '').toLowerCase() === 'off') return;
+  const { loadTestDiscipline, tddStackEnabled } = require('./test-discipline');
+  if (!tddStackEnabled(loadTestDiscipline(projectDir, process.env))) return;
   const ledger = readLedger(projectDir);
   if (ledger.state === 'absent') return; // nothing observed yet
   if (ledger.state === 'invalid') return blockInvalidLedger(ledger);

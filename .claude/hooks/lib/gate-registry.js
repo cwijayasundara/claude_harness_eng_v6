@@ -3,7 +3,10 @@
 // Ordered pre-commit gate catalog + tier-filtered runner (PR3).
 
 const { isGateEnabled, loadSensorTier } = require('./sensor-tier');
-const { buildContext, setFailContext, fail } = require('./pre-commit-util');
+const {
+  buildContext, setFailContext, fail,
+  worktreeChangedFiles, contextFromFiles,
+} = require('./pre-commit-util');
 const { recordOutcome } = require('./sensor-outcomes');
 const early = require('./gates-early');
 const quality = require('./gates-quality');
@@ -83,6 +86,75 @@ function selectGates(tier, { withoutSourceOnly = false } = {}) {
 }
 
 /**
+ * Same GATE_CATALOG as the git hook, but collect results instead of
+ * process.exit mid-gate. Used by `run-gate-checks.js` (default lane) so
+ * /auto and hosts without hooksPath still hit the sensor set.
+ *
+ * `opts.files` — explicit list (CLI `--files`).
+ * Otherwise worktree vs HEAD + untracked (not the index — this is not a commit).
+ */
+function runSensorCatalog(projectDir, opts = {}) {
+  const env = opts.env || process.env;
+  const tier = opts.tier || loadSensorTier(projectDir, env);
+  const files = (opts.files && opts.files.length)
+    ? opts.files
+    : worktreeChangedFiles(projectDir);
+  const ctx = contextFromFiles(projectDir, files);
+  ctx.tier = tier;
+  process.stdout.write(`sensor-checks: sensor_tier=${tier}\n`);
+
+  const gates = ctx.stagedSource.length === 0
+    ? selectGates(tier, { withoutSourceOnly: true })
+    : selectGates(tier);
+
+  const results = [];
+  let blocked = false;
+  for (const g of gates) {
+    setFailContext({ tier, currentSensor: g.id, projectDir, collect: true });
+    try {
+      g.run(ctx);
+      recordOutcome(projectDir, { sensor: g.id, ran: true, blocked: false, surface: 'cli' });
+      results.push({
+        id: g.id, pack: 'sensors', blocking: true, status: 'passed', detail: '',
+      });
+    } catch (err) {
+      if (!(err && err.gateBlocked)) throw err;
+      blocked = true;
+      results.push({
+        id: g.id, pack: 'sensors', blocking: true, status: 'blocked',
+        detail: String(err.message || '').slice(0, 400),
+      });
+      break;
+    }
+  }
+
+  if (!blocked && ctx.stagedSource.length > 0) {
+    setFailContext({ tier, currentSensor: null, projectDir, collect: true });
+    try {
+      runCommitCustomSensors(projectDir);
+    } catch (err) {
+      if (!(err && err.gateBlocked)) throw err;
+      blocked = true;
+      results.push({
+        id: 'custom-sensors', pack: 'sensors', blocking: true, status: 'blocked',
+        detail: String(err.message || '').slice(0, 400),
+      });
+    }
+  }
+
+  setFailContext({ tier: null, currentSensor: null, projectDir: null });
+  const count = (s) => results.filter((r) => r.status === s).length;
+  const summary = {
+    pass: !blocked,
+    passed: count('passed'),
+    blocked: count('blocked'),
+    warn: 0,
+    skipped: 0,
+  };
+  return { tier, results, summary, files };
+}
+
+/**
  * Run the full pre-commit sequence for projectDir.
  * process.exit(1) on block (via fail()); returns normally on pass.
  */
@@ -142,5 +214,6 @@ module.exports = {
   GATE_CATALOG,
   selectGates,
   runPreCommit,
+  runSensorCatalog,
   runCommitCustomSensors,
 };

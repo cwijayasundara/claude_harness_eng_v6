@@ -1,8 +1,12 @@
 ## Output
 
+**Review surface:** `architecture.md` + `program-design.md` + `component-map.md`.
+See `plan-review-loop/references/lean-review-surface.md`.
+
 | File | Purpose |
 |------|---------|
-| `specs/design/architecture.md` | Architecture overview |
+| `specs/design/architecture.md` | Architecture overview (decisions table + sequence + data) |
+| `specs/design/program-design.md` | **Required.** Types, signatures, call-stack tree, file-tree |
 | `specs/design/api-contracts.md` | Human-readable API contracts |
 | `specs/design/api-contracts.schema.json` | OpenAPI 3.0 machine-readable schema |
 | `specs/design/data-models.md` | Human-readable data model definitions |

@@ -19,6 +19,7 @@
 
 const { fileState } = require('./red-phase-ledger');
 const { isTestFile } = require('./tdd');
+const { loadTestDiscipline, tddStackEnabled } = require('./test-discipline');
 
 function allow(reason) {
   return { blocked: false, reason, redSha: null, message: null };
@@ -61,7 +62,9 @@ function ledgerInvalid(ledger) {
   };
 }
 
-function decideLock({ ledger, filePath, contentHash, env = {} }) {
+function decideLock({ ledger, filePath, contentHash, env = {}, projectDir = null, discipline = null }) {
+  const resolved = discipline || loadTestDiscipline(projectDir, env);
+  if (!tddStackEnabled(resolved)) return allow('discipline-not-tdd');
   if (String(env.HARNESS_TEST_LOCK || '').toLowerCase() === 'off') return allow('bypass');
 
   const rel = String(filePath || '').replace(/\\/g, '/');

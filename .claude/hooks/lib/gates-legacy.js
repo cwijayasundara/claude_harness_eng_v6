@@ -70,6 +70,11 @@ function checkLegacyBiteBackstop(projectDir, files) {
 // waste, and on a large commit it is what overflowed the subprocess buffer.
 function resolveLegacyGate(ctx) {
   const { projectDir } = ctx;
+  const { isBrownfieldGraphReal } = require('./sensor-tier');
+  if (!isBrownfieldGraphReal(projectDir)) {
+    noteSkip('legacy-discipline', 'brownfield graph is a placeholder or missing');
+    return null;
+  }
   if (process.env.HARNESS_LEGACY_DISCIPLINE_GATE === 'off') {
     noteSkip('legacy-discipline', 'HARNESS_LEGACY_DISCIPLINE_GATE=off');
     return null;
@@ -131,6 +136,11 @@ function checkSproutDiffGate(ctx) {
     noteSkip('sprout-diff', 'sensor script missing or unloadable from .claude/scripts');
     return;
   }
+  const { isBrownfieldGraphReal } = require('./sensor-tier');
+  if (!isBrownfieldGraphReal(projectDir)) {
+    noteSkip('sprout-diff', 'brownfield graph is a placeholder or missing');
+    return;
+  }
   const graphPath = path.join(projectDir, 'specs', 'brownfield', 'code-graph.json');
   if (!fs.existsSync(graphPath)) return;
   let graph;
@@ -182,6 +192,11 @@ function checkAtFirstGate(ctx) {
   const { projectDir } = ctx;
   if (process.env.HARNESS_AT_FIRST_GATE === 'off') {
     noteSkip('at-first', 'HARNESS_AT_FIRST_GATE=off');
+    return;
+  }
+  const { loadTestDiscipline, atFirstRequired } = require('./test-discipline');
+  if (!atFirstRequired(loadTestDiscipline(projectDir, process.env))) {
+    noteSkip('at-first', 'quality.test_discipline is not tdd or at-first');
     return;
   }
   let gate;

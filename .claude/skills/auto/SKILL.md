@@ -1,7 +1,7 @@
 ---
 name: auto
 description: Autonomous build loop with Karpathy ratcheting, GAN evaluator, and session chaining. Iterates story groups until all features pass or stopping criteria met.
-argument-hint: "[--mode full|lean] [--group GROUP_ID]"
+argument-hint: "[--sealed] [--mode full|lean] [--group GROUP_ID]"
 context: fork
 ---
 
@@ -43,5 +43,5 @@ This skill is an **orchestrator index**. Load only the section file for the step
 
 ### Load-bearing gate names (always visible here for harness integrity)
 
-Gate 4 / pre-merge must continue to invoke: `cycle-gate.js`, `coupling-gate.js`, `mutation-gate.js` / mutation-smoke, `regression-gate.js` (with `--replay`, booting the app-under-test under `HARNESS_TEST_REPLAY=1` so its DB/HTTP/LLM resolve to the recorded boundary-doubles and a missing fixture is a hard fail), `contract-accessibility-default.js` as specified in the section files. Full procedure lives in the references.
+The sensor layer is one command: `node .claude/scripts/run-gate-checks.js` (honor its exit). `sensor_tier` selects membership. `cycle-gate.js`, `coupling-gate.js`, and `mutation-gate.js` / mutation-smoke run only at `strict`. `regression-gate.js --replay` stays in the registry. Full procedure lives in SECTION 5.
 

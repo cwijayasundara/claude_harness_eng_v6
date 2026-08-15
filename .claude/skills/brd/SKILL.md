@@ -388,9 +388,14 @@ them.
 
 (In delta mode add the same `--out-dir specs/brd/sprint-N` you adopted with.)
 
-### Step 4.5 — Phase Evaluation Gate
+### Step 4.5 — Phase Evaluation Gate [`--eval` only]
 
-Spawn the `evaluator` agent (artifact mode) to validate the BRD before human review.
+Skip this step unless the invocation includes `--eval` or the BRD introduces
+an auth, tenant, migration, or external-trust boundary. Grounding (4.4) and
+taxonomy (4.45) already proved the load-bearing properties. The review surface
+is `brd.md` + `brd-requirements.json` — see `plan-review-loop/references/lean-review-surface.md`.
+
+When `--eval` is on, spawn the `evaluator` agent (artifact mode) to validate the BRD before human review.
 
 Run it with **`model: "sonnet"`**. The BRD's load-bearing properties are already
 proven deterministically before this gate — grounding is an identity in adopt
@@ -477,6 +482,8 @@ phase's context being re-billed through the next one.
 
 ## Output
 
+**Review surface (what the human approves):** `specs/brd/brd.md` + `specs/brd/brd-requirements.json`. See `plan-review-loop/references/lean-review-surface.md`.
+
 | File | Purpose |
 |------|---------|
 | `specs/brd/brd.md` | Full BRD for a new project |
@@ -505,7 +512,7 @@ phase's context being re-billed through the next one.
 
 **Taxonomy floor — hard block (both modes).** `brd-taxonomy-check.js` proves every one of the ten requirement slots is either covered by a tagged requirement or excused with a substantive, committed reason — the check the grounding gate structurally cannot make, since grounding is relative to a source that may itself be silent. See Step 4.45.
 
-**Phase evaluation gate runs before human approval.** The evaluator agent (artifact mode) scores the BRD against 5 criteria (completeness, traceability, specificity, consistency, actionability). Threshold: average >= 7.0, all criteria >= 5. In both modes the traceability criterion is anchored to the grounding verdict, and the completeness criterion to the taxonomy verdict, rather than free judgement.
+**Phase evaluation is opt-in (`--eval`).** Grounding and taxonomy remain hard blocks. The evaluator scores prose only when `--eval` is passed or a security/data boundary is in play.
 
 **Human approval is still required before proceeding to `/spec`.** The gates validate quality + grounding; the human validates intent.
 

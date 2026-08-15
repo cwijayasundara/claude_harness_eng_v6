@@ -1,16 +1,35 @@
 ## SECTION 2: Context Recovery (Step 1 of Every Iteration)
 
-At the start of EVERY iteration — including the first — read these files in order:
+At the start of EVERY iteration — including the first — recover operational state,
+then load only the sealed planning pack.
 
 First run `node .claude/scripts/checkpoint-state.js resume`. `resume_exact` authorizes
 continuation from the recorded `next_action`; `repair_partial_iteration` routes to the
 self-healing loop before new work; `diverged_after_checkpoint` requires reconciliation;
 any `blocked_*` result is a hard stop. Never infer recovery solely from prose state.
 
+### Sealed planning pack
+
+After `plan-seal.js check` (SECTION 1) passes, planning reads are this pack only:
+
+- `specs/reviews/plan-seal.json` — artifact list (and the files it names that are in this pack)
+- `features.json`
+- `specs/design/program-design.md`
+- `specs/design/component-map.md`
+- `specs/test_artefacts/test-plan.md` (named seams)
+- `specs/test_artefacts/verification-matrix.json`
+
+Do not reload `/brd`, `specs/brd/brd.md`, or `.claude/skills/code-gen/SKILL.md` in full.
+Story files for the selected group are loaded after wave selection (item 6), not as a
+second planning pass. `quality.test_discipline` from `project-manifest.json` selects
+the testing excerpt injected into teammates — not the whole code-gen skill.
+
+### Operational state (session machinery, not the plan)
+
 1. **`.claude/program.md`** — Constraints may have changed mid-run. Re-read every iteration. Never cache.
 2. **`.claude/state/learned-rules.md`** — Accumulated project rules. Inject verbatim into ALL agent prompts spawned this iteration.
 3. **`claude-progress.txt`** — Read the LAST session block (the block after the final `=== Session` marker). Extract: `current_group`, `groups_completed`, `groups_remaining`, `last_commit`, `next_action`. If the file does not exist (`/auto` invoked standalone, without `/build`), create it now with a Session 0 block in the SECTION 10 format before reading.
-4. **`features.json`** — Current pass/fail state for all features. Determines what work remains.
+4. **`features.json`** — Current pass/fail state for all features. Determines what work remains. (Also in the sealed pack.)
 5. **`specs/stories/dependency-graph.md`** — Compute the current wave (Section 4B Wave Selection Algorithm). A group is "unfinished" if any of its stories' features are not passing in `features.json`. Respect dependency ordering: do not start a group whose upstream dependencies have failing features. With `--sequential` (or `--parallel-groups 1`), the wave is the single next unfinished group; with default `--parallel-groups 3`, the wave is up to 3 concurrently-ready groups.
 6. **Target group story files** — Verify every story in every selected group is marked `Readiness: ready`. If any story is `needs_breakdown`, stop and request a story decomposition pass before implementation.
 

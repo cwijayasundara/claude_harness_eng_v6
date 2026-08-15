@@ -4,6 +4,7 @@
 
 ```
 /auto
+/auto --sealed
 /auto --mode lean
 
 /auto --group D
@@ -14,7 +15,7 @@
 /auto --single-pr
 ```
 
-- `--mode` controls which ratchet gates are enforced. Default: `full`. Options: `full`, `lean` (`lean` skips only the per-iteration design-critic).
+- `--sealed` — coding-loop entry after a human plan seal. `/auto` always checks the seal; pass `--sealed` after `/clear` from a gated `/build`. SECTION 2 loads only the sealed planning pack. Success stops at an open **draft PR** plus quality card and walkthrough — do not merge unless `AUTO_MERGE` / `--auto-merge` is set. Default `--mode` is `full`. Options: `full`, `lean`. Same coding loop either way: tests → `run-gate-checks.js` → optional security reviewer → 2-axis review → evaluator **once at the end**. `lean` skips design-critic. `full` runs design-critic only after the UI slice is green, cap 3. There is no `--slim` lane.
 - `--group` resumes or targets a specific dependency group. If omitted, picks the next unfinished group from the dependency graph.
 - `--parallel-groups N` enables cross-group parallelism: up to N independent dependency groups run concurrently as separate group-orchestrator subagents. Default: `3`. Set `1` (or pass `--sequential`) to force one-group-at-a-time behavior.
 - `--sequential` shorthand for `--parallel-groups 1`. Use when you need deterministic group ordering for debugging.
@@ -28,7 +29,7 @@
 Before `/auto` can run, the following must exist:
 
 - `specs/stories/` — approved story files with acceptance criteria.
-- `specs/design/` — approved architecture artifacts including `api-contracts.md` and `component-map.md`.
+- `specs/design/` — approved architecture artifacts including `api-contracts.md`, `component-map.md`, and `program-design.md`.
 - `.claude/program.md` — project constraints and conventions.
 - `features.json` — feature tracking file (created by `/spec`).
 - `specs/stories/dependency-graph.md` — group ordering and dependencies.
@@ -69,7 +70,10 @@ and required security scanners. A warning is not sufficient in headless mode.
 
 ```bash
 node .claude/scripts/plan-approval.js check --phase all
+node .claude/scripts/plan-seal.js check
 ```
+
+A missing or stale `specs/reviews/plan-seal.json` means coding must not start. After the four plan gates: `node .claude/scripts/plan-seal.js write`. Headless `--auto` writes `plan-seal.js write --lane --auto` after the phase waivers. `--require-human` refuses a waived seal.
 
 **One-time migration for in-flight projects.** `brd` joined the gated phases when `/brd` was de-forked, so a project whose `specs/brd/` predates that change has no receipt and this check will block. Record or waive it once:
 

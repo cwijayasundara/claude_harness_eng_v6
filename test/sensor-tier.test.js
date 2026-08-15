@@ -10,6 +10,7 @@ const {
   VALID_TIERS,
   loadSensorTier,
   isGateEnabled,
+  isBrownfieldGraphReal,
   normalizeTier,
   GATE_TIERS,
 } = require('../.claude/hooks/lib/sensor-tier');
@@ -57,6 +58,32 @@ test('strict enables cycle and coupling; standard does not', () => {
   assert.strictEqual(isGateEnabled('strict', 'coupling-ratchet'), true);
   assert.strictEqual(isGateEnabled('standard', 'cycle-detection'), false);
   assert.strictEqual(isGateEnabled('standard', 'coupling-ratchet'), false);
+});
+
+test('mutation-smoke is strict only', () => {
+  assert.strictEqual(isGateEnabled('standard', 'mutation-smoke'), false);
+  assert.strictEqual(isGateEnabled('minimal', 'mutation-smoke'), false);
+  assert.strictEqual(isGateEnabled('strict', 'mutation-smoke'), true);
+});
+
+test('unknown gate ids require an explicit GATE_TIERS row', () => {
+  assert.strictEqual(isGateEnabled('standard', 'brand-new-undocumented-gate'), false);
+  assert.strictEqual(isGateEnabled('strict', 'brand-new-undocumented-gate'), false);
+});
+
+test('isBrownfieldGraphReal is false for a placeholder and true for a real graph', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tier-graph-'));
+  const brown = path.join(dir, 'specs', 'brownfield');
+  fs.mkdirSync(brown, { recursive: true });
+  assert.strictEqual(isBrownfieldGraphReal(dir), false);
+  fs.writeFileSync(path.join(brown, 'code-graph.meta.json'), JSON.stringify({
+    producer: 'none', status: 'empty',
+  }));
+  assert.strictEqual(isBrownfieldGraphReal(dir), false);
+  fs.writeFileSync(path.join(brown, 'code-graph.meta.json'), JSON.stringify({
+    producer: 'vendored-ast', status: 'fresh',
+  }));
+  assert.strictEqual(isBrownfieldGraphReal(dir), true);
 });
 
 test('GATE_TIERS covers all catalog-critical ids', () => {

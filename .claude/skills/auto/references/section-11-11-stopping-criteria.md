@@ -23,7 +23,16 @@ OR logic with priority (check in order):
    2. Generate `README.md` for the built application (see below)
    3. Commit: `git add README.md && git commit -m "docs: add README with architecture, setup, and API reference"`
    4. Invoke `/retro` once (unless `--no-retro`; see Usage) — reviews this session's loop-health scorecard and drafts any evidence-backed harness-improvement recommendations. Report-only and interactive (agentic-flywheel §4.2); never blocks completion, and stays silent if there is nothing new to recommend.
-   5. Exit
+   5. **Draft PR is the stop** (especially `/auto --sealed`). Spawn the evaluator against the running app (API + Playwright if UI) if this run has not already done so. Then generate the quality card and walkthrough, and open a **draft** PR. Do not merge. Do not enable auto-merge unless `AUTO_MERGE=true` or `--auto-merge` is set.
+      ```bash
+      node .claude/scripts/quality-card.js --range <base..HEAD>
+      node .claude/scripts/pr-walkthrough.js --base <base>
+      node .claude/scripts/pr-body.js --require-gate --title "<stories delivered>" > /tmp/pr-body.md
+      node .claude/scripts/wave-pr.js --branch "$(git branch --show-current)" --base main --title "<stories delivered>" --body "$(cat /tmp/pr-body.md)"
+      ```
+      If `wave-pr.js` is the wrong shape (no cluster plan), `gh pr create --draft --title "..." --body-file /tmp/pr-body.md`. Print the PR URL, `specs/reviews/quality-card.md`, and `specs/reviews/walkthrough.md`. Human reads. `/gate` groups the diff by slice. `/pr-respond` patches comments — do not rebuild it.
+      When AUTO_MERGE is active, run `node .claude/scripts/auto-merge.js <prUrl> --auto-merge` after the draft exists. Otherwise leave the draft open.
+   6. Exit
 
 ### `--no-retro` and `--once`
 

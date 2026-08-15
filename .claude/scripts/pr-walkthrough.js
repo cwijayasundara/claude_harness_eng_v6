@@ -14,6 +14,13 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
+let parseComponentMapStoryFiles = () => new Map();
+try {
+  ({ parseComponentMapStoryFiles } = require('../hooks/lib/impact-scope'));
+} catch (_) {
+  /* impact-scope is legacy-discipline pack — kernel walkthrough still groups by layer */
+}
+
 const SOURCE_EXTS = new Set([
   '.py', '.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.go', '.java', '.cs',
 ]);
@@ -148,6 +155,63 @@ function storyHints(root) {
   return { intent: firstLines.slice(0, 400) || null, stories };
 }
 
+function extractProgramDesignSections(md) {
+  const sections = [];
+  for (const part of String(md || '').split(/^## /m)) {
+    if (!part.trim()) continue;
+    const nl = part.indexOf('\n');
+    const title = (nl === -1 ? part : part.slice(0, nl)).trim();
+    const body = nl === -1 ? '' : part.slice(nl + 1).trim();
+    sections.push({ title, body });
+  }
+  return sections;
+}
+
+function matchDesignForSlice(sections, { story, files }) {
+  const needles = [story, ...(files || [])].filter(Boolean).map((s) => String(s).toLowerCase());
+  const matched = sections.filter((s) => {
+    const hay = `${s.title}\n${s.body}`.toLowerCase();
+    return needles.some((n) => n && hay.includes(n));
+  });
+  if (matched.length) return matched.slice(0, 3);
+  return sections.filter((s) => /types|signatures|call stack|file tree/i.test(s.title)).slice(0, 4);
+}
+
+function groupBySlice(files, mapText) {
+  const storyFiles = parseComponentMapStoryFiles(mapText || '');
+  const fileToStories = new Map();
+  for (const [story, fset] of storyFiles) {
+    for (const f of fset) {
+      const key = String(f).replace(/\\/g, '/');
+      if (!fileToStories.has(key)) fileToStories.set(key, new Set());
+      fileToStories.get(key).add(story);
+    }
+  }
+  const slices = new Map();
+  const unmapped = [];
+  for (const raw of files || []) {
+    const norm = String(raw).replace(/\\/g, '/');
+    let stories = fileToStories.get(norm);
+    if (!stories) {
+      for (const [owned, ss] of fileToStories) {
+        if (norm.endsWith(owned) || owned.endsWith(path.basename(norm))) {
+          stories = ss;
+          break;
+        }
+      }
+    }
+    if (!stories || !stories.size) {
+      unmapped.push(raw);
+      continue;
+    }
+    for (const story of stories) {
+      if (!slices.has(story)) slices.set(story, []);
+      slices.get(story).push(raw);
+    }
+  }
+  return { slices, unmapped };
+}
+
 function groupFiles(files) {
   const groups = new Map();
   for (const layer of LAYER_ORDER) groups.set(layer, []);
@@ -157,6 +221,16 @@ function groupFiles(files) {
   }
   for (const list of groups.values()) list.sort();
   return groups;
+}
+
+function fileFindings(review, filePath) {
+  return (review.byFile.get(filePath) || []).map((x) => ({
+    id: x.id,
+    level: x.level,
+    confidence: x.confidence,
+    axis: x.axis,
+    summary: x.what || x.message || x.summary || '',
+  }));
 }
 
 function buildWalkthrough({
@@ -174,6 +248,33 @@ function buildWalkthrough({
   const stories = storyHints(root);
   const generatedAt = new Date().toISOString();
 
+  let mapText = '';
+  let designText = '';
+  try { mapText = fs.readFileSync(path.join(root, 'specs', 'design', 'component-map.md'), 'utf8'); } catch (_) { /* optional */ }
+  try { designText = fs.readFileSync(path.join(root, 'specs', 'design', 'program-design.md'), 'utf8'); } catch (_) { /* optional */ }
+  const designSections = extractProgramDesignSections(designText);
+  const { slices, unmapped } = groupBySlice(changed, mapText);
+  const sliceGroups = [];
+  for (const [story, list] of slices) {
+    const excerpt = matchDesignForSlice(designSections, { story, files: list });
+    sliceGroups.push({
+      story,
+      files: list.map((f) => ({ path: f, findings: fileFindings(review, f) })),
+      program_design: excerpt.map((s) => ({
+        title: s.title,
+        excerpt: s.body.slice(0, 800),
+      })),
+    });
+  }
+  if (unmapped.length) {
+    sliceGroups.push({
+      story: 'unmapped',
+      files: unmapped.map((f) => ({ path: f, findings: fileFindings(review, f) })),
+      program_design: matchDesignForSlice(designSections, { story: '', files: unmapped })
+        .map((s) => ({ title: s.title, excerpt: s.body.slice(0, 800) })),
+    });
+  }
+
   const ordered = [];
   for (const layer of LAYER_ORDER) {
     const list = groups.get(layer) || [];
@@ -183,13 +284,7 @@ function buildWalkthrough({
       title: layerLabel(layer),
       files: list.map((f) => ({
         path: f,
-        findings: (review.byFile.get(f) || []).map((x) => ({
-          id: x.id,
-          level: x.level,
-          confidence: x.confidence,
-          axis: x.axis,
-          summary: x.what || x.message || x.summary || '',
-        })),
+        findings: fileFindings(review, f),
       })),
     });
   }
@@ -199,6 +294,7 @@ function buildWalkthrough({
     generated_at: generatedAt,
     base: base || null,
     file_count: changed.length,
+    slices: sliceGroups,
     groups: ordered,
     review_summary: review.summary,
     review_pass: review.pass,
@@ -240,6 +336,35 @@ function renderMd(data) {
   ];
   if (data.stories.length) {
     lines.push(`Stories: ${data.stories.map((s) => `\`${s}\``).join(', ')}`, '');
+  }
+
+  if (Array.isArray(data.slices) && data.slices.length) {
+    lines.push('## Story / slice groups', '');
+    lines.push(
+      '_Grouped from `component-map.md`. Each slice sits next to the matching `program-design.md` section._',
+      '',
+    );
+    for (const slice of data.slices) {
+      lines.push(`### Slice \`${slice.story}\``, '');
+      for (const f of slice.files || []) {
+        lines.push(`- \`${f.path}\``);
+        for (const find of (f.findings || []).slice(0, 5)) {
+          lines.push(
+            `  - ${severityIcon(find.level)} **${find.level}**`
+            + (find.confidence ? ` (${find.confidence})` : '')
+            + `: ${find.summary || find.id}`,
+          );
+        }
+      }
+      lines.push('');
+      if (slice.program_design && slice.program_design.length) {
+        lines.push('**Program design (this slice)**', '');
+        for (const sec of slice.program_design) {
+          const excerpt = String(sec.excerpt || '').replace(/^```[^\n]*\n?/, '').replace(/\n?```$/, '');
+          lines.push(`#### ${sec.title}`, '', excerpt, '');
+        }
+      }
+    }
   }
 
   lines.push('## Logical change groups', '');
@@ -303,7 +428,7 @@ function renderMd(data) {
     '3. Open every 🔴 BLOCK and 🟠 WARN; dismiss only with evidence.',
     '4. Spot-check one happy path and one failure path in tests (group 7).',
     '5. Confirm `specs/reviews/quality-card.md` is PASS and wiki links are fresh.',
-    '6. Merge only if you understand the change groups — not because CI is green alone.',
+    '6. A human merges. The agent pre-read never approves or merges.',
     '',
   );
   return lines.join('\n');
@@ -350,6 +475,9 @@ module.exports = {
   writeWalkthrough,
   classifyFile,
   groupFiles,
+  groupBySlice,
+  extractProgramDesignSections,
+  matchDesignForSlice,
   renderMd,
   main,
   LAYER_ORDER,

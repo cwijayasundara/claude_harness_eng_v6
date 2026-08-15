@@ -92,9 +92,26 @@ test('copyScaffoldTree(core) does not copy pe-ic-memo or install-framework-packs
     assert.ok(!fs.existsSync(path.join(target, '.claude', 'skills', 'fastapi-code')));
     assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'build', 'SKILL.md')));
     assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'writing-acceptance-tests-first', 'SKILL.md')));
+    assert.ok(
+      fs.existsSync(path.join(target, '.claude', 'scripts', 'plan-seal.js')),
+      'core profile must ship plan-seal.js — do not document a manual copy'
+    );
   } finally {
     fs.rmSync(workDir, { recursive: true, force: true });
   }
+});
+
+test('buildManifest writes quality.test_discipline outcomes by default', () => {
+  const manifest = buildManifest({
+    name: 'web',
+    projectType: 'A',
+    stack: {
+      backend: { language: 'python', framework: 'fastapi' },
+      frontend: { language: 'typescript', framework: 'react' },
+      database: null,
+    },
+  });
+  assert.strictEqual(manifest.quality.test_discipline, 'outcomes');
 });
 
 test('scaffold.md documents quality.sensor_tier', () => {

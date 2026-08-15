@@ -232,6 +232,8 @@ Based on their answers, write `project-manifest.json` to the project root. Fill 
   - Override with profile field `sensorTier` or by editing the written manifest later.
   Also seed `quality.agent_readiness: { "mode": "report", "min_active_pillars": 3, "forbid_regression": false }` for Project Zero-style readiness reporting. Print in the Step 10 report: `Sensor tier: <value> (change via project-manifest.json#quality.sensor_tier)`.
 
+- **quality.test_discipline** (coding loop, lit-factory P2): `"outcomes" | "tdd" | "at-first"`. New scaffolds default to **`outcomes`** (tests + code together at named seams; coverage, mutation-smoke, and test-deletion stay). `tdd` keeps the write-lock / red-phase / test-integrity stack. `at-first` requires an AT + red receipt for behavior stories. Override with profile field `testDiscipline` or `quality.test_discipline`.
+
 ### Auto-attach stack-matched specialty packs
 
 `scaffold-apply.js` and `scaffold-render.js` both derive the effective `frameworkPacks` list via a shared `deriveFrameworkPacks(profile)` helper: whatever the user explicitly selected in the tech-stack-pack question (Step 1.E Q7), plus `fastapi-code` whenever `stack.backend.framework === "fastapi"`, plus `react-code` whenever `stack.frontend.framework === "react"` (the Vite variant — Presets A and C; **not** `"nextjs"`, Preset B). This is fully automatic in both interactive and non-interactive (`--yes`) modes — there is no separate question or confirmation-card line for it, and no manual step is required for either pack since both are locally bundled.

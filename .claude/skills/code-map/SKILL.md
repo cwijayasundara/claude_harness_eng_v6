@@ -1,6 +1,6 @@
 ---
 name: code-map
-description: "[Internal pipeline stage — run by /brownfield and /seam-finder; invoke directly only as a power user.] Build a deterministic dependency graph of an existing codebase. AST-first for Python, React/JS/TS, and Java/C#/Go (stdlib ast + tree-sitter wheels — symbols with line ranges, routes, components, hooks, call/render edges, package-aware import resolution, god-file skeletons, incremental --files patching); regex fallback when python3 or the wheels are unavailable. Outputs JSON + ranked symbol map + Mermaid + metrics for downstream brownfield, refactor, and seam-finder skills."
+description: "[Internal pipeline stage — run by first-source /auto (navigation-refresh), /brownfield, and /seam-finder; invoke directly only as a power user.] Build a deterministic dependency graph. AST-first for Python, React/JS/TS, and Java/C#/Go (stdlib ast + tree-sitter wheels — symbols with line ranges, routes, components, hooks, call/render edges, package-aware import resolution, god-file skeletons, incremental --files patching); regex fallback when python3 or the wheels are unavailable. Outputs JSON + ranked symbol map + Mermaid + metrics for /auto first-source, brownfield, refactor, and seam-finder."
 argument-hint: "[path]"
 context: fork
 ---
@@ -193,9 +193,10 @@ node .claude/skills/code-map/scripts/code_wiki.js render \
   --out specs/brownfield/wiki
 ```
 
-Refresh secondary navigation (TF-IDF, inverted graph index, co-change, concepts, lean maps):
+If `.claude/scripts/nav-query.js` is installed (brownfield pack), refresh secondary navigation (TF-IDF, inverted graph index, co-change, concepts, lean maps):
 
 ```bash
+# skip when nav-query.js is absent — first-source index does not need it
 node .claude/scripts/nav-query.js refresh
 ```
 
@@ -261,7 +262,7 @@ Downstream skills should treat `code-graph.json` as the source of truth for stru
 
 ## Gotchas
 
-- **Do not call this skill on greenfield projects.** It is for existing codebases. On an empty repo it produces a useless empty graph.
+- **Empty repo → placeholder.** `/auto` first-source runs `navigation-refresh.js` after the first production files exist. Calling this skill on a repo with no source writes a placeholder; that is not brownfield-ready.
 - **Do not edit the JSON by hand.** Re-run the skill to refresh.
 - **Understand-Anything imports are source-of-truth preserving.** If its graph omits calls or symbol references, fix or re-run that producer instead of filling gaps manually.
 - **Never install Graphify.** It is a bring-your-own producer, not a harness dependency: do not add it to `init.sh`, do not suggest `pip install`/`uv tool install graphifyy` as part of any harness flow, and do not run the `graphify` CLI or its MCP server on the user's behalf. Only import `graphify-out/graph.json` if it already exists in the repo.

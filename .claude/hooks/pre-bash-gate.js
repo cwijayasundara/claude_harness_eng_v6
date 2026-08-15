@@ -117,6 +117,7 @@ function checkTestWriteLock(projectDir, resolved) {
       filePath: path.relative(realResolve(projectDir), resolved).replace(/\\/g, '/'),
       contentHash: hashFile(resolved),
       env: process.env,
+      projectDir,
     });
   } catch (err) {
     process.stdout.write(`[pre-bash-gate] test-write-lock could not run: ${err.message}\n`);

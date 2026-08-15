@@ -48,7 +48,7 @@ test('standard selects the historical set (includes sprout, excludes cycle)', ()
   assert.ok(ids.includes('secret-scan'));
   assert.ok(ids.includes('sprout-diff'));
   assert.ok(ids.includes('legacy-discipline-proof'));
-  assert.ok(ids.includes('mutation-smoke'));
+  assert.ok(!ids.includes('mutation-smoke'));
   assert.ok(!ids.includes('cycle-detection'));
   assert.ok(!ids.includes('coupling-ratchet'));
 });

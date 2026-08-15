@@ -13,13 +13,15 @@ Architecture is the phase where a wrong call is cheapest to fix now and most exp
 
 **Challenge sources for this phase:**
 
-- `specs/design/reasons-canvas.md` — the decisions and their rejected alternatives
+- `specs/design/program-design.md` — types, signatures, call stacks the implementer is bound by
+- `specs/design/reasons-canvas.md` — when present, the decisions and their rejected alternatives
 - `specs/plan-confidence.json` — band and drivers
-- `specs/reviews/phase-design-eval.json` — findings accepted without a fix
+- `specs/reviews/phase-design-eval.json` — only if `--eval` ran
 - The modularity assessment from Step 0.7, and any hub or cycle it flagged
 - Schema constraints that will become hard obligations for `/test` (each one becomes negative tests the human is implicitly signing up for)
 
-Record each round with `plan-approval.js`, naming the architecture doc, `api-contracts.md`, `component-map.md`, and the `.schema.json` files on the approving round. Then:
+Record each round with `plan-approval.js`, naming `architecture.md`,
+`program-design.md`, and `component-map.md` on the approving round. Then:
 
 ```bash
 node .claude/scripts/plan-approval.js check --phase design

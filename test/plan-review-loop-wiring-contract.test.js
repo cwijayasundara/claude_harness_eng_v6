@@ -21,6 +21,10 @@ test('package.json exposes the gate', () => {
     JSON.parse(read('package.json')).scripts['plan-approval'],
     'node .claude/scripts/plan-approval.js',
   );
+  assert.strictEqual(
+    JSON.parse(read('package.json')).scripts['plan-seal'],
+    'node .claude/scripts/plan-seal.js',
+  );
 });
 
 test('every phase the gate knows about actually runs the loop', () => {
@@ -53,6 +57,10 @@ test('each planning phase blocks on the previous phase review, and /auto on all 
     readSkillCorpus('auto'), /plan-approval\.js check --phase all/,
     '/auto must not build a plan no human closed the loop on',
   );
+  assert.match(
+    readSkillCorpus('auto'), /plan-seal\.js check/,
+    '/auto must not start coding without a plan seal',
+  );
 });
 
 test('/auto states the block as a hard one, naming the post-approval-edit case', () => {
@@ -66,6 +74,8 @@ test('the headless lanes record a waiver rather than leaving the receipt absent'
   const build = readSkillCorpus('build');
   assert.match(build, /plan-approval\.js waive/, '/build must waive for the collapsed lanes');
   assert.match(build, /--lane --auto(nomous)?\b/, 'a waiver must name the lane that granted it');
+  assert.match(build, /plan-seal\.js write/, '/build must write the plan seal after approvals');
+  assert.match(build, /stopsAfterSeal/, '/build must honor the seal stop from build-lane.js');
   const loop = read('.claude/skills/plan-review-loop/SKILL.md');
   assert.match(loop, /--require-human/, 'the loop must document how a gated lane refuses waivers');
 });
@@ -93,7 +103,7 @@ test('each phase names where its own uncertainty already lives', () => {
   const sources = {
     brd: /brd-open-questions\.json/,
     spec: /plan-confidence\.json/,
-    design: /reasons-canvas\.md/,
+    design: /program-design\.md/,
     test: /constraint-obligations\.json/,
   };
   for (const [phase, pattern] of Object.entries(sources)) {
@@ -136,6 +146,10 @@ test('manifest and HARNESS.md register both controls with budget justifications'
 test('scaffold-copy propagates the loop and its gate to scaffolded projects', () => {
   assert.ok(shipsIn('plan-approval', 'script').includes('core'),
     'the gate must ship wherever the planning phases do');
+  assert.ok(shipsIn('plan-seal', 'script').includes('core'),
+    'the plan seal must ship with core — do not document a manual copy');
+  assert.ok(shipsIn('plan-artifact-digest', 'script').includes('core'),
+    'features.json identity digest must ship with the seal');
   assert.ok(shipsIn('plan-review-loop', 'skill').includes('core'),
     'a gate whose skill did not ship would block every scaffolded project');
 });

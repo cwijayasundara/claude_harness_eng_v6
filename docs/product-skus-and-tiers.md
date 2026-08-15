@@ -53,8 +53,8 @@ Configured at `project-manifest.json#quality.sensor_tier`:
 | Value | Intent |
 |---|---|
 | `minimal` | Secrets + structural basics when configured; low-ceremony CLI/library work |
-| `standard` | **Default.** Product-team posture — matches today's pre-commit set (once the registry lands) |
-| `strict` | Standard plus extra architecture ratchets at commit (cycle / coupling) |
+| `standard` | **Default.** Small always-on set: secrets, test-deletion, types, coverage, stub-smell, live-externals |
+| `strict` | Standard plus mutation, cycle, coupling, duplication, and security-baseline |
 
 ### Defaults
 
@@ -75,7 +75,7 @@ Env overrides for the dial itself (when wired): `HARNESS_SENSOR_TIER=minimal|sta
 
 ### Commit-time membership (normative for Phase 1)
 
-`standard` **must** preserve today's pre-commit behavior (including sprout-diff). `minimal` drops legacy / AT-first / coverage / mutation ceremony. `strict` adds cycle + coupling at commit when a code-graph exists.
+`standard` is the small always-on product set. `minimal` drops coverage / test-deletion / stub / live-externals ceremony. `strict` adds mutation, cycle, coupling, duplication, and security-baseline. Legacy / sprout still sit on `standard`+ but no-op unless the brownfield graph is real.
 
 | Gate id | minimal | standard | strict |
 |---|---|---|---|
@@ -92,7 +92,7 @@ Env overrides for the dial itself (when wired): `HARNESS_SENSOR_TIER=minimal|sta
 | `sprint-contract` (+ security + verification-matrix) | ✓ | ✓ | ✓ |
 | `type-check` (tsc at pre-commit) | ✓ | ✓ | ✓ |
 | `coverage-ratchet` | | ✓ | ✓ |
-| `mutation-smoke` | | ✓ | ✓ |
+| `mutation-smoke` | | | ✓ |
 | `cycle-detection` | | | ✓ |
 | `coupling-ratchet` | | | ✓ |
 

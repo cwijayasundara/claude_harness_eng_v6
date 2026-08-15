@@ -23,10 +23,13 @@ test('coupling-gate lib reuses drift.js and cycle-gate.js instead of reimplement
   assert.match(lib, /require\('\.\/cycle-gate'\)/, 'must reuse gateDecision from cycle-gate.js');
 });
 
-test('package.json exposes the coupling-gate script; /auto Gate 4 and /gate run it', () => {
+test('package.json exposes the coupling-gate script; /auto names it as strict-only', () => {
   const pkg = JSON.parse(read('package.json'));
   assert.strictEqual(pkg.scripts['coupling-gate'], 'node .claude/scripts/coupling-gate.js');
-  assert.match(readSkillCorpus('auto'), /coupling-gate\.js/, 'Gate 4 must run the coupling ratchet');
+  const auto = readSkillCorpus('auto');
+  assert.match(auto, /coupling-gate\.js/, 'the corpus must still name the coupling script');
+  assert.match(auto, /run-gate-checks\.js/, 'SECTION 5 must name the one runner');
+  assert.match(auto, /strict/, 'coupling must not be required on standard');
   // /gate no longer names checks inline — it runs the pack-contributed registry.
   // Registry membership is the stronger assertion: prose could mention the script
   // without it ever running.
