@@ -196,8 +196,10 @@ test('verification matrix gate is wired through test, auto, generator, evaluator
 
   assert.match(files.autoSkill, /verification-matrix\.json/);
   assert.match(files.autoSkill, /verification-matrix-gate\.js --phase contract/);
-  assert.match(files.autoSkill, /verification-matrix-gate\.js --phase implementation/);
-  assert.match(files.autoSkill, /verification-matrix-gate\.js --phase executed --group "\$GROUP_ID"/);
+  // Sealed /auto folds implementation + executed into run-gate-checks / the
+  // sprint-contract pre-commit backstop — do not require a third explicit list.
+  assert.match(files.autoSkill, /run-gate-checks\.js/);
+  assert.match(files.autoSkill, /implementation and executed phases/);
 
   assert.match(files.generator, /unit-traces\.json/);
   assert.match(files.generator, /matrix_id/);

@@ -23,6 +23,12 @@ Principles (Lance Martin / Anthropic / Coinbase):
 ## Measure first
 
 ```bash
+# Per-step transcript bill (written automatically on Stop / new prompt):
+node .claude/scripts/phase-cost.js             # table
+node .claude/scripts/phase-cost.js --write --step brd-approval
+# Artifacts: .claude/state/phase-cost.json  (latest rollup)
+#            .claude/state/phase-cost.jsonl (delta per step)
+
 # During / after a metered run (budget-start present):
 node .claude/scripts/pipeline-status.js
 node .claude/scripts/cost-report.js            # human table
@@ -33,7 +39,8 @@ node .claude/scripts/cost-report.js --json     # machine
 `/status` lines:
 
 - **Budget:** wall-clock / agents / est $ caps
-- **Cost:** ~$ · source=estimate|receipts|mixed · worker% · model mix
+- **Cost:** ~$ · source=transcript|estimate|receipts|mixed · worker% · model mix
+- **Phases:** `/$cmd` per slash-command from the transcript rollup — present from `/brd` onward, not only after `/auto` stamps `budget-start`
 - **Navigation / token-advisor:** context savings (not API $)
 
 Enable Claude Code OTEL for authoritative cache hit rate (see `telemetry/CACHE_MONITORING.md`).

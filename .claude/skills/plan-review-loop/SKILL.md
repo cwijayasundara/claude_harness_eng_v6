@@ -93,6 +93,14 @@ Feedback is recorded verbatim — it is the reviewer's words, not your summary o
 
 `--artifact` fixes what was approved. The receipt stores a digest of each file, so an approval dies the moment those files change — a later phase cannot inherit approval for a plan the human never saw. Re-run the loop after any post-approval edit.
 
+After the approving (or waived) record, persist this phase's token/cost bill:
+
+```bash
+node .claude/scripts/phase-cost.js --write --step <phase>-approval
+```
+
+The Stop hook writes the same rollup automatically. This command labels the ledger row with the phase name so `/status` can show it.
+
 </recording>
 
 <bounds>

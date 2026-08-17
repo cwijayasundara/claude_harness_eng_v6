@@ -41,9 +41,13 @@ function installScripts(projectDir) {
 }
 
 function writeGraph(projectDir, graph) {
-  const p = path.join(projectDir, 'specs', 'brownfield', 'code-graph.json');
-  fs.mkdirSync(path.dirname(p), { recursive: true });
-  fs.writeFileSync(p, JSON.stringify(graph));
+  const dir = path.join(projectDir, 'specs', 'brownfield');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'code-graph.json'), JSON.stringify(graph));
+  fs.writeFileSync(path.join(dir, 'code-graph.meta.json'), JSON.stringify({
+    producer: 'vendored-ast',
+    status: 'fresh',
+  }));
 }
 
 function writeReceipts(projectDir, rows) {

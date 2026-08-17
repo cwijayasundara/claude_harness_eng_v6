@@ -11,7 +11,7 @@ boundary needs an inferential phase score.
 
 | Phase | Human reads | Machine spine | Do not put in the approval brief |
 |---|---|---|---|
-| `/brd` | `specs/brd/brd.md` (≤80 lines: problem, success, in/out, risks) | `specs/brd/brd-requirements.json` | analysis pack tables, phase-eval JSON |
+| `/brd` | `specs/brd/brd.md` (≤80 lines: problem, success, in/out, risks). Lean `--prd` writes this pointer automatically. | `specs/brd/brd-requirements.json` | analysis pack tables, phase-eval JSON (`--full` / `--eval` only) |
 | `/spec` | `specs/stories/epics.md` + story files as **vertical slices** | `specs/stories/stories.json` + `features.json` | layer-ladder schedules, phase-eval JSON |
 | `/design` | `specs/design/architecture.md` + **`program-design.md`** | `specs/design/component-map.md` | mockups (unless a UI story), constitution, deployment essay |
 | `/test --plan-only` | `specs/test_artefacts/test-plan.md` (named seams + what is untested) | `specs/test_artefacts/verification-matrix.json` | Playwright, AT source files, phase-eval JSON |

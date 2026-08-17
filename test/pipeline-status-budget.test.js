@@ -87,3 +87,28 @@ test('cost line shows model mix when budget-start is set', () => {
   assert.match(renderStatus(snap), /source=estimate/);
   assert.match(renderStatus(snap), /sonnet-5=1/);
 });
+
+test('cost line uses the persisted transcript rollup when no budget-start exists', () => {
+  const dir = makeProject({
+    '.claude/state/phase-cost.json': JSON.stringify({
+      generated_at: NOW,
+      grand_usd: 1.25,
+      totals: [
+        { command: 'brd', runs: 1, cost_usd: 1.0, output_tokens: 100 },
+        { command: 'spec', runs: 1, cost_usd: 0.25, output_tokens: 20 },
+      ],
+      rows: [
+        { command: 'brd', model: 'claude-opus-5', cost_usd: 1.0, input_tokens: 10, output_tokens: 100, cache_read_tokens: 0 },
+      ],
+    }),
+  });
+  const snap = buildSnapshot(dir, { now: NOW });
+  assert.ok(snap.cost);
+  assert.strictEqual(snap.cost.source, 'transcript');
+  assert.strictEqual(snap.cost.est_cost_usd, 1.25);
+  assert.ok(snap.phase_cost);
+  const out = renderStatus(snap);
+  assert.match(out, /Cost:\s+~\$1\.25/);
+  assert.match(out, /source=transcript/);
+  assert.match(out, /Phases:\s+\/brd=\$1\.00 · \/spec=\$0\.25/);
+});

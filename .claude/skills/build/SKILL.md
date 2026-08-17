@@ -19,11 +19,12 @@ was never asked.
 
 All three planning phases now share this shape: `/brd`, `/spec` and `/design`
 each run their dialogue in this session and dispatch a forked sidekick
-(`brd-render`, `spec-render`, `design-render`) for the expansion. So Phase 1's
-five-dimension interview, Phase 2's decision dialogue and Phase 3's architecture
-brainstorm all reach the human, and each phase records a `plan-approval`
-receipt — including `brd`, which had no phase at all until the intake was
-de-forked.
+(`brd-render` only on `--full` or interview-from-scratch; `spec-render`,
+`design-render`) for the expansion. Phase 1 on `/brd --prd` is lean adopt
+(scripts). The five-dimension interview runs only for interview-from-scratch
+or `--full`. Phase 2's decision dialogue and Phase 3's architecture
+brainstorm still reach the human, and each phase records a `plan-approval`
+receipt.
 
 The delegated sub-skills (`/brownfield`, the three `*-render` skills, `/test`,
 `/auto`, `/gate`) fork their own work as they already do; the conductor itself

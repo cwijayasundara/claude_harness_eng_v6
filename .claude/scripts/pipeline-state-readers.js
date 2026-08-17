@@ -163,14 +163,83 @@ function readBudget(projectDir, nowMs) {
   return computeBudget(spent, config);
 }
 
-// Cost visibility for /status. Shown when metering (budget-start) exists, even
-// if budget caps are off — operators still need the model-mix line.
+function readPhaseCost(projectDir) {
+  try {
+    const obj = JSON.parse(readText(path.join(projectDir, '.claude', 'state', 'phase-cost.json')));
+    if (!obj || typeof obj !== 'object') return null;
+    return obj;
+  } catch (_) {
+    return null;
+  }
+}
+
+function mixFromPhaseCost(phase) {
+  const mix = {};
+  for (const row of (phase && phase.rows) || []) {
+    for (const model of Object.keys(row.by_model || {})) {
+      if (!mix[model]) mix[model] = { agents: 0, est_cost_usd: 0 };
+      mix[model].agents += 1;
+      mix[model].est_cost_usd += (row.by_model[model].cost_usd != null)
+        ? row.by_model[model].cost_usd
+        : 0;
+    }
+    if ((!row.by_model || !Object.keys(row.by_model).length) && row.model) {
+      if (!mix[row.model]) mix[row.model] = { agents: 0, est_cost_usd: 0 };
+      mix[row.model].agents += 1;
+      mix[row.model].est_cost_usd += row.cost_usd || 0;
+    }
+  }
+  return mix;
+}
+
+function tokensFromPhaseCost(phase) {
+  let input = 0;
+  let output = 0;
+  let cacheRead = 0;
+  for (const row of (phase && phase.rows) || []) {
+    input += row.input_tokens || 0;
+    output += row.output_tokens || 0;
+    cacheRead += row.cache_read_tokens || 0;
+  }
+  const tokenTotal = input + output + cacheRead;
+  return {
+    input_tokens: input || null,
+    output_tokens: output || null,
+    cache_read_tokens: cacheRead || null,
+    cache_read_share_pct: tokenTotal > 0 ? Math.round((cacheRead / tokenTotal) * 100) : null,
+  };
+}
+
+function summaryFromPhaseCost(phase) {
+  const tokens = tokensFromPhaseCost(phase);
+  return {
+    est_cost_usd: phase.grand_usd || 0,
+    agents: null,
+    source: 'transcript',
+    worker_pct: null,
+    model_mix: mixFromPhaseCost(phase),
+    by_phase: phase.totals || [],
+    ...tokens,
+  };
+}
+
+// Cost visibility for /status. Receipt-based when a budget-start exists;
+// otherwise the persisted transcript rollup (phase-cost.json) so /brd and
+// /spec still show a bill before /auto stamps a meter.
 function readCostSummary(projectDir, nowMs) {
   const started = parseInt(readMarker(path.join(projectDir, '.claude', 'state'), 'budget-start') || '', 10);
-  if (!Number.isFinite(started)) return null;
-  const exec = readManifestExec(projectDir);
-  const tier = exec.model_tier || 'balanced';
-  return costSummary(readRunReceipts(projectDir), started, nowMs || Date.now(), tier);
+  const phase = readPhaseCost(projectDir);
+  if (Number.isFinite(started)) {
+    const exec = readManifestExec(projectDir);
+    const tier = exec.model_tier || 'balanced';
+    const fromReceipts = costSummary(readRunReceipts(projectDir), started, nowMs || Date.now(), tier);
+    if (phase) fromReceipts.by_phase = phase.totals || [];
+    return fromReceipts;
+  }
+  if (phase && (phase.grand_usd != null || (phase.rows && phase.rows.length))) {
+    return summaryFromPhaseCost(phase);
+  }
+  return null;
 }
 
 function readNavigation(projectDir) {
@@ -302,6 +371,7 @@ module.exports = {
   readPlanConfidence,
   readBudget,
   readCostSummary,
+  readPhaseCost,
   readNavigation,
   readContextCache,
   readTokenAdvisor,

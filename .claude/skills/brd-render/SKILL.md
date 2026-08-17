@@ -8,7 +8,12 @@ agent: generator
 
 # BRD Render — Requirements Expansion (sidekick)
 
-The **rendering** half of `/brd`. `/brd` holds the interview and the
+**`--full` and interview-from-scratch only.** Lean `/brd --prd` does not
+dispatch this skill. If you were invoked after a lean adopt (`brd.md` is a
+short pointer and `brd-analysis.json` is absent), stop and say so — do not
+write a 15-section restatement or an analysis pack.
+
+The **rendering** half of `/brd --full`. `/brd` holds the interview and the
 clarification dialogue in the main session and records what was confirmed; this
 skill expands that into the analysis pack, the BRD document, and the two hard
 gates. It decides nothing and it asks nothing.

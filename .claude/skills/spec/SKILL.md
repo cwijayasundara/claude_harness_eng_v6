@@ -73,6 +73,8 @@ node .claude/scripts/phase-digest.js --phase spec
 
 Exit 1 means `/brd` has not run — halt and ask the human to run it first.
 
+If `specs/brd/analysis-seed.json` exists (lean `--prd`), treat its `open_questions` and `risks` as challenge sources for Step 8. Do not re-derive domain terms the seed already classified.
+
 The digest carries what this phase actually decides against: requirement count
 and id range, the taxonomy spread, **how many requirements have no observable
 acceptance criterion**, the PRD's own milestone order, the deny-list, the open

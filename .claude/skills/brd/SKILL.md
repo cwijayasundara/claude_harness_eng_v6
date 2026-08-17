@@ -1,6 +1,6 @@
 ---
 name: brd
-description: "[Internal pipeline stage — run by /build; invoke directly only as a power user.] Create a Business Requirements Document — from a Socratic interview, or grounded in a Functional Requirements Document via --frd (with a deterministic net-new/dropped gate). First step in the SDLC pipeline."
+description: "[Internal pipeline stage — run by /build; invoke directly only as a power user.] Create a Business Requirements Document. /brd --prd is adopt-only (scripts, no interview) unless --full. First step in the SDLC pipeline."
 ---
 
 # BRD Skill — Requirements Intake
@@ -20,21 +20,28 @@ gates, on the sidekick model. Judgement here, volume there.
 ## Usage
 
 ```
-/brd                              # interview-from-scratch
-/brd --frd path/to/frd.md         # ground the BRD in a Functional Requirements Document
-/brd --prd path/to/prd.md         # alias for --frd: a PRD is the grounding baseline
-/brd --delta path/to/prd-sprintN.md    # ground sprint N's PRD against the prior sprint's requirement spine
+/brd --prd path/to/prd.md         # default: adopt-only (scripts, no interview, no eval)
+/brd --frd path/to/frd.md         # alias for --prd
+/brd --prd path/to/prd.md --full  # old ceremony: brainstorm + interview + analysis pack
+/brd --prd path/to/prd.md --eval  # lean adopt, then optional prose evaluator
+/brd                              # interview-from-scratch (no source document)
+/brd --delta path/to/prd-sprintN.md
 ```
 
 Two modes:
-- **Document-grounded (recommended for greenfield):** pass `--frd <path>` (or its alias `--prd <path>`) to a Functional/Product Requirements Document. `--prd` and `--frd` are treated identically — the document becomes the immutable grounding baseline, extracted into the same requirements spine (`frd-requirements.json`); only the input flag name differs. For the canonical PRD shape this skill grounds best against, see `docs/prd-format.md`. The document becomes the immutable grounding baseline — Claude interrogates it for gaps, then generates a BRD in which **every requirement traces back to a source section or to a confirmed clarification.** A deterministic gate (Step 4.4) hard-blocks anything invented or dropped relative to the source before you ever see it for approval.
-- **Interview-from-scratch:** no argument — an interactive Socratic interview gathers requirements from nothing. Use only when there is no source document.
+- **Document-grounded (default for `--prd` / `--frd`):** adopt the PRD with scripts. Grounding is an identity. Ask only the document's own Open Questions. Write a short pointer `brd.md`. Do **not** interview, brainstorm, write `brd-analysis.json`, or spawn the phase evaluator unless the user passed `--full` or `--eval`. Procedure: `references/prd-lean.md`.
+- **Interview-from-scratch:** no argument — a Socratic interview. Use only when there is no source document.
+- **`--full`:** the ceremony below (brainstorm, five-dimension interview, `brd-render` analysis pack). Opt-in only.
 
 ---
 
 ## Overview
 
-This is the first gate in the SDLC pipeline, and the origin of the whole grounding chain (`BRD → /spec → /design → /test → /auto`). Mistakes here cascade through every downstream phase, so the BRD must invent nothing the business did not state. With `--frd`, the FRD plus the human's confirmed interrogation answers are the **only** sanctioned sources of content; with no FRD, the confirmed interview answers are. Either way you interview the human across five dimensions, in this session to surface the full problem space — Socratic: ask clarifying questions, probe assumptions, reflect answers back for confirmation before moving on.
+This is the first gate in the SDLC pipeline (`BRD → /spec → /design → /test → /auto`). The BRD must invent nothing the business did not state. With `--prd`, the PRD plus confirmed answers to **its own** Open Questions are the only sanctioned sources. The five-dimension interview is for interview-from-scratch and `--full` only.
+
+<lean_prd>
+When the invocation includes `--prd` or `--frd` and is without `--full`, follow `references/prd-lean.md` and stop. Do not continue into Step 0 brainstorm, Step 2 interview, Step 2.9 `brd-render`, or Step 4.5 eval (eval only if `--eval` was passed).
+</lean_prd>
 
 ---
 
@@ -57,12 +64,11 @@ for the very first sprint.
 
 ### Step Δ1 — Run Steps 0.0 through 4 unchanged, writing to `specs/brd/sprint-N/`
 
-Run the FRD-grounded flow exactly as written, across both halves of the phase:
-Steps 0.0 (ingest), **0.1 (adopt)**, 0, 0.5, 1 and 2 here, then dispatch
-`brd-render` (Step 2.9) for its Steps 2.7, 2.8, 3, 4, 4.4 and 4.45. Adoption
-**does** run in delta mode — the new sprint PRD is a source document like any
-other — so pass `--out-dir specs/brd/sprint-N` so the adopted files land where
-Step Δ2's trace-check reads them. `--root` alone cannot express this: it
+Run the FRD-grounded flow. Default is lean adopt (`references/prd-lean.md`)
+with `--out-dir specs/brd/sprint-N`. Pass `--full` only when the user did.
+Adoption **does** run in delta mode — the new sprint PRD is a source document
+like any other — so pass `--out-dir specs/brd/sprint-N` so the adopted files
+land where Step Δ2's trace-check reads them. `--root` alone cannot express this: it
 prefixes `specs/brd/` again, and without `--out-dir` adoption would overwrite
 sprint 1's approved flat spine, after which Δ2 compares sprint N against itself
 and passes vacuously with 0 dropped.
@@ -156,26 +162,20 @@ into the spine, and the gap was found by hand three hours later, after the BRD
 had already been rendered and scored. `docs/prd-format.md` is what to point the
 human at, and `docs/shortlink-prd.md` is a worked example that passes clean.
 
-### Step 0.0 — Dispatch `brd-extract` (only in `--prd` / `--frd` mode)
+### Step 0.0 — Extract with the script (only in `--prd` / `--frd` mode)
 
-Invoke the `brd-extract` skill, passing the same `--prd` / `--frd` path and any
-`--sprint N`. It copies the source verbatim to `specs/brd/source-frd.md`,
-extracts the spine into `specs/brd/frd-requirements.json`, and runs
-`brd-adopt.js`. It returns counts.
+Use this when `--full` was passed (lean mode already ran the same command in
+`references/prd-lean.md`). Do not extract the spine yourself and do not
+dispatch an LLM `brd-extract` fork to rewrite the PRD.
 
-**Do not extract the spine yourself.** Extraction is transcription — every
-MUST/SHALL/SHOULD statement copied verbatim with a stable id — and it needs
-none of this session's context. On a real run the main session did it here and
-wrote a **34 KB** JSON file with the frontier model before the interview had
-even begun; that blob was the largest single thing in the session and it was
-then re-billed on all 337 remaining turns. The phase cost $15.58 and the
-sidekick produced 8.6% of it.
+```bash
+node .claude/scripts/prd-extract.js <path-to-prd.md> --tag --write-brd
+```
 
-**Do not read `frd-requirements.json` when it returns.** You need its counts,
-which are in the return message, and its open questions, which you read in
-Step 0.5 from `brd-open-questions.json`. Everything else you need arrives via
-`phase-digest.js`. Reading the spine back in is the same cost as having written
-it, paid a second time.
+It copies the source to `specs/brd/source-frd.md`, writes `frd-requirements.json`,
+runs `brd-adopt.js`, tags taxonomy, and writes the short `brd.md`. It prints
+counts. **Do not read `frd-requirements.json` when it returns.** Open questions
+are in `brd-open-questions.json`.
 
 If no `--prd` / `--frd` was given, skip this step. The BRD's grounding baseline
 is then the confirmed `INT-n` interview requirements captured in Step 2
@@ -217,9 +217,9 @@ Steps 3 and 4 then write a **short** `brd.md` — a pointer to `source-frd.md`,
 the confirmed clarifications, the taxonomy verdict, and the open questions. Not
 a restatement of the requirements, which now live in the adopted spine.
 
-### Step 0 — Brainstorm with Superpowers
+### Step 0 — Brainstorm with Superpowers [`--full` or interview-from-scratch only]
 
-Before beginning the interview, invoke `superpowers:brainstorming` to explore the user's intent, requirements, and design space. This surfaces hidden assumptions and alternative framings before the structured Socratic interview locks in a direction. In FRD-grounded mode, brainstorm **gaps and ambiguities in the FRD** specifically — what it leaves unspecified. The brainstorming output feeds into the interview — it does not replace it.
+Skip on lean `--prd`. Before a `--full` interview, invoke `superpowers:brainstorming` to explore the user's intent, requirements, and design space. This surfaces hidden assumptions and alternative framings before the structured Socratic interview locks in a direction. In `--full` FRD-grounded mode, brainstorm **gaps and ambiguities in the FRD** specifically — what it leaves unspecified. The brainstorming output feeds into the interview — it does not replace it.
 
 ### Step 0.5 — Apply the Clarification Budget (and log every answer)
 
@@ -266,9 +266,9 @@ If this is an existing non-trivial codebase and `specs/brownfield/codebase-map.m
 
 This prevents proposing solutions that conflict with what is already built.
 
-### Step 2 — Conduct the Five-Dimension Interview
+### Step 2 — Conduct the Five-Dimension Interview [`--full` or interview-from-scratch only]
 
-Work through each dimension in order. Do not skip dimensions. Ask only the highest-value questions within the clarification budget, then summarize what you heard and ask the human to confirm before proceeding. If a dimension is already answered by local context, document the assumption and move on.
+Skip on lean `--prd`. Work through each dimension in order. Do not skip dimensions. Ask only the highest-value questions within the clarification budget, then summarize what you heard and ask the human to confirm before proceeding. If a dimension is already answered by local context, document the assumption and move on.
 
 **As each dimension is confirmed, append the confirmed requirement statements to `specs/brd/interview-requirements.json`** — one entry per discrete requirement the human signed off:
 
@@ -347,12 +347,17 @@ Confirm: "Here is the UI context I have captured: [summary]. Is this complete?"
 
 ---
 
-### Step 2.9 — Dispatch `brd-render`
+### Step 2.9 — Dispatch `brd-render` [`--full` or interview-from-scratch only]
 
-The interview and the clarification log are the confirmed intake. Hand the
-expansion to the sidekick: invoke the `brd-render` skill, passing any
-`--sprint N`. It writes the analysis pack, the BRD document, and runs the two
-hard gates (Step 4.4 grounding, Step 4.45 taxonomy floor) before returning.
+Skip on lean `--prd` — `prd-extract.js --tag --write-brd` already wrote the
+pointer `brd.md` and tagged taxonomy. Lean still runs the two hard-gate
+commands in `references/prd-lean.md` (do not dispatch the renderer to do them).
+
+On `--full` or interview-from-scratch, the interview and the clarification log
+are the confirmed intake. Hand the expansion to the sidekick: invoke the
+`brd-render` skill, passing any `--sprint N`. It writes the analysis pack, the
+BRD document, and runs the two hard gates (Step 4.4 grounding, Step 4.45
+taxonomy floor) before returning.
 
 **One dispatch, not one per table.** Coarse handoffs keep the renderer's context
 cached; per-artifact round-trips pay cache creation on every switch.
@@ -390,10 +395,12 @@ them.
 
 ### Step 4.5 — Phase Evaluation Gate [`--eval` only]
 
-Skip this step unless the invocation includes `--eval` or the BRD introduces
-an auth, tenant, migration, or external-trust boundary. Grounding (4.4) and
-taxonomy (4.45) already proved the load-bearing properties. The review surface
-is `brd.md` + `brd-requirements.json` — see `plan-review-loop/references/lean-review-surface.md`.
+Skip this step unless the invocation includes `--eval`. Auth, tenant,
+migration, or an external-trust boundary in the PRD is **not** a reason to
+run it — those are almost every web app and the eval then scores a restated
+`brd.md` against itself. Grounding (4.4) and taxonomy (4.45) already proved
+the load-bearing properties. The review surface is `brd.md` +
+`brd-requirements.json` — see `plan-review-loop/references/lean-review-surface.md`.
 
 When `--eval` is on, spawn the `evaluator` agent (artifact mode) to validate the BRD before human review.
 
@@ -466,7 +473,8 @@ lives, so you ask about it rather than re-deriving it:
   hard gate, so nothing downstream will challenge them mechanically.
 - `phase-brd-eval.json` findings you accepted without a fix.
 - Risks this analysis added that the source document did not carry — you
-  inferred them, so they need confirming.
+  inferred them, so they need confirming. Lean `--prd` has no analysis pack;
+  only the PRD's own `brd-risks.json` entries apply.
 
 Record each round with `plan-approval.js record --phase brd`, naming
 `specs/brd/brd.md`, `brd-requirements.json` and `clarification-log.json` on the
@@ -486,7 +494,7 @@ phase's context being re-billed through the next one.
 
 | File | Purpose |
 |------|---------|
-| `specs/brd/brd.md` | Full BRD for a new project |
+| `specs/brd/brd.md` | Lean: ≤80-line pointer. `--full`: 15-section BRD |
 | `specs/brd/feature-{name}.md` | BRD for a feature addition |
 | `specs/brd/brd-requirements.json` | Machine-readable requirement spine; each BR carries `traces` to FRD/clarification ids and `taxonomy` slots |
 | `specs/brd/brd-acceptance.json` | Postconditions split into individually traceable `BR-n-ACm` ids — what `spec-render` Step 6.46 checks |
@@ -497,7 +505,8 @@ phase's context being re-billed through the next one.
 | `specs/brd/frd-requirements.json` | (FRD mode) extracted `FRD-n` requirements the BRD is checked against |
 | `specs/brd/interview-requirements.json` | (interview mode) confirmed `INT-n` requirement spine — the grounding baseline |
 | `specs/brd/clarification-log.json` | Confirmed interrogation answers (`C-n`) — the only sanctioned net-new content |
-| `specs/brd/brd-analysis.json` | SPDD-grade analysis pack: Domain Concepts, Ambiguity Table, Edge-Case Table, decision log, AC Coverage Matrix, and Risk & Gap Table |
+| `specs/brd/brd-analysis.json` | (`--full` only) SPDD-grade analysis pack. Not written on lean `--prd`. |
+| `specs/brd/analysis-seed.json` | Lean `--prd`: deterministic domain/risk seed. No FR paraphrase. |
 | `specs/reviews/brd-grounding.json` | deterministic grounding verdict (`pass`, `net_new[]`, `dropped[]`) |
 | `specs/brd/sprint-N/*` | (delta mode) sprint-N's BRD artifact set, same shape as the flat sprint-1 layout |
 | `specs/brd/sprint-N/requirements-delta.json` | (delta mode) new/changed/carried/dropped classification vs the prior sprint's spine |
@@ -512,7 +521,7 @@ phase's context being re-billed through the next one.
 
 **Taxonomy floor — hard block (both modes).** `brd-taxonomy-check.js` proves every one of the ten requirement slots is either covered by a tagged requirement or excused with a substantive, committed reason — the check the grounding gate structurally cannot make, since grounding is relative to a source that may itself be silent. See Step 4.45.
 
-**Phase evaluation is opt-in (`--eval`).** Grounding and taxonomy remain hard blocks. The evaluator scores prose only when `--eval` is passed or a security/data boundary is in play.
+**Phase evaluation is opt-in (`--eval`).** Grounding and taxonomy remain hard blocks. The evaluator scores prose only when `--eval` is passed. A security/data boundary does not auto-enable it.
 
 **Human approval is still required before proceeding to `/spec`.** The gates validate quality + grounding; the human validates intent.
 
@@ -522,8 +531,8 @@ Do not auto-advance. Wait for explicit approval or correction.
 
 ## Gotchas
 
-- **Do not skip the interview.** Never generate a BRD from a single sentence of input.
-- **Do not skip Dimension 2.5.** Alternatives must be explored and documented.
+- **Do not skip the interview in interview-from-scratch or `--full`.** Lean `--prd` skips it by design — the PRD is the interview.
+- **Do not skip Dimension 2.5 on `--full`.** Alternatives must be explored and documented. Lean `--prd` leaves alternatives to `/design`.
 - **Avoid vague success metrics.** "Users are happy" is not a metric. Push for numbers.
 - **Check existing code first.** Proposing a new auth system when one already exists wastes cycles.
 - **Confirm each dimension before moving on.** Misunderstood requirements compound.

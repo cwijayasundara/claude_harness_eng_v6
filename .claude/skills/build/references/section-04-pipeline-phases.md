@@ -22,7 +22,7 @@ Skip Phase 0 only for greenfield projects, documentation-only work, or tiny `/vi
 
 ### Phase 1 — Business Requirements [HUMAN APPROVAL]
 
-Run `/brd` with the provided requirements document. Outputs are written to `specs/brd/`.
+Run **`/brd --prd <path>`** (lean adopt-only — `brd/references/prd-lean.md`). Do not pass `--full` or `--eval` unless the user did. Outputs are written to `specs/brd/`. A well-formed PRD should finish this phase in minutes: `validate-prd.js` + `prd-extract.js --tag --write-brd` + the two hard-gate scripts + approval/waiver.
 
 **Stop and wait for explicit human approval before proceeding.** Present a summary of the BRD and ask: "Approve BRD to proceed to Phase 2?"
 

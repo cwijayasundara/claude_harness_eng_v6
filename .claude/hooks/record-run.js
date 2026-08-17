@@ -10,6 +10,7 @@ const { readHookInputAsync, reportFailure, optionalRequire } = require('./lib/co
 // telemetry + planning packs. Recording must never break a session: absent = skip.
 const telemetry = optionalRequire(path.join(__dirname, '..', 'scripts', 'telemetry-memory.js'));
 const buildLane = optionalRequire(path.join(__dirname, '..', 'scripts', 'build-lane.js'));
+const phaseCostPersist = optionalRequire(path.join(__dirname, 'lib', 'phase-cost-persist.js'));
 const { inferSkills } = require('./lib/record-skills');
 const { resolveAgentModel, extractUsageFields } = require('./lib/agent-model');
 const { contextFields } = require('./lib/run-context');
@@ -66,6 +67,17 @@ function harnessSha(projectDir) {
 
 function append(receiptPath, obj) {
   fs.appendFileSync(receiptPath, JSON.stringify(obj) + '\n');
+}
+
+function persistPhaseCost(projectDir, input, eventName) {
+  if (!phaseCostPersist || typeof phaseCostPersist.writeSnapshot !== 'function') return;
+  try {
+    phaseCostPersist.writeSnapshot(projectDir, {
+      transcriptPath: input && input.transcript_path ? input.transcript_path : null,
+      sessionId: input && input.session_id ? input.session_id : null,
+      event: eventName || (input && input.hook_event_name) || 'snapshot',
+    });
+  } catch (_) { /* never block a session on a usage log */ }
 }
 
 async function persistAndPush(receiptPath, stateDir, projectDir, record) {
@@ -148,6 +160,7 @@ function shouldSkipCommandTelemetry(command) {
         host: os.hostname(),
       };
       await persistAndPush(receiptPath, stateDir, projectDir, promptRecord);
+      persistPhaseCost(projectDir, input, 'UserPromptSubmit');
       process.exit(0);
     }
 
@@ -287,6 +300,7 @@ function shouldSkipCommandTelemetry(command) {
       if (usage.cache_read_tokens != null) turnRecord.cache_read_tokens = usage.cache_read_tokens;
       if (usage.cache_creation_tokens != null) turnRecord.cache_creation_tokens = usage.cache_creation_tokens;
       await persistAndPush(receiptPath, stateDir, projectDir, turnRecord);
+      persistPhaseCost(projectDir, input, eventKind);
       process.exit(0);
     }
   } catch (err) {

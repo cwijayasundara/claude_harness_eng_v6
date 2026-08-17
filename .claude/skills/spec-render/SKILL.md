@@ -68,9 +68,11 @@ Then read `specs/decisions/spec-decisions.json`. It is the authority for:
 
 Read the file at the path provided as the argument. Confirm the document exists and is an approved BRD. If the file is missing, halt and ask the human to run `/brd` first.
 
-If `specs/brd/brd-analysis.json` exists, read it before decomposing stories. It is the BRD analysis pack produced by `/brd`, and it carries the ambiguity, edge-case, acceptance-coverage, and risk signals that should shape story boundaries.
+If `specs/brd/brd-analysis.json` exists, read it before decomposing stories. It is the BRD analysis pack produced by `/brd --full`, and it carries the ambiguity, edge-case, acceptance-coverage, and risk signals that should shape story boundaries.
 
-Use the analysis pack this way:
+If that pack is absent, read `specs/brd/analysis-seed.json` when present (lean `/brd --prd`). Use `domain_concepts` for entity names and existing-vs-unknown status, and use `open_questions` / `risks` the way `--full` uses `ambiguity_table` and `risk_gap_table`. Do not invent a 15-section analysis pack to fill the gap.
+
+When `brd-analysis.json` is present, use the pack this way:
 - Use `ambiguity_table` to avoid converting unresolved ambiguity into implementation scope. A high-risk deferred ambiguity should become `needs_breakdown` or an explicit Open Question, not a guessed story.
 - Use `edge_case_table` to create acceptance criteria for failure, empty, limit, concurrency, and security/privacy paths.
 - Use `ac_coverage_matrix` to preserve every source requirement's observable acceptance criterion.
@@ -388,7 +390,29 @@ Cuts drop-off at signup, the largest funnel loss in the current product.
 ## Acceptance Criteria
 - **E1-S1-AC1** — *Given* a visitor with no account, *when* they POST /api/auth/register with a valid email and password, *then* the response is 201 and the body contains a non-null userId.
 - ...
+
+## Generation Contract
+### Requirements
+- **E1-S1-AC1** — Given a visitor with no account, when they POST /api/auth/register with a valid email and password, then the response is 201 and the body contains a non-null userId.
+### Entities
+- User — unknown — no code-graph
+### Operations
+- pending
+### Safeguards
+- none — registration does not touch listed SG-n invariants
 ```
+
+The contract is the **delta prompt** for this story. Leave `Operations` as `pending` here — `/implement` and `/change` replace it with ordered file-level steps before code. Entity status comes from `analysis-seed.json` / the code-graph (`existing` | `new` | `unknown`), never invented as `new` without evidence.
+
+After writing the story files, run:
+
+```bash
+node .claude/scripts/validate-generation-contract.js --mode skeleton --stories specs/stories
+```
+
+In sprint mode, pass `--stories specs/stories/sprint-N`.
+
+Non-zero exit is a hard block. Fix the stories; do not skip the section.
 
 ### Step 6 — Generate `features.json`
 
@@ -548,7 +572,7 @@ Skip only when `brd-acceptance.json` does not exist (a BRD authored before this 
 |------|---------|
 | `specs/stories/epics.md` | Epic index with story membership and readiness summary |
 | `specs/stories/dependency-graph.md` | Scheduling waves with dependency mapping, plus the ownership-cluster view |
-| `specs/stories/E{n}-S{n}.md` | One file per story |
+| `specs/stories/E{n}-S{n}.md` | One file per story (includes `## Generation Contract`) |
 | `specs/stories/stories.json` | Machine-readable story index (the `.md` files are the human view) |
 | `specs/stories/dependency-edges.json` | Flat typed edge list derived from `stories.json#depends_on` |
 | `specs/stories/story-clusters.json` | Ownership clusters, interface contracts, blocking dependencies — the allocation contract |
@@ -565,6 +589,8 @@ Skip only when `brd-acceptance.json` does not exist (a BRD authored before this 
 ## Gate
 
 **Grounding gate (FRD-grounded BRD) — hard block.** `trace-check.js` proves mechanically that no story invented scope (`net_new`) and no BRD requirement was dropped (`dropped`) — see Step 6.45. Any violation blocks before the rubric runs, independent of quality score. Step 6.46 repeats the check at acceptance-criterion granularity when `brd-acceptance.json` exists.
+
+**Generation-contract gate — hard block.** `validate-generation-contract.js --mode skeleton` (Step 5) exits non-zero when a ready story is missing the `## Generation Contract` section or its Requirements/Entities/Operations/Safeguards subsections.
 
 **Ownership-cluster gate — hard block.** `story-clusters.js` (Step 4.5) exits non-zero when an interface contract has no story that can publish it. The clusters are then not independent, and allocating them to separate engineers would produce a hidden serial dependency discovered mid-sprint.
 
@@ -585,6 +611,7 @@ node .claude/scripts/plan-approval.js check --phase spec
 Pre-approval checklist (verified by evaluator, confirmed by human):
 - [ ] Every story has 3-6 specific, testable acceptance criteria in Given/When/Then form with stable `{story}-AC{n}` ids
 - [ ] Every story has `business_value`, `scope_in`, and `scope_out`
+- [ ] Every ready story has a `## Generation Contract` that passes `validate-generation-contract.js --mode skeleton`
 - [ ] Every dependency is typed (`contract` | `data` | `behavior` | `ui`) with an `artifact` and a `reason`
 - [ ] Every story has an INVEST scorecard, with `independent` backfilled from `story-clusters.json`
 - [ ] `story-clusters.json` exists and has no unresolved interface contracts

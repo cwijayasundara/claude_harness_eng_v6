@@ -31,12 +31,14 @@ function frontmatter(rel) {
   return out;
 }
 
-test('brd-extract runs as a fork on the sidekick agent', () => {
+test('brd-extract is a fallback fork; the default path is the script', () => {
   const fm = frontmatter(EXTRACT);
-  assert.strictEqual(fm.context, 'fork', 'extraction in the main session is the cost this fixes');
+  assert.strictEqual(fm.context, 'fork', 'if the fallback runs, it must not sit in the main session');
   assert.strictEqual(fm.agent, 'generator', 'transcription does not need the frontier model');
   assert.match(fm.description, /^\[Internal pipeline stage/,
     'internal stages must be marked so they are not offered as a user lane');
+  const body = read(EXTRACT);
+  assert.match(body, /prd-extract\.js/, 'canonical PRDs go through the script, not an LLM transcription');
 });
 
 test('brd-extract returns counts, and says so in the imperative', () => {
@@ -56,9 +58,9 @@ test('brd-extract keeps the properties adoption depends on', () => {
     'a fork cannot reach the human, so clarifying means answering its own question');
 });
 
-test('/brd dispatches extraction instead of doing it', () => {
+test('/brd runs prd-extract.js instead of an LLM transcription', () => {
   const brd = read('.claude/skills/brd/SKILL.md');
-  assert.match(brd, /brd-extract/, '/brd must dispatch the extractor');
+  assert.match(brd, /prd-extract\.js/, '/brd must run the deterministic extractor');
   assert.match(brd, /Do not extract the spine yourself/i);
   assert.match(brd, /Do not read `frd-requirements\.json`/i,
     'reading the spine back costs the same as having written it');

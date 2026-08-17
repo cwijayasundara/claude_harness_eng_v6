@@ -22,6 +22,7 @@ const HOOK_DEP_SCRIPTS = [
   'pipeline-snapshot.js',
   'pipeline-state-readers.js',
   'budget-state.js',
+  'phase-cost.js',
 ];
 
 const STATE_FILES = {
@@ -134,6 +135,7 @@ function runHook(projectDir, input, env) {
 // scripts/ copy fails to load and the hook silently pushes nothing.
 const HOOK_LIB_SCRIPTS = [
   'common.js', 'record-skills.js', 'agent-model.js', 'run-context.js', 'model-pricing.js',
+  'transcript-usage.js', 'phase-cost-persist.js',
 ];
 
 function copyHookLibFiles(hooksDir) {

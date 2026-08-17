@@ -28,7 +28,7 @@ If no argument is given, ask the user for a one-paragraph description before sta
 
 1. **PRD grounding replaces Step 1.** The input is a PRD file path, not a `/build --lite "<description>"` one-liner. Derive the Step 1 fields — project name, language/runtime, core capability, load-bearing dependencies, interface — from the PRD (see `docs/prd-format.md`). Do **not** interview; an interview cannot run headless. Where the PRD is silent on a load-bearing detail, **record an assumption** in the BRD-lite *Notes* section and proceed — do not stop to ask. If no usable PRD is supplied, stop and say so rather than inventing scope (in `--auto` there is no plan gate to catch a hallucinated project).
 
-2. **The Eligibility check becomes an automated gate that auto-escalates.** Evaluate the PRD against the Eligibility caps below *before writing any artifact*. If it stays within the caps, proceed with the lite lane. If it exceeds them — a database, a second service, auth/payments/PII, a real public API, or > 5 stories — **do not** compress it into 5 stories. Hand off to the full `--auto` pipeline (`/build`'s Phase 0 onward) automatically and **log the escalation reason**. There is no human to ask, so the escalation that the interactive lane leaves to the user is here made automatic — silently cramming an oversized project into the lite caps is the one failure this gate exists to prevent.
+2. **The Eligibility check becomes an automated gate that auto-escalates.** Evaluate the PRD against the Eligibility caps below *before writing any artifact*. If it stays within the caps, proceed with the lite lane. If it exceeds them — a database, a second service, auth/payments/PII, a real public API, or > 5 stories — **do not** compress it into 5 stories. Hand off to the full `--auto` pipeline (`/build`'s Phase 0 onward) automatically and **log the escalation reason**. That full pipeline still uses **lean `/brd --prd`** (no interview, no analysis pack, no phase-eval). There is no human to ask, so the escalation that the interactive lane leaves to the user is here made automatic — silently cramming an oversized project into the lite caps is the one failure this gate exists to prevent.
 
 3. **Step 7 is dropped and handoff is automatic.** Skip the approval gate entirely (that is what `--auto` means) and **invoke `/auto --group A` directly**, then run the autonomous tail (Phase 9.5 pre-PR verify → PR) exactly as `/build --auto` does. In `--lite --autonomous` (semi-auto), keep **one** consolidated approval — present the Step 7 summary once, and on approval run straight through to the PR. In `--lite --auto` (full-auto), keep **zero** gates.
 
@@ -48,7 +48,7 @@ Use `/build --lite` only when **all** are true:
 - Estimated implementation surface ≤ ~5 source files and ≤ ~5 stories.
 - New project (not adding to an existing codebase — for that, use `/change`).
 
-Escalate to `/brd → /spec → /design → /auto` (or `/build`) when **any** are true:
+Escalate to **`/brd --prd <prd>` (lean) → `/spec` → `/design` → `/auto`** (or `/build <prd>`) when **any** are true:
 
 - Multi-service architecture or split frontend+backend.
 - A real database with migrations, or persistent business state.
@@ -254,11 +254,12 @@ If at any point during the lite lane you discover the project is bigger than the
 
 ```text
 This project exceeds the /build --lite scope ({reason}). Switch to:
-  /brd specs/brd/brd.md      # if you want to keep the partial BRD
-  /spec specs/brd/brd.md
+  /brd --prd path/to/prd.md    # lean adopt — not the interview / --full path
+  /spec
   /design
   /auto
-or restart with /build path/to/full-requirements.md.
+or restart with /build path/to/prd.md (--auto if headless). The escalated
+/brd is still lean: no five-dimension interview, no brd-analysis.json, no eval.
 ```
 
 Do not silently grow `/build --lite` into the full pipeline. The scope cap is the contract.

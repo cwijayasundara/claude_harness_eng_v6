@@ -12,7 +12,7 @@ One coding-loop gate. Do not restate the sensor catalog here — `sensor_tier` a
 | Evaluator | **End of run**, not per group | Once against the running app (API + Playwright if UI), then draft PR. |
 | Design-critic | `--mode full` only, **after** the UI slice is green, cap 3 | Skip in lean. See SECTION 9. |
 
-`sensor_tier=standard` (default new web apps) keeps the runner's small always-on set (secrets, test-deletion, types, coverage, stub-smell, live-externals). Cycle, hub, clone, mutation, and security-baseline are **`strict` only**. Sprint-contract pre-commit already no-ops when `sprint-contracts/{group}.json` is absent.
+`sensor_tier=standard` (default new web apps) keeps the runner's small always-on set (secrets, test-deletion, types, coverage, stub-smell, live-externals). Cycle, hub, clone, mutation, security-baseline, and secure-baseline-wiring are **`strict` only**. Sprint-contract pre-commit already no-ops when `sprint-contracts/{group}.json` is absent.
 
 ### Tests
 

@@ -9,17 +9,19 @@ const { readSkillCorpus } = require('./helpers/skill-corpus');
 const ROOT = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
-test('BRD skill emits SPDD-grade analysis before synthesis', () => {
+test('BRD skill keeps SPDD analysis on --full only', () => {
   const skill = read('.claude/skills/brd/SKILL.md');
+  assert.match(skill, /brd-analysis\.json/);
+  assert.match(skill, /`--full` only|lean `--prd`/);
+  const full = read('.claude/skills/brd-render/SKILL.md');
   for (const phrase of [
-    'brd-analysis.json',
     'Domain Concepts',
     'Ambiguity Table',
     'Edge-Case Table',
     'AC Coverage Matrix',
     'Risk & Gap Table',
   ]) {
-    assert.match(skill, new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `missing ${phrase}`);
+    assert.match(full, new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `missing ${phrase}`);
   }
 });
 
@@ -117,4 +119,25 @@ test('spec and design consume the BRD analysis pack downstream', () => {
     assert.match(doc, /edge_case_table/);
     assert.match(doc, /risk_gap_table/);
   }
+});
+
+test('per-step token/cost persist is wired through record-run and /status', () => {
+  assert.match(read('.claude/hooks/record-run.js'), /persistPhaseCost/);
+  assert.match(read('.claude/hooks/lib/phase-cost-persist.js'), /phase-cost\.jsonl/);
+  assert.match(read('.claude/scripts/phase-cost.js'), /--write/);
+  assert.match(read('.claude/scripts/pipeline-state-readers.js'), /source: 'transcript'/);
+  assert.match(read('.claude/skills/brd/references/prd-lean.md'), /phase-cost\.js --write/);
+});
+
+test('lean --prd analysis seed and story generation contract are wired', () => {
+  const extract = read('.claude/scripts/prd-extract.js');
+  assert.match(extract, /analysis-seed\.js/);
+  const specRender = readSkillCorpus('spec-render');
+  assert.match(specRender, /analysis-seed\.json/);
+  assert.match(specRender, /Generation Contract/);
+  assert.match(specRender, /validate-generation-contract\.js/);
+  const implement = read('.claude/skills/implement/SKILL.md');
+  assert.match(implement, /--mode implementable/);
+  const change = read('.claude/skills/change/SKILL.md');
+  assert.match(change, /validate-generation-contract\.js/);
 });

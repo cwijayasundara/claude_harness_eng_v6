@@ -285,3 +285,39 @@ test('record-run keeps every event kind free of the embedded skill catalog', asy
   assert.match(lastBody, /harness_skill_info\{[^}]*skill="spec"[^}]*path="\.claude\/skills\/spec\/SKILL\.md"/);
   assert.match(lastBody, /harness_skill_info\{[^}]*skill="brownfield"[^}]*path="\.claude\/skills\/brownfield\/SKILL\.md"/);
 });
+
+test('Stop persists phase-cost.json from transcript_path', async () => {
+  const projectDir = makeProject();
+  const transcript = path.join(projectDir, 'session.jsonl');
+  fs.writeFileSync(transcript, [
+    JSON.stringify({
+      type: 'user',
+      isSidechain: false,
+      timestamp: '2026-08-16T07:00:00.000Z',
+      message: { content: '/brd --prd docs/shortlink-prd.md' },
+    }),
+    JSON.stringify({
+      type: 'assistant',
+      isSidechain: false,
+      timestamp: '2026-08-16T07:10:00.000Z',
+      requestId: 'a1',
+      message: {
+        id: 'a1',
+        model: 'claude-opus-5',
+        usage: { input_tokens: 10, output_tokens: 1000000 },
+      },
+    }),
+  ].join('\n') + '\n');
+  const result = await runHook(projectDir, {
+    hook_event_name: 'Stop',
+    session_id: 'sess-brd',
+    transcript_path: transcript,
+  }, { HARNESS_USER: 'dev' });
+  assert.equal(result.status, 0, result.stderr);
+  const latest = JSON.parse(fs.readFileSync(
+    path.join(projectDir, '.claude', 'state', 'phase-cost.json'),
+    'utf8',
+  ));
+  assert.ok(latest.rows.some((r) => r.command === 'brd'), JSON.stringify(latest.rows));
+  assert.ok(latest.grand_usd > 0);
+});

@@ -43,9 +43,13 @@ function installLegacyDisciplineScripts(projectDir) {
 }
 
 function writeGraph(projectDir, graph) {
-  const p = path.join(projectDir, 'specs', 'brownfield', 'code-graph.json');
-  fs.mkdirSync(path.dirname(p), { recursive: true });
-  fs.writeFileSync(p, JSON.stringify(graph));
+  const dir = path.join(projectDir, 'specs', 'brownfield');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'code-graph.json'), JSON.stringify(graph));
+  fs.writeFileSync(path.join(dir, 'code-graph.meta.json'), JSON.stringify({
+    producer: 'vendored-ast',
+    status: 'fresh',
+  }));
 }
 
 function writeReceipts(projectDir, rows) {
@@ -60,7 +64,7 @@ test('legacy-discipline: silent no-op when no code-graph.json exists', async () 
   stage(projectDir, 'src/legacy.py', 'x = 1\n');
   const result = await runGitHook(projectDir, HOOK, { HARNESS_COVERAGE_GATE: 'off' });
   assert.strictEqual(result.status, 0, result.stdout + result.stderr);
-  assert.ok(!result.stdout.includes('legacy-discipline'), result.stdout);
+  assert.ok(result.stdout.includes('GATE SKIPPED') && result.stdout.includes('legacy-discipline'), result.stdout);
 });
 
 test('legacy-discipline: blocks a modified production file with no recorded verdict, naming it', async () => {

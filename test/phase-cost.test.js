@@ -236,3 +236,61 @@ test('the unpriced-model note names each model once and is silent when all are p
   assert.strictEqual((note[0].match(/claude-nextgen-9/g) || []).length, 1, 'deduplicated');
   assert.match(note[1], /model-pricing\.js/, 'must say where to add the price');
 });
+
+const { writeSnapshot } = require('../.claude/hooks/lib/phase-cost-persist.js');
+
+test('--write persists a rollup and a delta ledger row', () => {
+  const file = writeTranscript([
+    userTurn('2026-08-16T07:00:00.000Z', '/brd --prd docs/x.md'),
+    assistantTurn('2026-08-16T07:30:00.000Z', 'a1', 'claude-opus-5', 1e6),
+  ]);
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'phase-cost-write-'));
+  const first = writeSnapshot(root, {
+    transcriptPath: file,
+    step: 'brd-gates',
+    event: 'step',
+    sessionId: 's1',
+  });
+  assert.strictEqual(first.written, true);
+  assert.strictEqual(first.rows[0].command, 'brd');
+  assert.strictEqual(Math.round(first.grand_usd), 25);
+  const latest = JSON.parse(fs.readFileSync(path.join(root, '.claude/state/phase-cost.json'), 'utf8'));
+  assert.strictEqual(latest.step, 'brd-gates');
+  const ledger = fs.readFileSync(path.join(root, '.claude/state/phase-cost.jsonl'), 'utf8')
+    .trim().split('\n').map((l) => JSON.parse(l));
+  assert.strictEqual(ledger.length, 1);
+  assert.strictEqual(ledger[0].step, 'brd-gates');
+  assert.strictEqual(Math.round(ledger[0].delta_usd), 25);
+
+  const dup = writeSnapshot(root, {
+    transcriptPath: file,
+    step: 'brd-gates',
+    event: 'step',
+  });
+  assert.strictEqual(dup.written, false, 'identical fingerprint is not double-logged');
+  const still = fs.readFileSync(path.join(root, '.claude/state/phase-cost.jsonl'), 'utf8')
+    .trim().split('\n');
+  assert.strictEqual(still.length, 1);
+});
+
+test('a later persist records only the delta since the last write', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'phase-cost-delta-'));
+  const file = path.join(dir, 't.jsonl');
+  const rows = [
+    userTurn('2026-08-16T07:00:00.000Z', '/brd'),
+    assistantTurn('2026-08-16T07:10:00.000Z', 'a1', 'claude-opus-5', 1e6),
+  ];
+  fs.writeFileSync(file, rows.map((r) => JSON.stringify(r)).join('\n') + '\n');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'phase-cost-delta-root-'));
+  writeSnapshot(root, { transcriptPath: file, step: 'brd' });
+  rows.push(userTurn('2026-08-16T09:00:00.000Z', '/spec'));
+  rows.push(assistantTurn('2026-08-16T09:10:00.000Z', 'a2', 'claude-sonnet-5', 1e6));
+  fs.writeFileSync(file, rows.map((r) => JSON.stringify(r)).join('\n') + '\n');
+  const second = writeSnapshot(root, { transcriptPath: file, step: 'spec' });
+  assert.strictEqual(second.written, true);
+  const ledger = fs.readFileSync(path.join(root, '.claude/state/phase-cost.jsonl'), 'utf8')
+    .trim().split('\n').map((l) => JSON.parse(l));
+  assert.strictEqual(ledger.length, 2);
+  assert.strictEqual(Math.round(ledger[1].delta_usd), 15, 'only the spec increment');
+  assert.strictEqual(Math.round(ledger[1].grand_usd), 40);
+});

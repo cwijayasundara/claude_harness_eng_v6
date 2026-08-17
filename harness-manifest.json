@@ -181,6 +181,24 @@
       "description": "SPDD REASONS Canvas (gap G4): /design emits specs/design/reasons-canvas.md (Requirements/Entities/Approach/Structure/Operations/Norms/Safeguards + a machine-read Governs list). Living artifact — 'fix the prompt first' when behaviour changes; brownfield grounds entities existing-vs-new in the code-graph."
     },
     {
+      "id": "lean-analysis-seed",
+      "axis": "traceability",
+      "kind": "feedforward",
+      "wired_at": ".claude/scripts/analysis-seed.js",
+      "status": "active",
+      "description": "Lean /brd --prd replacement for the skipped brd-analysis.json pack: a deterministic seed (domain terms from the adopted spine + optional CONTEXT.md / naming-clusters.md evidence, plus the PRD's own questions, risks, and safeguards copied verbatim). Does not paraphrase FR text. spec-render reads it when brd-analysis.json is absent.",
+      "net_add_justification": "Lean adopt correctly stopped paraphrasing FRs, and in doing so dropped the only product-grain analysis context (domain existing-vs-new, open questions, risks). Nothing else on the default --prd path produces that seed; brd-analysis.json is --full only. This is a cheap script, not a new interview."
+    },
+    {
+      "id": "story-generation-contract",
+      "axis": "behaviour",
+      "kind": "feedforward",
+      "wired_at": ".claude/skills/spec-render/SKILL.md",
+      "status": "active",
+      "description": "Per-story generation contract (Requirements / Entities / Operations / Safeguards) inside each E*-S*.md. The story stays the ticket and scheduler; this section is the executable delta prompt /implement and /change fill and run against. Operations may be pending at spec-render and must name files before code.",
+      "net_add_justification": "The system REASONS Canvas is the constitution, not the per-change generation prompt. Implement plans were session-ephemeral (writing-plans in chat), so the SPDD 'fix the prompt first' rule had nothing at story grain to fix. This is a section on an existing story file, not a new markdown pile."
+    },
+    {
       "id": "legacy-discipline",
       "axis": "behaviour",
       "kind": "feedforward",
@@ -626,6 +644,18 @@
       "description": "Deterministic structure gate (gap G4) run in /design Step 1.9: the Canvas must carry all seven REASONS sections and a non-empty Governs list. Hard block. Safeguard coverage (D9): when specs/brd/brd-safeguards.json exists, also proves every SG-n invariant/prohibition/limit/norm the BRD recorded is cited in the Canvas Safeguards or Norms section. Structure alone cannot catch a Safeguards section that is present, well-formed, and silently missing a business invariant — which is exactly how a BRD constraint fails to reach the design contract, since those sections were previously authored from the architecture with nothing tying them back. UNCOVERED (a required constraint the design does not carry) and UNKNOWN (an SG-n cited but absent from the spine — a typo or an invented constraint) both BLOCK; a misplaced citation (a norm filed under Safeguards or vice versa) is a warning only, because the constraint did reach the design and only the filing is off. Skipped loudly when the spine file is absent; an EMPTY spine reports empty_spine and FAILS, so creating an empty file cannot be used to silence the gate."
     },
     {
+      "id": "generation-contract",
+      "axis": "behaviour",
+      "type": "computational",
+      "cadence": "planning",
+      "status": "active",
+      "scope": "artifacts",
+      "wired_at": ".claude/scripts/validate-generation-contract.js",
+      "signal": "a ready story is missing a Generation Contract, has pending Operations at implement time, or cites an unknown SG-n",
+      "description": "Structure gate for the per-story generation contract. --mode skeleton (spec-render) allows Operations: pending. --mode implementable (/implement, /change) requires at least one repo-relative file path. Does not replace validate-canvas.js (system constitution) or story-clusters.js (allocation).",
+      "net_add_justification": "Prompt-level 'write a plan then implement' is the class of discipline G17/G23 taught not to trust. This is the mechanical presence check for the story-generation-contract guide, at the grain code is actually generated."
+    },
+    {
       "id": "canvas-sync-check",
       "axis": "traceability",
       "type": "computational",
@@ -703,7 +733,7 @@
       "scope": "universal",
       "wired_at": ".claude/scripts/cost-report.js",
       "signal": "est $ / model mix / token totals from run receipts",
-      "description": "Operator cost report over .claude/runs receipts: est/measured $, agents by role, model mix, optional cache-read share. Writes .claude/state/cost-report.json; /status Cost line via pipeline-state-readers#readCostSummary."
+      "description": "Operator cost report over .claude/runs receipts: est/measured $, agents by role, model mix, optional cache-read share. Writes .claude/state/cost-report.json. Per-step token/$ is persisted from the session transcript by record-run (Stop / SubagentStop / UserPromptSubmit) via phase-cost-persist.js → .claude/state/phase-cost.json + phase-cost.jsonl; /status Cost and Phases lines via pipeline-state-readers#readCostSummary (receipts when budget-start exists, otherwise the transcript rollup)."
     },
     {
       "id": "coupling-ratchet",

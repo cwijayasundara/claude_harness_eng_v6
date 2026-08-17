@@ -4,6 +4,18 @@ All notable changes to the Claude Harness Engine are documented here.
 
 ## Unreleased
 
+### Per-step token and cost log (2026-08-16)
+
+- **`phase-cost.js --write [--step NAME]`** persists the transcript bill to `.claude/state/phase-cost.json` and an append-only `.claude/state/phase-cost.jsonl` (delta vs last persist). The `record-run` hook writes this on every UserPromptSubmit / Stop / SubagentStop so `/brd`, `/spec`, `/design`, `/implement`, and `/gate` each leave a labeled step row without a collector or OTEL.
+- **`/status` Cost line no longer waits for `/auto`'s `budget-start`.** Planning phases show the transcript rollup; a Phases line lists `$` per slash command.
+- **Lean BRD:** clarification answers that record a risk now appear in `brd.md` Risks and in `analysis-seed.json` (re-seed after the open-question answers). The shortlink-p3 run had C2/C3 as risks that vanished from the seed.
+
+### 6.0.0 — Lean `/brd --prd` (2026-08-16)
+
+- **Default `--prd` / `--frd` is adopt-only.** `prd-extract.js` + `brd-adopt.js` + `brd-taxonomy-tag.js` + `brd-lean-write.js` replace the LLM extract fork, five-dimension interview, `brd-analysis.json`, and auto phase-eval. `brd.md` is a ≤80-line pointer. Opt into the old ceremony with `--full`; prose eval only with `--eval`.
+- **Lean analysis seed + story generation contract.** `analysis-seed.js` writes `specs/brd/analysis-seed.json` on adopt (domain terms + the PRD's own questions/risks/safeguards — no FR paraphrase). Each ready story carries a `## Generation Contract`; `validate-generation-contract.js --mode skeleton` runs at spec-render, `--mode implementable` at `/implement` and `/change` (Operations must name files). System REASONS Canvas stays the constitution; the contract is the per-change delta prompt.
+- **`/build --auto` and `/build --lite` escalation** call lean `/brd --prd`. Exceeding lite caps (auth, DB, >5 stories) still escalates to the full pipeline, but that pipeline no longer runs interview-shaped BRD or 99k-token eval.
+
 ### 2.4.0 — Bun Phase C (optional polish) (2026-07-12)
 
 - **Semantic-divergence checklist:** `.claude/skills/code-gen/references/semantic-divergence.md`; `code-reviewer` lens for mechanical ports; wired into `/refactor --mechanical` + migrate `MAPPING.md`.

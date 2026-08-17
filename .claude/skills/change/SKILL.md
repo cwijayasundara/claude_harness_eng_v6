@@ -51,7 +51,7 @@ State the chosen lane in one line. When you redirect (`/refactor` or `/build`), 
 Every behavior change must have a story file in `specs/stories/` before implementation begins.
 
 - If a story ID was provided (e.g. `E2-S3`): read `specs/stories/E2-S3.md` and confirm it has acceptance criteria.
-- If a description was provided: check for a matching story. If none exists, create `specs/stories/{next-id}.md` with Title, Problem statement, Acceptance criteria (numbered, each testable), and Out of scope (explicit).
+- If a description was provided: check for a matching story. If none exists, create `specs/stories/{next-id}.md` with Title, Problem statement, Acceptance criteria (numbered Given/When/Then, each testable), Out of scope, and a `## Generation Contract` (Requirements / Entities / Operations: pending / Safeguards).
 - **If `--linear <KEY>` or `--jira <KEY>` was provided**, seed the story from the ticket:
 
   ```bash
@@ -146,6 +146,14 @@ Document this assessment before writing any code.
 Read `specs/design/` for relevant architecture decisions and `.claude/skills/code-gen/references/architecture.md` for layering rules. Confirm the planned implementation stays within the correct layer (new type → `types/`, new query → `repository/`, …). Do not shortcut layers.
 
 If `specs/design/reasons-canvas.md` exists, treat it as the living design contract. Behaviour changes that create, move, or materially alter governed source files must update the Canvas first: `Requirements`/`Operations` for intent and implementation steps, `Safeguards` for risks, and `Governs` for changed paths. After code changes, run `npm run canvas-sync`; a mismatch is a **self-correct** finding in `/change` until the Canvas and diff agree.
+
+Fill this story's `## Generation Contract` before the first production edit: replace `Operations: pending` with ordered file-level steps, mark entities `existing|new|unknown`, and cite `SG-n` or write `none` with a reason. Then:
+
+```bash
+node .claude/scripts/validate-generation-contract.js --mode implementable --story <story-id>
+```
+
+Non-zero exit: halt. Do not implement. Behaviour changes edit the contract first, then the code.
 
 ### Step S4 — Write the Failing Test(s) First
 

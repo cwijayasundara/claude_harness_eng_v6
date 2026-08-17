@@ -65,6 +65,16 @@ function renderStatus(s) {
   if (s.cost) {
     const costLine = fmtCost(s.cost);
     if (costLine) lines.push(costLine);
+    const phases = (s.cost.by_phase && s.cost.by_phase.length)
+      ? s.cost.by_phase
+      : (s.phase_cost && s.phase_cost.totals);
+    if (phases && phases.length) {
+      const bits = phases.map((t) => {
+        const name = t.command === '(freeform)' ? '(freeform)' : `/${t.command}`;
+        return `${name}=$${(t.cost_usd || 0).toFixed(2)}`;
+      });
+      lines.push(`Phases:    ${bits.join(' · ')}`);
+    }
   }
   if (s.navigation) lines.push(fmtNavigation(s.navigation));
   if (s.context_cache) lines.push(fmtContextCache(s.context_cache));

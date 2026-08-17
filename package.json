@@ -6,6 +6,7 @@
   "scripts": {
     "certification": "node .claude/scripts/certification-report.js",
     "status": "node .claude/scripts/pipeline-status.js",
+    "phase-cost": "node .claude/scripts/phase-cost.js",
     "drift": "node .claude/scripts/drift-report.js",
     "flakes": "node .claude/scripts/flake-detector.js",
     "flakes:e2e": "node .claude/scripts/flake-detector.js --e2e",
@@ -46,6 +47,8 @@
     "release:skus": "node .claude/scripts/release-skus.js",
     "scaffold:upgrade": "node .claude/scripts/scaffold-upgrade.js",
     "slo": "node .claude/scripts/slo-check.js",
+    "analysis-seed": "node .claude/scripts/analysis-seed.js",
+    "generation-contract": "node .claude/scripts/validate-generation-contract.js",
     "canvas-sync": "node .claude/scripts/canvas-sync-check.js",
     "canvas-semantic": "node .claude/scripts/canvas-semantic-check.js",
     "sensor-waivers": "node .claude/scripts/validate-sensor-waivers.js",

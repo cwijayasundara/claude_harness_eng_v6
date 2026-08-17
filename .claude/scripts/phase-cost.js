@@ -13,6 +13,7 @@
 // Usage:
 //   node .claude/scripts/phase-cost.js [transcriptPath|projectDir] [--json]
 //   node .claude/scripts/phase-cost.js            # this project, all sessions
+//   node .claude/scripts/phase-cost.js --write [--step NAME]   # persist to .claude/state/
 
 const fs = require('fs');
 const os = require('os');
@@ -255,12 +256,42 @@ function render(rows, coverage) {
     '', ...unpricedNote(rows), ...coverageNote(coverage), ''].join('\n');
 }
 
+function parseCli(argv) {
+  const opts = { json: false, write: false, step: null, target: null };
+  for (let i = 0; i < argv.length; i += 1) {
+    const a = argv[i];
+    if (a === '--json') opts.json = true;
+    else if (a === '--write') opts.write = true;
+    else if (a === '--step') opts.step = argv[++i] || null;
+    else if (!a.startsWith('--') && !opts.target) opts.target = a;
+  }
+  opts.target = opts.target || process.cwd();
+  return opts;
+}
+
 function main(argv) {
-  const args = argv.filter((a) => !a.startsWith('--'));
-  const asJson = argv.includes('--json');
-  const target = args[0] || process.cwd();
+  const opts = parseCli(argv);
+  const asJson = opts.json;
+  const target = opts.target;
+  if (opts.write) {
+    const persist = require('../hooks/lib/phase-cost-persist');
+    let transcriptPath = null;
+    try {
+      if (fs.statSync(target).isFile()) transcriptPath = path.resolve(target);
+    } catch (_) { /* directory or missing — discover from project slug */ }
+    const written = persist.writeSnapshot(process.cwd(), {
+      transcriptPath,
+      step: opts.step,
+      event: opts.step ? 'step' : 'snapshot',
+    });
+    if (asJson) {
+      process.stdout.write(`${JSON.stringify(written, null, 2)}\n`);
+      return;
+    }
+  }
   const files = transcriptsFor(target);
   if (!files.length) {
+    if (opts.write) return;
     process.stderr.write(`phase-cost: no transcripts found for ${target}\n`);
     process.exit(1);
   }
@@ -271,6 +302,7 @@ function main(argv) {
     return costByPhase(file, { extraTranscripts });
   }).sort((a, b) => a.start.localeCompare(b.start));
   if (!rows.length) {
+    if (opts.write) return;
     process.stderr.write('phase-cost: transcripts found, but no slash-command phases in them\n');
     process.exit(1);
   }
@@ -283,5 +315,6 @@ function main(argv) {
 if (require.main === module) main(process.argv.slice(2));
 
 module.exports = {
-  segmentsFromTranscript, costByPhase, commandOf, aggregate, subagentTranscriptsFor, unpricedNote,
+  segmentsFromTranscript, costByPhase, commandOf, aggregate,
+  subagentTranscriptsFor, transcriptsFor, unpricedNote,
 };

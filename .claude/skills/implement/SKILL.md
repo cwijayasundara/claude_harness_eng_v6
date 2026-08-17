@@ -65,6 +65,23 @@ If `specs/brownfield/` exists, prefer the pack + `symbol-map.md` over front-load
 
 Before loading code or spawning agents, invoke `superpowers:writing-plans` to produce a structured implementation plan for this group. The plan identifies task decomposition, dependencies, and risk areas. This feeds into the teammate spawn prompts and prevents ad-hoc implementation.
 
+### Step 0.2 — Persist the generation contract [HARD BLOCK]
+
+The Step 0 plan is not session-only. Write it into each story's `## Generation Contract` before any teammate spawn:
+
+- **Requirements** — keep the story's Given/When/Then AC ids; do not rewrite them
+- **Entities** — `existing` | `new` | `unknown`, citing a code-graph path or file when brownfield. Prefer `specs/brd/analysis-seed.json` and `CONTEXT.md` names
+- **Operations** — replace `pending` with ordered steps that each name a repo-relative file
+- **Safeguards** — cite the `SG-n` ids this story can violate, or `none` plus a reason of at least 25 characters
+
+Then:
+
+```bash
+node .claude/scripts/validate-generation-contract.js --mode implementable --story <id>
+```
+
+Non-zero exit: halt. Do not spawn teammates. Behaviour changes update this section first, then the code.
+
 If story metadata, component ownership, or API/data contracts conflict, invoke `.claude/skills/clarify/SKILL.md` before planning implementation. Keep clarification bounded:
 - Ask only questions that block implementation or could cause rework.
 - Stop at 10 questions by default.
@@ -196,6 +213,10 @@ git commit -m "$(node .claude/scripts/review-commit-msg.js \
 
 If the reviewer still emits BLOCK findings after 3 retries, escalate to the user with a summary of the unresolved issues.
 
+```bash
+node .claude/scripts/phase-cost.js --write --step implement
+```
+
 ---
 
 ## Rules
@@ -216,3 +237,4 @@ If the reviewer still emits BLOCK findings after 3 retries, escalate to the user
 - **Deferring test coverage:** Tests are written in the same sprint cycle, not later. "I'll add tests in the next sprint" is not acceptable.
 - **Vibe coding without acceptance criteria:** Every function must trace to an acceptance criterion. If the criterion does not exist, do not write the code — write the criterion first.
 - **Ignoring learned rules:** Failing to inject `.claude/state/learned-rules.md` recreates decisions the team has already made, causing style and pattern drift.
+- **Leaving Operations as pending:** the generation contract is the implementer's plan. A teammate that codes from chat while the story still says `pending` is the failure Step 0.2 exists to stop.

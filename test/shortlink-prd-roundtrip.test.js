@@ -23,32 +23,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 const PRD = path.join(ROOT, 'docs/shortlink-prd.md');
-
-/** Build the spine the way brd-extract's section table instructs. */
-function extractSpine(markdown) {
-  const out = [];
-  let section = null;
-  for (const line of markdown.split('\n')) {
-    const heading = line.match(/^##\s+(.*)$/);
-    if (heading) { section = heading[1].trim(); continue; }
-    if (!section) continue;
-    const ac = line.match(/^-\s+\*\*((?:FR|NFR)-[\w.]+)\*\*\s+(?:→|->)\s+(.*)$/);
-    if (ac && /Acceptance/i.test(section)) {
-      out.push({ id: `FRD-${out.length + 1}`, text: ac[2], section: `${section} / ${ac[1]} AC` });
-      continue;
-    }
-    const req = line.match(/^-\s+\*\*((?:FR|NFR)-[\w.]+)\*\*\s+(.*)$/);
-    if (req) {
-      out.push({ id: `FRD-${out.length + 1}`, text: req[2], section: `${section} / ${req[1]}` });
-      continue;
-    }
-    const bullet = line.match(/^-\s+(.+)$/);
-    if (bullet && /Out of Scope|Risks|Open Questions|Milestones/i.test(section)) {
-      out.push({ id: `FRD-${out.length + 1}`, text: bullet[1], section });
-    }
-  }
-  return out;
-}
+const { extractSpine } = require('../.claude/hooks/lib/prd-extract');
 
 function adopt() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'shortlink-'));

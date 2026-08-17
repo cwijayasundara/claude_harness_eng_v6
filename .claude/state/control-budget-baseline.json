@@ -1,5 +1,5 @@
 {
-  "count": 162,
+  "count": 166,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -67,6 +67,7 @@
     "flake-detection",
     "flake-history",
     "fleet-gate-retrofit",
+    "generation-contract",
     "git-safety-parallel",
     "git-safety-session",
     "human-codebase",
@@ -74,6 +75,7 @@
     "impact-scoped-regression",
     "layer-config",
     "layer-imports",
+    "lean-analysis-seed",
     "legacy-discipline",
     "legacy-discipline-proof",
     "length-caps",
@@ -128,6 +130,7 @@
     "runtime-containment",
     "runtime-slo",
     "sast",
+    "sealed-auto-pack",
     "seam-confidence",
     "secret-scan",
     "secure-baseline-wiring",
@@ -141,6 +144,7 @@
     "spec-decisions-gate",
     "sprint-contract",
     "sprout-diff-one-symbol",
+    "story-generation-contract",
     "story-ownership-clusters",
     "stub-smell-gate",
     "task-envelope",

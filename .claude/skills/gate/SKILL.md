@@ -156,6 +156,8 @@ After all reviewers and static gates settle (including after fix cycles), **alwa
 
 A quality-card with `pass: false` or missing core inputs (evaluator report / code-review verdict) means the gate is not green — do not open a PR. Opening a draft PR is `/auto --sealed`'s job; this skill never merges it.
 
+The `record-run` Stop hook writes the labeled `/gate` cost row. Kernel `/gate` does not run the telemetry persist CLI.
+
 ## Output Files
 
 - `specs/reviews/evaluator-report.md` — PASS/FAIL with per-check detail

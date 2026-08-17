@@ -65,6 +65,7 @@
       "test-write-lock",
       "task-envelope",
       "task-lifecycle",
+      "generation-contract",
       "toolchain",
       "tracker-fetch",
       "trust-boundary"
@@ -89,7 +90,8 @@
       "review-tier",
       "run-gate-checks",
       "security-scan",
-      "tracker-fetch"
+      "tracker-fetch",
+      "validate-generation-contract"
     ]
   },
   "packs": {
@@ -129,9 +131,12 @@
       ],
       "script": [
         "amendment-provenance-check",
+        "analysis-seed",
         "auto-merge",
         "brd-taxonomy-check",
         "brd-adopt",
+        "brd-lean-write",
+        "brd-taxonomy-tag",
         "build-chain",
         "build-chain-state",
         "build-lane",
@@ -172,6 +177,7 @@
         "validate-canvas",
         "validate-contract",
         "validate-design-decisions",
+        "prd-extract",
         "validate-prd",
         "validate-spec-decisions",
         "verification-matrix-gate",
@@ -187,9 +193,11 @@
         "contract-schema",
         "decision-record",
         "adopted-spine",
+        "analysis-seed",
         "decision-verdict",
         "gate-receipt-sensor",
         "prd-adoption",
+        "prd-extract",
         "prd-milestones",
         "gates-planning",
         "live-session",
@@ -407,6 +415,7 @@
         "merge-provenance",
         "stale-stamp",
         "transcript-usage",
+        "phase-cost-persist",
         "withhold-verdicts"
       ],
       "hook": [
