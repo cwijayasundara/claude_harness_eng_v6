@@ -64,6 +64,13 @@ A non-zero exit **BLOCKS** — fix the Canvas before Step 2. It covers two thing
 
 Skipped loudly when `brd-safeguards.json` does not exist (a BRD authored before this gate). Do not create an empty `brd-safeguards.json` to silence it: an empty spine reports `empty_spine` and fails, precisely so a missing input cannot read as a clean bill of health.
 
+Join the story bundles now that Structure exists (SSDD; owned files from
+`component-map.md`). Do not read the JSON back:
+
+```bash
+node .claude/scripts/bundle-write.js
+```
+
 Also run the **vocabulary-consistency gate** (deterministic; skip only when `CONTEXT.md` does not exist yet):
 
 ```bash

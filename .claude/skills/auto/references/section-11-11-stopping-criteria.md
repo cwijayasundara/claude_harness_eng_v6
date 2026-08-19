@@ -23,7 +23,7 @@ OR logic with priority (check in order):
    2. Generate `README.md` for the built application (see below)
    3. Commit: `git add README.md && git commit -m "docs: add README with architecture, setup, and API reference"`
    4. Invoke `/retro` once (unless `--no-retro`; see Usage) — reviews this session's loop-health scorecard and drafts any evidence-backed harness-improvement recommendations. Report-only and interactive (agentic-flywheel §4.2); never blocks completion, and stays silent if there is nothing new to recommend.
-   5. **Draft PR is the stop** (especially `/auto --sealed`). Spawn the evaluator against the running app (API + Playwright if UI) if this run has not already done so. Then generate the quality card and walkthrough, and open a **draft** PR. Do not merge. Do not enable auto-merge unless `AUTO_MERGE=true` or `--auto-merge` is set.
+   5. **Draft PR is the stop** (especially `/auto --sealed`). Spawn the evaluator against the running app (API + Playwright if UI) if this run has not already done so. If `specs/reviews/regression-gate-verdict.json` is missing or not `pass` for this HEAD, run `node .claude/scripts/regression-gate.js --replay` (G15). Then generate the quality card and walkthrough, and open a **draft** PR. Do not merge. Do not enable auto-merge unless `AUTO_MERGE=true` or `--auto-merge` is set.
       ```bash
       node .claude/scripts/quality-card.js --range <base..HEAD>
       node .claude/scripts/pr-walkthrough.js --base <base>
@@ -46,15 +46,15 @@ Success does. `--no-retro` suppresses that invocation for callers (e.g. a
 
 After the build completes, generate a `README.md` that describes the GENERATED APP (not the harness).
 
-Read these files for content:
-- `specs/brd/brd.md` — project description
-- `specs/design/architecture.md` — system architecture
-- `specs/design/api-contracts.md` or `api-contracts.schema.json` — API surface
+Read these files for content (sealed pack + runtime, not a second BRD pass):
+- `specs/design/program-design.md` — types, signatures, call stack
 - `specs/design/component-map.md` — module structure
+- `specs/design/api-contracts.md` or `api-contracts.schema.json` — API surface (grep routes; do not dump)
 - `project-manifest.json` — tech stack
 - `init.sh` — setup steps
 - `docker-compose.yml` (if exists) — services
 - `.env.example` (if exists) — required environment variables
+- One-line problem statement from `specs/reviews/plan-seal.json` / features list — not `brd.md` whole
 
 **Required sections:** Project description, Architecture (diagram/layers), Tech Stack (table), Prerequisites, Quick Start (copy-paste commands), API Endpoints (table), Project Structure (directory tree), Running Tests, Environment Variables (table from .env.example), Development notes.
 

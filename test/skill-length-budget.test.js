@@ -18,6 +18,7 @@ const ENTRY_BUDGETS = {
   build: 80,
   test: 80,
   brd: 80,
+  spec: 80,
 };
 
 for (const [skill, budget] of Object.entries(ENTRY_BUDGETS)) {
@@ -35,6 +36,14 @@ test('auto has references for progressive sections', () => {
   assert.ok(fs.existsSync(refs));
   const files = fs.readdirSync(refs).filter((f) => f.endsWith('.md'));
   assert.ok(files.length >= 10, `expected many section files, got ${files.length}`);
+});
+
+test('spec has shape/render/review references for progressive loading', () => {
+  const refs = path.join(ROOT, '.claude', 'skills', 'spec', 'references');
+  assert.ok(fs.existsSync(refs));
+  for (const name of ['shape.md', 'render.md', 'review.md']) {
+    assert.ok(fs.existsSync(path.join(refs, name)), `missing spec/references/${name}`);
+  }
 });
 
 test('design has mode references for progressive loading', () => {

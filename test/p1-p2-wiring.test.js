@@ -23,9 +23,9 @@ test('/change updates the bundle first then syncs after a refactor', () => {
   assert.match(change, /story-sync\.js/);
 });
 
-test('/implement and /auto run story-sync after code lands', () => {
-  assert.match(readSkillCorpus('implement'), /story-sync\.js --write/);
-  assert.match(readSkillCorpus('auto'), /story-sync\.js --write/);
+test('/implement and /auto rewrite the SSDD record after code lands', () => {
+  assert.match(readSkillCorpus('implement'), /spdd-sync\.js --write/);
+  assert.match(readSkillCorpus('auto'), /spdd-sync\.js --write/);
 });
 
 test('/test appends sprint-scoped matrix rows when a sprint is active', () => {

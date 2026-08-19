@@ -165,10 +165,10 @@ node .claude/scripts/run-gate-checks.js
 
 Honor a non-zero exit. Do not restate lint, types, coverage, or mutation as a second list — the runner already applies `sensor_tier`.
 
-Then sync owned-file moves back into the story bundles (no-op when nothing drifted):
+Then rewrite the structured record from the code (Canvas + bundles):
 
 ```bash
-node .claude/scripts/story-sync.js --write
+node .claude/scripts/spdd-sync.js --write
 ```
 
 All of the above must pass before proceeding. If tests or the runner fail:

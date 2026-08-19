@@ -77,9 +77,9 @@ You are the group-orchestrator for dependency group {G} of wave {N}.
 Your scope is EXACTLY one group. Do not touch other groups, do not advance the wavefront, do not write to parent-owned state files.
 
 Mandatory steps:
-1. Read sprint-contracts/group-{G}.json. If missing, propose one (Section 3 of /auto), get evaluator approval, then proceed.
+1. Read sprint-contracts/group-{G}.json. If missing, propose one from the group's `specs/bundles/{id}.json` files (Section 3 of /auto), get evaluator approval, then proceed.
 2. Switch to branch auto/group-{G} (parent has already created it from {WAVE_BASE}).
-3. Run the in-group flow: micro-DAG → teammate dispatch (Rule 2 in generator.md) → ratchet gate for this group only.
+3. Run the in-group flow: persist Generation Contracts (implement Step 0.2) → micro-DAG from bundle owned_files → teammate dispatch (Rule 2 in generator.md) → SECTION 5 ratchet (tests + runner + SSDD join) for this group only.
 4. Write per-group state to .claude/state/wave-{N}/group-{G}/ ONLY. Do not write to claude-progress.txt, learned-rules.md, or features.json directly.
 5. Commit all work to auto/group-{G}. Do NOT merge — the parent handles merging after the wave.
 6. Return a structured summary: { "group": "{G}", "passes": <bool>, "stories_passing": [...], "stories_failing": [...], "rule_candidates_path": "...", "iteration_log_path": "..." }

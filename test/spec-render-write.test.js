@@ -64,6 +64,9 @@ test('writeStoryGraph expands stories.json and marks characterization features',
   const md = fs.readFileSync(path.join(root, 'specs/stories/E1-S1.md'), 'utf8');
   assert.match(md, /## Generation Contract/);
   assert.match(md, /E1-S1-AC1/);
+  const bundle = JSON.parse(fs.readFileSync(path.join(root, 'specs/bundles/E1-S1.json'), 'utf8'));
+  assert.strictEqual(bundle.story_id, 'E1-S1');
+  assert.ok(bundle.requirements.ac_ids.includes('E1-S1-AC1'));
   fs.rmSync(root, { recursive: true, force: true });
 });
 

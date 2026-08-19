@@ -63,14 +63,15 @@ contract the rest of the design is bound by, and the implementer reads it first.
 
 ### Step 1 — Render the documents
 
-Read all ready story files in `specs/stories/`, plus `epics.md` and
-`dependency-graph.md`. If `specs/brd/brd-analysis.json` exists, use its
+Orient from `specs/stories/stories.json` plus `epics.md`. Do **not** read every
+`E*-S*.md` whole — open one story only when a component-map row or signature
+turns on its wording. If `specs/brd/brd-analysis.json` exists, use its
 `ambiguity_table`, `edge_case_table`, `ac_coverage_matrix` and `risk_gap_table`
 as inputs. Ignore anything listed in `backlog-needs-breakdown.md`. Read
 `CONTEXT.md` and reuse its vocabulary verbatim.
 
 Write to `specs/design/`. The **review surface** is `architecture.md` +
-`program-design.md` + `component-map.md` — see
+`program-design.md` + `reasons-canvas.md` — see
 `plan-review-loop/references/lean-review-surface.md`.
 
 1. **architecture.md** — the recorded-decisions table first, then a sequence

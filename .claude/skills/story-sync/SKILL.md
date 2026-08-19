@@ -12,12 +12,14 @@ Behaviour changes do not belong here. If acceptance-criterion ids on the story n
 
 ## Usage
 
+The rewrite command (Canvas + bundles in one pass):
+
 ```bash
-node .claude/scripts/story-sync.js            # report
-node .claude/scripts/story-sync.js --write    # update bundles + canvas Governs
+node .claude/scripts/spdd-sync.js            # report
+node .claude/scripts/spdd-sync.js --write    # apply Governs/Operations stubs + bundle ownership
 ```
 
-`npm run story-sync` is the same script.
+`npm run spdd-sync` is the same script. `story-sync.js --write` still updates bundles only.
 
 ## When to run
 

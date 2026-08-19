@@ -38,4 +38,6 @@ When schemas exist, `references/test-plan.md` runs `constraints-extract.js`.
 Load `references/test-design.md` only to add extra negative rows.
 
 The review surface is `test-plan.md` + `verification-matrix.json`
-(`plan-review-loop/references/lean-review-surface.md`).
+(`plan-review-loop/references/lean-review-surface.md` and `ssdd.md`).
+SSDD: this gate writes testable Operations (seams + matrix) and joins
+`specs/bundles/` via `bundle-write.js`.

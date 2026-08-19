@@ -16,6 +16,8 @@ test('lean review surface names the four phase pairs', () => {
   assert.match(surface, /brd\.md/);
   assert.match(surface, /brd-requirements\.json/);
   assert.match(surface, /program-design\.md/);
+  assert.match(surface, /reasons-canvas\.md/);
+  assert.match(surface, /Generation Contract/);
   assert.match(surface, /verification-matrix\.json/);
   assert.match(surface, /vertical slices/i);
   assert.match(surface, /`--eval`/);

@@ -54,6 +54,7 @@
     "bundle-write": "node .claude/scripts/bundle-write.js",
     "bundle-check": "node .claude/scripts/bundle-check.js",
     "story-sync": "node .claude/scripts/story-sync.js",
+    "spdd-sync": "node .claude/scripts/spdd-sync.js",
     "matrix-append": "node .claude/scripts/matrix-append.js",
     "canvas-sync": "node .claude/scripts/canvas-sync-check.js",
     "canvas-semantic": "node .claude/scripts/canvas-semantic-check.js",

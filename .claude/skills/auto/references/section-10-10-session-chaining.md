@@ -34,12 +34,12 @@ next_action: Run evaluator against group D
 When invoked with `--once`, `/auto` performs **one** pass of the loop and then stops, instead of iterating until all features pass:
 
 1. Run Context Recovery (SECTION 2) and select the current wave exactly as normal.
-2. Execute that one wave through Sprint Contract negotiation, agent-team build, all 8 ratchet gates, and pass/fail handling (SECTIONS 3–6) — unchanged.
+2. Execute that one wave through Sprint Contract negotiation, agent-team build, SECTION 5 (tests + runner + SSDD join sensors), G15 when landing on `WAVE_BASE`, and pass/fail handling (SECTIONS 3–6) — unchanged.
 3. On a clean wave, **commit**, append the session block, then run
    `node .claude/scripts/checkpoint-state.js create --group <group-or-wave> --next "<exact next action>"`
    — the hash-chained, atomically written checkpoint is the durable recovery authority.
 4. Set `next_action` precisely so a fresh process can continue with zero ambiguity:
-   - If `features.json` now has every feature passing (or no groups remain): `next_action: DONE — all groups complete` and `groups_remaining: []`.
+   - If `features.json` now has every feature passing (or no groups remain): this wave **is Success**. Before exiting, run G15 (`node .claude/scripts/regression-gate.js --replay`) and spawn the evaluator once against the running app (SECTION 5 evaluator). Then set `next_action: DONE — all groups complete` and `groups_remaining: []`. Do not skip verification because `--once` would otherwise bypass SECTION 11.
    - Otherwise: `next_action: CONTINUE — next wave: [<group ids>]` with an accurate `groups_remaining: [...]`.
 5. **Exit the turn** — do not loop back to SECTION 2.
 

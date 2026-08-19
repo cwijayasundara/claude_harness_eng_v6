@@ -21,7 +21,8 @@ Architecture is the phase where a wrong call is cheapest to fix now and most exp
 - Schema constraints that will become hard obligations for `/test` (each one becomes negative tests the human is implicitly signing up for)
 
 Record each round with `plan-approval.js`, naming `architecture.md`,
-`program-design.md`, and `component-map.md` on the approving round. Then:
+`program-design.md`, `reasons-canvas.md`, and `component-map.md` on the
+approving round. Then:
 
 ```bash
 node .claude/scripts/plan-approval.js check --phase design

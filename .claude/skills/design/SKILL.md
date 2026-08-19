@@ -50,5 +50,5 @@ This skill is an **orchestrator index**. Read only the reference file for the mo
 
 ### Load-bearing names (always visible)
 
-Full/delta modes still run `trace-check.js`, `validate-canvas.js`, `vocabulary-check.js`, `modularity-pack.js`, `record-modularity-review.js`, and `contract-drift-gate.js` where the mode file specifies them. The review surface is `architecture.md` + `program-design.md` + `component-map.md` (`plan-review-loop/references/lean-review-surface.md`). Wiring tests scan this entry file **and** `references/*.md` as one corpus.
+Full/delta modes still run `trace-check.js`, `validate-canvas.js`, `vocabulary-check.js`, `modularity-pack.js`, `record-modularity-review.js`, and `contract-drift-gate.js` where the mode file specifies them. The review surface is `architecture.md` + `program-design.md` + `reasons-canvas.md` (`plan-review-loop/references/lean-review-surface.md` and `ssdd.md`). SSDD: this gate writes Approach / Structure / Norms / Safeguards. Wiring tests scan this entry file **and** `references/*.md` as one corpus.
 

@@ -27,7 +27,7 @@ test('manifest registers the guide and sensor with budget justifications', () =>
   const sensor = m.sensors.find((x) => x.id === 'story-bundle-check');
   assert.ok(guide && guide.net_add_justification);
   assert.ok(sensor && sensor.net_add_justification);
-  assert.strictEqual(sensor.wired_at, '.claude/scripts/bundle-check.js');
+  assert.strictEqual(sensor.wired_at, '.claude/hooks/lib/gates-ssdd.js');
   assert.strictEqual(guide.wired_at, '.claude/hooks/lib/story-bundle.js');
 });
 

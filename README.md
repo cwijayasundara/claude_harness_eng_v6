@@ -256,7 +256,7 @@ The other commands below are still available, but the harness should usually rou
 
 | Command | Use when | What happens |
 |---|---|---|
-| `/scaffold` | New target repo setup | Installs the lean core harness, settings, hooks, state seeds, manifest, and project guide |
+| `/scaffold` | New target repo setup | SSDD Norms: infer + confirm a profile, then `scaffold-apply.js` installs the lean core harness |
 | `/build --lite "<idea>"` | Small greenfield project | Short interview, compact plan, one group, then `/auto` |
 | `/build <prd> --lite --auto` | Small PRD, hands-off | Headless lite: compressed plan (≤5 stories, one group, no interview/gate) -> PR; auto-escalates to the full `--auto` pipeline if the PRD exceeds lite scope |
 | `/build <prd>` | Normal greenfield build | BRD -> stories -> design/test plan -> `/auto`, with human gates |
@@ -278,7 +278,7 @@ The other commands below are still available, but the harness should usually rou
 
 | Mode | Command | Human gates |
 |---|---|---|
-| Gated | `/build <prd>` | Approve BRD, stories, design/test plan |
+| Gated | `/build <prd>` | Approve BRD, stories, design/test plan (SSDD human gates) |
 | Semi-auto | `/build <prd> --autonomous` | One plan approval gate |
 | Full-auto | `/build <prd> --auto` | Zero human gates |
 | Sprint (gated) | `/sprint <prd-file>` | Approve requirement delta + decomposition, approve design amendment |

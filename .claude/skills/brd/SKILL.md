@@ -30,5 +30,6 @@ Lean `--prd` runs `validate-prd.js` **before** dispatching the extractor, then `
 `--full` only writes `brd-analysis.json`. Lean writes `analysis-seed.json`.
 
 The review surface is `brd.md` + `brd-requirements.json`
-(`plan-review-loop/references/lean-review-surface.md`). Record with
+(`plan-review-loop/references/lean-review-surface.md` and `ssdd.md`).
+SSDD: this gate writes R / E / Safeguards (`analysis-seed.json`). Record with
 `plan-approval.js record --phase brd`. On approval: `/clear` before `/spec`.

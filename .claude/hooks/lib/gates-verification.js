@@ -4,11 +4,39 @@
 // build and needs the mutation runner. Split out of gates-quality (kernel) so the
 // kernel commit gate does not require mutation-gate.
 
+const fs = require('fs');
+const path = require('path');
 const { runMutationOnFiles, renderSurvivors } = require('./mutation-gate');
 const { failBlock, noteSkip, inAutoBuild, stagedNewTestFiles } = require('./pre-commit-util');
 const { isTestFile } = require('./tdd');
 const { readLedger } = require('./red-phase-ledger');
 const { integrityFindings } = require('./test-integrity');
+
+function checkImpactScopedRegression(ctx) {
+  const { projectDir, staged } = ctx;
+  if ((process.env.HARNESS_LOCAL_REGRESSION_GATE || '').toLowerCase() === 'off') return;
+  if (!inAutoBuild(projectDir)) return;
+  const { spawnSync } = require('child_process');
+  const script = path.join(projectDir, '.claude', 'scripts', 'local-regression-gate.js');
+  if (!fs.existsSync(script)) {
+    noteSkip('impact-scoped-regression', 'local-regression-gate.js not installed');
+    return;
+  }
+  const args = [script, '--root', projectDir];
+  for (const f of staged || []) args.push('--changed-file', f);
+  const res = spawnSync(process.execPath, args, {
+    cwd: projectDir, encoding: 'utf8', timeout: 180000,
+  });
+  if (res.status === 0) return;
+  failBlock({
+    id: 'impact-scoped-regression',
+    title: 'impact-scoped regression (G16) failed during /auto',
+    detail: `${String(res.stderr || res.stdout || '').slice(0, 800)}\n`,
+    fix: 'fix the regressed e2e/contract check. G15 (regression-gate.js --replay) still runs when the group lands on WAVE_BASE.',
+    envOff: 'HARNESS_LOCAL_REGRESSION_GATE',
+    minTier: 'standard',
+  });
+}
 
 function checkMutation(ctx) {
   const { projectDir, stagedSource } = ctx;
@@ -72,4 +100,4 @@ function checkTestIntegrity(ctx) {
   });
 }
 
-module.exports = { checkMutation, checkTestIntegrity };
+module.exports = { checkMutation, checkTestIntegrity, checkImpactScopedRegression };

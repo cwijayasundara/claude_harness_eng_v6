@@ -79,8 +79,8 @@ test('CLI default lane writes sensor-checks.json and does not write gate-checks.
   const doc = JSON.parse(fs.readFileSync(sensorOut, 'utf8'));
   assert.strictEqual(doc.lane, 'sensors');
   assert.ok(doc.results.some((x) => x.id === 'secret-scan'));
-  assert.ok(!doc.results.some((x) => x.id === 'canvas-sync'));
   assert.ok(!doc.results.some((x) => x.id === 'mutation-smoke'));
+  assert.ok(!doc.results.some((x) => x.id === 'cycle-detection'));
 });
 
 test('/gate skill names --lane gate; /auto default command has no --lane gate', () => {

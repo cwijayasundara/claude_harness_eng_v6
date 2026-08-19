@@ -7,6 +7,11 @@ context: fork
 
 # Auto Skill
 
+SSDD `/spdd-generate` (`plan-review-loop/references/ssdd.md`). After the plan
+seal, execute implementable `specs/bundles/{id}.json` — do not reload `/brd`
+or every `E*-S*.md`. Fix the Generation Contract / Canvas first when code and
+the record diverge; then `spdd-sync.js --write`.
+
 Autonomous build loop implementing Karpathy's ratcheting pattern with GAN-style generator-evaluator separation, agent teams for parallel execution, sprint contracts for verifiable done-criteria, self-healing with failure-driven learning, and session chaining for multi-context-window builds.
 
 > **Ultracode tip:** Leave ultracode **off** here (`/effort high` or lower). This loop already orchestrates its own agent teams and generator↔evaluator fan-out against sprint contracts; ultracode's auto-workflows would double-orchestrate, fight the contracts, and burn tokens. Do the divergent thinking earlier (`/brownfield`, `/design`, `/spec`) with ultracode on, then turn it off before running `/auto`.
@@ -43,5 +48,5 @@ This skill is an **orchestrator index**. Load only the section file for the step
 
 ### Load-bearing gate names (always visible here for harness integrity)
 
-The sensor layer is one command: `node .claude/scripts/run-gate-checks.js` (honor its exit). `sensor_tier` selects membership. `cycle-gate.js`, `coupling-gate.js`, and `mutation-gate.js` / mutation-smoke run only at `strict`. `regression-gate.js --replay` stays in the registry. Full procedure lives in SECTION 5.
+The sensor layer is one command: `node .claude/scripts/run-gate-checks.js` (honor its exit). `sensor_tier` selects membership. `GATE_CATALOG` includes `generation-contract`, `story-bundle-check`, `canvas-sync-check`, and (during `/auto`) G16 `impact-scoped-regression`. `cycle-gate.js`, `coupling-gate.js`, and `mutation-gate.js` / mutation-smoke run only at `strict`. `regression-gate.js --replay` is the G15 merge-time sweep (SECTION 4B / sequential land / `--once` Success / draft PR). Rewrite the record with `spdd-sync.js --write`. Full procedure lives in SECTION 5.
 

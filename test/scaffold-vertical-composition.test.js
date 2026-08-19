@@ -108,12 +108,17 @@ test('scaffold.md wires the local tech pack and domain vertical into Step 1\'s q
   const scaffoldMd = fs.readFileSync(
     path.join(__dirname, '..', '.claude', 'commands', 'scaffold.md'), 'utf8'
   );
+  const wizard = fs.readFileSync(
+    path.join(__dirname, '..', '.claude', 'commands', 'references', 'scaffold-wizard.md'), 'utf8'
+  );
   const referenceSectionIndex = scaffoldMd.indexOf('### Optional Agent-Framework Skill Packs & Domain Vertical Plugins');
   assert.notStrictEqual(referenceSectionIndex, -1, 'reference section heading should exist');
-  const step1Section = scaffoldMd.slice(0, referenceSectionIndex);
+  const step1Section = scaffoldMd.slice(0, referenceSectionIndex) + wizard;
 
   assert.match(step1Section, /Enable a domain-vertical plugin\?/);
   assert.match(step1Section, /Python AI Agents \(LangGraph \/ LangChain \/ DeepAgents\)/);
+  assert.match(scaffoldMd, /references\/scaffold-wizard\.md/,
+    'the command must progressive-load the wizard, not inline it');
 
   const scaffoldApplyJs = fs.readFileSync(
     path.join(__dirname, '..', '.claude', 'scripts', 'scaffold-apply.js'), 'utf8'

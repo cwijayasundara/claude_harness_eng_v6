@@ -21,7 +21,7 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 const CALLERS = {
   brd: '.claude/skills/brd/references/interview.md',
-  spec: '.claude/skills/spec/SKILL.md',
+  spec: '.claude/skills/spec/references/review.md',
   test: '.claude/skills/test/references/test-eval.md',
   design: '.claude/skills/design/references/mode-10-render-and-gates.md',
 };

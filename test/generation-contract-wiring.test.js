@@ -35,7 +35,7 @@ test('manifest registers the guide and the sensor with budget justifications', (
   assert.ok(guide && guide.net_add_justification);
   assert.ok(seed && seed.net_add_justification);
   assert.ok(sensor && sensor.net_add_justification);
-  assert.strictEqual(sensor.wired_at, '.claude/scripts/validate-generation-contract.js');
+  assert.strictEqual(sensor.wired_at, '.claude/hooks/lib/gates-ssdd.js');
 });
 
 test('HARNESS.md names the new controls', () => {

@@ -56,7 +56,7 @@ test('/gate and /auto keep running the FULL regression-gate.js sweep unchanged (
   const fullGateRe = /(?<!local-)regression-gate\.js/;
   const auto = readSkillCorpus('auto');
   assert.match(auto, fullGateRe, '/auto must still run the FULL regression-gate.js sweep');
-  assert.doesNotMatch(auto, /local-regression-gate\.js/, '/auto must not have been rewired to the local/scoped gate');
+  assert.match(auto, /impact-scoped-regression/, '/auto catalog must run G16 per group as well as G15 at land');
 
   // /gate now runs the check registry rather than naming scripts, so assert there:
   // the FULL sweep must be registered and the scoped local gate must NOT be.

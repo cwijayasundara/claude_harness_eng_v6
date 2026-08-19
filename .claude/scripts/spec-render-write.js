@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const { planClusters } = require('./story-clusters');
 const { renderStoryMd, renderEpics, renderGraphMd } = require('../hooks/lib/spec-render-format');
+const { run: writeBundles } = require('./bundle-write');
 
 function readJson(file, fallback) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (_) { return fallback; }
@@ -178,6 +179,8 @@ function writeStoryGraph(root) {
     }
   }
   writeJson(path.join(root, 'specs', 'stories', 'dependency-edges.json'), edges);
+
+  writeBundles(['--root', root], root);
 
   return {
     stories: stories.length,

@@ -6,15 +6,15 @@ Sprint contracts define the verifiable done-criteria for a group. Two-step propo
 
 Spawn generator as a subagent with this prompt:
 
-> Read stories [list IDs for this group], `specs/design/api-contracts.md`, `specs/design/component-map.md`, and `specs/test_artefacts/verification-matrix.json`. Propose a sprint contract for group {ID}. Include: api_checks, playwright_checks, design_checks, architecture_checks, features list. Every runtime check must carry the `matrix_ids` it verifies. Populate `architecture_checks.files_must_exist` with the file paths listed for this group's stories in `specs/design/component-map.md`. Write the contract to `sprint-contracts/{group}.json`.
+> For each story in group {ID}, read only `specs/bundles/{story-id}.json`. Propose a sprint contract. Include: api_checks, playwright_checks, design_checks, architecture_checks, features list. Every runtime check must carry the `matrix_ids` it verifies (`tests.matrix_ids` on the bundle). Populate `architecture_checks.files_must_exist` from `structure.owned_files`. Do not reload `specs/stories/E*-S*.md`, `api-contracts.md`, or `verification-matrix.json` whole — the bundle already joined those. Write the contract to `sprint-contracts/{group}.json`.
 
-The generator produces a draft contract based on the story acceptance criteria and the architecture design.
+The generator produces a draft contract from the sealed execution contracts, not a second planning pass.
 
 ### Step 3 — Evaluator Approves Contract
 
 Spawn evaluator as a subagent with this prompt:
 
-> Read the proposed sprint contract at `sprint-contracts/{group}.json` and `specs/test_artefacts/verification-matrix.json`. Review each check against the story acceptance criteria, API contracts, and matrix obligations. Add any missing checks. Remove any checks that do not trace to an acceptance criterion. Ensure every runtime check carries the `matrix_ids` it verifies. Write the final contract to the same path. Also write an audit of your edits to `specs/reviews/contract-audit-{group}.json`: `{"group": "...", "added": [{"check": ..., "reason": ...}], "removed": [{"check": ..., "reason": ...}]}` — an empty `added`/`removed` means the proposal was accepted as-is.
+> Read the proposed sprint contract at `sprint-contracts/{group}.json` and the same `specs/bundles/{id}.json` files the generator used. Review each check against `requirements.ac_ids`, `tests.matrix_ids`, and `structure.owned_files`. Add any missing checks. Remove any checks that do not trace to an acceptance criterion. Ensure every runtime check carries the `matrix_ids` it verifies. Write the final contract to the same path. Also write an audit of your edits to `specs/reviews/contract-audit-{group}.json`: `{"group": "...", "added": [{"check": ..., "reason": ...}], "removed": [{"check": ..., "reason": ...}]}` — an empty `added`/`removed` means the proposal was accepted as-is.
 
 Rules:
 - **No back-and-forth.** The evaluator has final say. The generator does not get to dispute.

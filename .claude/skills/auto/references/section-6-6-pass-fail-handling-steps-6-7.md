@@ -5,11 +5,12 @@
 **Sequential mode (`--sequential` or wave-of-one):**
 
 1. **Commit:** `git add -A && git commit -m "feat: implement group {group}"`
-2. **Update features.json:** Set `passes: true` for all features in this group's sprint contract.
-3. **Update claude-progress.txt:** Append a new session block (see SECTION 10 for format).
-4. **Update iteration-log.md:** Append entry with group ID, timestamp, verdict, and summary.
-5. **Update coverage-baseline.txt:** Write the new coverage percentage (ratchet up).
-6. **Next group:** Return to SECTION 2 (context recovery) for the next iteration.
+2. **G15 if this is not the first landed group:** `node .claude/scripts/regression-gate.js --replay --exclude-group {group}` against the running app. A `blocked` verdict is a FAIL (route to self-heal). `no-baseline` is a note. Skip when `features.json` has no prior `passes: true` group.
+3. **Update features.json:** Set `passes: true` for all features in this group's sprint contract.
+4. **Update claude-progress.txt:** Append a new session block (see SECTION 10 for format).
+5. **Update iteration-log.md:** Append entry with group ID, timestamp, verdict, and summary.
+6. **Update coverage-baseline.txt:** Write the new coverage percentage (ratchet up).
+7. **Next group:** Return to SECTION 2 (context recovery) for the next iteration.
 
 **Parallel mode (wave of ≥ 2 groups):**
 

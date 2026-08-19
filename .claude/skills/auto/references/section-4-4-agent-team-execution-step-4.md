@@ -10,14 +10,15 @@ When invoking the generator from `/auto`, you (the orchestrator) **MUST** use a 
 Implement group {GROUP_ID} ({N_STORIES} stories) using generator.md Rule 2 and .claude/scripts/team-policy.js.
 
 Concretely:
-1. Read specs/stories/ for every story in this group.
-2. Read specs/design/component-map.md and build the micro-DAG (Step 2.5).
-3. Decide team_mode via team-policy (solo | solo_sequential | team). Log the decision + reason to .claude/state/iteration-log.md.
-4. If team: create `.claude/state/parallel-implement.lock` (empty file) and set env `HARNESS_PARALLEL_AGENTS=1` for the team window so pre-bash git-safety is active; spawn one Agent(subagent_type=implementer) per story — parallel Phase 1, then Phase 2 after Phase 1 commits. You are dispatching, not implementing (except designated Phase 3 integrator). Remove the lock when the team finishes.
-5. If solo_sequential: implement stories one-by-one in this context — do NOT spawn per-story teammates.
-6. If solo (N=1): implement yourself.
-7. After implementation, run SECTION 5 (tests, then `node .claude/scripts/run-gate-checks.js`). Do not spawn the evaluator per group — it runs once at the end of the run.
-8. Structural advisor: after 2 consecutive evaluator FAILs on this group, spawn Agent(subagent_type=advisor) with a compact fail brief (cap: execution.advisor_max_per_run, default 3) before the next generator attempt.
+1. For each story, load only specs/bundles/{id}.json plus the slices it cites (approach.program_design / canvas / amendment, structure.owned_files, tests.matrix_ids). Do not reload specs/stories/ or /brd.
+2. Persist the Generation Contract before any teammate spawn (`/implement` Step 0.2): Operations must name repo-relative files, then `node .claude/scripts/validate-generation-contract.js --mode implementable --story {id}`, `bundle-write.js --story {id}`, `bundle-check.js --mode implementable --story {id}`. Non-zero: halt.
+3. Build the micro-DAG from `structure.owned_files` and Produces/Consumes on the cited component-map slice (Step 2.5). When specs/brownfield/code-graph.json is real, run context-pack.js --diff --budget 1600 per story and inject read_next into teammate prompts.
+4. Decide team_mode via team-policy (solo | solo_sequential | team). Log the decision + reason to .claude/state/iteration-log.md.
+5. If team: create `.claude/state/parallel-implement.lock` (empty file) and set env `HARNESS_PARALLEL_AGENTS=1` for the team window so pre-bash git-safety is active; spawn one Agent(subagent_type=implementer) per story — parallel Phase 1, then Phase 2 after Phase 1 commits. You are dispatching, not implementing (except designated Phase 3 integrator). Remove the lock when the team finishes.
+6. If solo_sequential: implement stories one-by-one in this context — do NOT spawn per-story teammates.
+7. If solo (N=1): implement yourself.
+8. After implementation, run SECTION 5 (tests, `spdd-sync.js --write`, then `node .claude/scripts/run-gate-checks.js`). Do not spawn the evaluator per group — it runs once at the end of the run.
+9. Structural advisor: after 2 consecutive evaluator FAILs on this group, spawn Agent(subagent_type=advisor) with a compact fail brief (cap: execution.advisor_max_per_run, default 3) before the next generator attempt.
 ```
 
 If the group has only **1 story**, use the single-generator prompt — no team needed.
@@ -58,9 +59,9 @@ Max 5 concurrent teammates per phase. Batch in groups of 5 if more.
 ### Teammate Spawn Prompt
 
 Every teammate receives:
-- Story acceptance criteria (from `specs/stories/E{n}-S{n}.md`)
+- `specs/bundles/{id}.json` (ACs, owned files, matrix ids, Generation Contract). Do not attach the story markdown or `brd.md`.
 - Story readiness metadata (must be `ready`; otherwise do not spawn)
-- File ownership (from `specs/design/component-map.md`)
+- File ownership from `structure.owned_files` (the component-map join already in the bundle)
 - Learned rules (from `.claude/state/learned-rules.md` — inject verbatim)
 - Process rules (from `.claude/state/process-rules.md` when non-empty — inject verbatim; workflow constraints, not code style)
 - Quality principles excerpt matching `project-manifest.json#quality.test_discipline` (do not inject `.claude/skills/code-gen/SKILL.md` in full)

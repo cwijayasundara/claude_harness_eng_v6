@@ -32,7 +32,7 @@ the testing excerpt injected into teammates — not the whole code-gen skill.
 3. **`claude-progress.txt`** — Read the LAST session block (the block after the final `=== Session` marker). Extract: `current_group`, `groups_completed`, `groups_remaining`, `last_commit`, `next_action`. If the file does not exist (`/auto` invoked standalone, without `/build`), create it now with a Session 0 block in the SECTION 10 format before reading.
 4. **`features.json`** — Current pass/fail state for all features. Determines what work remains. (Also in the sealed pack.)
 5. **`specs/stories/dependency-graph.md`** — Compute the current wave (Section 4B Wave Selection Algorithm). A group is "unfinished" if any of its stories' features are not passing in `features.json`. Respect dependency ordering: do not start a group whose upstream dependencies have failing features. With `--sequential` (or `--parallel-groups 1`), the wave is the single next unfinished group; with default `--parallel-groups 3`, the wave is up to 3 concurrently-ready groups.
-6. **Target group story files** — Verify every story in every selected group is marked `Readiness: ready`. If any story is `needs_breakdown`, stop and request a story decomposition pass before implementation.
+6. **Target group bundles** — Load `specs/bundles/{id}.json` for each selected story. Verify `readiness` is `ready`. If any story is `needs_breakdown` or the bundle is missing, stop and request a story decomposition pass before implementation. Do not re-read the story markdown to learn that.
 
 If `claude-progress.txt` indicates a `current_group` (or `current_wave`) that is not yet complete, resume from there. Otherwise, compute a fresh wave per Section 4B.
 

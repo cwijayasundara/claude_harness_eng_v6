@@ -4,6 +4,57 @@ All notable changes to the Claude Harness Engine are documented here.
 
 ## Unreleased
 
+### SSDD join sensors are catalog-enforced (2026-08-19)
+
+Skipping `/auto` SECTION 5 no longer skips the generate sensors.
+
+- `GATE_CATALOG` now includes `generation-contract`, `story-bundle-check`,
+  `canvas-sync-check`, and (when `claude-progress.txt` has `current_group`)
+  G16 `impact-scoped-regression`. Same list as the git hook.
+- `node .claude/scripts/spdd-sync.js --write` is the `/spdd-sync` rewrite:
+  applies Canvas Governs/Operations stubs and bundle ownership, then
+  reports remaining issues. Report-only without `--write`.
+- `--once` on the last wave (every feature passing) runs G15 + the evaluator
+  before exiting, instead of skipping SECTION 11 verification.
+
+### `/auto` generate is SSDD-wired (2026-08-19)
+
+`/auto` is `/spdd-generate`: execute implementable `specs/bundles/{id}.json`,
+not a second pass over `E*-S*.md` / `brd.md`. Doctrine in
+`plan-review-loop/references/ssdd.md`.
+
+- Sprint contracts and teammate prompts take ACs / owned files / matrix ids
+  from the bundle. Generation Contracts persist (`--mode implementable`)
+  before spawn.
+- Per-group ratchet now runs the SSDD join sensors after `story-sync`:
+  `validate-generation-contract.js`, `bundle-check.js`, `canvas-sync-check.js`.
+  `run-gate-checks.js` still owns `GATE_CATALOG` (secrets, types, coverage,
+  stub-smell, …; cycle/hub/clone/mutation on `strict`).
+- Sequential `/auto` was skipping G15 (`regression-gate.js --replay`) because
+  that sweep lived only on the parallel `WAVE_BASE` merge. It now runs when
+  a passing group lands on trunk after a prior group, and again before the
+  draft PR if the verdict is missing.
+- Amendments edit `design-decisions.json` / Canvas / bundles first, then
+  transcribed `api-contracts.md`.
+
+### SSDD on the human planning gates (2026-08-19)
+
+Structured Story-Driven Development is the harness's SPDD adaptation: the
+**story bundle** is the first-class artifact, not a prompt file. Doctrine lives
+in `plan-review-loop/references/ssdd.md`.
+
+- **`/spec` is now a progressive index** (shape / render / review). Entry
+  under the 80-line budget; same-session render still requires `/clear` then
+  `--render-only`.
+- **`/scaffold` wizard is on-demand.** Infer + confirm stay in the command;
+  Step 1.E moved to `commands/references/scaffold-wizard.md`.
+- **Review is of the structured record.** Lean surface now includes Generation
+  Contracts, `reasons-canvas.md`, and `specs/bundles/`. `plan-review-loop`
+  requires *fix the record first, then re-render*.
+- **`spec-render-write.js` writes skeleton bundles**; `/design` re-joins after
+  the Canvas so Structure/owned files land before `/test`.
+- **`design-render` orients from `stories.json`**, not every `E*-S*.md`.
+
 ### Front-half cost leaks closed (2026-08-18)
 
 - **`/spec` mid-phase `/clear`.** After `validate-spec-decisions.js`, stop → `/clear` → `/spec --render-only`. Same-session render is only for `/build --in-session`.

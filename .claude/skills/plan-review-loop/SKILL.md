@@ -9,6 +9,10 @@ The pipeline's planning gates exist so a human shapes the plan *before* `/auto` 
 
 This skill replaces that single question with a bounded dialogue, then records what happened. `/brd`, `/spec`, `/design`, and `/test` each invoke it at their gate; `plan-approval.js` writes the receipt the next phase checks, and prints the `/clear` handoff to the next phase on the approving round.
 
+The loop is the SSDD iterative-review skill (see `references/ssdd.md` and
+`references/lean-review-surface.md`). Review the structured story record, not
+the rendered pile.
+
 **Carrying the header is not running the loop.** `/brd` cited this skill at its gate while its body still said "display the BRD and ask: approve, or provide corrections" — and a real run behaved the way the body said, closing in one round on a one-word reply while four PRD overrides and 79 requirements with no observable criterion went unasked. If a phase's gate can be satisfied by one question, the loop is not wired there yet.
 
 <caller_contract>
@@ -53,6 +57,13 @@ Then work through the artifact in sections, scaled to complexity — a sentence 
 </dialogue>
 
 <revise_and_represent>
+
+**Fix the structured record first** (SSDD / SPDD). A change that alters what
+gets built edits `spec-decisions.json`, `design-decisions.json`, a story
+Generation Contract, `reasons-canvas.md`, or `verification-matrix.json` — then
+re-renders (`--render-only`, `spec-render-write.js`, `bundle-write.js`,
+`test-plan-write.js`). Do not patch `epics.md` / `architecture.md` and leave
+the record stale.
 
 Between rounds, revise, then re-present as a **changelog against their feedback** — every item they raised, and what you did about it:
 

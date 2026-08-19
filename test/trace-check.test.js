@@ -161,7 +161,7 @@ test('/design and /test thread their trace spine + grounding gate', () => {
   assert.match(design, /trace-check\.js/);
   assert.match(design, /design-grounding\.json/);
   assert.match(design, /HARD BLOCK/);
-  const tst = fsw.readFileSync(pathw.join(ROOTW, '.claude', 'skills', 'test', 'SKILL.md'), 'utf8');
+  const tst = readSkillCorpus('test');
   assert.match(tst, /test-traces\.json/);
   assert.match(tst, /trace-check\.js/);
   assert.match(tst, /test-grounding\.json/);
@@ -177,7 +177,7 @@ test('rubric now has a test phase, and design/test phases hard-gate on grounding
 
 test('verification matrix gate is wired through test, auto, generator, evaluator, and evaluate prompts', () => {
   const files = {
-    testSkill: fsw.readFileSync(pathw.join(ROOTW, '.claude', 'skills', 'test', 'SKILL.md'), 'utf8'),
+    testSkill: readSkillCorpus('test'),
     // Phase 4 progressive loading moved auto's verification-matrix wiring into references/.
     autoSkill: readSkillCorpus('auto'),
     generator: fsw.readFileSync(pathw.join(ROOTW, '.claude', 'agents', 'generator.md'), 'utf8'),
@@ -187,12 +187,12 @@ test('verification matrix gate is wired through test, auto, generator, evaluator
 
   assert.match(files.testSkill, /verification-matrix\.json/);
   assert.match(files.testSkill, /verification-matrix-gate\.js --phase plan/);
-  assert.match(files.testSkill, /unit-traces\.json/);
+  assert.match(files.testSkill, /test-traces\.json/);
   assert.match(files.testSkill, /integration-traces\.json/);
   assert.match(files.testSkill, /e2e-traces\.json/);
   assert.match(files.testSkill, /implementation_paths/);
   assert.match(files.testSkill, /HARD (?:BLOCK|gate)[\s\S]*verification-matrix-verdict\.json/);
-  assert.match(files.testSkill, /generate[\s\S]*unit-traces\.json[\s\S]*integration-traces\.json[\s\S]*e2e-traces\.json/);
+  assert.match(files.testSkill, /bundle-write\.js/);
 
   assert.match(files.autoSkill, /verification-matrix\.json/);
   assert.match(files.autoSkill, /verification-matrix-gate\.js --phase contract/);
