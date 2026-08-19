@@ -5,6 +5,7 @@ One coding-loop gate. Do not restate the sensor catalog here — `sensor_tier` a
 | Step | When | What |
 |------|------|------|
 | Tests | Every group | Project test command (`pytest` / `vitest` / `npm test`) must pass |
+| Story sync | Every group | `node .claude/scripts/story-sync.js --write` — owned-file moves back into bundles. Non-zero means ACs drifted. |
 | Runner | Every group | `node .claude/scripts/run-gate-checks.js` (default **sensors** lane = `GATE_CATALOG`, filtered by `sensor_tier`). Honor its exit. Same command from `/implement` and from a host that is not Claude Code. Writes `specs/reviews/sensor-checks.json`. The git hook runs this same catalog on staged files. `/gate` uses `--lane gate` for the pack list — do not use that lane here. |
 | First-source index | Once, after the first group that writes production files under `backend/`, `frontend/`, or any non-`specs/` source | `node .claude/scripts/navigation-refresh.js --root . --mode first-source`. Fail open on missing Python/wheels/indexer, but log loudly and record `.claude/state/navigation-status.json`. Do not block group 1 on wiki quality. A placeholder graph (`code-graph.meta.json#status` `empty` or `producer` `none`) is **not** brownfield-ready — do not run cycle/hub/clone against it. |
 | Security reviewer | Group diff hits auth / PII / persistence / secrets / API boundary | Spawn `security-reviewer`. Missing selected verdict is a fail. No trigger → record `security_review: skipped_no_boundary`. |

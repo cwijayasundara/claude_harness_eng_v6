@@ -62,3 +62,36 @@ test('/test --plan-only does not write Playwright or AT source', () => {
   assert.match(test, /Do not write Playwright/);
   assert.match(test, /Do not[\s\S]{0,40}write AT source/i);
 });
+
+test('phase-eval is flag-only — auth is not an implicit trigger', () => {
+  const surface = fs.readFileSync(
+    path.join(ROOT, '.claude/skills/plan-review-loop/references/lean-review-surface.md'),
+    'utf8',
+  );
+  assert.match(surface, /unless the invocation includes `--eval`/);
+  assert.doesNotMatch(
+    surface,
+    /unless the invocation includes `--eval`\s+or the artifact introduces/,
+    'auth/tenant/migration must not auto-enable artefact eval',
+  );
+  for (const phase of ['spec', 'design', 'test']) {
+    const corpus = readSkillCorpus(phase);
+    assert.match(corpus, /Skip unless `--eval`/, `/${phase} eval must be flag-only`);
+    assert.doesNotMatch(
+      corpus,
+      /Skip unless `--eval` or /,
+      `/${phase} must not treat a security boundary as implicit --eval`,
+    );
+  }
+});
+
+test('/test --plan-only does not spawn a nested generator or load evaluate', () => {
+  const plan = fs.readFileSync(
+    path.join(ROOT, '.claude/skills/test/references/test-plan.md'),
+    'utf8',
+  );
+  assert.doesNotMatch(plan, /evaluate\/SKILL/);
+  assert.doesNotMatch(plan, /Spawn the `generator`/);
+  assert.match(plan, /Do not write `test-cases\.md`/);
+  assert.match(plan, /Do not load the evaluate skill/);
+});

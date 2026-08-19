@@ -138,6 +138,8 @@ test('applyScaffold produces a real scaffold from a Minimal Node profile', () =>
     assert.ok(fs.existsSync(path.join(target, '.gitignore')));
     assert.ok(fs.existsSync(path.join(target, 'features.json')));
     assert.ok(fs.existsSync(path.join(target, 'claude-progress.txt')));
+    assert.ok(fs.existsSync(path.join(target, 'CODEBASE_MAP.md')));
+    assert.ok(fs.existsSync(path.join(target, 'docs', 'model-allocation.md')));
 
     // Minimal (type D) skips calibration-profile.json.
     assert.ok(!fs.existsSync(path.join(target, 'calibration-profile.json')),
@@ -296,6 +298,11 @@ test('full-stack projects also default to core; full is explicit only', () => {
     assert.ok(!fs.existsSync(path.join(target, '.claude', 'skills', 'brownfield', 'SKILL.md')),
       'defaulting to core means the brownfield pack is not installed');
     assert.ok(!fs.existsSync(path.join(target, '.claude', 'scripts', 'upstream-watch.js')));
+    assert.ok(fs.existsSync(path.join(target, 'backend', 'CLAUDE.md')));
+    assert.ok(fs.existsSync(path.join(target, 'frontend', 'CLAUDE.md')));
+    assert.ok(fs.existsSync(path.join(target, 'pyproject.toml')));
+    const manifest = JSON.parse(fs.readFileSync(path.join(target, 'project-manifest.json'), 'utf8'));
+    assert.strictEqual(manifest.quality.mutation.tool, 'mutmut');
   } finally {
     fs.rmSync(workDir, { recursive: true, force: true });
   }
@@ -401,13 +408,13 @@ test('the project README is tailored per shape (lite CLI vs full-stack)', () => 
   assert.doesNotMatch(app, /\{\{[A-Z_]+\}\}/);
 });
 
-test('full-stack projects default to cost + full + docker (enterprise Token Saver)', () => {
+test('full-stack projects default to cost + trimmed + docker (enterprise Token Saver)', () => {
   const m = buildManifest({
     name: 'app', projectType: 'A',
     stack: { backend: { language: 'python' }, frontend: { language: 'react' } },
   });
   assert.strictEqual(m.execution.model_tier, 'cost');
-  assert.strictEqual(m.execution.ceremony, 'full');
+  assert.strictEqual(m.execution.ceremony, 'trimmed');
   assert.strictEqual(m.verification.mode, 'docker');
   assert.strictEqual(m.architecture, undefined);
 });

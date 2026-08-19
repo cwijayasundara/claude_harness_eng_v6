@@ -35,6 +35,18 @@ const EXTRA_ARTIFACTS = [
   path.join('specs', 'test_artefacts', 'verification-matrix.json'),
 ];
 
+function extraArtifacts(root) {
+  const extras = [...EXTRA_ARTIFACTS];
+  const bundleDir = path.join(root, 'specs', 'bundles');
+  if (!fs.existsSync(bundleDir)) return extras;
+  for (const name of fs.readdirSync(bundleDir).sort()) {
+    if (/^E\d+-S\d+\.json$/.test(name)) {
+      extras.push(path.join('specs', 'bundles', name));
+    }
+  }
+  return extras;
+}
+
 function arg(argv, name, fallback) {
   const i = argv.indexOf(name);
   if (i === -1 || argv[i + 1] === undefined) return fallback;
@@ -78,7 +90,7 @@ function collectArtifacts(root) {
       artifacts.push({ path: item.path, sha256, phase });
     }
   }
-  for (const rel of EXTRA_ARTIFACTS) {
+  for (const rel of extraArtifacts(root)) {
     if (seen.has(rel)) continue;
     const sha256 = digest(root, rel);
     if (!sha256) continue;

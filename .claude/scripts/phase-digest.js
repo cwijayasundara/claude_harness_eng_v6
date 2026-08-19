@@ -23,6 +23,12 @@ function line(label, value) {
   return `  ${String(label).padEnd(18)}${value}`;
 }
 
+const NEXT_HINT = {
+  shape: 'hold the milestone / epic dialogue, then write spec-decisions.json',
+  render: 'run /spec --render-only — do not re-shape; stories are still missing',
+  review: 'story graph exists — run the Step 8 review loop, do not re-shape or re-render',
+};
+
 function specLines(d) {
   const out = [];
   const r = d.requirements;
@@ -35,6 +41,15 @@ function specLines(d) {
     out.push(line('', '  Authoring them is this phase\'s work-list; no gate will catch a miss.'));
   }
   if (d.confidence) out.push(line('CONFIDENCE', d.confidence));
+  const p = d.progress;
+  if (p) {
+    const scope = p.decisions
+      ? `${p.decisions.milestone || 'milestone'} · ${(p.decisions.epics || []).join(', ')}`
+      : '(none)';
+    out.push(line('DECISIONS', scope));
+    out.push(line('STORIES', String(p.stories)));
+    out.push(line('NEXT', `${p.next}   ← ${NEXT_HINT[p.next] || p.next}`));
+  }
   return out;
 }
 
@@ -76,10 +91,15 @@ function renderDesign(d) {
 }
 
 function renderTest(d) {
-  return [
+  const out = [
     line('ACCEPTANCE', `${d.acceptance_criteria} criteria over ${d.stories} story/stories`),
     line('SCHEMAS', d.schemas.length ? d.schemas.join(', ') : '(none in specs/design/)'),
+    line('DESIGN DOCS', d.design_rendered ? 'architecture.md present' : '(not rendered — matrix implementation_paths stay empty)'),
   ];
+  for (const row of d.by_story || []) {
+    out.push(`      ${row.id}  ${(row.acs || []).join(', ')}`);
+  }
+  return out;
 }
 
 const RENDERERS = { spec: renderSpec, design: renderDesign, test: renderTest };

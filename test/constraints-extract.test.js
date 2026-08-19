@@ -197,7 +197,8 @@ test('CLI: a malformed schema file fails loudly (exit 2)', () => {
 const ROOT = path.join(__dirname, '..');
 
 test('/test SKILL reads test-design.md and runs the constraint-obligation gate', () => {
-  const skill = fs.readFileSync(path.join(ROOT, '.claude', 'skills', 'test', 'SKILL.md'), 'utf8');
+  const { readSkillCorpus } = require('./helpers/skill-corpus');
+  const skill = readSkillCorpus('test');
   assert.match(skill, /test-design\.md/, 'reads the technique reference');
   assert.match(skill, /constraints-extract\.js/, 'invokes the extractor');
   assert.match(skill, /constraint-obligations\.json/, 'names the obligations artifact');

@@ -1,7 +1,7 @@
 ---
 name: tracker-publish
 description: Publish approved Claude Harness dependency groups to Linear/Jira-compatible tracker tasks and write the local tracker mapping contract.
-argument-hint: "[--provider linear|jira] [--granularity group|story] [--dry-run]"
+argument-hint: "[--provider linear|jira|azure] [--granularity group|story] [--dry-run]"
 context: fork
 ---
 
@@ -11,7 +11,7 @@ Publish approved story groups to an external tracker. This skill prepares the ha
 
 ## Operating Model (overview)
 
-This optional add-on mirrors approved Claude Harness story groups into an external tracker (Linear/Jira), then lets a standalone orchestrator schedule unblocked groups and launch Claude Code in isolated workspaces. The default scaffold remains local-only — use tracker orchestration only when a project wants Linear/Jira to act as the visible work queue and human review surface.
+This optional add-on mirrors approved Claude Harness story groups into an external tracker (Linear/Jira/Azure DevOps), then lets a standalone orchestrator schedule unblocked groups and launch Claude Code in isolated workspaces. The default scaffold remains local-only — use tracker orchestration only when a project wants Linear/Jira/ADO to act as the visible work queue and human review surface. The issue body is a render of `specs/bundles/{id}.json` when that file exists.
 
 Claude Harness stays the source of truth for planning and verification (`/brd` → `/spec` → `/design` → `/auto --group <id>`). The tracker is only a control plane: issue status gates whether a group may run, blocker links mirror the local dependency graph, and comments hold proof/PR links. Human review and final merge stay outside the autonomous loop. The orchestrator is external — it polls the tracker, claims eligible unblocked group issues, creates one workspace per group, launches `claude --print`, reads `.claude/state/tracker-runs/<group>/result.json`, updates the tracker, and leaves completed work in `Human Review`.
 
@@ -142,6 +142,13 @@ Under story granularity, the `groups` section is informational — every actual 
 3. Apply configured labels such as `harness-group`, `agent-ready`.
 4. Always include the per-issue `mode-*` label when a non-default harness command is intended (for example `mode-lite` for a `/build --lite`-eligible scope).
 5. Keep `.claude/state/tracker-map.json` authoritative for the local repo. If you re-publish, update entries in place rather than creating duplicates.
+6. After the map exists, render board bodies from story bundles:
+
+   ```bash
+   node .claude/scripts/tracker-body.js --granularity group   # or story
+   ```
+
+   The body is the bundle (ACs, original reqs, owned files, matrix ids). Do not hand-author a second spec in the ticket.
 
 ### Group granularity (`--granularity group`, default)
 
@@ -256,6 +263,21 @@ node .claude/skills/tracker-publish/scripts/publish-to-linear.js --dry-run
 
 # override env file location (e.g. when .env lives elsewhere)
 node .claude/skills/tracker-publish/scripts/publish-to-linear.js --env-file /path/to/.env
+```
+
+### Provider-aware routing: `--provider azure`
+
+When `provider` is `azure` (or `ado` / `azure-devops`), run
+`node .claude/skills/tracker-publish/scripts/publish-to-ado.js`. It creates a
+work item per `groups` entry, or **PATCHes** an existing numeric `tracker_key`
+on re-publish so sprint N updates the same ticket.
+
+**Auth:** `AZURE_DEVOPS_PAT` in `.env` or the shell. Config: `tracker.org_url`
+(e.g. `https://dev.azure.com/myorg`) and `tracker.project`.
+
+```bash
+node .claude/skills/tracker-publish/scripts/publish-to-ado.js
+node .claude/skills/tracker-publish/scripts/publish-to-ado.js --dry-run
 ```
 
 ### Provider-aware routing: `--provider jira`

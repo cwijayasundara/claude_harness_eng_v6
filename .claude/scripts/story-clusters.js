@@ -98,7 +98,15 @@ function describeCluster(comp, index, ctx, blocking) {
   };
 }
 
-function buildWarnings(clusters, unresolved, maxPoints) {
+function cancelledContractWarnings(ctx, clusterOf) {
+  return ctx.edges
+    .filter((e) => CUTTABLE_KINDS.has(e.kind) && clusterOf.get(e.from) === clusterOf.get(e.to))
+    .map((e) =>
+      `contract edge ${e.to} → ${e.from} is not a cluster cut: hard edges still join them in `
+      + `${clusterOf.get(e.from)} — do not sell this as independently startable parallelism`);
+}
+
+function buildWarnings(clusters, unresolved, maxPoints, ctx, clusterOf) {
   const warnings = clusters.filter((c) => c.oversized).map(
     (c) => `cluster ${c.id} is oversized (${c.story_points} points > ${maxPoints} cap) and has no bridge to `
       + 'split on — it is tightly coupled. Decompose the epic or give it one owner.',
@@ -107,7 +115,7 @@ function buildWarnings(clusters, unresolved, maxPoints) {
     (c) => `interface contract ${c.id} (${c.artifact || 'unnamed artifact'}) has no interface-layer story to `
       + `publish it, so ${c.consumer_cluster} cannot start before ${c.producer_cluster} ships ${c.edge.to}. `
       + 'Add a Types/Config story for the artifact.',
-  ));
+  )).concat(cancelledContractWarnings(ctx, clusterOf));
 }
 
 function planClusters({ stories, options } = {}) {
@@ -134,7 +142,7 @@ function planClusters({ stories, options } = {}) {
     interface_contracts,
     unresolved_contracts,
     blocking_dependencies,
-    warnings: buildWarnings(clusters, unresolved_contracts, opts.maxPointsPerCluster),
+    warnings: buildWarnings(clusters, unresolved_contracts, opts.maxPointsPerCluster, ctx, clusterOf),
   };
 }
 

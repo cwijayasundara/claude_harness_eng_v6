@@ -1,6 +1,6 @@
 ---
 name: retro
-description: Review this harness's own recent loop-health signals and recommend scored, evidence-backed improvements to the harness itself (skills, gates, sensors, CLAUDE.md rules) — never to product code. Use after a `/auto`/`/gate` run, on a drift cadence, or on demand when the loop feels off. Interactive-only — recommends and records human decisions; does not apply anything.
+description: Use after /auto or /gate to recommend harness (not product) improvements. Interactive only — does not apply changes.
 argument-hint: "[--root DIR] [--apply-decisions]"
 context: fork
 ---

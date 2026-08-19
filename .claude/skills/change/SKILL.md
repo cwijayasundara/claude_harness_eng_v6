@@ -151,9 +151,11 @@ Fill this story's `## Generation Contract` before the first production edit: rep
 
 ```bash
 node .claude/scripts/validate-generation-contract.js --mode implementable --story <story-id>
+node .claude/scripts/bundle-write.js --story <story-id>
+node .claude/scripts/bundle-check.js --mode implementable --story <story-id>
 ```
 
-Non-zero exit: halt. Do not implement. Behaviour changes edit the contract first, then the code.
+Non-zero exit: halt. Do not implement. Behaviour changes edit the contract first, then the bundle, then the code.
 
 ### Step S4 — Write the Failing Test(s) First
 
@@ -180,6 +182,12 @@ Run the full test suite — all tests must pass. Then run the project's lint and
 **Impact-scoped local regression (G16) — required, in addition to the unit suite above, not instead of it.** The full unit suite only proves this change didn't break its own layer; it says nothing about earlier features — but running the WHOLE accumulated `e2e/` suite on every single `/change` is too expensive for local iteration. Run `node .claude/scripts/run-gate-checks.js --only local-regression` (add `--exclude-group <this change's group>` if the change is scoped to an in-flight sprint group). It computes which prior story-group(s) this change's diff could plausibly affect — a deterministic dependency-graph blast radius over `code-graph.json`, not an LLM guess — via `specs/test_artefacts/verification-matrix.json` (or `specs/design/component-map.md` as a fallback), and re-runs only THOSE groups' e2e specs and sprint-contract `api_checks`, plus any human-curated `project-manifest.json#verification.golden_paths`. A `blocked` verdict is a **BLOCK**: fix the regression before proceeding to Step S6, the same way a failing unit test would block. Tests already quarantined in `specs/drift/flake-history.jsonl` are excluded. This is the fast local complement to gap G15's full regression-suite-full check, which still runs unabridged (the whole accumulated suite, not just the impacted subset) at `/gate` and `/auto`'s pre-merge step as the final backstop before merge.
 
 If `specs/test_artefacts/` exists, update `test-cases.md` and `test-data/` to reflect the changed acceptance criteria — keep the test plan in sync with the actual state of the stories. If Playwright E2E specs exist in `e2e/`, update the affected files to match the new behavior.
+
+After the suite is green, sync refactor-only file moves back into the bundle (fails closed if ACs drifted):
+
+```bash
+node .claude/scripts/story-sync.js --write
+```
 
 ### Step S6 — Adaptive Review
 

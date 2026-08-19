@@ -1,6 +1,6 @@
 ## Gate
 
-**Phase evaluation gate runs before human approval.** The evaluator agent (artifact mode) validates:
+**Phase evaluation is opt-in (`--eval`) and runs before human approval when passed.** The evaluator agent (artifact mode) validates:
 - Cross-phase traceability (every story has component-map entry, API endpoints, mockups)
 - Schema validity (OpenAPI + JSON Schema syntax)
 - Field-shape consistency (mockup fields match API contracts)

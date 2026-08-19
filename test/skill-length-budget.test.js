@@ -16,6 +16,8 @@ const ENTRY_BUDGETS = {
   auto: 80, // progressive index + gate name anchors
   design: 80,
   build: 80,
+  test: 80,
+  brd: 80,
 };
 
 for (const [skill, budget] of Object.entries(ENTRY_BUDGETS)) {

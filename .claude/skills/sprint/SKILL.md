@@ -120,7 +120,15 @@ updated living-design files are committed together in one commit.
 ## Phase 4 — Tracker Publish (optional)
 
 If a tracker is configured (`.claude/tracker-config.json`), run
-`tracker-publish --granularity group` exactly as `/feature`'s epic lane does.
+`tracker-publish --granularity story` so each story is a board item whose body
+is the story bundle. Then refresh bodies and re-publish in place:
+
+```bash
+node .claude/scripts/tracker-body.js --granularity story
+# provider from tracker-config.json: linear | jira | azure
+```
+
+Re-publish updates existing issues (Jira PUT, Azure PATCH) rather than creating duplicates.
 
 ## Phase 5 — Delta Test Plan
 
@@ -128,7 +136,8 @@ Run `/test` (the normal flow, not `--from-cr` — that lane is for a single
 change-request bug fix with no stories directory) scoped to
 `specs/stories/sprint-N/`, so every new story gets a proper test plan and
 grounded verification-matrix entries exactly as a fresh spec/design pass
-would produce. Any existing area the amendment's Breaking Changes section
+would produce. Then `node .claude/scripts/bundle-write.js` so sprint-N stories
+have execution contracts before `/auto`. Any existing area the amendment's Breaking Changes section
 names is covered by that area's own existing tests, which `/auto`'s normal
 test gate re-runs — no separate regression-pin pass is needed since sprint-N
 stories already carry proper `story-traces.json`.

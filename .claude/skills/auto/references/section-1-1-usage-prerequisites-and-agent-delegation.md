@@ -71,9 +71,13 @@ and required security scanners. A warning is not sufficient in headless mode.
 ```bash
 node .claude/scripts/plan-approval.js check --phase all
 node .claude/scripts/plan-seal.js check
+node .claude/scripts/bundle-write.js
+node .claude/scripts/bundle-check.js --mode implementable
 ```
 
-A missing or stale `specs/reviews/plan-seal.json` means coding must not start. After the four plan gates: `node .claude/scripts/plan-seal.js write`. Headless `--auto` writes `plan-seal.js write --lane --auto` after the phase waivers. `--require-human` refuses a waived seal.
+After a group lands, run `node .claude/scripts/story-sync.js --write` so owned-file moves flow back into the bundles. A non-zero exit means ACs drifted — fix the story and `bundle-write` instead of forcing a sync.
+
+A missing or stale `specs/reviews/plan-seal.json` means coding must not start. After the four plan gates: `node .claude/scripts/bundle-write.js` then `node .claude/scripts/plan-seal.js write`. Headless `--auto` writes `plan-seal.js write --lane --auto` after the phase waivers. `--require-human` refuses a waived seal. A missing implementable bundle means the join of story + design + tests is incomplete — stop and report `bundle-check` errors.
 
 **One-time migration for in-flight projects.** `brd` joined the gated phases when `/brd` was de-forked, so a project whose `specs/brd/` predates that change has no receipt and this check will block. Record or waive it once:
 

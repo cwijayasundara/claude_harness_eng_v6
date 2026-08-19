@@ -1,5 +1,5 @@
 {
-  "count": 166,
+  "count": 168,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -144,6 +144,8 @@
     "spec-decisions-gate",
     "sprint-contract",
     "sprout-diff-one-symbol",
+    "story-bundle",
+    "story-bundle-check",
     "story-generation-contract",
     "story-ownership-clusters",
     "stub-smell-gate",

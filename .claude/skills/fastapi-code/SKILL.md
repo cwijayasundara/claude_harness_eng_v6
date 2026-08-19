@@ -1,6 +1,6 @@
 ---
 name: fastapi-code
-description: Build FastAPI backends — dependency injection with Depends(), Pydantic v2 request/response validation, async vs sync route rules, background tasks, and testing with TestClient. Use for any FastAPI route, dependency, or Pydantic model. Not for database/ORM design (no SQLAlchemy content here) or non-FastAPI Python web frameworks. Triggers on "FastAPI route", "Depends()", "Pydantic model", "FastAPI dependency", "FastAPI testing", "TestClient", "async def vs def FastAPI".
+description: Use when writing a FastAPI route, Depends(), Pydantic model, or TestClient test. Not for SQLAlchemy or non-FastAPI frameworks.
 ---
 
 # FastAPI

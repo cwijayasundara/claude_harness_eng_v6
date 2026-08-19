@@ -24,6 +24,7 @@ test('auto corpus names the sealed planning pack', () => {
     'component-map.md',
     'test-plan.md',
     'verification-matrix.json',
+    'specs/bundles/',
   ]) {
     assert.match(auto, new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), needle);
   }

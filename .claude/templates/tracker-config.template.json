@@ -14,7 +14,9 @@
     "feature_label": "agent-feature",
     "base_url": "replace-with-https://your-domain.atlassian.net",
     "project_key": "replace-with-jira-project-key",
-    "issue_type": "Task"
+    "issue_type": "Task",
+    "org_url": "replace-with-https://dev.azure.com/your-org",
+    "project": "replace-with-azure-devops-project"
   },
   "orchestrator": {
     "repo_url": "git@github.com:your-org/your-repo.git",

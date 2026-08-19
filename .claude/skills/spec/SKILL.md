@@ -11,8 +11,10 @@ argument-hint: "[path-to-BRD]"
 ```
 /spec specs/brd/brd.md
 /spec specs/brd/sprint-N/brd.md --sprint N   # sprint N: write to specs/stories/sprint-N/
-/spec --render-only                          # re-run the renderer against an existing decisions file
+/spec --render-only                          # re-expand an existing decisions file (unresolved items / amended scope)
 ```
+
+**Two sessions produce the story graph.** Shape and record `spec-decisions.json`, then `/clear` and `/spec --render-only`. Same-session render re-bills the shaping dialogue (40 of 47 turns at 284K on a metered run). `/build` passes `--in-session` and continues. `--render-only` is also the re-expand flag after unresolved items.
 
 **Runs in the main session — do not add `context: fork`.** This skill owns the
 decision dialogue and the human review gate. A forked skill cannot pause for
@@ -32,9 +34,10 @@ after that — story files, typed edges, ownership clusters, point estimates,
 `features.json`, the trace spines — is transcription of those calls.
 
 This skill does the first job with the human and records the result in
-`specs/decisions/spec-decisions.json`. `spec-render` does the second on the
-sidekick model. The decisions file is the contract between them, and
-`validate-spec-decisions.js` is what stops the renderer running without one.
+`specs/decisions/spec-decisions.json`. Then **this same invocation** dispatches
+`spec-render` on the sidekick model to write the story graph. The decisions
+file is the contract between them, and `validate-spec-decisions.js` is what
+stops the renderer running without one.
 
 **Why this order.** The previous shape generated the whole story graph and then
 asked the human to review it. That asks someone to relitigate decisions already
@@ -47,9 +50,17 @@ first is what stops the harness rendering work nobody chose.
 
 ## Steps
 
-**With `--render-only`, skip to Step 6.** The decisions file already exists and
-was already gated; re-running the dialogue would re-ask settled questions. Use it
-after resolving `spec-unresolved.json`, or to re-expand an amended scope.
+<routing>
+Read `NEXT` from `node .claude/scripts/phase-digest.js --phase spec` (Step 1) and follow it:
+
+| NEXT | What to do |
+|---|---|
+| `shape` | Steps 0–5, then stop at Step 5.5 |
+| `render` | Skip to Step 6. Decisions already exist. Do not re-open the dialogue. |
+| `review` | Skip to Step 8. The story graph already exists. |
+
+`--render-only` skips to Step 6 (first render after `/clear`, or re-expand after `spec-unresolved.json`).
+</routing>
 
 ### Step 0 — Context Handoff [HARD BLOCK]
 
@@ -169,7 +180,8 @@ one they accepted — note both, and note *why* in `rationale`.
   "milestone": {
     "name": "M1 — ingestion",
     "epics": ["E1", "E2", "E3"],
-    "deferred_epics": ["E4", "E5"]
+    "deferred_epics": ["E4", "E5"],
+    "requirements_in_scope": ["FR-1", "FR-2", "NFR-1"]
   },
   "decisions": [
     {
@@ -204,8 +216,11 @@ those must be `basis: "human"` outside headless lanes, or the gate blocks.
 ### Step 5 — Verify the gate passes before dispatching
 
 ```bash
+node .claude/scripts/fill-spec-scope.js
 node .claude/scripts/validate-spec-decisions.js
 ```
+
+`fill-spec-scope.js` copies the matching `brd-milestones.json` requirement list when you omitted `requirements_in_scope`. If you pulled a requirement forward (D3), add that FR/NFR label yourself before this step — the filler will not invent a departure.
 
 Fix what it reports — by asking, not by editing the basis field.
 
@@ -213,19 +228,17 @@ Add `--in-session` only when `/build` is conducting every phase from one session
 
 ### Step 5.5 — Checkpoint: stop here and clear [HARD BLOCK]
 
-When Step 5 passes it prints a checkpoint. **Obey it: stop, and tell the human to
-run `/clear` then `/spec --render-only`.** Do not continue into Step 6 in this
-session.
+When Step 5 passes it prints a checkpoint. **Obey it: stop, and tell the human
+to run `/clear` then `/spec --render-only`.** Do not continue into Step 6 in
+this session.
 
-This is not politeness about context — it is the most expensive stretch of the
-front half. Everything from Step 6 on reads
-`specs/decisions/spec-decisions.json`, not this conversation. On a metered run,
-40 of `/spec`'s 47 turns fell after this point at a **284K average context**;
-re-entered fresh they run at ~110K.
+Everything from Step 6 on reads `specs/decisions/spec-decisions.json`, not
+this conversation. On a metered run, 40 of `/spec`'s 47 turns fell after this
+point at a **284K average context**; re-entered fresh they run at ~110K.
 
 No checkpoint is printed when the gate was waived by a headless lane or run
-`--in-session` — neither has a human who can clear, and both continue straight
-into Step 6.
+`--in-session` — neither has a human who can clear, and both continue into
+Step 6.
 
 ### Step 6 — Dispatch `spec-render`
 
@@ -233,16 +246,16 @@ into Step 6.
 node .claude/scripts/handoff-check.js --phase spec --stage render
 ```
 
-Exit 1 means Step 5.5 was skipped and this is still the shaping session. Stop and
-hand off as above rather than working around it.
+Exit 1 means Step 5.5 was skipped and this is still the shaping session. Stop
+and hand off as above rather than working around it.
 
 Invoke the `spec-render` skill, passing the BRD path and any `--sprint N`. It
 forks onto the sidekick model, re-runs the gate itself, and expands the decided
-scope into the full artifact set.
+scope into the full artifact set. `/spec` is not done until those files exist.
 
-**One dispatch, not one per story.** Coarse handoffs keep the renderer's context
-cached; per-story round-trips pay cache creation on every switch and can cost
-more than the cheaper model saves.
+**One dispatch, not one per story.** The renderer writes `stories.json` and
+runs `spec-render-write.js` — do not `cat` story files or gate scripts back
+into this session. That re-bills the prefix on every remaining turn.
 
 When it returns, read `specs/decisions/spec-unresolved.json` if present. Each
 entry is a judgement the renderer refused to invent. Put them to the human as in
@@ -251,8 +264,8 @@ A renderer that returns unresolved items is working correctly.
 
 ### Step 7 — Phase Evaluation Gate [`--eval` only]
 
-Skip unless `--eval` or the decomposition introduces an auth, tenant,
-migration, or external-trust boundary. Grounding and cluster gates already
+Skip unless `--eval`. Auth, tenant, migration, or an external-trust
+boundary is not a reason to run it — grounding and cluster gates already
 ran in `spec-render`. Stories must be **vertical slices** (see
 `plan-review-loop/references/lean-review-surface.md`) — do not split a
 capability into a Types / Config / Repository / Service / API / UI ladder.
@@ -337,9 +350,12 @@ round. In `--auto` / `--autonomous`, waive with `--lane` per that skill's
 
 | File | Purpose |
 |------|---------|
-| `specs/decisions/spec-decisions.json` | **This skill's artifact** — the recorded human calls the renderer expands |
+| `specs/decisions/spec-decisions.json` | Recorded human calls the renderer expands |
 | `specs/decisions/spec-unresolved.json` | Judgements the renderer refused to invent; resolved here and re-dispatched |
-| *(all story-graph artifacts)* | Written by `spec-render` — see that skill's Output table |
+| `specs/stories/epics.md` | Epic index — **this command's user-visible output** |
+| `specs/stories/E*-S*.md`, `stories.json` | Stories — written by `spec-render` in this invocation |
+| `specs/stories/dependency-graph.md` | Dependencies — written by `spec-render` in this invocation |
+| *(remaining story-graph artifacts)* | See `spec-render/SKILL.md` Output table |
 
 ---
 
@@ -367,6 +383,10 @@ Do not auto-advance. The loop ends on an explicit approving round, not on silenc
 
 ## Gotchas
 
+- **Do not continue into render in the shaping session.** An empty
+  `specs/stories/` after Step 5.5 is expected — `/clear` then `--render-only`.
+- **Do not re-shape when `NEXT` is `render` or `review`.** The decisions file
+  on disk is the authority, not a 06:16 gate line from an earlier attempt.
 - **Do not fork this skill.** `context: fork` would silently disable every
   question in Step 3 and leave the model answering itself.
 - **Do not write `basis: "human"` for a decision you did not ask.** It is the one

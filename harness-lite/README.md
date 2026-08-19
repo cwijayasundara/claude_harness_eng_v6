@@ -1,6 +1,6 @@
 # harness-lite
 
-The **artifact-only** loadout for the Claude Harness Engine. Load this instead of the full `claude_harness_eng_v5` plugin when the work is producing **disposable artifacts** rather than shipped code:
+The **artifact-only** loadout for the Claude Harness Engine. Load this instead of the full `claude_harness_eng_v6` plugin when the work is producing **disposable artifacts** rather than shipped code:
 
 - UI mockups
 - Architecture / ARB (Architecture Review Board) narrative documents
@@ -21,7 +21,7 @@ So in this loadout it is *structurally impossible* to trigger the heavyweight pi
 ## Install / load
 
 ```
-claude --plugin-dir ~/claude_harness_eng_v5/harness-lite/.claude
+claude --plugin-dir ~/claude_harness_eng_v6/harness-lite/.claude
 ```
 
 Load harness-lite **instead of**, not alongside, the full harness for artifact work — loading both would bring the SDLC machinery back.
@@ -45,4 +45,4 @@ Install those separately if you want their full capability; the lanes work witho
 
 ## When to switch back to the full harness
 
-The moment an artifact becomes shipped product code — a mockup turning into a real component, a design doc driving an actual build — switch to the full `claude_harness_eng_v5` loadout and enter the SDLC pipeline (`/brd` → `/spec` → `/design` → `/auto`). harness-lite is for the artifact, not the product.
+The moment an artifact becomes shipped product code — a mockup turning into a real component, a design doc driving an actual build — switch to the full `claude_harness_eng_v6` loadout and enter the SDLC pipeline (`/brd` → `/spec` → `/design` → `/auto`). harness-lite is for the artifact, not the product.

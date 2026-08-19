@@ -29,7 +29,12 @@ const doc = (over = {}) => ({
   phase: 'spec',
   source: 'specs/brd/brd.md',
   confirmed_at: '2026-08-05T10:00:00.000Z',
-  milestone: { name: 'M1 — ingestion', epics: ['E1', 'E2', 'E3'], deferred_epics: ['E4'] },
+  milestone: {
+    name: 'M1 — ingestion',
+    epics: ['E1', 'E2', 'E3'],
+    deferred_epics: ['E4'],
+    requirements_in_scope: ['FR-1', 'FR-2'],
+  },
   decisions: [decision()],
   ...over,
 });
@@ -93,9 +98,17 @@ test('rejects an unknown basis value rather than treating it as human', () => {
 });
 
 test('requires a milestone with at least one epic — the renderer needs a scope', () => {
-  const res = validateDecisions(doc({ milestone: { name: 'M1', epics: [] } }));
+  const res = validateDecisions(doc({ milestone: { name: 'M1', epics: [], requirements_in_scope: ['FR-1'] } }));
   assert.strictEqual(res.ok, false);
   assert.ok(res.errors.some((e) => /epic/i.test(e)));
+});
+
+test('requires requirements_in_scope so the renderer cannot invent the milestone set', () => {
+  const res = validateDecisions(doc({
+    milestone: { name: 'M1', epics: ['E1'], deferred_epics: [] },
+  }));
+  assert.strictEqual(res.ok, false);
+  assert.ok(res.errors.some((e) => /requirements_in_scope/i.test(e)));
 });
 
 test('rejects a non-spec or malformed document outright', () => {

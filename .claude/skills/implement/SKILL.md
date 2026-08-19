@@ -78,9 +78,11 @@ Then:
 
 ```bash
 node .claude/scripts/validate-generation-contract.js --mode implementable --story <id>
+node .claude/scripts/bundle-write.js --story <id>
+node .claude/scripts/bundle-check.js --mode implementable --story <id>
 ```
 
-Non-zero exit: halt. Do not spawn teammates. Behaviour changes update this section first, then the code.
+Non-zero exit: halt. Do not spawn teammates. Behaviour changes update the Generation Contract first, then rewrite the bundle, then the code.
 
 If story metadata, component ownership, or API/data contracts conflict, invoke `.claude/skills/clarify/SKILL.md` before planning implementation. Keep clarification bounded:
 - Ask only questions that block implementation or could cause rework.
@@ -113,29 +115,26 @@ Pay particular attention to deep modules and public-interface testing:
 - Do not create pass-through abstractions to satisfy a pattern.
 - Tests must enter through public interfaces and survive internal refactors.
 
-### Step 2 — Load Dependency Graph
+### Step 2 — Load Dependency Graph and Story Bundles
 
 Read `specs/stories/dependency-graph.md`. Identify:
 - Which stories belong to the requested group.
 - Which groups must be complete before this group (upstream dependencies).
 - The total story count for this group.
 
-For every story in the group, read the corresponding `specs/stories/E{n}-S{n}.md` file and verify:
-- `Readiness: ready`
-- 3-6 acceptance criteria
-- `Layer` is present
-- `Group` matches the requested group
-- `Depends On` matches the dependency graph
+For every story in the group, load **only** `specs/bundles/{id}.json` plus the files it cites (`approach.program_design`, `approach.canvas`, `approach.amendment` when present, `structure.owned_files`, and the verification-matrix rows in `tests.matrix_ids`). Do not reload `/brd` or invent Operations in chat.
 
-Abort if any story is marked `needs_breakdown`, lacks concrete acceptance criteria, or has metadata that conflicts with the dependency graph. Abort if upstream groups are not yet evaluated as PASS.
+The bundle must show:
+- `readiness` is `ready`
+- `requirements.ac_ids` has 3–6 criteria
+- `structure.layer` is present
+- `provenance.parents` matches the dependency graph
 
-### Step 3 — Load Component Map
+Abort if any story is marked `needs_breakdown`, the bundle is missing, or metadata conflicts with the dependency graph. Abort if upstream groups are not yet evaluated as PASS.
 
-Read `specs/design/component-map.md`. For each story in the group, extract:
-- The list of files the story owns (may create or modify).
-- Any shared interface or type files that multiple stories reference.
+### Step 3 — File ownership from the bundle
 
-This ownership map is the single source of truth for file assignments during parallel execution.
+Use each bundle's `structure.owned_files` as the ownership assignment. `specs/design/component-map.md` is the source those paths were joined from — do not assign a file the bundle does not list.
 
 ### Step 4 — Load Learned Rules + Process Rules
 
@@ -165,6 +164,12 @@ node .claude/scripts/run-gate-checks.js
 ```
 
 Honor a non-zero exit. Do not restate lint, types, coverage, or mutation as a second list — the runner already applies `sensor_tier`.
+
+Then sync owned-file moves back into the story bundles (no-op when nothing drifted):
+
+```bash
+node .claude/scripts/story-sync.js --write
+```
 
 All of the above must pass before proceeding. If tests or the runner fail:
 

@@ -14,10 +14,10 @@
 // dirs. Telemetry export stays opt-in via --telemetry / profile.telemetry.
 //
 // Out of scope (still handled by the interactive command): the telemetry/grafana
-// stack copy (the dir + compose file), tracker-config files, git init and the
-// `git config core.hooksPath .claude/git-hooks` wiring (the git-hooks/ tree
-// itself IS copied here), framework-pack installs, subdirectory CLAUDE.md files,
-// and the official-plugins enabledPlugins rebuild.
+// stack copy when --telemetry is set (compose + grafana dir), tracker-config
+// files, and official-plugins enabledPlugins rebuild. Module CLAUDE.md,
+// CODEBASE_MAP, mutation starters, model-tier pins, git init, and docs copies
+// are writeProjectFiles() — not the interactive command.
 //
 // CLI:
 //   node scaffold-apply.js --profile <profile.json> \
@@ -55,6 +55,7 @@ const encoding = require('./scaffold-encoding');
 const { copyScaffoldTree, pruneSettings, resolveScaffoldProfile, copyFrameworkPackSkills } = require('./scaffold-copy');
 const { refreshNavigation } = require('./navigation-refresh');
 const secBaseline = require('./scaffold-security-baseline');
+const { writeProjectFiles } = require('./scaffold-project-files');
 
 const OUTPUT_DIRS = [
   'specs/brd', 'specs/stories', 'specs/design/mockups', 'specs/design/amendments',
@@ -263,6 +264,7 @@ function applyScaffold(rawOpts) {
   if (secBaseline.driftWorkflowEnabled(profile, rawOpts)) written.push(secBaseline.copyDriftWorkflow(target, pluginSource));
   makeDirs(target);
   writeStateFiles(target, profile);
+  written.push(...writeProjectFiles(target, pluginSource, profile));
   const navigation = refreshNavigation({ projectDir: target, mode: 'scaffold' });
   const cal = writeCalibration(target, profile);
   if (cal) written.push(cal);

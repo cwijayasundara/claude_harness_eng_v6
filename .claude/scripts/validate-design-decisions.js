@@ -96,7 +96,21 @@ function readDoc(file) {
   }
 }
 
-function report(result, file, inSession) {
+const FIELD_CAPS = { chosen: 280, rules_out: 400, rationale: 200 };
+
+function lengthWarnings(doc) {
+  const out = [];
+  for (const entry of (doc && doc.decisions) || []) {
+    if (!entry || !entry.id) continue;
+    for (const [field, max] of Object.entries(FIELD_CAPS)) {
+      const n = String(entry[field] || '').length;
+      if (n > max) out.push(`${entry.id} ${field} is ${n} chars (soft cap ${max}) — shorten; the gate still passes`);
+    }
+  }
+  return out;
+}
+
+function report(result, file, inSession, doc) {
   if (!result.ok) {
     process.stderr.write(`validate-design-decisions: BLOCKED (${file})\n`);
     for (const e of result.errors) process.stderr.write(`  - ${e}\n`);
@@ -105,6 +119,7 @@ function report(result, file, inSession) {
   }
   const suffix = result.waived ? ` (human shaping waived by ${result.waived})` : '';
   process.stdout.write(`validate-design-decisions: OK${suffix}\n`);
+  for (const w of lengthWarnings(doc)) process.stdout.write(`validate-design-decisions: WARN ${w}\n`);
   process.stdout.write(checkpointOn(result, inSession));
   return 0;
 }
@@ -119,14 +134,15 @@ function main(argv) {
   const inSession = argv.includes('--in-session');
   const file = path.join(root, REL);
 
-  const result = validateDesignDecisions(readDoc(file), { lane, sessionLane: sessionLane(root) });
+  const doc = readDoc(file);
+  const result = validateDesignDecisions(doc, { lane, sessionLane: sessionLane(root) });
   writeDecisionVerdict({
     root, gate: 'design-decisions', verdictRel: VERDICT_REL, decisionsRel: REL, result, lane, inSession,
   });
-  const code = report(result, file, inSession);
+  const code = report(result, file, inSession, doc);
   if (code !== 0) process.exit(code);
 }
 
 if (require.main === module) main(process.argv.slice(2));
 
-module.exports = { validateDesignDecisions, REL };
+module.exports = { validateDesignDecisions, lengthWarnings, REL };

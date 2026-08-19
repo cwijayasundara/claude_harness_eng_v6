@@ -2,9 +2,9 @@
 
 Three approval models, selected by `--autonomous` / `--auto`:
 
-- **Gated (default).** Humans approve at Phases 1, 2, and 3 (BRD, stories, design+tests). After the last approval, run `plan-seal.js write` and **stop**. The human `/clear`s and starts `/auto --sealed` in a fresh session. Coding does not share the planning context.
+- **Gated (default).** Humans approve at Phases 1, 2, and 3 (BRD, stories, design+tests). After the last approval, run `bundle-write.js` then `plan-seal.js write` and **stop**. The human `/clear`s and starts `/auto --sealed` in a fresh session. Coding does not share the planning context.
 - **Semi-auto (`--autonomous`) — plan-approve-once, then seal.** The Phase 1/2/3 stops collapse into Phase 3.5. After that one approval, write the seal and **stop** the same way as gated (`stopsAfterSeal: true`). `/auto --sealed` is the coding session.
-- **Full-auto (`--auto`) — PRD straight to PR(s).** No human plan gate. Write phase waivers and a **waived** seal (`plan-seal.js write --lane --auto`), then continue Phases 4–11 in-session. The human re-appears as the **merge gate** (unless `--auto-merge`). Pair with `--pod N` for one PR per cluster.
+- **Full-auto (`--auto`) — PRD straight to PR(s).** No human plan gate. Write phase waivers, `bundle-write.js`, and a **waived** seal (`plan-seal.js write --lane --auto`), then continue Phases 4–11 in-session. The human re-appears as the **merge gate** (unless `--auto-merge`). Pair with `--pod N` for one PR per cluster.
 
 After approval (or immediately, for `--auto`), the only barriers are machine gates that are **independent of the generator** — `/auto`'s ratchet, `/gate` (evaluator + adaptive review), and the Phase 9.5 pre-PR verify gate — so the code is never self-approved by the agent that wrote it, and **no PR is ever opened over a red build** regardless of model. Full lane detail: **`.claude/skills/build/references/autonomous-lane.md`**.
 

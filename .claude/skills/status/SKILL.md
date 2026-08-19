@@ -44,7 +44,8 @@ node .claude/scripts/pipeline-status.js status --json
 progress (`done / current / remaining`) · features passing X/Y · coverage vs
 baseline · current iteration · pending reviews · navigation freshness/token
 savings · context-cache entries/token savings · Cost (tokens + $) · Phases
-(per slash-command bill) · next action · blocked stories.
+(per slash-command bill) · **Bundles** (count + last `provenance.synced_at` age)
+· next action · blocked stories.
 
 `--json` emits the full snapshot object (`schema_version: 1`). Treat that object —
 not the text rendering — as the stable interface; the text layout may change.

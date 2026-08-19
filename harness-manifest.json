@@ -199,6 +199,15 @@
       "net_add_justification": "The system REASONS Canvas is the constitution, not the per-change generation prompt. Implement plans were session-ephemeral (writing-plans in chat), so the SPDD 'fix the prompt first' rule had nothing at story grain to fix. This is a section on an existing story file, not a new markdown pile."
     },
     {
+      "id": "story-bundle",
+      "axis": "behaviour",
+      "kind": "feedforward",
+      "wired_at": ".claude/hooks/lib/story-bundle.js",
+      "status": "active",
+      "description": "Per-story execution contract joining story ACs, generation contract, component-map ownership, verification-matrix rows, and originating BRD acceptance ids into specs/bundles/{id}.json. The story stays the ticket; the bundle is what /implement and /auto may execute against.",
+      "net_add_justification": "Stories, design, and tests already exist as separate files, so /implement could load a story and improvise. SPDD's closed loop needs one join artifact at story grain — not a parallel prompt library. This is a deterministic join of existing artifacts, not a new planning phase."
+    },
+    {
       "id": "legacy-discipline",
       "axis": "behaviour",
       "kind": "feedforward",
@@ -654,6 +663,18 @@
       "signal": "a ready story is missing a Generation Contract, has pending Operations at implement time, or cites an unknown SG-n",
       "description": "Structure gate for the per-story generation contract. --mode skeleton (spec-render) allows Operations: pending. --mode implementable (/implement, /change) requires at least one repo-relative file path. Does not replace validate-canvas.js (system constitution) or story-clusters.js (allocation).",
       "net_add_justification": "Prompt-level 'write a plan then implement' is the class of discipline G17/G23 taught not to trust. This is the mechanical presence check for the story-generation-contract guide, at the grain code is actually generated."
+    },
+    {
+      "id": "story-bundle-check",
+      "axis": "traceability",
+      "type": "computational",
+      "cadence": "planning",
+      "status": "active",
+      "scope": "artifacts",
+      "wired_at": ".claude/scripts/bundle-check.js",
+      "signal": "a ready story has no bundle, no matrix rows, no owned files, or a test case that cites a story AC without the originating brd-acceptance id",
+      "description": "Hard gate for the story-bundle join. --mode skeleton allows pending Operations. --mode implementable (/implement, /auto) requires a bundle per ready story, verification-matrix rows, owned or Operations files, and (when brd-acceptance.json exists) original-requirement ids on the bundle and on each test-trace that cites a story AC. Dormant when there are no ready stories.",
+      "net_add_justification": "generation-contract checks one story section. verification-matrix-gate checks the matrix. Neither proves the generator is holding story + design + original req at once. Without this join gate the bundle file is documentation."
     },
     {
       "id": "canvas-sync-check",
@@ -1841,7 +1862,7 @@
       "wired_at": ".claude/scripts/handoff-check.js",
       "signal": "a planning phase starting inside the same session that approved its predecessor, or a render stretch starting inside the session that shaped its decisions",
       "net_add_justification": "The /clear handoff existed but was advisory, and advisory lost: on a metered run it printed at /brd approval and /spec continued in the same session anyway, running 47 turns at a 273K average context against ~110K for a fresh one. No existing control covers this. plan-approval owns whether a human approved and whether the plan still matches — it says nothing about which conversation the successor starts in, and cannot: the approving session id was not recorded until now. Distinct invariant, deterministic signal, and it fires only at the three phase boundaries rather than after every task.",
-      "description": "Two checkpoints, one engine. (1) --stage boundary: hard block at Step 0 of /spec, /design and /test, refusing to start when the predecessor's approval receipt names the live session; plan-approval.js record stamps session_id into the receipt. (2) --stage render: hard block at /spec Step 6 and /design Step 0.9 §3, refusing to run the render stretch when the phase's decisions verdict names the live session — once the decisions gate passes, the renderer and every gate after it read the decisions file rather than the shaping dialogue, and on a metered run that stretch was 40 of /spec's 47 turns at a 284K average context against ~110K fresh. Both phases re-enter via --render-only (/spec had it; /design gained it with this control). The stamp records who SHAPED the decisions, carried forward by a sha256 of the decisions file: the renderers re-run their own gate at Step 0, and restamping there would block the very session the clear just created. The live id comes from the run receipts record-run.js already writes (hook payloads carry session_id, Bash does not). Every uncertain case passes — no record, no session id, a record written before stamping existed — because a control that fires on missing evidence reports a context problem for another control's failure and trains operators to bypass it. Two exemptions ride on the record rather than on a flag the caller must repeat: in_session (/build, which cannot clear itself mid-run) and waived_by (a headless lane with no human to clear)."
+      "description": "Two checkpoints, one engine. (1) --stage boundary: hard block at Step 0 of /spec, /design and /test, refusing to start when the predecessor's approval receipt names the live session; plan-approval.js record stamps session_id into the receipt. (2) --stage render: hard block at /design Step 0.9 §3 when the design decisions verdict names the live session — /design still re-enters via --render-only. /spec is exempt (`same_session_render`): it dispatches spec-render in the same invocation so the command is not finished with an empty specs/stories/. --render-only remains the re-expand path after spec-unresolved.json. The stamp still records who SHAPED the decisions, carried forward by a sha256 of the decisions file. The live id comes from the run receipts record-run.js already writes. Every uncertain case passes — no record, no session id, a record written before stamping existed. Two exemptions ride on the record: in_session (/build) and waived_by (a headless lane)."
     },
     {
       "id": "planning-gate-receipts",

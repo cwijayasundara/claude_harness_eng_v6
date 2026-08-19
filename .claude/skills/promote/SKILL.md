@@ -1,6 +1,6 @@
 ---
 name: promote
-description: Implement an approved /retro recommendation and open a PR against this harness repo. Use after a human has approved a recommendation via /retro --apply-decisions. Merge always stays human — this skill only opens the PR, never merges. Refuses gate-loosen/security-class recommendations outright; those are permanently human-gated and must go through /vibe or /change manually.
+description: Use after /retro --apply-decisions to open a PR for one approved recommendation. Never merges. Refuses gate-loosen and security-class items.
 argument-hint: "<recommendation-id>"
 context: fork
 ---

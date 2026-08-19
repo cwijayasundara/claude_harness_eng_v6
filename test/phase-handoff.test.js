@@ -260,24 +260,32 @@ test('the --in-session fact is recorded on the receipt', () => {
 // The phase-boundary clear above is not the whole win. /spec's decisions gate is
 // a durable checkpoint MID-phase: once spec-decisions.json passes, everything
 // after it — dispatching spec-render, the grounding gates, the evaluation — runs
-// off that file and needs none of the shaping dialogue.
-//
-// On the audited run, 40 of /spec's 47 turns fell after the gate, at a 284K
-// average context, costing $5.67. The same stretch re-entered fresh via the
-// already-existing `/spec --render-only` would cost ~$2.20.
+// off that file. Both /spec and /design re-enter via --render-only after /clear.
 
 const { staleRenderContext, renderHandoffBlock } = require(
   path.join(ROOT, '.claude/hooks/lib/phase-handoff.js'),
 );
 
-test('the render handoff names the clear and the re-entry command', () => {
+test('the spec render handoff names the clear and the re-entry command', () => {
   const block = renderHandoffBlock('spec');
   assert.match(block, /\/clear/);
   assert.match(block, /\/spec --render-only/);
 });
 
-test('the render stretch is blocked in the session that shaped the decisions', () => {
+test('design still names the clear and the re-entry command', () => {
+  const block = renderHandoffBlock('design');
+  assert.match(block, /\/clear/);
+  assert.match(block, /\/design --render-only/);
+});
+
+test('the spec render stretch is blocked in the session that shaped the decisions', () => {
   const v = staleRenderContext({ phase: 'spec', verdict: { session_id: 'S1' }, sessionId: 'S1' });
+  assert.strictEqual(v.blocked, true);
+  assert.match(v.message, /--render-only/);
+});
+
+test('the design render stretch is blocked in the session that shaped the decisions', () => {
+  const v = staleRenderContext({ phase: 'design', verdict: { session_id: 'S1' }, sessionId: 'S1' });
   assert.strictEqual(v.blocked, true);
   assert.match(v.message, /--render-only/);
 });
@@ -326,7 +334,7 @@ function gatedDecisions(sessionId, extra = []) {
     phase: 'spec',
     source: 'specs/brd/brd.md',
     confirmed_at: '2026-08-09T10:00:00.000Z',
-    milestone: { name: 'M1', epics: ['E1'], deferred_epics: [] },
+    milestone: { name: 'M1', epics: ['E1'], deferred_epics: [], requirements_in_scope: ['FR-1'] },
     decisions: [{
       id: 'D1',
       question: 'Which epics are in milestone 1?',
@@ -345,7 +353,7 @@ function gatedDecisions(sessionId, extra = []) {
   return dir;
 }
 
-test('--stage render blocks in the shaping session and clears in a fresh one', () => {
+test('--stage render blocks spec in the shaping session', () => {
   const dir = gatedDecisions('SESSION-A');
   assert.strictEqual(handoffCheck(['--phase', 'spec', '--stage', 'render', '--root', dir], dir,
     { liveSessionId: () => 'SESSION-A' }), 1);
@@ -353,7 +361,7 @@ test('--stage render blocks in the shaping session and clears in a fresh one', (
     { liveSessionId: () => 'SESSION-B' }), 0);
 });
 
-test('--stage render reads the live session for real, with nothing injected', () => {
+test('--stage render on spec requires a fresh session', () => {
   const dir = gatedDecisions('SESSION-A');
   assert.strictEqual(handoffCheck(['--phase', 'spec', '--stage', 'render', '--root', dir], dir), 1);
 });
@@ -371,6 +379,23 @@ test('--stage render with no decisions verdict yet does not block', () => {
 // The two checkpoints are distinct: the boundary one reads the /brd receipt,
 // this one reads the decisions verdict. Confusing them would block the wrong
 // stretch, so the stage must be explicit rather than inferred.
+test('test handoff warns when design decisions exist but architecture.md does not', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'handoff-design-gap-'));
+  fs.mkdirSync(path.join(dir, 'specs/decisions'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'specs/decisions/design-decisions.json'), '{"phase":"design"}\n');
+  const chunks = [];
+  const write = process.stdout.write.bind(process.stdout);
+  process.stdout.write = (s) => { chunks.push(s); return true; };
+  let code;
+  try {
+    code = handoffCheck(['--phase', 'test', '--root', dir], dir);
+  } finally {
+    process.stdout.write = write;
+  }
+  assert.strictEqual(code, 0, 'missing design docs warn; they do not block');
+  assert.match(chunks.join(''), /architecture\.md does not/);
+});
+
 test('--stage render is defined for the phases that can re-enter, and only those', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'render-phase-'));
   // /test renders nothing and has no --render-only to come back through.

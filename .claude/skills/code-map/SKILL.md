@@ -1,6 +1,6 @@
 ---
 name: code-map
-description: "[Internal pipeline stage — run by first-source /auto (navigation-refresh), /brownfield, and /seam-finder; invoke directly only as a power user.] Build a deterministic dependency graph. AST-first for Python, React/JS/TS, and Java/C#/Go (stdlib ast + tree-sitter wheels — symbols with line ranges, routes, components, hooks, call/render edges, package-aware import resolution, god-file skeletons, incremental --files patching); regex fallback when python3 or the wheels are unavailable. Outputs JSON + ranked symbol map + Mermaid + metrics for /auto first-source, brownfield, refactor, and seam-finder."
+description: "[Internal pipeline stage — run by first-source /auto, /brownfield, and /seam-finder; invoke directly only as a power user.] Build the deterministic code graph."
 argument-hint: "[path]"
 context: fork
 ---

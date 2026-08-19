@@ -16,7 +16,7 @@
 const assert = require('assert');
 const { test } = require('node:test');
 
-const { validateDesignDecisions } = require('../.claude/scripts/validate-design-decisions.js');
+const { validateDesignDecisions, lengthWarnings } = require('../.claude/scripts/validate-design-decisions.js');
 
 const decision = (over = {}) => ({
   id: 'D-A',
@@ -137,6 +137,14 @@ test('the shaping session is stamped into the design verdict', () => {
   gate(dir);
   assert.strictEqual(verdictOf(dir).session_id, 'SESSION-A');
   assert.strictEqual(verdictOf(dir).in_session, false);
+});
+
+test('long chosen/rules_out/rationale warn but do not fail the gate', () => {
+  const long = 'x'.repeat(500);
+  const res = validateDesignDecisions(doc({ decisions: [decision({ chosen: long, rules_out: long, rationale: long })] }));
+  assert.strictEqual(res.ok, true);
+  const warns = lengthWarnings(doc({ decisions: [decision({ chosen: long })] }));
+  assert.ok(warns.some((w) => /D-A chosen is 500 chars/.test(w)));
 });
 
 test('passing the gate prints the clear-and-render-only checkpoint', () => {

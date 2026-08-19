@@ -32,6 +32,10 @@ function checkMilestone(doc) {
   if (!Array.isArray(epics) || epics.length === 0) {
     return ['milestone.epics must name at least one epic — the renderer needs a scope to expand'];
   }
+  const scope = doc.milestone.requirements_in_scope;
+  if (!Array.isArray(scope) || scope.length === 0) {
+    return ['milestone.requirements_in_scope must list the FR/NFR labels this run expands — run fill-spec-scope.js or write them in /spec'];
+  }
   return [];
 }
 
@@ -71,11 +75,9 @@ function readDoc(file) {
 // later step — or a human asking "was this waived?" — can check, the way
 // plan-approval.js leaves a receipt.
 //
-// `session_id` is what makes the render checkpoint work: once this gate passes,
-// spec-decisions.json is the state, and handoff-check --stage render refuses to
-// run the rest of the phase inside the conversation that shaped it.
-// The checkpoint prints only when there is a human who can act on it: a waived
-// headless lane has nobody to run /clear, and /build cannot clear itself.
+// `session_id` still records who shaped the decisions. The printed checkpoint
+// tells a human to /clear then /spec --render-only. A waived headless lane
+// and /build --in-session get no checkpoint and continue.
 function checkpointOn(result, inSession) {
   return result.waived || inSession ? '' : renderHandoffBlock('spec');
 }

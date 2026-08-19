@@ -26,6 +26,10 @@ decisions file does not contain, record it in
 `/design` puts it to the human and re-dispatches. Guessing here is the failure
 this split exists to remove.
 
+**Turn budget.** Do not `Read`/`sed` gate scripts (`trace-check.js`,
+`validate-canvas.js`, …) — run them if `/design` asked you to, otherwise return
+and let `/design` run them. Do not edit `design-decisions.json`.
+
 ---
 
 ## Steps

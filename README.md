@@ -205,22 +205,37 @@ for core". They are distinguishable again, and negative assertions keep them tha
 
 ### 2. Pick The Work Route
 
+`/build` is sprint 1 (no living design yet). After `specs/design/architecture.md` exists, do not run `/build` again — it will stop and send you here.
+
 ```
-Are you building something NEW?
-├── Yes → small scope (CLI, library, ≤5 stories)?  → /build --lite
-│         otherwise                                 → /build
+What already exists?
+
+├── Nothing yet (greenfield)
+│   ├── small (CLI, library, ≤5 stories)              → /build --lite
+│   └── otherwise                                     → /build
 │
-└── No (existing codebase) → normal route: /feature "<request>"
-          first time here? /feature refreshes the DeepWiki/code-map first, then:
-          ├── tiny safe edit (≤3 files, <150 lines, no auth/API) → /vibe
-          ├── structure only, no behavior change                 → /refactor
-          ├── one bounded behavior change — the DEFAULT lane,
-          │   even for auth / API / migration work               → /change  (add --issue N for a GitHub bug)
-          └── multi-story scope: >~2–3 stories, spans many
-              modules, or a new subsystem                        → /build (brownfield-aware)
+├── Code and/or specs/design/architecture.md (living product)
+│   ├── next PRD / many stories / next increment      → /sprint <prd-file>
+│   │                                                   (amends the living design; never regenerates it)
+│   └── one request                                   → /feature "<request>"
+│           first time here? /feature refreshes DeepWiki/code-map, then:
+│           ├── tiny safe edit (≤3 files, <150 lines,
+│           │   no auth/API)                          → /vibe
+│           ├── structure only, no behavior change    → /refactor
+│           ├── one bounded behavior change — DEFAULT,
+│           │   even for auth / API / migration       → /change  (--issue N for a GitHub bug)
+│           └── a cluster / epic (still one product)  → stay on /feature
+│                                                       (/design --delta, not /build)
+│
+└── Discovery only (no code changes)                  → /brownfield
+        └── need cut-points for a risky change        → /brownfield --seams "<goal>"
 ```
 
-**Sensitivity does not force the heavy pipeline — only scale does.** A single bounded change belongs in `/change` even when it touches auth, a public API, or a migration; that sensitivity raises the *review tier inside* `/change` (adversarial review, security-reviewer, feature-flag defaults), it does not send you to `/brd→/spec→/design`. The full pipeline is for work that genuinely needs more than ~2–3 stories, spans many modules, or introduces a new subsystem. See `/change` Step 0 for the exact auto-routing table.
+**Do not send an existing product back through `/build`.** That regenerates planning artifacts and is how earlier runs grew a new silo per sprint. Multi-story work on a living system is `/sprint` (full next PRD) or `/feature` (one request that fans into stories). Both amend `specs/design/`; neither replaces it.
+
+**Sensitivity does not force the heavy pipeline — only scale does.** A single bounded change belongs in `/change` even when it touches auth, a public API, or a migration; that sensitivity raises the *review tier inside* `/change` (adversarial review, security-reviewer, feature-flag defaults). It does not send you to `/brd→/spec→/design`. See `/change` Step 0 for the exact auto-routing table.
+
+Stories may generate code in parallel. They must not invent a parallel architecture — GATE 2 on the design amendment is where that is rejected.
 
 Not sure? Describe the request plainly. The harness should classify the lane before it edits.
 
@@ -328,11 +343,18 @@ Model choice is a **measured** decision, not a vibe: a per-token-cheaper worker 
 
 ## Existing-Code Flow
 
-For sprint-by-sprint product work on an existing repo, start with `/feature "<request>"`.
+Use the [work-route map](#2-pick-the-work-route). Short form:
 
-`/feature` keeps the committed DeepWiki fresh, creates or publishes the story when a tracker is configured, checks the existing design before planning changes, delegates to `/vibe`, `/change`, `/refactor`, or `/build` by scope, runs tests and gates, and leaves the issue in Human Review with the PR linked.
+| You have | Start with |
+|---|---|
+| One request in a living product | `/feature "<request>"` → `/vibe`, `/change`, or `/refactor` |
+| Next PRD / many stories on that product | `/sprint <prd-file>` |
+| No `specs/design/architecture.md` yet | `/build` (or `/build --lite`) — sprint 1 only |
+| Maps only, no edits | `/brownfield` |
 
-When the next unit of work is a full PRD rather than a single request, use `/sprint <prd-file>` instead — it grounds the PRD against the prior sprint's requirements and produces a human-reviewed design amendment before any code generation, so the system evolves sprint by sprint instead of being regenerated each time.
+`/feature` keeps the committed DeepWiki fresh, creates or publishes the story when a tracker is configured, checks the existing design, and for an epic runs **`/design --delta`** (not a fresh `/design` or `/build`). It then gates and leaves the issue in Human Review with the PR linked.
+
+`/sprint` grounds the new PRD against the prior requirement spine and produces a human-reviewed design amendment before any code generation, so the system evolves sprint by sprint instead of being regenerated each time. `/build` on a repo that already has `architecture.md` is the wrong door — stop and use `/sprint`.
 
 Use `/brownfield` directly only when you want discovery without implementation. Use `/brownfield --seams "<goal>"` when you need safe cut-points before a risky change. Use `/brownfield --full` only for heavier CI/flag/perf inventory and evaluator scoring.
 

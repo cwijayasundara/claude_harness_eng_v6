@@ -4,6 +4,59 @@ All notable changes to the Claude Harness Engine are documented here.
 
 ## Unreleased
 
+### Front-half cost leaks closed (2026-08-18)
+
+- **`/spec` mid-phase `/clear`.** After `validate-spec-decisions.js`, stop → `/clear` → `/spec --render-only`. Same-session render is only for `/build --in-session`.
+- **`/design` shaping.** Superpowers brainstorm is `--brainstorm` or `ceremony: full` only. Render/gates live in `mode-10-render-and-gates.md`. Long `chosen`/`rules_out`/`rationale` warn, do not fail.
+- **`/brd` is an index.** Lean `--prd` loads `prd-lean.md` only; interview/delta moved to references.
+- **Product default `execution.ceremony` is `trimmed`** for web-app and api-service.
+- Shortened always-on descriptions on `code-map`, `fastapi-code`, `promote`, `retro`, `writing-acceptance-tests-first`, `checking-migration-safety`.
+
+### `/test --plan-only` must not fork a generator (2026-08-18)
+
+A 6-story API billed **~200K tokens** on `/test` because the skill was
+`context: fork` + `agent: generator` and the scaffolded project still had the
+485-line procedure. Plan-only now runs in the main session. `test-plan-write.js`
+emits the matrix, traces, and a skeleton plan from `story-traces.json` in one
+process. The model fills seams and the untested table only.
+
+### Lean `/design` + `/test --plan-only` (2026-08-18)
+
+Phase-eval is **`--eval` only**. Auth, tenant, migration, or a trust boundary
+no longer auto-spawns the artefact evaluator (that is what made shortlink-p3's
+`/test` write an 11 KB `phase-test-eval.json` for a 6-story API).
+
+`/test` is a progressive index. `--plan-only` loads `references/test-plan.md`
+and writes the review pair (`test-plan.md` + `verification-matrix.json` +
+`test-traces.json`). It does not write `test-cases.md`, fixtures, Playwright,
+or AT source, and it does not spawn a nested generator. `handoff-check --phase
+test` warns when `design-decisions.json` exists but `architecture.md` does not.
+`phase-digest.js --phase test` lists AC ids by story.
+
+### Planning path: fewer turns, less cache (2026-08-18)
+
+`/clear` between phases is necessary but not sufficient. Cache-read cost is **turn count × prefix size** inside the phase. The shortlink-p3 run spent ~$10 and 52 minutes on `/scaffold`+`/brd`+`/spec` mostly re-billing a 1,082-line scaffold command and a 650-line spec-render skill.
+
+- **`/scaffold` is confirm → `scaffold-apply.js` → report.** Apply now writes module `CLAUDE.md`, `CODEBASE_MAP.md`, mutation starters, model-tier pins, git hooksPath, and `docs/`. Command file 1082 → ~210 lines. Generation contract lives in `commands/references/scaffold-generation.md`.
+- **`spec-render-write.js`** expands `stories.json` into story files, features, traces, clusters. The renderer writes one index and runs one bash block. Load/crypto ACs get `verification: "characterization"`.
+- **`fill-spec-scope.js` + `requirements_in_scope` gate.** The renderer must not invent or patch the milestone set.
+- **`/status`** reads planning approvals. A spec-approved project is phase `spec` / `on_track`, not `Run /brd` / `failing` on the 80% coverage seed.
+- **Cluster warning** when a `contract` edge is cancelled by a hard edge (the D4 "two clusters" that became C1).
+
+### Story bundles — structured story-driven execution (2026-08-17)
+
+- **`specs/bundles/{id}.json`** is the per-story execution contract: a deterministic join of ACs, generation contract, component-map ownership, verification-matrix rows, and originating BRD acceptance ids. Not a prompt library.
+- **`bundle-write.js` / `bundle-check.js`** emit and gate the join. `/build` writes bundles before `plan-seal`. `/implement` and `/auto` hard-block on `--mode implementable`. `/test` must trace each case to the story AC **and** a `brd-acceptance.json` id when that spine exists.
+- Sealed `/auto` pack includes `specs/bundles/`. Control budget 166 → 168 (`story-bundle` + `story-bundle-check`).
+- **P1 close the loop.** `/story-sync` (`story-sync.js --write`) pushes refactor-only file moves back into the bundle + Canvas `Governs`. AC drift fails closed. `/change` and `/implement` run it after code. Sprint `/test` writes `specs/test_artefacts/sprint-N/` and `matrix-append.js` merges into the living matrix (changed ACs become `VM-id@sN`, never deleted).
+- **P2 team surface.** `tracker-body.js` renders the bundle as the Jira/ADO/Linear issue body. `publish-to-ado.js` creates or PATCHes Azure DevOps work items. Jira re-publish updates in place. `/sprint` publishes at story granularity. `/status` shows bundle count and last-sync age.
+
+### `/spec` produces the story graph in one invocation (2026-08-17)
+
+- **`/spec` no longer hard-stops after `spec-decisions.json`.** The same run dispatches `spec-render` and is not finished until `specs/stories/` has epics, stories, and the dependency graph. `--render-only` is a re-expand flag, not a required second hop.
+- **`phase-digest.js --phase spec` prints `NEXT` (`shape` | `render` | `review`)** so a later session cannot treat an empty `specs/stories/` as "shaping never happened".
+- Same-session render is allowed for `/spec`. `/design` still uses the `/clear` then `--render-only` checkpoint.
+
 ### Per-step token and cost log (2026-08-16)
 
 - **`phase-cost.js --write [--step NAME]`** persists the transcript bill to `.claude/state/phase-cost.json` and an append-only `.claude/state/phase-cost.jsonl` (delta vs last persist). The `record-run` hook writes this on every UserPromptSubmit / Stop / SubagentStop so `/brd`, `/spec`, `/design`, `/implement`, and `/gate` each leave a labeled step row without a collector or OTEL.

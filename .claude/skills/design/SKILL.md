@@ -30,10 +30,11 @@ This skill is an **orchestrator index**. Read only the reference file for the mo
 | Baseline Recovery Mode (`--baseline-recovery`) | `references/mode-04-baseline-recovery-mode-baseline-recovery.md` |
 | Overview (full mode) | `references/mode-05-overview-full-mode.md` |
 | Prerequisites (full mode only — `--doc-only` has none) | `references/mode-06-prerequisites-full-mode-only-doc-only-has-none.md` |
-| Step 0 — Brainstorm Architecture Direction | `references/mode-07-step-0-brainstorm-architecture-direction.md` |
+| Step 0 — Brainstorm (`--brainstorm` or `ceremony: full` only) | `references/mode-07-step-0-brainstorm-architecture-direction.md` |
 | Step 0.5 — Clarify Load-Bearing Design Decisions | `references/mode-08-step-0-5-clarify-load-bearing-design-decisions.md` |
 | Step 0.7 — Pre-Code Modularity Assessment | `references/mode-09-step-0-7-pre-code-modularity-assessment.md` |
-| Step 0.9 — Record decisions + dispatch the renderer | `references/mode-10-step-1-spawn-two-agents-concurrently.md` |
+| Step 0.9 — Record decisions + checkpoint | `references/mode-10-step-1-spawn-two-agents-concurrently.md` |
+| `--render-only` — dispatch + gates | `references/mode-10-render-and-gates.md` |
 | Machine-Readable Artifacts | `references/mode-11-machine-readable-artifacts.md` |
 | Output | `references/mode-12-output.md` |
 | Gate | `references/mode-13-gate.md` |
@@ -41,10 +42,11 @@ This skill is an **orchestrator index**. Read only the reference file for the mo
 
 ### Route
 
-1. Parse flags (`--doc-only`, `--delta`, `--baseline-recovery`, `--render-only`, default full).
+1. Parse flags (`--doc-only`, `--delta`, `--baseline-recovery`, `--render-only`, `--brainstorm`, default full).
 2. Load **only** that mode's reference file and execute it.
 3. Do not load delta/full procedure when running `--doc-only`.
-4. **With `--render-only`, run full mode from Step 0.9 §3 onward** — load `references/mode-10-step-1-spawn-two-agents-concurrently.md` and skip Steps 0, 0.5 and 0.7. The decisions file already exists and was already gated; re-running the dialogue would re-ask settled questions. Do not load the Step 0/0.5/0.7 reference files at all.
+4. **Skip Step 0 Superpowers** unless `--brainstorm` or `execution.ceremony` is `full`. The PRD + approved spec + manifest stack are enough to write `rules_out`.
+5. **With `--render-only`, load only `references/mode-10-render-and-gates.md`.** Skip Steps 0, 0.5, 0.7 and the record file. Do not re-ask settled questions.
 
 ### Load-bearing names (always visible)
 

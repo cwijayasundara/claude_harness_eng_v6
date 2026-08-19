@@ -29,6 +29,7 @@ const MUST_STAY_INTERACTIVE = [
   'spec',     // decision dialogue (Step 3) + plan-review-loop (Step 8)
   'design',   // Step 0 brainstorm + Step 0.5 clarify + the design gate
   'brd',      // five-dimension interview + clarification budget + approval
+  'test',     // --plan-only review; a fork bills a generator prefix (~200K)
 ];
 
 // Phases split into a main-session shaping half and a forked sidekick renderer.

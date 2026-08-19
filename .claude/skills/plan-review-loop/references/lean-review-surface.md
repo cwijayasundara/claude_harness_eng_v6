@@ -38,7 +38,7 @@ implement time against those seams. `/test --e2e-only` runs after code exists.
 
 ## Phase-eval
 
-Skip the inferential phase-eval loop unless the invocation includes `--eval`
-or the artifact introduces an auth, tenant, migration, or external-trust
-boundary. Grounding, taxonomy, and trace-check stay on — they are cheap and
-computational.
+Skip the inferential phase-eval loop unless the invocation includes `--eval`.
+Auth, tenant, migration, or an external-trust boundary is **not** a reason to
+run it — those are design decisions plus the deterministic gates. Grounding,
+taxonomy, and trace-check stay on — they are cheap and computational.

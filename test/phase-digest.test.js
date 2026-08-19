@@ -58,6 +58,26 @@ test('the spec digest counts uncovered requirements — the phase work-list no g
   assert.strictEqual(d.acceptance.uncovered, 2, 'FRD-2 and FRD-3 have no criterion');
 });
 
+test('the spec digest names the next hop so an empty stories/ cannot be misread as "never shaped"', () => {
+  const dir = fixture();
+  assert.strictEqual(digestFor('spec', dir).progress.next, 'shape',
+    'fixture has stories but no decisions — still a shaping session');
+  const write = (rel, value) => {
+    fs.mkdirSync(path.join(dir, path.dirname(rel)), { recursive: true });
+    fs.writeFileSync(path.join(dir, rel), JSON.stringify(value));
+  };
+  write('specs/decisions/spec-decisions.json', {
+    milestone: { name: 'M1', epics: ['E1', 'E2'] },
+  });
+  fs.rmSync(path.join(dir, 'specs/stories/stories.json'));
+  const renderNext = digestFor('spec', dir);
+  assert.strictEqual(renderNext.progress.next, 'render');
+  assert.strictEqual(renderNext.progress.stories, 0);
+  const out = render('spec', renderNext);
+  assert.match(out, /NEXT\s+render/);
+  assert.match(out, /do not re-shape/);
+});
+
 test('the spec digest carries no requirement prose, however long the source', () => {
   const out = render('spec', digestFor('spec', fixture()));
   assert.doesNotMatch(out, /x{200}/, 'requirement bodies must stay in the fork');
@@ -92,6 +112,8 @@ test('an unknown phase has no digest rather than a wrong one', () => {
 test('the three consuming phases orient from the digest, not the full artifacts', () => {
   const spec = read('.claude/skills/spec/SKILL.md');
   assert.match(spec, /phase-digest\.js --phase spec/);
+  assert.match(spec, /Two sessions produce the story graph|\/spec --render-only/,
+    '/spec must not treat the decisions file as the finished command');
   assert.match(spec, /[Dd]o not read `brd-requirements\.json`/,
     '/spec must say plainly that the spine is not read whole here');
   assert.match(
@@ -99,4 +121,28 @@ test('the three consuming phases orient from the digest, not the full artifacts'
     /phase-digest\.js --phase design/,
   );
   assert.match(read('.claude/skills/test/SKILL.md'), /phase-digest\.js --phase test/);
+});
+
+test('the test digest lists AC ids by story and whether design rendered', () => {
+  const dir = fixture();
+  const writeJson = (rel, value) => {
+    fs.mkdirSync(path.join(dir, path.dirname(rel)), { recursive: true });
+    fs.writeFileSync(path.join(dir, rel), JSON.stringify(value));
+  };
+  writeJson('specs/stories/acceptance-criteria.json', [
+    { id: 'E1-S1-AC1' },
+    { id: 'E1-S1-AC2' },
+    { id: 'E1-S2-AC1', story: 'E1-S2' },
+  ]);
+  const d = digestFor('test', dir);
+  assert.strictEqual(d.acceptance_criteria, 3);
+  assert.strictEqual(d.design_rendered, false);
+  assert.deepStrictEqual(
+    d.by_story.map((row) => [row.id, row.acs.join(',')]),
+    [['E1-S1', 'E1-S1-AC1,E1-S1-AC2'], ['E1-S2', 'E1-S2-AC1']],
+  );
+  const out = render('test', d);
+  assert.match(out, /E1-S1/);
+  assert.match(out, /not rendered/);
+  assert.doesNotMatch(out, /x{200}/);
 });

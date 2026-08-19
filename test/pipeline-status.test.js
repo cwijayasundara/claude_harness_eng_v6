@@ -17,6 +17,21 @@ const {
 const { storeContext } = require('../.claude/scripts/context-store');
 const { NOW, FEATURES_FOUR, makeProject, midBuildProject } = require('./helpers/pipeline-status-fixtures');
 
+test('buildSnapshot reports story-bundle count and last sync age', () => {
+  const dir = midBuildProject();
+  fs.mkdirSync(path.join(dir, 'specs', 'bundles'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'specs', 'bundles', 'E1-S1.json'), JSON.stringify({
+    story_id: 'E1-S1',
+    provenance: { synced_at: '2026-08-17T00:00:00.000Z' },
+  }));
+  const snap = buildSnapshot(dir, { now: '2026-08-17T00:01:00.000Z', nowMs: Date.parse('2026-08-17T00:01:00.000Z') });
+  assert.strictEqual(snap.bundles.count, 1);
+  assert.strictEqual(snap.bundles.last_sync, '2026-08-17T00:00:00.000Z');
+  assert.strictEqual(snap.bundles.age_seconds, 60);
+  const text = renderStatus(snap);
+  assert.match(text, /Bundles:/);
+});
+
 test('buildSnapshot reads the latest session block and core state', () => {
   const snap = buildSnapshot(midBuildProject(), { now: NOW });
 

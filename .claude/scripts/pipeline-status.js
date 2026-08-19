@@ -60,6 +60,10 @@ function renderStatus(s) {
     `Run:       lane=${s.run.lane || '-'}  mode=${s.run.mode || '-'}  session=${s.run.session_id || '-'}`,
   ];
   if (s.sprint) lines.push(`Sprint:    ${s.sprint.number} (${s.sprint.phase})`);
+  if (s.bundles) {
+    const age = s.bundles.age_seconds == null ? 'never' : `${s.bundles.age_seconds}s ago`;
+    lines.push(`Bundles:   ${s.bundles.count}  last-sync=${s.bundles.last_sync || 'n/a'} (${age})`);
+  }
   if (s.confidence) lines.push(fmtConfidence(s.confidence));
   if (s.budget) lines.push(fmtBudget(s.budget));
   if (s.cost) {

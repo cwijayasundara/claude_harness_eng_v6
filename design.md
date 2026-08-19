@@ -8,7 +8,7 @@ Copied into target projects by `/scaffold`.
 
 Current scaffold version: `2.0.0`.
 
-Canonical repository: `https://github.com/cwijayasundara/claude_harness_eng_v5.git`.
+Canonical repository: `https://github.com/cwijayasundara/claude_harness_eng_v6.git`.
 
 Based on:
 - [Anthropic: Harness Design for Long-Running Apps](https://www.anthropic.com/engineering/harness-design-long-running-apps)
@@ -494,7 +494,7 @@ The chosen packs are recorded in `project-manifest.json` under a `framework_skil
 A solo engineer (or small pod) drives Claude Code directly:
 
 ```
-$ claude --plugin-dir ~/claude_harness_eng_v5/.claude
+$ claude --plugin-dir ~/claude_harness_eng_v6/.claude
 > /scaffold                # one time
 > /brd                     # or /build --lite, or /brownfield
 > /spec                    # human gate

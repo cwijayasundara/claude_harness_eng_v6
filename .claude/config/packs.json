@@ -66,6 +66,10 @@
       "task-envelope",
       "task-lifecycle",
       "generation-contract",
+      "story-bundle",
+      "story-sync",
+      "matrix-append",
+      "bundle-render",
       "toolchain",
       "tracker-fetch",
       "trust-boundary"
@@ -91,7 +95,10 @@
       "run-gate-checks",
       "security-scan",
       "tracker-fetch",
-      "validate-generation-contract"
+      "validate-generation-contract",
+      "bundle-write",
+      "bundle-check",
+      "story-sync"
     ]
   },
   "packs": {
@@ -119,6 +126,7 @@
         "spec-render",
         "sprint",
         "status",
+        "story-sync",
         "test",
         "tracker-publish"
       ],
@@ -134,6 +142,8 @@
         "analysis-seed",
         "auto-merge",
         "brd-taxonomy-check",
+        "matrix-append",
+        "tracker-body",
         "brd-adopt",
         "brd-lean-write",
         "brd-taxonomy-tag",
@@ -180,6 +190,11 @@
         "prd-extract",
         "validate-prd",
         "validate-spec-decisions",
+        "fill-spec-scope",
+        "spec-render-write",
+        "test-plan-write",
+        "planning-progress",
+        "scaffold-project-files",
         "verification-matrix-gate",
         "unattended-preflight",
         "vertical-glossary-pack",
@@ -204,7 +219,8 @@
         "phase-digest",
         "phase-handoff",
         "plan-confidence-freshness",
-        "story-graph"
+        "story-graph",
+        "spec-render-format"
       ],
       "hook": [
         "concurrency-gate"

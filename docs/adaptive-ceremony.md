@@ -13,8 +13,8 @@ not a constant — and the dial must be re-measured, not guessed.
 
 | Value | Behavior |
 |---|---|
-| `full` (default) | Current pipeline exactly as documented in `/auto` |
-| `trimmed` | Single-story groups skip sprint decomposition (straight to contract + implement); design-critic GAN loop caps at 3 iterations instead of 10 |
+| `full` | Superpowers brainstorm on `/design`, 10-question budgets, optional parallel design+test on large plans; `/auto` as documented |
+| `trimmed` (**product default** for web-app / api-service) | Lean `/brd --prd`, `/design` without Superpowers, `/test --plan-only` via `test-plan-write.js`, sequential Phase 3 when ≤8 stories; `/auto` skips 1-story sprint decomp and caps the critic at 3 |
 
 Two components are **never** trimmed, at any setting:
 

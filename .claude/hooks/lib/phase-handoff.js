@@ -101,20 +101,17 @@ function staleContext({ phase, receipt, sessionId, inSession }) {
 // was 40 of /spec's 47 turns, at a 284K average context against ~110K for a
 // fresh session: the single most expensive stretch of the front half.
 //
-// Defined only for phases that can re-enter after the clear. A block on a phase
-// with no `--render-only` would strand it rather than save anything.
-// `evidence` is what was actually measured for THAT phase. /spec's number is a
-// real metered run; /design has not been metered, so it says so rather than
-// borrowing /spec's figure and presenting it as its own.
+// Defined for phases that split shaping from rendering. Both /spec and
+// /design re-enter via `--render-only` after /clear. `same_session_render`
+// is only for a conductor that cannot clear (/build --in-session).
+// `evidence` is what was measured for THAT phase.
 const RENDER_PHASES = Object.freeze({
   spec: {
     decisions: 'specs/decisions/spec-decisions.json',
     verdict: 'specs/reviews/spec-decisions-verdict.json',
     evidence: [
-      '  not this conversation, so clearing loses no state. On a metered run this',
-      '  stretch was 40 of 47 turns at a 284K average context — the most expensive',
-      '  part of the front half, and all of it re-reading a dialogue already',
-      '  recorded in the decisions file.',
+      '  not this conversation. On a metered run this stretch was 40 of 47 turns',
+      '  at a 284K average context — the most expensive part of the front half.',
     ],
   },
   design: {
@@ -134,6 +131,24 @@ const RENDER_RULE = '─'.repeat(58);
 function renderHandoffBlock(phase) {
   const hop = RENDER_PHASES[phase];
   if (!hop) return '';
+  if (hop.same_session_render) {
+    return [
+      '',
+      `  ${RENDER_RULE}`,
+      '  CHECKPOINT — decisions gated.',
+      '',
+      `  Dispatch ${phase}-render now in this invocation.`,
+      `  /${phase} is not finished until the rendered artifacts exist.`,
+      '',
+      '  Do not stop. Do not ask the human to /clear or --render-only first.',
+      '  --render-only re-expands after unresolved items or an amended decisions file.',
+      '',
+      `  After the /${phase} review, /clear before the next phase.`,
+      ...hop.evidence,
+      `  ${RENDER_RULE}`,
+      '',
+    ].join('\n');
+  }
   return [
     '',
     `  ${RENDER_RULE}`,
@@ -161,7 +176,9 @@ function renderHandoffBlock(phase) {
  */
 function staleRenderContext({ phase, verdict, sessionId, inSession }) {
   const hop = RENDER_PHASES[phase];
-  if (!hop || inSession || !isResident(verdict, sessionId)) return { blocked: false, message: '' };
+  if (!hop || inSession || hop.same_session_render || !isResident(verdict, sessionId)) {
+    return { blocked: false, message: '' };
+  }
   return {
     blocked: true,
     message: [

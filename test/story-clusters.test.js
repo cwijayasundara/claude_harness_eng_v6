@@ -80,6 +80,19 @@ test('a hard edge keeps two stories in the same cluster', () => {
   assert.strictEqual(plan.cluster_count, 1);
 });
 
+test('a contract edge cancelled by a hard edge warns that parallelism was not bought', () => {
+  const plan = planClusters({
+    stories: [
+      s('E1-S1', { layer: 'Config' }),
+      s('E2-S1', { depends_on: [behavior('E1-S1')] }),
+      s('E3-S1', { layer: 'Types', depends_on: [behavior('E2-S1')] }),
+      s('E4-S1', { depends_on: [contract('E3-S1', 'Link type'), behavior('E2-S1')] }),
+    ],
+  });
+  assert.strictEqual(plan.cluster_count, 1);
+  assert.ok(plan.warnings.some((w) => /not a cluster cut/i.test(w) && /E3-S1/.test(w)));
+});
+
 test('a contract edge is cuttable — producer and consumer land in different clusters', () => {
   const plan = planClusters({
     stories: [

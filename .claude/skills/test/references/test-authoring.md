@@ -7,6 +7,7 @@ This file covers the *artifacts* (plan, cases, fixtures, E2E structure). For the
 ## Inputs
 
 - Ready user stories in `specs/stories/E{n}-S{n}.md` (acceptance criteria are your spec)
+- Originating requirement ids in `specs/stories/story-traces.json` and, when present, `specs/brd/brd-acceptance.json`
 - Source code in `src/` (read to understand actual implementations)
 - API contracts in `specs/design/api-contracts.schema.json`
 - Data models in `specs/design/data-models.schema.json`
@@ -54,6 +55,7 @@ The TypeScript/Playwright examples elsewhere in this file are illustrative; tran
 - Test complete user journeys from browser through to database
 - One spec file per story: `e2e/S-001-login.spec.ts`
 - Must correspond to acceptance criteria — every AC gets at least one test case
+- Skip `features.json` rows with `verification: "characterization"` in the default plan (load tests, 10k-code statistical checks). Record them in the test plan as a later characterization suite, not as Playwright cases for this milestone.
 
 ## Playwright Patterns
 

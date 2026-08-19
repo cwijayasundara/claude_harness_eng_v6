@@ -100,6 +100,16 @@ function run(argv, cwd, deps = {}) {
   );
   if (!verdict.blocked) {
     process.stdout.write(okLine(stage, phase));
+    if (phase === 'test' && stage === 'boundary' && !argv.includes('--in-session')) {
+      const decisions = path.join(root, 'specs', 'decisions', 'design-decisions.json');
+      const arch = path.join(root, 'specs', 'design', 'architecture.md');
+      if (fs.existsSync(decisions) && !fs.existsSync(arch)) {
+        process.stdout.write(
+          'handoff-check: design decisions exist but architecture.md does not — '
+          + 'prefer /design --render-only first unless this is /build Phase 3.\n',
+        );
+      }
+    }
     return 0;
   }
   process.stderr.write(`handoff-check: ${phase} BLOCKED — stale context.\n${verdict.message}`);

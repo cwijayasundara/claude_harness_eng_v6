@@ -73,10 +73,21 @@ function updateTrackerReferences(trackerMap, config, group, groupId, issue) {
 async function publishGroups(trackerMap, config, deps) {
   const { request, readBody, dryRun = false } = deps;
   const created = [];
+  const updated = [];
   const skipped = [];
   const warnings = [];
   for (const [groupId, group] of Object.entries(trackerMap.groups || {})) {
-    if (looksAlreadyPublished(group)) { skipped.push({ groupId, key: group.tracker_key }); continue; }
+    if (looksAlreadyPublished(group)) {
+      if (dryRun) { updated.push({ groupId, key: group.tracker_key, dryRun: true }); continue; }
+      await request('PUT', `/rest/api/3/issue/${group.tracker_key}`, {
+        fields: {
+          summary: group.title || `Group ${groupId}`,
+          description: textToAdf(readBody(group, groupId)),
+        },
+      });
+      updated.push({ groupId, key: group.tracker_key, url: group.url });
+      continue;
+    }
     if (dryRun) { created.push({ groupId, dryRun: true }); continue; }
 
     const issue = await createIssue(request, config, group, groupId, readBody);
@@ -86,7 +97,7 @@ async function publishGroups(trackerMap, config, deps) {
     const entry = updateTrackerReferences(trackerMap, config, group, groupId, issue);
     created.push(entry);
   }
-  return { created, skipped, warnings };
+  return { created, updated, skipped, warnings };
 }
 
 // ---- CLI ----

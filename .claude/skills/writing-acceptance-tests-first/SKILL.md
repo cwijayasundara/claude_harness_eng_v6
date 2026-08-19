@@ -1,6 +1,6 @@
 ---
 name: writing-acceptance-tests-first
-description: Use when a story is about to move from acceptance criteria to implementation — in /test's plan-phase deliverable or /change Step S4, before any production code is written — to write a business-readable acceptance test against a Ports-and-Adapters seam with a test-double adapter, and confirm it fails for the right reason before implementation proceeds. [Internal discipline — applied automatically by pipeline agents mid-task; direct use is a power-user path.]
+description: Use when a story is about to move from ACs to implementation — write the AT at a Ports-and-Adapters seam and confirm it fails for the right reason. [Internal discipline — applied automatically by pipeline agents mid-task; direct use is a power-user path.]
 ---
 
 # Writing Acceptance Tests First

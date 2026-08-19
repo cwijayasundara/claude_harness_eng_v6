@@ -32,9 +32,9 @@ Record the outcome with `node .claude/scripts/plan-approval.js record --phase br
 
 ### Phase 2 — Story Specification [HUMAN APPROVAL]
 
-Run `/spec` using the approved BRD. Outputs are written to `specs/stories/` and root `features.json`.
+Run `/spec` using the approved BRD. Outputs are written to `specs/stories/` and root `features.json`. Standalone, `/spec` stops after `spec-decisions.json` and the human runs `/clear` then `/spec --render-only`.
 
-**Pass `--in-session` to `/spec`'s decisions gate** (`validate-spec-decisions.js --in-session`, Step 5). That gate now prints a checkpoint telling the human to `/clear` and re-enter with `/spec --render-only` before the render stretch — the same instruction this conductor cannot follow, for the same reason as `--in-session` on the approval rounds above. Without the flag, `/spec` Step 6's `handoff-check --stage render` blocks this lane. It is the same trade recorded below: the separate-invocation route is cheaper, and this is another place `/build` pays for continuity.
+**Pass `--in-session` to `/spec`'s decisions gate** (`validate-spec-decisions.js --in-session`, Step 5) so this conductor continues into `spec-render` — it cannot `/clear` mid-run.
 
 **Stop and run `/spec`'s Step 8 review loop before proceeding** — a `plan-review-loop` dialogue over the decomposition, not a single approve/reject question. It ends by recording `plan-approval.js record --phase spec --in-session`, which Phase 3 hard-blocks on.
 
@@ -46,16 +46,24 @@ If the user already has product stories, `/spec` may normalize those existing st
 
 **Pass `--in-session` to `/design`'s decisions gate too** (`validate-design-decisions.js --in-session`, Step 0.9 §2) — same reason as `/spec`'s above: that gate now prints a checkpoint asking the human to `/clear` and re-enter with `/design --render-only`, which this conductor cannot do. Without the flag, §3's `handoff-check --stage render` blocks this lane.
 
-Run `/design` and `/test --plan-only` **in parallel** using two concurrent Agent calls. Both consume `/spec` output independently:
+Do **not** spawn `/test --plan-only` as a `generator` agent. That fork
+re-creates the full prefix (the 200K-token bill on a 6-story API). The
+skill runs in this session and writes the matrix via `test-plan-write.js`.
+
+On `ceremony: full` **and** more than 8 stories, `/design` shaping may still
+run as its own main-session command while test waits. Otherwise run `/design`
+to completion, then `/test --plan-only` in this conductor.
+
+Both consume `/spec` output independently:
 
 - **`/design`** — produces architecture artifacts in `specs/design/` (architecture, api-contracts, component-map, data-models, schemas).
-- **`/test --plan-only`** — produces test plan, test cases mapped to acceptance criteria, and test data fixtures in `specs/test_artefacts/` (test-plan.md, test-cases.md, test-data/).
+- **`/test --plan-only`** — `test-plan-write.js` writes `verification-matrix.json` + `test-traces.json` + a skeleton `test-plan.md`. The model fills seams and the untested table only.
 
 Wait for BOTH to complete before presenting results.
 
 **Then compute plan confidence.** Run `node .claude/scripts/plan-confidence.js`, which writes `specs/plan-confidence.json` — a band (high/medium/low), a score, and its risk drivers, derived deterministically from the BRD's open questions and assumptions, the needs-breakdown backlog, the epic count, hollow definitions in the design schemas, and unmitigated high/critical seams in the brownfield risk map. This gates **planning only** and never touches the machine verification gates; it just makes the planner's own uncertainty visible to the gate that follows.
 
-**Stop and run both review loops before proceeding — in this session, not in the sub-skills.** `/design` and `/test --plan-only` are dispatched as forked agents, and a forked skill cannot pause for `AskUserQuestion`; a review loop delegated into one of them can only ask itself. **`/build` runs both `plan-review-loop` dialogues itself** (`--phase design`, `--phase test`) after the two agents return, reading the artifacts they wrote. They review different decisions and are not collapsed into one question. Run them in sequence, design first, since the test plan's obligations follow from the approved schemas. Each brief carries:
+**Stop and run both review loops before proceeding — in this session.** `/test --plan-only` is no longer a forked generator. **`/build` still runs both `plan-review-loop` dialogues itself** (`--phase design`, `--phase test`) so a design `--render-only` fork cannot ask the human. They review different decisions and are not collapsed into one question. Run them in sequence, design first, since the test plan's obligations follow from the approved schemas. Each brief carries:
 
 1. Architecture summary: tech stack, component count, API surface area.
 2. Test plan summary: test case count, story coverage, fixture count — and what was deliberately left untested.
@@ -81,9 +89,10 @@ Exit 1 means stale — the verdict was computed from planning files that have si
 
 Do NOT proceed until `node .claude/scripts/plan-approval.js check --phase all` exits 0. *(In `--autonomous` mode, do not present a design-only gate here — go to Phase 3.5, which presents the whole plan at once.)*
 
-**Seal and stop (gated only).** After that check is green and the lane is `gated` (or interactive `--lite`), run:
+**Seal and stop (gated only).** After that check is green and the lane is `gated` (or interactive `--lite`), join the planning artifacts and seal:
 
 ```bash
+node .claude/scripts/bundle-write.js
 node .claude/scripts/plan-seal.js write
 ```
 
@@ -118,7 +127,7 @@ In `--autonomous` mode this is the **single** human gate. After Phases 1–3 hav
 6. **Plan confidence** from `specs/plan-confidence.json`: the band (high/medium/low) and its drivers — so the human approves with the planner's own uncertainty in view, not blind.
 7. **Projected spend** vs the budget cap: a rough estimate from the story/group count (`~N min · ~M agents · ~$K`, same rate table as `budget-state.js`) against the resolved cap — so the human sees the likely cost before approving. In `--auto`, if the projection already exceeds the cap before a single group runs, stop and surface it rather than starting a run that cannot finish in budget.
 
-Ask once: **"Approve this plan?"** On a clear "yes/approved", record the approvals, run `node .claude/scripts/plan-seal.js write`, and **stop** (`stopsAfterSeal: true`). Print `/clear` then `/auto --sealed`. Do not run Phases 4–11 in this session. On anything else, fall back to the gated model. In the default (non-`--autonomous`) model, skip Phase 3.5; the per-phase gates above already ran.
+Ask once: **"Approve this plan?"** On a clear "yes/approved", record the approvals, run `node .claude/scripts/bundle-write.js` then `node .claude/scripts/plan-seal.js write`, and **stop** (`stopsAfterSeal: true`). Print `/clear` then `/auto --sealed`. Do not run Phases 4–11 in this session. On anything else, fall back to the gated model. In the default (non-`--autonomous`) model, skip Phase 3.5; the per-phase gates above already ran.
 
 **Satisfy `/auto`'s review gate for the collapsed lanes.** `/auto` blocks on `plan-approval.js check --phase all`, so a lane that skipped the per-phase loops records *why* rather than leaving the receipt absent — an absent receipt and a deliberately-headless run are different facts, and the audit trail should say which one this was:
 
@@ -128,7 +137,7 @@ for phase in brd spec design test; do
 done
 ```
 
-Write the `--autonomous` waivers only **after** the consolidated approval above is given; on a fallback to the gated model, do not write them — the per-phase loops run instead. In `--auto`, write the `--auto` waivers once Phase 3 completes, then `node .claude/scripts/plan-seal.js write --lane --auto`, then continue to Phase 4.
+Write the `--autonomous` waivers only **after** the consolidated approval above is given; on a fallback to the gated model, do not write them — the per-phase loops run instead. In `--auto`, write the `--auto` waivers once Phase 3 completes, then `node .claude/scripts/bundle-write.js` and `node .claude/scripts/plan-seal.js write --lane --auto`, then continue to Phase 4.
 
 When confidence is **low**, do not present the bare approve/reject question — lead with the drivers and recommend resolving them first, e.g. *"Plan confidence is LOW (2 open questions, 1 undecomposable story). Recommend `/clarify` before an unattended run. Clarify now, approve anyway, or stop?"* High/medium confidence keeps the single question above.
 

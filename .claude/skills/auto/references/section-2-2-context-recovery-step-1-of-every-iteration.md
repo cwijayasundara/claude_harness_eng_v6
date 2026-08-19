@@ -18,10 +18,11 @@ After `plan-seal.js check` (SECTION 1) passes, planning reads are this pack only
 - `specs/design/component-map.md`
 - `specs/test_artefacts/test-plan.md` (named seams)
 - `specs/test_artefacts/verification-matrix.json`
+- `specs/bundles/` — one JSON per ready story (the execution contract)
 
 Do not reload `/brd`, `specs/brd/brd.md`, or `.claude/skills/code-gen/SKILL.md` in full.
-Story files for the selected group are loaded after wave selection (item 6), not as a
-second planning pass. `quality.test_discipline` from `project-manifest.json` selects
+After wave selection (item 6), load `specs/bundles/{id}.json` for each selected story
+plus the design slices that bundle cites — not a second planning pass over every story file. `quality.test_discipline` from `project-manifest.json` selects
 the testing excerpt injected into teammates — not the whole code-gen skill.
 
 ### Operational state (session machinery, not the plan)

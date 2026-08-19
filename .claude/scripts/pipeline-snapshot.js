@@ -4,6 +4,7 @@
 // The snapshot shape is the machine contract consumed by renderers, --json, CI,
 // and e2e. See docs/archive/internal/PIPELINE_PROGRESS_PROPOSAL_2026-06-21.md.
 
+const fs = require('fs');
 const path = require('path');
 const {
   readMarker,
@@ -23,6 +24,7 @@ const {
   readNavTelemetry,
   parseIterationLog,
 } = require('./pipeline-state-readers');
+const { latestPlanningPhase, implementationStarted } = require('./planning-progress');
 
 function buildRun(stateDir, progress, last) {
   return {
@@ -92,17 +94,40 @@ function buildSprint(stateDir) {
   return { number: parseInt(num, 10), phase: readMarker(stateDir, 'sprint-phase') || 'unknown' };
 }
 
-function derivePhase(lane, progress) {
+function buildBundles(projectDir, nowMs) {
+  const dir = path.join(projectDir, 'specs', 'bundles');
+  if (!fs.existsSync(dir)) return { count: 0, last_sync: null, age_seconds: null };
+  const files = fs.readdirSync(dir).filter((n) => /^E\d+-S\d+\.json$/.test(n));
+  let last = null;
+  for (const name of files) {
+    try {
+      const raw = JSON.parse(fs.readFileSync(path.join(dir, name), 'utf8'));
+      const ts = raw && raw.provenance && raw.provenance.synced_at;
+      if (ts && (!last || ts > last)) last = ts;
+    } catch (_) { /* skip */ }
+  }
+  let age = null;
+  if (last && nowMs) {
+    const then = Date.parse(last);
+    if (Number.isFinite(then)) age = Math.max(0, Math.round((nowMs - then) / 1000));
+  }
+  return { count: files.length, last_sync: last, age_seconds: age };
+}
+
+function derivePhase(lane, progress, projectDir) {
   if (/^DONE\b/i.test(progress.next_action || '')) return 'done';
   const done = parseList(progress.groups_completed).length > 0;
   const drained = progress.current_group === 'none'
     && parseList(progress.groups_remaining).length === 0;
   if (done && drained) return 'done';
-  return lane || 'unknown';
+  if (lane) return lane;
+  return (projectDir && latestPlanningPhase(projectDir)) || 'unknown';
 }
 
-function deriveHealth(coverage, groups, stories, iter) {
-  const regressed = coverage.current != null
+function deriveHealth(coverage, groups, stories, iter, progress) {
+  const started = implementationStarted(progress || groups);
+  const regressed = started
+    && coverage.current != null
     && coverage.baseline != null
     && coverage.current < coverage.baseline;
   if (iter.failedOut || regressed) return 'failing';
@@ -122,7 +147,7 @@ function composeValues(stateDir, projectDir, progress, last, iter, groups, stori
     context_cache: readContextCache(projectDir),
     token_advisor: readTokenAdvisor(projectDir),
     nav_telemetry: readNavTelemetry(projectDir),
-    phase: derivePhase(readMarker(stateDir, 'current-lane') || (last && last.lane), progress),
+    phase: derivePhase(readMarker(stateDir, 'current-lane') || (last && last.lane), progress, projectDir),
     wave: buildWave(groups, countGroupsFromGraph(projectDir)),
     groups,
     stories,
@@ -131,8 +156,9 @@ function composeValues(stateDir, projectDir, progress, last, iter, groups, stori
     coverage,
     last_step: buildLastStep(last),
     sprint: buildSprint(stateDir),
+    bundles: buildBundles(projectDir, atMs || Date.now()),
     next_action: progress.next_action || null,
-    health: deriveHealth(coverage, groups, stories, iter),
+    health: deriveHealth(coverage, groups, stories, iter, progress),
   };
 }
 

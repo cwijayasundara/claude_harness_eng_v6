@@ -33,6 +33,7 @@ const path = require('path');
 const { handoffOn } = require('../hooks/lib/phase-handoff.js');
 const { liveSessionId } = require('../hooks/lib/live-session.js');
 const { digest } = require('./plan-artifact-digest.js');
+const { stampPlanningProgress } = require('./planning-progress.js');
 
 // brd joined the list when /brd was de-forked: before that its approval could
 // not reach a human, so a receipt would have recorded a stop that never
@@ -202,6 +203,7 @@ function recordRound(argv, root, phase, now) {
   writeReceipt(root, phase, buildReceipt({
     root, phase, verdict, artifacts, round, receipt, inSession: argv.includes('--in-session'),
   }));
+  if (verdict === 'approved') stampPlanningProgress(root, phase);
   process.stdout.write(`plan-approval: ${phase} round ${round.round} recorded as ${verdict}.\n`);
   process.stdout.write(handoffOn(phase, verdict, argv.includes('--in-session')));
   return 0;

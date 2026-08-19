@@ -122,14 +122,15 @@ test('scaffold.md wires the local tech pack and domain vertical into Step 1\'s q
 });
 
 test('scaffold.md Step 2 auto-attaches fastapi-code and react-code based on the chosen stack', () => {
-  const scaffoldMd = fs.readFileSync(
-    path.join(__dirname, '..', '.claude', 'commands', 'scaffold.md'), 'utf8'
+  const generation = fs.readFileSync(
+    path.join(__dirname, '..', '.claude', 'commands', 'references', 'scaffold-generation.md'), 'utf8'
   );
-  const step2Index = scaffoldMd.indexOf('## Step 2: Generate project-manifest.json');
-  const step3Index = scaffoldMd.indexOf('## Step 3');
-  assert.ok(step2Index > -1, 'expected Step 2 heading in scaffold.md');
+  assert.match(generation, /## Step 2: Generate project-manifest.json/);
+  const step2Index = generation.indexOf('## Step 2: Generate project-manifest.json');
+  const step3Index = generation.indexOf('## Step 3');
+  assert.ok(step2Index > -1, 'expected Step 2 heading in scaffold-generation.md');
   assert.ok(step3Index > step2Index, 'expected Step 3 to follow Step 2');
-  const step2Section = scaffoldMd.slice(step2Index, step3Index);
+  const step2Section = generation.slice(step2Index, step3Index);
   assert.match(step2Section, /fastapi-code/);
   assert.match(step2Section, /react-code/);
   assert.match(step2Section, /stack\.backend\.framework/);

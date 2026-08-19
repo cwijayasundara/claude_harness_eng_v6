@@ -20,10 +20,10 @@ const ROOT = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 const CALLERS = {
-  brd: '.claude/skills/brd/SKILL.md',
+  brd: '.claude/skills/brd/references/interview.md',
   spec: '.claude/skills/spec/SKILL.md',
-  test: '.claude/skills/test/SKILL.md',
-  design: '.claude/skills/design/references/mode-10-step-1-spawn-two-agents-concurrently.md',
+  test: '.claude/skills/test/references/test-eval.md',
+  design: '.claude/skills/design/references/mode-10-render-and-gates.md',
 };
 
 test('the evaluator keeps its frontier pin for runtime mode', () => {

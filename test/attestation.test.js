@@ -62,18 +62,18 @@ function gen(root, extra = {}) {
   return generateAttestation({ root, attestDir: path.join(root, '.claude', 'attestations'), runner, now: () => NOW, ...extra });
 }
 
-test('control_inventory round-trips the REAL manifest: total == guides+sensors == 166', () => {
+test('control_inventory round-trips the REAL manifest: total == guides+sensors == 168', () => {
   const root = makeRoot();
   const { bundle } = gen(root);
   const inv = bundle.control_inventory;
-  assert.strictEqual(inv.total, 166);
+  assert.strictEqual(inv.total, 168);
   assert.strictEqual(inv.total, inv.guides + inv.sensors);
-  assert.strictEqual(inv.guides, 50);
-  assert.strictEqual(inv.sensors, 116);
+  assert.strictEqual(inv.guides, 51);
+  assert.strictEqual(inv.sensors, 117);
   const axisSum = Object.values(inv.by_axis).reduce((a, b) => a + b, 0);
   const statusSum = Object.values(inv.by_status).reduce((a, b) => a + b, 0);
-  assert.strictEqual(axisSum, 166);
-  assert.strictEqual(statusSum, 166);
+  assert.strictEqual(axisSum, 168);
+  assert.strictEqual(statusSum, 168);
   assert.ok(inv.by_status.active > 0, 'expected active controls');
 });
 
@@ -275,18 +275,18 @@ test('standard-map: by_id overrides by_axis; an unknown axis is recorded unmappe
   assert.strictEqual(other.standard_ref, 'unmapped');
 });
 
-test('manifest is valid with the new sensors and the control budget holds at 166', () => {
+test('manifest is valid with the new sensors and the control budget holds at 168', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'harness-manifest.json'), 'utf8'));
   const { errors, counts } = validate(manifest);
   assert.deepStrictEqual(errors, [], errors.join('\n'));
-  assert.strictEqual(counts.guides + counts.sensors, 166);
+  assert.strictEqual(counts.guides + counts.sensors, 168);
   const ids = controlIds(manifest);
-  assert.strictEqual(ids.length, 166);
+  assert.strictEqual(ids.length, 168);
   assert.ok(ids.includes('compliance-attestation'));
   assert.ok(ids.includes('portfolio-compliance-rollup'));
   const baseline = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, '.claude', 'state', 'control-budget-baseline.json'), 'utf8'));
   const decision = budgetDecision(ids, baseline, justifiedIds(manifest));
-  assert.strictEqual(decision.blocked, false, 'control budget must not block at 166');
+  assert.strictEqual(decision.blocked, false, 'control budget must not block at 168');
 });
 
 test('scaffold round-trip: generator script, attestation skill, and standard-map ship to a target', () => {

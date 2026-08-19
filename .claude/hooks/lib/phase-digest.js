@@ -79,6 +79,40 @@ function acceptanceCoverage(requirements, acceptance) {
   return { criteria: acceptance.length, gated: requirements.length - uncovered.length, uncovered: uncovered.length };
 }
 
+/** Story-file count — stories.json first, then E*-S*.md if the index is absent. */
+function storyCount(root) {
+  const indexed = rows(readJson(root, 'specs/stories/stories.json'), 'stories').length;
+  if (indexed) return indexed;
+  try {
+    return fs.readdirSync(path.join(root, 'specs', 'stories'))
+      .filter((f) => /^E\d+-S\d+\.md$/.test(f)).length;
+  } catch (_) {
+    return 0;
+  }
+}
+
+/**
+ * Where `/spec` should go next. Presence of a scoped decisions file means
+ * shaping already happened — do not re-open the dialogue because a verdict
+ * timestamp is old or stories/ is still empty.
+ */
+function specProgress(root) {
+  const decisions = readJson(root, 'specs/decisions/spec-decisions.json');
+  const epics = decisions && decisions.milestone && decisions.milestone.epics;
+  const hasScope = Array.isArray(epics) && epics.length > 0;
+  const stories = storyCount(root);
+  let next = 'shape';
+  if (hasScope && stories === 0) next = 'render';
+  else if (hasScope && stories > 0) next = 'review';
+  return {
+    decisions: hasScope
+      ? { milestone: decisions.milestone.name || null, epics }
+      : null,
+    stories,
+    next,
+  };
+}
+
 /** What `/spec` needs from `/brd` — ids, counts, deny-list, open items. */
 function specInputs(root) {
   const requirements = rows(readJson(root, 'specs/brd/brd-requirements.json'), 'requirements');
@@ -100,6 +134,7 @@ function specInputs(root) {
     risks: rows(readJson(root, 'specs/brd/brd-risks.json'), 'risks')
       .filter((r) => /\bHigh\b/.test(r.text || '')).map((r) => ({ id: r.id, text: clip(r.text, 90) })),
     confidence: confidence ? (confidence.band || confidence.confidence || null) : null,
+    progress: specProgress(root),
   };
 }
 
@@ -124,15 +159,36 @@ function designInputs(root) {
   };
 }
 
+/** Story id an acceptance row belongs to (explicit field, else E*-S* prefix). */
+function criterionStoryId(row) {
+  if (!row) return null;
+  if (row.story || row.story_id) return row.story || row.story_id;
+  const m = String(row.id || '').match(/^(E\d+-S\d+)/);
+  return m ? m[1] : null;
+}
+
 /** What `/test` needs — coverage obligations, not the design prose. */
 function testInputs(root) {
   const criteria = rows(readJson(root, 'specs/stories/acceptance-criteria.json'), 'acceptance_criteria');
   const stories = rows(readJson(root, 'specs/stories/stories.json'), 'stories');
+  const byStory = {};
+  for (const c of criteria) {
+    const sid = criterionStoryId(c);
+    if (!sid) continue;
+    if (!byStory[sid]) byStory[sid] = [];
+    byStory[sid].push(c.id);
+  }
+  let designRendered = false;
+  try {
+    designRendered = fs.existsSync(path.join(root, 'specs', 'design', 'architecture.md'));
+  } catch (_) { /* ignore */ }
   return {
     source: 'specs/stories/ + specs/design/',
     full_text_for_the_renderer: ['acceptance-criteria.json', 'specs/design/api-contracts.md', '*.schema.json'],
     acceptance_criteria: criteria.length,
     stories: stories.length,
+    by_story: Object.entries(byStory).map(([id, acs]) => ({ id, acs })),
+    design_rendered: designRendered,
     schemas: (() => {
       try {
         return fs.readdirSync(path.join(root, 'specs/design')).filter((f) => f.endsWith('.schema.json'));
@@ -149,4 +205,7 @@ function digestFor(phase, root) {
   return build ? build(root) : null;
 }
 
-module.exports = { digestFor, PHASES: Object.keys(SOURCES), readJson, rows, clip, tally, idRange };
+module.exports = {
+  digestFor, PHASES: Object.keys(SOURCES), readJson, rows, clip, tally, idRange,
+  specProgress, storyCount,
+};

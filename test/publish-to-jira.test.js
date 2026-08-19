@@ -45,6 +45,16 @@ test('pickTransition matches by name or target name, case-insensitive', () => {
   assert.strictEqual(pickTransition(ts, 'nope'), null);
 });
 
+test('publishGroups updates an already-published Jira key instead of skipping', async () => {
+  const map = { groups: { A: { title: 'Group A', tracker_key: 'PROJ-9', url: 'u', stories: [] } } };
+  const { calls, request } = recordingRequest();
+  const res = await publishGroups(map, CONFIG, { request, readBody: () => 'updated' });
+  assert.strictEqual(res.updated.length, 1);
+  assert.strictEqual(res.created.length, 0);
+  assert.strictEqual(calls[0].method, 'PUT');
+  assert.match(calls[0].p, /issue\/PROJ-9/);
+});
+
 test('publishGroups creates an issue then transitions it to ready', async () => {
   const map = { groups: { A: { title: 'Group A', labels: ['x'], stories: ['E1-S1'] } }, stories: { 'E1-S1': { group: 'A' } } };
   const { calls, request } = recordingRequest();
@@ -78,13 +88,13 @@ test('publishGroups warns (no throw) when no transition matches the ready state'
   assert.ok(!calls.find((c) => c.method === 'POST' && /\/transitions$/.test(c.p)), 'no transition POST');
 });
 
-test('publishGroups skips an already-published group (no create)', async () => {
+test('publishGroups does not create a second issue for an already-published group', async () => {
   const map = { groups: { A: { title: 'A', stories: [], tracker_key: 'PROJ-7' } } };
   const { calls, request } = recordingRequest();
   const res = await publishGroups(map, CONFIG, { request, readBody: () => 'b' });
-  assert.strictEqual(res.skipped.length, 1);
   assert.strictEqual(res.created.length, 0);
-  assert.strictEqual(calls.length, 0);
+  assert.strictEqual(res.updated.length, 1);
+  assert.ok(!calls.find((c) => c.method === 'POST' && c.p === '/rest/api/3/issue'));
 });
 
 test('publishGroups dry-run makes no requests', async () => {
