@@ -12,7 +12,7 @@ const { GATE_TIERS } = require('../.claude/hooks/lib/sensor-tier');
 // an uninstalled pack breaks the commit gate for everyone.
 test('loading the registry does not eagerly require any pack gate module', () => {
   const loaded = Object.keys(require.cache).map((p) => p.replace(/\\/g, '/'));
-  for (const packModule of ['gates-legacy', 'gates-strict', 'gates-live-externals']) {
+  for (const packModule of ['gates-legacy', 'gates-strict', 'gates-live-externals', 'gates-registry-names']) {
     assert.ok(
       !loaded.some((p) => p.includes(`/hooks/lib/${packModule}.js`)),
       `${packModule}.js was eagerly loaded — it belongs to a pack and must be lazy (packRun)`
@@ -25,7 +25,7 @@ test('every pack-owned gate is wired through a lazy runner, not a direct referen
     require('path').join(__dirname, '..', '.claude', 'hooks', 'lib', 'gate-registry.js'), 'utf8'
   );
   // A top-level require of a pack module defeats the laziness above.
-  for (const packModule of ['gates-legacy', 'gates-strict', 'gates-live-externals']) {
+  for (const packModule of ['gates-legacy', 'gates-strict', 'gates-live-externals', 'gates-registry-names']) {
     assert.doesNotMatch(
       src,
       new RegExp(`^const .*require\\(['"]\\./${packModule}['"]\\)`, 'm'),
@@ -88,6 +88,7 @@ test('withoutSourceOnly returns only docs-safe gates', () => {
     'test-deletion-guard',
     'stub-smell-gate',
     'live-externals',
+    'registry-names',
     // G43: the tamper it catches (a test edited to go green) can land in a
     // test-only commit, exactly like test-deletion-guard above.
     'test-integrity',

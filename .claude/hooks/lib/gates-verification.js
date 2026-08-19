@@ -7,7 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 const { runMutationOnFiles, renderSurvivors } = require('./mutation-gate');
-const { failBlock, noteSkip, inAutoBuild, stagedNewTestFiles } = require('./pre-commit-util');
+const { failBlock, noteSkip, inAutoBuild, stagedNewTestFiles, requireScript, gitExec } = require('./pre-commit-util');
 const { isTestFile } = require('./tdd');
 const { readLedger } = require('./red-phase-ledger');
 const { integrityFindings } = require('./test-integrity');
@@ -100,4 +100,37 @@ function checkTestIntegrity(ctx) {
   });
 }
 
-module.exports = { checkMutation, checkTestIntegrity, checkImpactScopedRegression };
+function checkTrajectoryContract(ctx) {
+  const { projectDir } = ctx;
+  if (process.env.HARNESS_TRAJECTORY_GATE === 'off') {
+    noteSkip('trajectory-contract', 'HARNESS_TRAJECTORY_GATE=off');
+    return;
+  }
+  let gate;
+  try {
+    gate = requireScript('trajectory-contract');
+  } catch (_) {
+    noteSkip('trajectory-contract', 'sensor script missing or unloadable');
+    return;
+  }
+  const verdict = gate.evaluateFromDisk(projectDir, gitExec(projectDir));
+  if (verdict.status === 'skip') {
+    noteSkip('trajectory-contract', verdict.reason);
+    return;
+  }
+  if (verdict.status === 'fail') {
+    const failed = (verdict.checks || []).filter((c) => c.required && !c.ok);
+    failBlock({
+      id: 'trajectory-contract',
+      title: 'trajectory-contract — agent session is missing a required step receipt',
+      detail: `${failed.map((c) => `  - ${c.id}: ${c.detail}`).join('\n')}\n`,
+      fix: 'run the missing step (tests / context-pack) and leave its receipt, then re-commit. Do not skip verification and then swap models.',
+      envOff: 'HARNESS_TRAJECTORY_GATE',
+      minTier: 'standard',
+    });
+  }
+}
+
+module.exports = {
+  checkMutation, checkTestIntegrity, checkImpactScopedRegression, checkTrajectoryContract,
+};

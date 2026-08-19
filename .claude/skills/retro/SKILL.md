@@ -49,6 +49,11 @@ answer for each before drafting new ones.
 - `harness-manifest.json` / `HARNESS.md` — to check whether a proposed target
   (a gate, sensor, guide) already exists and how it's currently wired, so a
   recommendation references the real file, not an invented one.
+- `specs/retro/loop-health.md` **Failure causes** section — last-N blocked
+  gate outcomes and `failures.md` categories clustered by cause (skipped
+  verification, context-miss, spec-gap, security, hallucinated-dep, …). A
+  dominant cluster is evidence to fix the harness (tools, rules, context)
+  before swapping models.
 - `npm run sensor-value` — the biting-meta value meter: commit gates that never
   fire or never block over run history (candidate shelfware to retire). Below
   its data floor it prints INSUFFICIENT DATA; treat that as "no removal
@@ -106,9 +111,10 @@ Do not silently drop a low-confidence idea; record it at low confidence
 instead.
 
 Emit a recommendation **when** a scorecard observation, a recurring failure
-category, or a rule that keeps reappearing across runs points to a specific,
-nameable harness change — not for every scorecard line, and not as a
-restatement of a note the scorecard already prints verbatim.
+category, a dominant **Failure causes** cluster, or a rule that keeps
+reappearing across runs points to a specific, nameable harness change — not
+for every scorecard line, and not as a restatement of a note the scorecard
+already prints verbatim.
 
 Each recommendation is one JSON object:
 

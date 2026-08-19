@@ -52,6 +52,7 @@ const GATE_CATALOG = Object.freeze([
   // live-externals is runsWithoutSource:true so it fires on a test-only commit
   // (a new tests/integration file with no other source), like test-deletion-guard.
   { id: 'live-externals', order: 36, runsWithoutSource: true, run: packRun('gates-live-externals', 'checkLiveExternalsGate', 'verification') },
+  { id: 'registry-names', order: 37, runsWithoutSource: true, run: packRun('gates-registry-names', 'checkRegistryNames', 'verification') },
   // source-only exit sits here in the runner
   { id: 'refactor-purity', order: 40, runsWithoutSource: false, run: early.checkRefactorPurity },
   { id: 'layer-imports', order: 50, runsWithoutSource: false, run: early.checkLayers },
@@ -64,6 +65,7 @@ const GATE_CATALOG = Object.freeze([
   { id: 'legacy-discipline-proof', order: 80, runsWithoutSource: false, run: packRun('gates-legacy', 'checkLegacyDisciplineGate', 'legacy-discipline') },
   { id: 'sprout-diff', order: 90, runsWithoutSource: false, run: packRun('gates-legacy', 'checkSproutDiffGate', 'legacy-discipline') },
   { id: 'at-first-gate', order: 100, runsWithoutSource: false, run: packRun('gates-legacy', 'checkAtFirstGate', 'legacy-discipline') },
+  { id: 'trajectory-contract', order: 101, runsWithoutSource: false, run: packRun('gates-verification', 'checkTrajectoryContract', 'verification') },
   { id: 'sprint-contract', order: 110, runsWithoutSource: false, run: packRun('gates-planning', 'checkSprintContract', 'planning') },
   { id: 'type-check', order: 120, runsWithoutSource: false, run: quality.checkTypescript },
   { id: 'coverage-ratchet-py', order: 130, runsWithoutSource: false, run: quality.checkCoverage },

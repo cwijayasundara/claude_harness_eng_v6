@@ -1469,6 +1469,19 @@
       "net_add_justification": "Pre-existing control, previously UNREGISTERED. It has been running on every write/commit; registering it corrects the inventory rather than adding machinery. The budget rises because the old count understated what governs this repo."
     },
     {
+      "id": "registry-names",
+      "axis": "behaviour",
+      "type": "computational",
+      "cadence": "commit",
+      "status": "active",
+      "scope": "dependencies",
+      "gap_ref": "G44",
+      "wired_at": ".claude/scripts/registry-name-gate.js",
+      "signal": "a staged dependency or import is not on the npm/PyPI registry, or is an edit-distance slopsquat of a popular package",
+      "net_add_justification": "Generated code invents package names (404) and 1-edit slopsquats of popular packages; no existing sensor (dep-audit, secret-scan, live-externals) asks whether a newly introduced name is real. Commit-cadence, injected lookup, fail-open on network error.",
+      "description": "Hallucinated-dependency / slopsquat gate (G44). hooks/lib/registry-names.js classifies newly introduced npm/PyPI names from staged package.json, requirements.txt, and import/require lines: a 1-edit (or 2-edit, length>=5) near-miss of a popular package is a typosquat even if the name exists on the registry; a name missing from the registry is hallucinated. scripts/registry-name-gate.js does the git plumbing and a short HTTPS probe (404=missing, non-200=lookup-error, not a block). Wired into GATE_CATALOG via gates-registry-names.js (verification pack), runsWithoutSource so a package.json-only commit is checked, standard+ tier. Default-on; HARNESS_REGISTRY_NAME_GATE=off acknowledges a local skip. KNOWN LIMITATIONS: heuristic import regex, not an AST; popular-package list is a curated floor, not the whole registry; lookup errors fail open so a dark registry cannot freeze commits."
+    },
+    {
       "id": "regression-suite-full",
       "axis": "behaviour",
       "type": "computational",
@@ -1707,6 +1720,19 @@
       "signal": "net-new/dropped or untraced IDs across the planning trace chain: BRD vs FRD/interview spine, story vs BRD, test case vs AC + obligation",
       "net_add_justification": "Absorbs the former separate grounding-check sensor (v6-reduction, one-owner-per-invariant): the net-new/dropped ID-linkage invariant is one engine (trace-check.js) across every link, so it is registered once here rather than split into a second same-invariant sensor. grounding-check.js stays as a BRD-specific field-renaming adapter (still runs and is still tested), named below so the BRD hard block is not hidden.",
       "description": "Deterministic hard block on ID linkage across the whole planning trace chain — the single owner of the net-new/dropped invariant. One engine (trace-check.js) backs all links: BRD vs FRD/interview spine (via the BRD-specific grounding-check.js adapter at /brd Step 4.4, which only renames fields), story vs BRD (spec), and test case vs AC + obligation (test)."
+    },
+    {
+      "id": "trajectory-contract",
+      "axis": "behaviour",
+      "type": "computational",
+      "cadence": "commit",
+      "status": "active",
+      "scope": "artifacts",
+      "gap_ref": "G45",
+      "wired_at": ".claude/scripts/trajectory-contract.js",
+      "signal": "an agent session that staged story-owned production files left no test-run receipt, or (when the brownfield graph is real) no fresh context-pack receipt",
+      "net_add_justification": "Tests judge the artifact; nothing judged the agent's path. AT-first, red-phase, and token-governor each see one receipt; an implementer can skip the path and still land green output. This is the join, skip-if-no-agent-session so human commits are not blocked.",
+      "description": "Trajectory contract (G45). Joins existing receipts (red-phase ledger, at-red, coverage-verdicts, context-pack-last.json) into specs/reviews/trajectory.json. SKIPs when there is no component-map, no story-owned production file, or no agent-session receipt — human-only commits stay open. BLOCKs when an agent session staged story-owned production and a required step has no receipt: a test actually ran, and (if the brownfield graph is real) a fresh context pack. Does not re-check AT-first or live-externals. Wired via gates-verification.checkTrajectoryContract at order 101, standard+. HARNESS_TRAJECTORY_GATE=off acknowledges a local skip."
     },
     {
       "id": "trust-boundary",

@@ -12,6 +12,7 @@
 const fs = require('fs');
 const path = require('path');
 const { readOutcomes } = require('./sensor-outcomes');
+const { clusterFailures, clusterNotes, clusterTableLines, rowsFromLedgers } = require('./failure-clusters');
 
 function stripComments(md) {
   return String(md || '').replace(/<!--[\s\S]*?-->/g, '');
@@ -193,6 +194,7 @@ function deriveNotes(signals) {
   if (laneNote) notes.push(laneNote);
   notes.push(...leadTurnNotes(telemetry));
   notes.push(...bitingNotes(signals.biting));
+  notes.push(...clusterNotes(signals.failureClusters));
   return notes;
 }
 
@@ -214,13 +216,18 @@ function bitingNotes(biting) {
 }
 
 function buildScorecard(root) {
+  const failures = parseFailures(readText(root, '.claude/state/failures.md'));
   const signals = {
     telemetry: summarizeTelemetry(readLines(root, '.claude/state/telemetry-ledger.jsonl')),
-    failures: parseFailures(readText(root, '.claude/state/failures.md')),
+    failures,
     learnedRules: countRules(readText(root, '.claude/state/learned-rules.md')),
     processRules: countRules(readText(root, '.claude/state/process-rules.md')),
     flakeEvents: readFlakeCount(root),
     biting: analyzeBiting(root),
+    failureClusters: clusterFailures(rowsFromLedgers(
+      readOutcomes(root).filter((o) => o.blocked),
+      failures.byCategory,
+    )),
     baselines: {
       cycle: readBaselineNum(root, '.claude/state/cycle-baseline.txt'),
       coupling: readBaselineNum(root, '.claude/state/coupling-baseline.txt'),
@@ -240,13 +247,10 @@ function laneActivityLines(byLane) {
   return rows;
 }
 
-function renderMd(scorecard, generatedAt) {
-  const { signals, notes } = scorecard;
+function signalTable(signals) {
   const t = signals.telemetry;
   const b = signals.baselines;
-  const lines = [
-    '# Loop-health scorecard', '', `Generated: ${generatedAt}`, '',
-    '## Signals', '',
+  return [
     '| Signal | Value |', '|---|---|',
     `| Telemetry events | ${t.events} |`,
     `| Tool calls (errors) | ${t.tools} (${t.toolErrors}, ${(t.toolErrorRate * 100).toFixed(1)}%) |`,
@@ -256,12 +260,17 @@ function renderMd(scorecard, generatedAt) {
     `| Learned / process rules | ${signals.learnedRules} / ${signals.processRules} |`,
     `| Flake events | ${signals.flakeEvents} |`,
     `| Baselines (cycle / coupling / cov / covJs) | ${b.cycle} / ${b.coupling} / ${b.coverage} / ${b.coverageJs} |`,
-    '',
-    LEAD_TURN_CAVEAT,
-    '',
-    '## Lane activity', '',
-    ...laneActivityLines(t.byLane),
-    '',
+  ];
+}
+
+function renderMd(scorecard, generatedAt) {
+  const { signals, notes } = scorecard;
+  const lines = [
+    '# Loop-health scorecard', '', `Generated: ${generatedAt}`, '',
+    '## Signals', '', ...signalTable(signals), '',
+    LEAD_TURN_CAVEAT, '',
+    '## Lane activity', '', ...laneActivityLines(signals.telemetry.byLane), '',
+    '## Failure causes', '', ...clusterTableLines(signals.failureClusters), '',
     '## Observations', '',
   ];
   if (!notes.length) lines.push('- No deterministic observations flagged this run.');

@@ -1,0 +1,1774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Structured User Story Driven Development (SUDD)</title>
+<meta name="description" content="How the Claude Harness Engine adapts Structured Prompt-Driven Development: the user story — not the prompt — is the first-class delivery artifact, joined into a versioned bundle and executed inside a generator/evaluator control loop." />
+<style>
+  :root {
+    --bg: #0b0f14;
+    --bg-elev: #111821;
+    --bg-card: #151d28;
+    --bg-hover: #1a2433;
+    --border: #243041;
+    --border-soft: #1c2634;
+    --text: #e7eef8;
+    --text-dim: #9aabbf;
+    --text-mute: #6b7c91;
+    --accent: #5b9dff;
+    --accent-2: #7c5cff;
+    --accent-3: #2dd4bf;
+    --warn: #f5a524;
+    --danger: #f87171;
+    --ok: #34d399;
+    --gen: #60a5fa;
+    --eval: #c084fc;
+    --human: #fbbf24;
+    --sidebar-w: 292px;
+    --radius: 12px;
+    --font: "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    --shadow: 0 12px 40px rgba(0,0,0,.35);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+    font-size: 15.5px;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, kbd, .mono {
+    font-family: var(--mono);
+    font-size: 0.88em;
+  }
+  code {
+    background: rgba(91,157,255,.1);
+    border: 1px solid rgba(91,157,255,.18);
+    padding: 0.1em 0.4em;
+    border-radius: 6px;
+    color: #c7dcff;
+  }
+  pre {
+    background: #0a1018;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    line-height: 1.5;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+  }
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #d6e4ff;
+  }
+  kbd {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    padding: 0.05em 0.45em;
+    border-radius: 6px;
+    color: var(--text-dim);
+  }
+  blockquote.doctrine {
+    margin: 1.25rem 0;
+    padding: 1.1rem 1.25rem;
+    border-left: 3px solid var(--accent-2);
+    background: linear-gradient(90deg, rgba(124,92,255,.12), transparent 70%);
+    border-radius: 0 12px 12px 0;
+    font-size: 1.08rem;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    color: #f0f4ff;
+  }
+  blockquote.doctrine p { margin: 0; color: inherit; }
+  blockquote.quote {
+    margin: 1.25rem 0;
+    padding: 0.9rem 1.15rem;
+    border-left: 3px solid var(--accent-3);
+    background: linear-gradient(90deg, rgba(45,212,191,.08), transparent 75%);
+    border-radius: 0 12px 12px 0;
+    color: #d7ece8;
+  }
+  blockquote.quote cite {
+    display: block;
+    margin-top: .55rem;
+    color: var(--text-mute);
+    font-style: normal;
+    font-size: .88rem;
+  }
+
+  .shell { display: flex; min-height: 100vh; }
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: var(--sidebar-w);
+    background: linear-gradient(180deg, #0d131b 0%, #0a0f15 100%);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    z-index: 40;
+  }
+  .sidebar-head {
+    padding: 1.1rem 1rem 0.85rem;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .brand { display: flex; gap: .7rem; align-items: center; margin-bottom: .85rem; }
+  .brand-mark {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 11px; color: white;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 8px 24px rgba(91,157,255,.25);
+  }
+  .brand h1 { margin: 0; font-size: 0.92rem; font-weight: 700; letter-spacing: -0.02em; }
+  .brand p { margin: 0; font-size: 0.72rem; color: var(--text-mute); }
+  .search-wrap { position: relative; }
+  .search-wrap input {
+    width: 100%;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    padding: 0.55rem 0.7rem 0.55rem 2rem;
+    font: inherit; font-size: 0.85rem; outline: none;
+  }
+  .search-wrap input:focus {
+    border-color: rgba(91,157,255,.55);
+    box-shadow: 0 0 0 3px rgba(91,157,255,.12);
+  }
+  .search-wrap::before {
+    content: "⌕";
+    position: absolute; left: .65rem; top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-mute); font-size: .95rem;
+  }
+  .nav { overflow-y: auto; padding: .75rem .55rem 1.5rem; flex: 1; }
+  .nav-group { margin-bottom: .85rem; }
+  .nav-group-title {
+    font-size: 0.68rem; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--text-mute); padding: .35rem .55rem; font-weight: 700;
+  }
+  .nav a {
+    display: block; color: var(--text-dim); text-decoration: none;
+    padding: .38rem .55rem; border-radius: 8px; font-size: 0.84rem;
+    border: 1px solid transparent;
+  }
+  .nav a:hover { background: var(--bg-hover); color: var(--text); text-decoration: none; }
+  .nav a.active {
+    background: rgba(91,157,255,.12); color: #d6e8ff;
+    border-color: rgba(91,157,255,.22);
+  }
+  .nav a.hidden { display: none; }
+
+  .main { margin-left: var(--sidebar-w); flex: 1; min-width: 0; }
+  .topbar {
+    position: sticky; top: 0; z-index: 30;
+    backdrop-filter: blur(14px);
+    background: rgba(11,15,20,.78);
+    border-bottom: 1px solid var(--border-soft);
+    padding: .7rem 1.75rem;
+    display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+  }
+  .topbar .crumbs { color: var(--text-mute); font-size: .84rem; }
+  .topbar .crumbs strong { color: var(--text-dim); font-weight: 600; }
+  .pill-row { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .pill {
+    font-size: .72rem; font-weight: 600;
+    padding: .22rem .55rem; border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--text-dim); background: var(--bg-card);
+  }
+  .pill.accent { border-color: rgba(91,157,255,.4); color: #b9d6ff; background: rgba(91,157,255,.1); }
+  .pill.ok { border-color: rgba(52,211,153,.35); color: #9ff0c8; background: rgba(52,211,153,.08); }
+  .pill.warn { border-color: rgba(245,165,36,.35); color: #ffd899; background: rgba(245,165,36,.08); }
+  .pill.human { border-color: rgba(251,191,36,.35); color: #ffe7a3; background: rgba(251,191,36,.08); }
+
+  .content { max-width: 980px; margin: 0 auto; padding: 1.5rem 1.75rem 5rem; }
+  section.section { margin-bottom: 3.25rem; scroll-margin-top: 76px; }
+  .section > h2 {
+    font-size: 1.65rem; letter-spacing: -0.03em;
+    margin: 0 0 .35rem; padding-top: .25rem;
+  }
+  .section > .lede {
+    color: var(--text-dim); font-size: 1.02rem;
+    margin: 0 0 1.35rem; max-width: 68ch;
+  }
+  h3 { font-size: 1.15rem; margin: 1.75rem 0 .65rem; letter-spacing: -0.02em; }
+  h4 { font-size: .98rem; margin: 1.25rem 0 .5rem; color: #dbe7f7; }
+  p { margin: .55rem 0 0.9rem; color: #d2dceb; }
+  ul, ol { margin: .4rem 0 1rem; padding-left: 1.25rem; color: #d2dceb; }
+  li { margin: .28rem 0; }
+  li::marker { color: var(--text-mute); }
+
+  .hero {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 1.75rem 1.6rem 1.5rem;
+    background:
+      radial-gradient(900px 280px at 10% -20%, rgba(91,157,255,.18), transparent 60%),
+      radial-gradient(700px 260px at 90% 0%, rgba(124,92,255,.16), transparent 55%),
+      linear-gradient(180deg, #121a24 0%, #0e141c 100%);
+    box-shadow: var(--shadow);
+    margin-bottom: 2.25rem;
+  }
+  .hero .kicker {
+    font-size: .74rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--accent-3); font-weight: 700; margin: 0 0 .55rem;
+  }
+  .hero h2 {
+    margin: 0 0 .7rem; font-size: 2rem; letter-spacing: -0.035em; line-height: 1.15;
+  }
+  .hero .dek {
+    color: var(--text-dim); font-size: 1.06rem; max-width: 68ch; margin: 0 0 1.1rem;
+  }
+  .meta { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; color: var(--text-mute); font-size: .86rem; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .85rem; margin: 1rem 0 1.4rem; }
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.05rem;
+  }
+  .card .tag {
+    font-size: .68rem; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--accent-3); margin-bottom: .35rem;
+  }
+  .card h4 { margin: 0 0 .35rem; }
+  .card p { margin: 0; font-size: .92rem; color: var(--text-dim); }
+
+  .callout {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+    background: var(--bg-elev);
+    margin: 1.1rem 0 1.4rem;
+  }
+  .callout.sidebar-note { border-left: 3px solid var(--human); }
+  .callout .label {
+    font-size: .72rem; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--human); margin: 0 0 .35rem;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin: .8rem 0 1.3rem;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th, td {
+    text-align: left; padding: .62rem .75rem;
+    border-bottom: 1px solid var(--border-soft);
+    vertical-align: top;
+  }
+  th { color: var(--text-dim); font-weight: 650; background: #101722; }
+  tr:last-child td { border-bottom: none; }
+  td { color: #d2dceb; }
+
+  .fig {
+    margin: 1.2rem 0 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: #0c121a;
+    padding: 1rem 1rem .7rem;
+  }
+  .fig svg { width: 100%; height: auto; display: block; }
+  .figcaption {
+    color: var(--text-mute); font-size: .8rem;
+    margin-top: .65rem; text-align: center;
+  }
+
+  .steps { counter-reset: step; list-style: none; padding-left: 0; }
+  .steps li {
+    position: relative;
+    padding: .55rem 0 .55rem 2.6rem;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .steps li:last-child { border-bottom: none; }
+  .steps li::before {
+    counter-increment: step;
+    content: counter(step);
+    position: absolute; left: 0; top: .6rem;
+    width: 1.7rem; height: 1.7rem;
+    border-radius: 8px;
+    background: rgba(91,157,255,.14);
+    border: 1px solid rgba(91,157,255,.28);
+    color: #c7dcff;
+    display: grid; place-items: center;
+    font-size: .78rem; font-weight: 700;
+  }
+
+  .faq details {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-card);
+    margin: .55rem 0;
+    padding: .15rem .9rem .2rem;
+  }
+  .faq summary {
+    cursor: pointer;
+    font-weight: 600;
+    padding: .7rem 0;
+    color: #e4edf8;
+  }
+  .faq details[open] summary { border-bottom: 1px solid var(--border-soft); }
+
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .85rem;
+    margin: 1rem 0 1.4rem;
+  }
+  @media (max-width: 820px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; }
+    .compare { grid-template-columns: 1fr; }
+    .hero h2 { font-size: 1.55rem; }
+    .content { padding: 1.1rem 1rem 4rem; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <div class="brand">
+        <div class="brand-mark">SU</div>
+        <div>
+          <h1>SUDD</h1>
+          <p>Story as the delivery artifact</p>
+        </div>
+      </div>
+      <div class="search-wrap">
+        <input id="toc-search" type="search" placeholder="Filter sections…" autocomplete="off" />
+      </div>
+    </div>
+    <nav class="nav" id="toc">
+      <div class="nav-group">
+        <div class="nav-group-title">Essay</div>
+        <a href="#what-is-sudd">What is SUDD?</a>
+        <a href="#vs-spdd">What SUDD adds to SPDD</a>
+        <a href="#bundle">The story bundle</a>
+        <a href="#canvas">The REASONS constitution</a>
+        <a href="#workflow">The SUDD workflow</a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-title">Deep down</div>
+        <a href="#spine">The artifact spine</a>
+        <a href="#join">Deterministic join</a>
+        <a href="#control">Guides, sensors, cadence</a>
+        <a href="#generate">Generate from the join</a>
+        <a href="#gan">Writer / grader split</a>
+        <a href="#sync">Two-way sync</a>
+        <a href="#tokens">Token discipline</a>
+        <a href="#brownfield">Brownfield and reuse</a>
+        <a href="#lanes">Lanes and fitness</a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-title">Practice</div>
+        <a href="#example">Worked example</a>
+        <a href="#skills">Three core skills</a>
+        <a href="#tradeoffs">Trade-offs</a>
+        <a href="#closing">Closing</a>
+        <a href="#faq">Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="crumbs">docs / architecture / <strong>structured-user-story-driven-development</strong></div>
+      <div class="pill-row">
+        <span class="pill accent">SUDD</span>
+        <span class="pill">SPDD adaptation</span>
+        <span class="pill human">Human planning gates</span>
+        <span class="pill ok">Machine execution</span>
+      </div>
+    </div>
+
+    <article class="content">
+      <header class="hero">
+        <p class="kicker">Harness methodology · 19 August 2026</p>
+        <h2>Structured User Story Driven Development</h2>
+        <p class="dek">
+          How to make LLM-assisted changes governable, reviewable, and reusable —
+          by treating the <em>user story</em>, not the prompt, as the first-class
+          delivery artifact. This is the method the Claude Harness Engine runs
+          end to end, and the deep design of how that loop is wired.
+        </p>
+        <div class="meta">
+          <span>Companion to <a href="https://martinfowler.com/articles/structured-prompt-driven/">Structured Prompt-Driven Development</a></span>
+          <span>In-repo name: SSDD</span>
+          <span>Doctrine: <code>plan-review-loop/references/ssdd.md</code></span>
+        </div>
+      </header>
+
+      <p>
+        Once a team adopts AI coding assistants, the first gains show up at the
+        individual level: one developer can draft, modify, and refactor code much
+        faster than before. Delivery speed is rarely limited by typing. When you
+        look at the full lifecycle, from requirements through release, new
+        friction appears.
+      </p>
+      <ul>
+        <li>Ambiguous requirements become code quickly, and misunderstandings scale with them.</li>
+        <li>Reviews have to process more change, and inconsistency becomes easier to introduce.</li>
+        <li>More integration and testing issues surface because “generated” does not mean “aligned.”</li>
+        <li>Production risk is harder to reason about when the volume of change rises.</li>
+        <li>Chat transcripts vanish. The next session cannot tell what was decided, only what landed in git.</li>
+      </ul>
+      <p>
+        Local speed improves. That does not automatically become system-level
+        throughput. It is the Ferrari-on-muddy-roads problem Zhang and Xia
+        describe in SPDD: the engine is powerful, arrival time is determined by
+        the road. The real question is not “how do we generate more code?” It is
+        how we make AI-generated changes <strong>governable, reviewable, and
+        reusable</strong> so teams get faster and safer.
+      </p>
+      <p>
+        Thoughtworks Global IT answered that with
+        <a href="https://martinfowler.com/articles/structured-prompt-driven/">Structured Prompt-Driven Development</a>:
+        version the prompt, review the prompt, generate from the prompt, and when
+        reality diverges, <em>fix the prompt first</em>. That is the right closed
+        loop. SUDD keeps the loop and changes the artifact.
+      </p>
+
+      <blockquote class="doctrine">
+        <p>When reality diverges, fix the structured story record first — then re-render, then the code.</p>
+      </blockquote>
+
+      <!-- ============================================================ -->
+      <section class="section" id="what-is-sudd">
+        <h2>What is SUDD?</h2>
+        <p class="lede">
+          Structured User Story Driven Development is an engineering method that
+          treats the user story — joined into a machine-checkable bundle — as
+          the first-class delivery artifact.
+        </p>
+        <p>
+          Instead of relying on ad hoc chats, and instead of maintaining a
+          parallel library of REASONS prompt files, SUDD turns each ready story
+          into an asset that can be version-controlled, reviewed, reused, and
+          improved over time. The story already carries requirements, domain
+          language, scope, and acceptance criteria. Design and test planning
+          already produce ownership, operations, and verification rows. SUDD
+          <em>joins</em> those surfaces into one execution contract. Generation
+          reads that contract. Evaluation scores the running system against it.
+          Sync writes code-side structure back into it.
+        </p>
+        <p>
+          The Claude Harness Engine implements SUDD as
+          <strong>Structured Story-Driven Development (SSDD)</strong>. The names
+          refer to the same method. This essay uses SUDD because the unit is
+          the user story; the repo, skills, and changelog say SSDD.
+        </p>
+
+        <div class="cards">
+          <div class="card">
+            <div class="tag">Intent</div>
+            <h4>Story + Generation Contract</h4>
+            <p>Given/When/Then ACs, scope out, entities, operations, cited safeguards. Human-readable ticket stays in <code>specs/stories/</code>.</p>
+          </div>
+          <div class="card">
+            <div class="tag">Join</div>
+            <h4>Story bundle</h4>
+            <p><code>specs/bundles/{id}.json</code> is the executable contract. <code>/auto</code> and <code>/implement</code> load the bundle, not the artifact pile.</p>
+          </div>
+          <div class="card">
+            <div class="tag">Constitution</div>
+            <h4>System REASONS Canvas</h4>
+            <p><code>reasons-canvas.md</code> is the living design for the whole system. Per-story contracts are deltas against it, not replacements.</p>
+          </div>
+          <div class="card">
+            <div class="tag">Loop</div>
+            <h4>Closed on two scales</h4>
+            <p>Inside an iteration: record → code → evidence → sync. Across iterations: the next story starts from the sealed pack, not a blank chat.</p>
+          </div>
+        </div>
+
+        <p>
+          SUDD has two core components, mirroring SPDD’s canvas-plus-workflow
+          split — but the grain is different.
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="section" id="vs-spdd">
+        <h2>What SUDD adds to SPDD</h2>
+        <p class="lede">
+          Same closed loop. Same REASONS shape. A different first-class artifact,
+          and a control plane SPDD leaves to human review.
+        </p>
+
+        <div class="callout sidebar-note">
+          <p class="label">Sidebar · What SUDD adds to spec-driven development</p>
+          <p>
+            If you already know spec-driven development, you will recognize the
+            starting point: write the spec clearly first, then let the model
+            implement. SPDD takes a spec-anchored angle and treats structured
+            prompts as governed team assets. SUDD is also spec-anchored, but it
+            refuses a second prompt library. Planning already writes stories,
+            design, and tests. The missing piece was the <em>join</em> that
+            generation is forced to execute — plus deterministic sensors that
+            prove the join is still honest.
+          </p>
+        </div>
+
+        <div class="compare">
+          <div class="card">
+            <div class="tag">SPDD</div>
+            <h4>Prompt as artifact</h4>
+            <p>
+              A versioned REASONS file per change. Commands extract analysis,
+              write the canvas, generate code task-by-task, update the prompt
+              when requirements change, and sync the canvas when code is
+              refactored. Honesty of the artifacts is largely human review.
+            </p>
+          </div>
+          <div class="card">
+            <div class="tag">SUDD</div>
+            <h4>Story as artifact</h4>
+            <p>
+              A versioned story bundle per ready story. Human gates shape
+              decisions; scripts write volume; sensors hard-block missing IDs,
+              pending operations, canvas drift, and untraced tests. The system
+              canvas stays the constitution; the generation contract is the
+              per-change delta prompt.
+            </p>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Concern</th>
+                <th>SPDD (<code>openspdd</code>)</th>
+                <th>SUDD (this harness)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>First-class file</td>
+                <td><code>spdd/prompt/…[Feat]….md</code></td>
+                <td><code>specs/bundles/E1-S1.json</code></td>
+              </tr>
+              <tr>
+                <td>Human ticket</td>
+                <td>Requirements markdown</td>
+                <td><code>specs/stories/E1-S1.md</code></td>
+              </tr>
+              <tr>
+                <td>System design</td>
+                <td>Accumulated prior canvases</td>
+                <td><code>reasons-canvas.md</code> + <code>program-design.md</code></td>
+              </tr>
+              <tr>
+                <td>Per-change plan</td>
+                <td>Operations section of the prompt</td>
+                <td>Generation Contract (R / E / O / S)</td>
+              </tr>
+              <tr>
+                <td>Generate</td>
+                <td><code>/spdd-generate</code></td>
+                <td><code>/auto</code> (same role)</td>
+              </tr>
+              <tr>
+                <td>Requirements → spec</td>
+                <td><code>/spdd-prompt-update</code></td>
+                <td>Edit decisions / canvas / contract, then re-render</td>
+              </tr>
+              <tr>
+                <td>Code → spec</td>
+                <td><code>/spdd-sync</code></td>
+                <td><code>spdd-sync.js --write</code> + <code>/story-sync</code></td>
+              </tr>
+              <tr>
+                <td>Traceability</td>
+                <td>Human review of analysis + canvas</td>
+                <td>Hard-block ID chain: PRD → BRD → AC → matrix → evidence</td>
+              </tr>
+              <tr>
+                <td>Runtime proof</td>
+                <td>Optional curl API script + later unit tests</td>
+                <td>Independent evaluator: API + Playwright + schema + security</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          The gap analysis that produced this adaptation said it plainly: this
+          harness was already ahead of the SPDD example on behaviour
+          verification and on deterministic grounding. What it lacked was the
+          living, code-synced design artifact and a single join at story grain.
+          SUDD is that join. It does not import <code>openspdd</code>. Importing
+          the CLI would have duplicated <code>/brd</code>, <code>/spec</code>,
+          and <code>/design</code> and split the pipeline.
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="section" id="bundle">
+        <h2>The story bundle</h2>
+        <p class="lede">
+          One JSON file per ready story. A deterministic join, not a new
+          planning phase, and not a prompt the model is free to paraphrase.
+        </p>
+        <p>
+          Planning already writes stories, design, and tests into
+          <code>specs/</code>. Without a join, <code>/implement</code> can still
+          load a story file and improvise against chat. Design and the test
+          plan are then documentation the generator is not forced to execute.
+          The bundle closes that hole.
+        </p>
+
+        <pre><code>{
+  "version": 1,
+  "story_id": "E1-S1",
+  "sprint": 1,
+  "title": "Create a short link",
+  "readiness": "ready",
+  "requirements": {
+    "ac_ids": ["E1-S1-AC1"],
+    "brd_ids": ["BR-1"],
+    "br_acceptance_ids": ["BR-1-AC1"],
+    "scope_out": ["must not alter the session cookie format"]
+  },
+  "entities": [{ "name": "Link", "status": "existing" }],
+  "approach": {
+    "program_design": "specs/design/program-design.md",
+    "canvas": "specs/design/reasons-canvas.md",
+    "amendment": null
+  },
+  "structure": { "owned_files": ["src/links/service.py"], "layer": "Service" },
+  "operations": { "pending": false, "files": ["src/links/service.py"], "text": "…" },
+  "safeguards": { "ids": ["SG-2"], "none": false },
+  "tests": { "matrix_ids": ["VM-001"], "case_ids": ["TC-1"], "layers": ["unit", "api"] },
+  "provenance": { "story_path": "specs/stories/E1-S1.md", "parents": [] }
+}</code></pre>
+
+        <p>
+          <code>buildBundle()</code> in <code>.claude/hooks/lib/story-bundle.js</code>
+          is a pure function. Callers pass already-read objects; I/O lives in
+          <code>bundle-write.js</code> and <code>bundle-check.js</code>. That
+          split is load-bearing. Integration tests must round-trip the real
+          writer through the real checker. A hand-built fixture that encodes
+          the wrong shape keeps every test green while the feature is inert.
+        </p>
+
+        <h3>Two readiness modes</h3>
+        <p>
+          The same checker has two floors, because planning and generation
+          need different honesty.
+        </p>
+        <ul>
+          <li>
+            <strong>skeleton</strong> — written at spec-render. ACs must exist.
+            Operations may still say <code>pending</code>. The bundle is a
+            placeholder so later phases have a join target.
+          </li>
+          <li>
+            <strong>implementable</strong> — required before
+            <code>/implement</code> and <code>/auto</code> spawn anyone.
+            Operations must name repo-relative files. Verification-matrix rows
+            must exist. Owned files or Operations paths must exist. When a BRD
+            acceptance spine exists, every test that cites a story AC must also
+            cite an original-requirement id.
+          </li>
+        </ul>
+        <p>
+          Dormant when there are no ready stories: the checker exits 0 rather
+          than failing an empty greenfield. A missing bundle for a ready story
+          is a hard block.
+        </p>
+
+        <h3>The generation contract is the delta prompt</h3>
+        <p>
+          The system canvas is too coarse to be the per-change generation
+          prompt. Each story carries a <code>## Generation Contract</code>
+          with four subsections — Requirements, Entities, Operations,
+          Safeguards — the R / E / O / S slice of REASONS at story grain.
+        </p>
+        <ul>
+          <li><strong>Requirements</strong> keep the story’s Given/When/Then AC ids. They are not rewritten.</li>
+          <li><strong>Entities</strong> are marked <code>existing</code> | <code>new</code> | <code>unknown</code>, citing a code-graph path when the repo is brownfield.</li>
+          <li><strong>Operations</strong> are ordered steps that each name a file. <code>pending</code> is legal at skeleton, illegal at implementable.</li>
+          <li><strong>Safeguards</strong> cite <code>SG-n</code> ids the story can violate, or <code>none</code> plus a reason of at least 25 characters.</li>
+        </ul>
+        <p>
+          Behaviour changes update the Generation Contract first, rewrite the
+          bundle, then touch source. A teammate that codes from chat while
+          Operations still say <code>pending</code> is the failure this gate
+          exists to stop.
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="section" id="canvas">
+        <h2>The REASONS constitution</h2>
+        <p class="lede">
+          SPDD’s seven-part canvas is kept — as the system design, not as a
+          per-story prompt file.
+        </p>
+        <p>
+          Zhang and Xia’s REASONS Canvas forces clarity from intent through
+          governance: Requirements, Entities, Approach, Structure, Operations,
+          Norms, Safeguards. SUDD keeps that shape in
+          <code>specs/design/reasons-canvas.md</code>, emitted by
+          <code>/design</code> and validated by <code>validate-canvas.js</code>.
+        </p>
+
+        <div class="fig" aria-label="REASONS canvas mapped onto SUDD artifacts">
+          <svg viewBox="0 0 920 280" xmlns="http://www.w3.org/2000/svg" role="img">
+            <rect x="8" y="16" width="904" height="248" rx="14" fill="#101722" stroke="#243041"/>
+            <text x="28" y="44" fill="#6b7c91" font-size="12" font-family="ui-sans-serif,system-ui" letter-spacing="1.4">ABSTRACT — INTENT &amp; DESIGN</text>
+            <rect x="28" y="58" width="150" height="72" rx="10" fill="#152033" stroke="#3b6ea8"/>
+            <text x="44" y="88" fill="#b9d6ff" font-size="13" font-family="ui-sans-serif,system-ui" font-weight="700">R Requirements</text>
+            <text x="44" y="108" fill="#9aabbf" font-size="11" font-family="ui-sans-serif,system-ui">PRD · BRD · ACs</text>
+            <rect x="190" y="58" width="150" height="72" rx="10" fill="#152033" stroke="#3b6ea8"/>
+            <text x="206" y="88" fill="#b9d6ff" font-size="13" font-family="ui-sans-serif,system-ui" font-weight="700">E Entities</text>
+            <text x="206" y="108" fill="#9aabbf" font-size="11" font-family="ui-sans-serif,system-ui">CONTEXT.md · seed</text>
+            <rect x="352" y="58" width="150" height="72" rx="10" fill="#152033" stroke="#3b6ea8"/>
+            <text x="368" y="88" fill="#b9d6ff" font-size="13" font-family="ui-sans-serif,system-ui" font-weight="700">A Approach</text>
+            <text x="368" y="108" fill="#9aabbf" font-size="11" font-family="ui-sans-serif,system-ui">program-design</text>
+            <rect x="514" y="58" width="150" height="72" rx="10" fill="#152033" stroke="#3b6ea8"/>
+            <text x="530" y="88" fill="#b9d6ff" font-size="13" font-family="ui-sans-serif,system-ui" font-weight="700">S Structure</text>
+            <text x="530" y="108" fill="#9aabbf" font-size="11" font-family="ui-sans-serif,system-ui">owned files · layers</text>
+            <text x="28" y="162" fill="#6b7c91" font-size="12" font-family="ui-sans-serif,system-ui" letter-spacing="1.4">SPECIFIC — EXECUTION</text>
+            <rect x="28" y="176" width="312" height="64" rx="10" fill="#16241c" stroke="#2f8f6e"/>
+            <text x="44" y="206" fill="#9ff0c8" font-size="13" font-family="ui-sans-serif,system-ui" font-weight="700">O Operations</text>
+            <text x="44" y="224" fill="#9aabbf" font-size="11" font-family="ui-sans-serif,system-ui">Generation Contract · bundle.operations</text>
+            <text x="368" y="162" fill="#6b7c91" font-size="12" font-family="ui-sans-serif,system-ui" letter-spacing="1.4">COMMON — GOVERNANCE</text>
+            <rect x="368" y="176" width="150" height="64" rx="10" fill="#241b16" stroke="#a67a2a"/>
+            <text x="384" y="206" fill="#ffd899" font-size="13" font-family="ui-sans-serif,system-ui" font-weight="700">N Norms</text>
+            <text x="384" y="224" fill="#9aabbf" font-size="11" font-family="ui-sans-serif,system-ui">scaffold · code-gen</text>
+            <rect x="530" y="176" width="150" height="64" rx="10" fill="#241616" stroke="#a64a4a"/>
+            <text x="546" y="206" fill="#f8b4b4" font-size="13" font-family="ui-sans-serif,system-ui" font-weight="700">S Safeguards</text>
+            <text x="546" y="224" fill="#9aabbf" font-size="11" font-family="ui-sans-serif,system-ui">SG-n · BRD invariants</text>
+            <rect x="700" y="58" width="190" height="182" rx="10" fill="#1a1630" stroke="#7c5cff"/>
+            <text x="716" y="88" fill="#d7c8ff" font-size="13" font-family="ui-sans-serif,system-ui" font-weight="700">Governs</text>
+            <text x="716" y="112" fill="#9aabbf" font-size="11" font-family="ui-sans-serif,system-ui">machine-read path</text>
+            <text x="716" y="130" fill="#9aabbf" font-size="11" font-family="ui-sans-serif,system-ui">list on the Canvas</text>
+            <text x="716" y="160" fill="#c7dcff" font-size="11" font-family="ui-sans-serif,system-ui">canvas-sync-check</text>
+            <text x="716" y="178" fill="#c7dcff" font-size="11" font-family="ui-sans-serif,system-ui">compares the diff</text>
+            <text x="716" y="196" fill="#c7dcff" font-size="11" font-family="ui-sans-serif,system-ui">to this list</text>
+          </svg>
+          <div class="figcaption">Figure 1. REASONS stays the system constitution. Story grain lives in the Generation Contract and the bundle.</div>
+        </div>
+
+        <p>
+          Two extra rules make the canvas a sensor target rather than an essay:
+        </p>
+        <ol>
+          <li>
+            A machine-read <strong>Governs</strong> list names the source paths
+            the canvas claims to own. Empty Governs is a structure failure.
+          </li>
+          <li>
+            When <code>brd-safeguards.json</code> exists, every
+            <code>SG-n</code> the BRD recorded must be cited in Canvas
+            Safeguards or Norms. UNCOVERED (a required constraint the design
+            does not carry) and UNKNOWN (a cited id absent from the spine)
+            both block. A misplaced citation is a warning: the constraint
+            reached the design; only the filing is off.
+          </li>
+        </ol>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="section" id="workflow">
+        <h2>The SUDD workflow</h2>
+        <p class="lede">
+          Human-managed planning writes a structured record. Scripts transcribe
+          volume. <code>/auto</code> is generate. It does not reopen the planning gates.
+        </p>
+
+        <div class="fig" aria-label="SUDD closed loop">
+          <svg viewBox="0 0 920 220" xmlns="http://www.w3.org/2000/svg" role="img">
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#5b9dff"/>
+              </marker>
+            </defs>
+            <rect x="16" y="36" width="120" height="58" rx="10" fill="#1a2433" stroke="#fbbf24"/>
+            <text x="76" y="62" text-anchor="middle" fill="#ffe7a3" font-size="12" font-family="ui-sans-serif,system-ui" font-weight="700">/scaffold</text>
+            <text x="76" y="80" text-anchor="middle" fill="#9aabbf" font-size="10" font-family="ui-sans-serif,system-ui">N · norms</text>
+            <rect x="156" y="36" width="120" height="58" rx="10" fill="#1a2433" stroke="#fbbf24"/>
+            <text x="216" y="62" text-anchor="middle" fill="#ffe7a3" font-size="12" font-family="ui-sans-serif,system-ui" font-weight="700">/brd</text>
+            <text x="216" y="80" text-anchor="middle" fill="#9aabbf" font-size="10" font-family="ui-sans-serif,system-ui">R · E · SG</text>
+            <rect x="296" y="36" width="120" height="58" rx="10" fill="#1a2433" stroke="#fbbf24"/>
+            <text x="356" y="62" text-anchor="middle" fill="#ffe7a3" font-size="12" font-family="ui-sans-serif,system-ui" font-weight="700">/spec</text>
+            <text x="356" y="80" text-anchor="middle" fill="#9aabbf" font-size="10" font-family="ui-sans-serif,system-ui">stories · INVEST</text>
+            <rect x="436" y="36" width="120" height="58" rx="10" fill="#1a2433" stroke="#fbbf24"/>
+            <text x="496" y="62" text-anchor="middle" fill="#ffe7a3" font-size="12" font-family="ui-sans-serif,system-ui" font-weight="700">/design</text>
+            <text x="496" y="80" text-anchor="middle" fill="#9aabbf" font-size="10" font-family="ui-sans-serif,system-ui">A · S · canvas</text>
+            <rect x="576" y="36" width="120" height="58" rx="10" fill="#1a2433" stroke="#fbbf24"/>
+            <text x="636" y="62" text-anchor="middle" fill="#ffe7a3" font-size="12" font-family="ui-sans-serif,system-ui" font-weight="700">/test</text>
+            <text x="636" y="80" text-anchor="middle" fill="#9aabbf" font-size="10" font-family="ui-sans-serif,system-ui">matrix · seams</text>
+            <rect x="716" y="36" width="180" height="58" rx="10" fill="#152033" stroke="#5b9dff"/>
+            <text x="806" y="62" text-anchor="middle" fill="#b9d6ff" font-size="12" font-family="ui-sans-serif,system-ui" font-weight="700">/auto = generate</text>
+            <text x="806" y="80" text-anchor="middle" fill="#9aabbf" font-size="10" font-family="ui-sans-serif,system-ui">implementable bundles</text>
+            <line x1="136" y1="65" x2="156" y2="65" stroke="#5b9dff" stroke-width="1.6" marker-end="url(#arrow)"/>
+            <line x1="276" y1="65" x2="296" y2="65" stroke="#5b9dff" stroke-width="1.6" marker-end="url(#arrow)"/>
+            <line x1="416" y1="65" x2="436" y2="65" stroke="#5b9dff" stroke-width="1.6" marker-end="url(#arrow)"/>
+            <line x1="556" y1="65" x2="576" y2="65" stroke="#5b9dff" stroke-width="1.6" marker-end="url(#arrow)"/>
+            <line x1="696" y1="65" x2="716" y2="65" stroke="#5b9dff" stroke-width="1.6" marker-end="url(#arrow)"/>
+            <path d="M806 94 C806 150 216 150 216 94" fill="none" stroke="#7c5cff" stroke-width="1.6" stroke-dasharray="5 4"/>
+            <text x="511" y="168" text-anchor="middle" fill="#d7c8ff" font-size="11" font-family="ui-sans-serif,system-ui">fix the record · re-render · then code</text>
+            <text x="511" y="196" text-anchor="middle" fill="#6b7c91" font-size="11" font-family="ui-sans-serif,system-ui">plan-seal → /auto loads specs/bundles only · GATE_CATALOG still fires if SECTION 5 is skipped</text>
+          </svg>
+          <div class="figcaption">Figure 2. Human gates on the left. Generate on the right. The loop closes on the structured record, not on chat.</div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Gate</th>
+                <th>SPDD analog</th>
+                <th>Structured record (intent)</th>
+                <th>Volume (transcription)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>/scaffold</code></td>
+                <td>Project norms</td>
+                <td><code>.scaffold-profile.json</code> → manifest</td>
+                <td><code>scaffold-apply.js</code> copies the tree</td>
+              </tr>
+              <tr>
+                <td><code>/brd</code></td>
+                <td>Story + analysis</td>
+                <td><code>brd-requirements.json</code> + <code>analysis-seed.json</code></td>
+                <td><code>prd-extract.js</code> / <code>brd-lean-write.js</code></td>
+              </tr>
+              <tr>
+                <td><code>/spec</code></td>
+                <td><code>/spdd-story</code></td>
+                <td><code>spec-decisions.json</code> + skeleton contract</td>
+                <td><code>spec-render-write.js</code></td>
+              </tr>
+              <tr>
+                <td><code>/design</code></td>
+                <td>Analysis + REASONS canvas</td>
+                <td><code>design-decisions.json</code> + canvas + program-design</td>
+                <td><code>design-render</code></td>
+              </tr>
+              <tr>
+                <td><code>/test --plan-only</code></td>
+                <td>Test scenarios</td>
+                <td><code>verification-matrix.json</code> + <code>test-traces.json</code></td>
+                <td><code>test-plan-write.js</code></td>
+              </tr>
+              <tr>
+                <td><code>/auto</code></td>
+                <td><code>/spdd-generate</code></td>
+                <td>Implementable <code>specs/bundles/{id}.json</code></td>
+                <td><code>/implement</code> fills Operations, writes code</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Approval flags change whether a human must stop at the planning
+          gates. They do not turn off machine gates. Default
+          <code>/build</code> is gated. <code>--autonomous</code> reduces
+          approval. <code>--auto</code> waives planning approvals and records
+          the waiver. Headless lanes waive; they do not skip silently. Merge
+          stays human-owned.
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="section" id="spine">
+        <h2>Deep down: the artifact spine</h2>
+        <p class="lede">
+          Every downstream id is grounded in an upstream id. Relative checks
+          are not enough; the spine also has an absolute floor.
+        </p>
+        <p>
+          SPDD’s worked example produces rich analysis and a precise canvas,
+          then relies on people to notice a missing acceptance criterion or an
+          invented domain term. SUDD encodes that honesty as a chain of
+          hard-blocking sensors. A green pipeline is not “the model said the
+          BRD is complete.” It is “these identifiers still join.”
+        </p>
+
+        <ol class="steps">
+          <li>
+            <strong>PRD</strong> — the only artifact a human authors from
+            scratch. <code>validate-prd.js</code> requires every functional
+            requirement to carry an observable postcondition. Ids are
+            load-bearing; heading text is not.
+          </li>
+          <li>
+            <strong>BRD adopt</strong> — default <code>/brd --prd</code> is
+            adopt-only. <code>prd-extract.js</code> plus
+            <code>brd-adopt.js</code> carry PRD text verbatim into
+            <code>brd-requirements.json</code>. There is no rewriting step that
+            might incidentally “fix” a malformed requirement.
+          </li>
+          <li>
+            <strong>Taxonomy floor</strong> — <code>brd-taxonomy-check.js</code>
+            is the only absolute check in the planning chain. Ten slots
+            (functional, data lifecycle, integration, performance,
+            security/authz, privacy/retention, observability, operability,
+            UX/accessibility, constraints) each need a tagged requirement or a
+            substantive <code>na_reason</code>. Placeholder excuses fail.
+            Relative grounding cannot catch a silent FRD that stayed silent
+            all the way down.
+          </li>
+          <li>
+            <strong>Spec decisions</strong> — a human chooses milestone scope,
+            epic boundaries, and real-versus-defensive dependencies
+            <em>before</em> generation. At least one decision must have
+            <code>basis: "human"</code>. Load-bearing decisions cannot be
+            “original planner reasoning.”
+          </li>
+          <li>
+            <strong>Stories</strong> — INVEST scorecard, typed dependency
+            edges (<code>contract</code> | <code>data</code> | <code>behavior</code> |
+            <code>ui</code>), Given/When/Then ACs with stable ids, scope in /
+            scope out. Independence is computed from ownership clusters, not
+            self-graded.
+          </li>
+          <li>
+            <strong>Design decisions</strong> — a load-bearing architecture
+            decision must name what it <em>rules out</em>.
+            <code>n/a</code> / <code>none</code> / <code>TBD</code> are
+            rejected. Trace-check can pass and the canvas can be well-formed
+            while every decision is still a preference an implementer can
+            quietly reverse.
+          </li>
+          <li>
+            <strong>Test traces</strong> — each case maps to a story AC
+            <em>and</em>, when the spine exists, a BRD acceptance id.
+            <code>features.json</code> steps are generated from the
+            Given/When/Then triple, not re-authored.
+          </li>
+          <li>
+            <strong>Plan approval</strong> — <code>plan-approval.js</code>
+            records that a human reviewed the pair, with a sha256 of the
+            approved artifacts. An approval is void once those artifacts
+            change. That is the load-bearing anti-rubber-stamp property.
+          </li>
+          <li>
+            <strong>Plan seal</strong> — <code>plan-seal.js</code> freezes the
+            pack <code>/auto</code> is allowed to read, including
+            <code>specs/bundles/</code>.
+          </li>
+        </ol>
+
+        <p>
+          Two graphs sit on the same stories and answer different questions.
+          <code>dependency-graph.json</code> is topological depth — scheduling
+          order for waves. <code>story-clusters.json</code> is ownership:
+          weakly connected components over hard edges only
+          (<code>data</code>, <code>behavior</code>). Contract and UI edges are
+          cuttable because publishing the interface first genuinely
+          parallelizes two engineers. An interface contract with
+          <code>contract_story: null</code> is a hard failure: the cut is
+          fiction.
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="section" id="join">
+        <h2>Deep down: deterministic join</h2>
+        <p class="lede">
+          Models write judgements. Scripts write volume. Sensors prove the join.
+        </p>
+        <p>
+          This is the most important mechanical idea in the harness, and the
+          one most often missed if you only read the skill prose.
+        </p>
+        <p>
+          A planning skill that dumps every story file, the BRD, the eval JSON,
+          and the canvas into one context window will spend its budget
+          re-reading what a script already knows. SUDD therefore splits each
+          gate into <strong>shape</strong> (human + model, small) and
+          <strong>render</strong> (deterministic writer, large).
+        </p>
+        <ul>
+          <li><code>spec-render-write.js</code> expands <code>stories.json</code> into story files, features, traces, clusters, and skeleton bundles.</li>
+          <li><code>test-plan-write.js</code> emits the matrix, traces, and a skeleton plan from <code>story-traces.json</code> in one process.</li>
+          <li><code>bundle-write.js</code> joins ACs, ownership, matrix rows, generation contract, and originating BRD acceptance.</li>
+          <li><code>design-render</code> orients from <code>stories.json</code>, not every <code>E*-S*.md</code>.</li>
+        </ul>
+        <p>
+          After design, bundles are re-joined so Structure and owned files
+          land before <code>/test</code>. After implementation,
+          <code>spdd-sync.js --write</code> applies Canvas Governs/Operations
+          stubs and bundle ownership, then reports what is still wrong.
+          Report-only without <code>--write</code>.
+        </p>
+        <p>
+          The join sensors are not optional ceremony at the end of
+          <code>/auto</code> SECTION 5. They sit in <code>GATE_CATALOG</code>,
+          the same list the git hook runs:
+          <code>generation-contract</code>, <code>story-bundle-check</code>,
+          <code>canvas-sync-check</code>, and (when
+          <code>claude-progress.txt</code> has a current group) impact-scoped
+          regression. Skipping SECTION 5 still fails the commit.
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="section" id="control">
+        <h2>Deep down: guides, sensors, cadence</h2>
+        <p class="lede">
+          Agent = model + harness. The model writes code. The harness is
+          everything around it that makes the output trustworthy.
+        </p>
+        <p>
+          <code>HARNESS.md</code> is the human registry;
+          <code>harness-manifest.json</code> is the machine inventory. A
+          control is not implemented merely because a script exists. Status,
+          <code>wired_at</code>, cadence, and scope must match real execution.
+        </p>
+
+        <div class="cards">
+          <div class="card">
+            <div class="tag">Guide · feedforward</div>
+            <h4>Steer before the act</h4>
+            <p>Skills, the canvas, the bundle, learned rules, process rules, code-gen principles. Prevents a class of mistakes from being attempted.</p>
+          </div>
+          <div class="card">
+            <div class="tag">Sensor · feedback</div>
+            <h4>Observe after the act</h4>
+            <p>Computational (types, coverage, ID joins), inferential (reviewers), or hybrid. Feeds self-correction. Feedback-only repeats mistakes; feedforward-only encodes untested rules.</p>
+          </div>
+          <div class="card">
+            <div class="tag">Four axes</div>
+            <h4>What is governed</h4>
+            <p>Maintainability, architecture, behaviour — and traceability, which the source articles leave to humans and this harness hard-blocks.</p>
+          </div>
+        </div>
+
+        <pre><code>planning ──► session ──► commit ──► integration ──► drift
+(grounding) (inner loop) (pre-commit  (running app:     (outside the
+            on every     / gate)      evaluator / CI)   change cycle)
+            write)</code></pre>
+
+        <p>
+          Earlier is cheaper. Grounding fails before code exists. Session
+          hooks fail before a bad edit is even written.
+          <code>pre-write-gate.js</code> blocks prohibited paths, prompt-prefix
+          files, secrets, and selected TDD/coverage violations.
+          <code>pre-bash-gate.js</code> closes the shell-write bypass and
+          rejects destructive git during parallel implement. Commit runs the
+          tiered registry. Integration runs the evaluator against a live app.
+          Drift runs outside the change cycle so rot is visible even when
+          nobody opened a PR.
+        </p>
+        <p>
+          Sensor tier is a runtime dial, not a SKU.
+          <code>minimal</code> / <code>standard</code> / <code>strict</code>
+          come from <code>HARNESS_SENSOR_TIER</code> or
+          <code>project-manifest.json#quality.sensor_tier</code>.
+          <code>standard</code> is the product default. <code>strict</code>
+          adds cycle, coupling, clone, and mutation ratchets when the graph
+          is present.
+        </p>
+        <p>
+          The harness also ratchets <em>itself</em>.
+          <code>control-budget-gate.js</code> treats the count of registered
+          controls as monotonic: the count may only stay flat or drop unless
+          a new control carries a written
+          <code>net_add_justification</code>. Companion reports nominate
+          shelfware. A preventive gate that never fires looks identical to a
+          dead one; canaries feed each detector a known-bad and a known-good
+          input so “never blocked” splits into proven-live versus unproven.
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="section" id="generate">
+        <h2>Deep down: generate from the join</h2>
+        <p class="lede">
+          After the plan seal, <code>/auto</code> is <code>/spdd-generate</code>.
+          Teammates receive the bundle, not the pile.
+        </p>
+        <p>
+          Reloading <code>/brd</code>, <code>brd.md</code>, or every story
+          file inside generate is both a token leak and a drift source. The
+          sealed pack already joined those facts. The orchestrator:
+        </p>
+        <ol>
+          <li>Recovers context from <code>claude-progress.txt</code>, <code>features.json</code>, and git. On a fresh process it runs a resume smoke check before building (the Anthropic long-running-agent failure mode: do not assume the app still boots).</li>
+          <li>Negotiates a sprint contract per group from the bundle’s ACs, owned files, and matrix ids.</li>
+          <li>Validates every ready story at <code>--mode implementable</code>.</li>
+          <li>Spawns one implementer per story for multi-story groups (cap five concurrent), injecting learned rules, process rules, <code>CONTEXT.md</code>, and a context pack when a real code-graph exists.</li>
+          <li>Runs the ratchet: tests, <code>run-gate-checks.js</code>, story-sync, then the join sensors.</li>
+          <li>On PASS, updates features and continues. On FAIL, self-heals within a bound (three consecutive failed heals marks the story BLOCKED, extracts a learned rule, and moves on). A 50-iteration hard stop and a wall-clock / spawn / cost budget prevent oscillation without convergence.</li>
+        </ol>
+        <p>
+          File ownership is not a suggestion. The bundle’s
+          <code>structure.owned_files</code> is the assignment. Teammates may
+          not edit outside it without coordinator approval. Shared types use
+          an explicit handshake. Parallel implement also flips
+          <code>HARNESS_PARALLEL_AGENTS</code>, which makes stash,
+          <code>reset --hard</code>, <code>clean -fd</code>, and force-push
+          denied in the bash gate.
+        </p>
+        <p>
+          Testing discipline is a manifest knob, not a hidden default:
+        </p>
+        <ul>
+          <li><code>outcomes</code> — tests and production code together at the named seams. Default on new scaffolds.</li>
+          <li><code>tdd</code> — write-lock, red-phase recorder, test-integrity. A test file that is still red cannot be edited; a test that changed between the red run and the green run fails at commit.</li>
+          <li><code>at-first</code> — business-readable Given/When/Then against a Ports-and-Adapters seam, with a red receipt, before production files for that story.</li>
+        </ul>
+        <p>
+          First-window initialization is split from later windows. The first
+          context window sets the workspace; later windows resume. Session
+          chaining writes durable state so a killed process loses nothing that
+          was committed. <code>/status</code> reads that state, including
+          bundle count and last-sync age.
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="section" id="gan">
+        <h2>Deep down: the writer / grader split</h2>
+        <p class="lede">
+          The implementer is never the authority for its own result. That is
+          not a style preference. It is the anti-psychosis rule.
+        </p>
+        <p>
+          SUDD would still be useful with only the planning join. The harness
+          goes further because generated code that “looks right” in the
+          builder’s transcript is the most expensive kind of wrong. The
+          evaluator, code-reviewer, and security-reviewer run in fresh
+          context. They receive the contract, the diff, and the sealed
+          stories — not the builder’s reasoning.
+        </p>
+
+        <h3>Three runtime layers, then security</h3>
+        <ol>
+          <li><strong>API</strong> — live HTTP against the sprint contract. Status, body contains, optional schema ref into <code>api-contracts.schema.json</code>.</li>
+          <li><strong>Playwright</strong> — semantic locators, real user path. Evidence ledger required. Satisfying a functional check via <code>browser_evaluate</code> is a block: that proves a script ran, not that a user can do the thing.</li>
+          <li><strong>Design / vision</strong> — Full mode only, scored on a weighted rubric with a floor per criterion. Never an unstructured “looks good.”</li>
+        </ol>
+        <p>
+          Security is a gate, not advice. A missing scan is a fail. On a
+          security-boundary diff, <code>/gate</code> can spawn three
+          independent evaluator instances and three security-reviewer
+          instances and majority-vote per axis so no single blind spot
+          decides.
+        </p>
+        <p>
+          Review itself is tiered. Default is one reviewer with two axes
+          (standards vs spec). Size, a security boundary, or
+          <code>sensor_tier=strict</code> flips to two independent reviewers
+          whose verdicts merge under union: any BLOCK fails. The builder
+          transcript is excluded from the review pack on purpose.
+        </p>
+
+        <h3>Ratchets, not absolute sermons</h3>
+        <p>
+          Several sensors compare to a committed baseline and only fail on
+          regression: coverage, cycles, unstable hubs, clone clusters,
+          performance p95, agent-readiness pillars, security findings
+          (except secrets — new secrets always block), and the harness’s
+          own control budget. First measurement is often a warn that
+          establishes the baseline. Laundering a regression by refreshing
+          the baseline on FAIL is forbidden.
+        </p>
+        <p>
+          Local iteration uses impact-scoped regression (deterministic test
+          impact analysis over <code>code-graph.json</code>). Merge time
+          runs the full accumulated Playwright suite plus prior groups’
+          sprint-contract API checks, with replay so a missing boundary
+          fixture is a hard fail rather than a live external.
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="section" id="sync">
+        <h2>Deep down: two-way sync</h2>
+        <p class="lede">
+          SPDD’s golden rule, implemented as two flows and a fail-closed AC check.
+        </p>
+
+        <div class="compare">
+          <div class="card">
+            <div class="tag">Behaviour change</div>
+            <h4>Record first, then code</h4>
+            <p>
+              New rule, new field, new invariant: edit the Generation
+              Contract, <code>design-decisions.json</code>, or the Canvas,
+              rewrite the bundle, then generate a targeted diff. This is
+              SPDD’s <code>/spdd-prompt-update</code>. Do not patch
+              <code>api-contracts.md</code> and leave the canvas stale.
+            </p>
+          </div>
+          <div class="card">
+            <div class="tag">Refactor</div>
+            <h4>Code first, then sync</h4>
+            <p>
+              Structure or style that does not change observable behaviour:
+              change the code, then <code>spdd-sync.js --write</code> and
+              <code>/story-sync</code>. Owned-file moves update Structure
+              and Canvas Governs. AC drift fails closed — update the story
+              and run bundle-write; do not silently rewrite acceptance.
+            </p>
+          </div>
+        </div>
+
+        <p>
+          Sync is split on purpose. Path sync
+          (<code>canvas-sync.js</code>) is deterministic: it proposes the
+          exact Governs bullets and Operations stubs the diff implies, and
+          <code>--write</code> applies them. Semantic sync (does the prose
+          still hold?) is a companion sensor. Full bidirectional
+          regeneration of the entire canvas from the tree was deferred by
+          choice. Detection plus “fix the record first” shipped. That is
+          enough to stop silent rot; it is not a claim that the canvas is a
+          compiler.
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="section" id="tokens">
+        <h2>Deep down: token discipline</h2>
+        <p class="lede">
+          SUDD is also a cost architecture. Unstructured “read everything,
+          then think” is how planning burns a day’s budget before code exists.
+        </p>
+        <ol>
+          <li><strong>Shape, then <code>/clear</code>, then render.</strong> Judgement stays in the main session. Volume forks. Same-session render re-bills the dialogue.</li>
+          <li><strong>Digest, do not dump.</strong> <code>phase-digest.js</code> is the shaping input. Do not read <code>brd-requirements.json</code>, every story file, or eval JSON whole.</li>
+          <li><strong>Scripts write volume.</strong> The model fills only what a script cannot — seams, contested forks, Operations that name files.</li>
+          <li><strong>Review the lean pair</strong> in <code>lean-review-surface.md</code>, not the artifact pile. Phase-eval is <code>--eval</code> only.</li>
+          <li><strong>One structured record per gate.</strong> A change request edits that record, then <code>--render-only</code>. Re-present a changelog. Declined feedback is recorded, not silently absorbed.</li>
+          <li><strong>Do not churn the cached prefix.</strong> Mid-session writes to <code>CLAUDE.md</code>, <code>.mcp.json</code>, and settings are blocked. Model swaps happen on subagents, never by switching the orchestrator mid-run.</li>
+        </ol>
+        <p>
+          Progressive loading on <code>/auto</code> is the same idea at
+          generate time: the skill file is an index. The orchestrator loads
+          only the section it is executing. Wiring tests scan the index
+          <em>and</em> the section files as one corpus so the split cannot
+          drift.
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="section" id="brownfield">
+        <h2>Deep down: brownfield and reuse</h2>
+        <p class="lede">
+          Most work is enhancement. SUDD is designed for a living tree, not
+          only for a greenfield first sprint.
+        </p>
+        <p>
+          Before broad planning or feature work in an existing codebase,
+          <code>/brownfield</code> builds a factual map: architecture, tests,
+          risk, change strategy, and a deterministic code-graph. When that
+          graph is real, generate is context-first:
+          <code>context-pack.js --diff --budget 1600</code> produces cited
+          <code>read_next</code> ranges. Skeleton-flagged god files are
+          never whole-file-read.
+        </p>
+        <p>
+          Existing symbols that must change are classified before the first
+          production edit:
+        </p>
+        <ul>
+          <li><strong>Covered</strong> — change in place; existing tests are the pin.</li>
+          <li><strong>Uncovered but pinnable</strong> — write characterization tests at the nearest observable seam and prove they bite before editing.</li>
+          <li><strong>Uncovered and unpinnable</strong> — sprout: add behaviour in a new fully-tested unit; the legacy file may gain at most a call line or a wrap-rename pair. A mechanical sprout-diff gate enforces the symbol cap.</li>
+        </ul>
+        <p>
+          Sprint N does not regenerate the living design. It grounds the new
+          PRD against the prior requirement spine, writes a design
+          <em>amendment</em>, appends matrix rows as
+          <code>VM-id@sN</code> (never deletes the old row), and re-joins
+          bundles. An amendment-provenance sensor blocks
+          <code>specs/design/</code> edits that have no matching amendment.
+        </p>
+        <p>
+          Reuse is gated at intake when the scout band is medium or higher,
+          a constitution invariant is touched, or a same-release clone
+          cluster exists. The decision and a performance budget are recorded
+          before code. That is alignment at the “do we even build this?”
+          layer SPDD leaves to pairing.
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="section" id="lanes">
+        <h2>Where SUDD fits</h2>
+        <p class="lede">
+          SUDD is an engineering investment. The harness already encodes
+          SPDD’s fitness table as lanes. Using the wrong lane is the usual
+          failure mode.
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Fit</th><th>Scenario</th><th>Lane</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>★★★★★</td>
+                <td>New product, or a large enough new scope that stories, design, and tests must be re-shaped</td>
+                <td><code>/build</code> → human gates → <code>/auto</code></td>
+              </tr>
+              <tr>
+                <td>★★★★★</td>
+                <td>High-compliance / hard constraints / financial core</td>
+                <td>Same, with <code>sensor_tier=strict</code> and security-boundary <code>/gate</code></td>
+              </tr>
+              <tr>
+                <td>★★★★★</td>
+                <td>Next PRD on an established product</td>
+                <td><code>/sprint</code> (amendment, not redesign)</td>
+              </tr>
+              <tr>
+                <td>★★★★☆</td>
+                <td>One existing-code feature, end to end to a reviewed PR</td>
+                <td><code>/feature</code> → <code>/change</code> or the epic path</td>
+              </tr>
+              <tr>
+                <td>★★★★☆</td>
+                <td>Bounded behaviour change with a story or issue</td>
+                <td><code>/change</code> (test-first, full verification)</td>
+              </tr>
+              <tr>
+                <td>★★☆☆☆</td>
+                <td>Tiny low-risk fix, docs, narrowly scoped edit</td>
+                <td><code>/vibe</code> — micro-contract, still reviewed</td>
+              </tr>
+              <tr>
+                <td>★★☆☆☆</td>
+                <td>Behaviour-preserving structural work</td>
+                <td><code>/refactor</code> — keep refactor commits behaviour-free</td>
+              </tr>
+              <tr>
+                <td>★☆☆☆☆</td>
+                <td>UI mockup, ARB narrative, research report — does not ship</td>
+                <td>Lite / artifact lanes. Do not run the GAN loop.</td>
+              </tr>
+              <tr>
+                <td>★☆☆☆☆</td>
+                <td>Domain is a context black hole; no observable postconditions</td>
+                <td>Stop. Write a PRD. SUDD cannot invent the “why.”</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          SKU is an install boundary (<code>harness-core</code>,
+          <code>harness-full</code>, <code>harness-lite</code>), separate from
+          sensor tier. Lite is for artifacts that never ship. Small but
+          shippable code uses <code>/build --lite</code> or
+          <code>/vibe</code> inside the full harness, not Lite.
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="section" id="example">
+        <h2>Worked example: enhancing a short-link service</h2>
+        <p class="lede">
+          The same shape as the SPDD billing-engine walkthrough, executed
+          through SUDD artifacts instead of a prompt file.
+        </p>
+        <p>
+          Imagine a running service that already creates short links:
+          <code>POST /api/links</code> accepts a URL and returns a code.
+          Business now wants reserved aliases (“vanity codes”) for paying
+          workspaces, with uniqueness scoped to the workspace, not global.
+          That is an enhancement — the common case.
+        </p>
+
+        <h3>Step 1 — Lock the story, not the implementation</h3>
+        <p>
+          A human writes or adopts a PRD with observable postconditions.
+          Lean <code>/brd --prd</code> extracts the spine and an analysis
+          seed (domain terms, the PRD’s own questions, risks, safeguards).
+          <code>/spec</code> shapes milestone scope with the human, then
+          renders stories. For this change we get one ready story, not two
+          accidental ones:
+        </p>
+        <div class="callout">
+          <p class="label">E2-S1 — Reserve a vanity code</p>
+          <p>
+            <strong>In:</strong> a workspace admin can reserve an alias;
+            collision inside the workspace is 409; other workspaces may use
+            the same alias.<br />
+            <strong>Out:</strong> no billing change, no public directory of
+            aliases, no change to anonymous short-link creation.<br />
+            <strong>AC (E2-S1-AC1):</strong> Given workspace W and unused
+            alias <code>launch</code>, when an admin reserves it, then
+            <code>GET /w/{W}/launch</code> resolves to the target and the
+            record stores <code>workspaceId=W</code>.
+          </p>
+        </div>
+        <p>
+          The story’s Generation Contract is still skeleton: Operations
+          say <code>pending</code>. That is legal. Implementable would not
+          be.
+        </p>
+
+        <h3>Step 2 — Abstraction before generation</h3>
+        <p>
+          <code>/design</code> records decisions that name what they rule
+          out (for example: “workspace-scoped unique index, not a global
+          alias table”). The Canvas Entities section marks
+          <code>VanityReservation</code> as <em>new</em> and
+          <code>Link</code> as <em>existing</em>, citing the code-graph.
+          Structure lists <code>src/links/reservations.py</code>. Safeguards
+          cite the BRD invariant that anonymous create must not require a
+          workspace. <code>validate-canvas.js</code> refuses an empty
+          Governs list. Bundles are re-joined so owned files exist before
+          test planning.
+        </p>
+
+        <h3>Step 3 — Tests as operations you can run</h3>
+        <p>
+          <code>/test --plan-only</code> writes matrix row
+          <code>VM-014</code> (layers: unit, API) and traces
+          <code>E2-S1-AC1</code> → <code>BR-12-AC1</code>. Under
+          <code>at-first</code>, the acceptance test is written against the
+          reservation port with a fake store, observed red, and receipted
+          before any production file is added. Playwright stays the
+          confirming layer, not the primary AT.
+        </p>
+
+        <h3>Step 4 — Generate from the bundle</h3>
+        <p>
+          After seal, <code>/auto</code> loads
+          <code>specs/bundles/E2-S1.json</code> plus the cited canvas
+          slices. Step 0.2 of implement replaces
+          <code>pending</code> with ordered Operations that name files,
+          re-validates implementable, and only then writes code. The
+          teammate does not receive the BRD. Reviewers do not receive the
+          builder transcript.
+        </p>
+
+        <h3>Step 5 — Two kinds of review fix</h3>
+        <p>
+          A missing default for historical rows that have no
+          <code>workspaceId</code> is a <em>behaviour</em> change: update
+          the contract (“historical links remain globally unique and cannot
+          be reserved”), rewrite the bundle, regenerate the targeted
+          persistence path. Extracting a magic TTL into a named constant is
+          a <em>refactor</em>: change the code, then
+          <code>spdd-sync.js --write</code>. Regression is
+          impact-scoped locally and full-suite at <code>/gate</code>.
+        </p>
+
+        <h3>What the example delivered</h3>
+        <ol>
+          <li>A behaviour change whose acceptance criteria still join to the original requirement ids.</li>
+          <li>A living canvas whose Governs list includes the new reservation module.</li>
+          <li>A bundle the next sprint can start from, instead of rediscovering the decision in chat.</li>
+          <li>Evidence: AT red receipt, API check, optional Playwright path, security review of the new uniqueness rule.</li>
+        </ol>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="section" id="skills">
+        <h2>Three core skills</h2>
+        <p class="lede">
+          SPDD named the human skills that actually move. SUDD keeps them and
+          attaches a mechanical proof to each.
+        </p>
+
+        <div class="cards">
+          <div class="card">
+            <div class="tag">Alignment</div>
+            <h4>Lock intent before you write code</h4>
+            <p>
+              <code>/brd</code> and <code>/spec</code> make in / out /
+              postcondition explicit. Proof: PRD shape, taxonomy floor,
+              spec-decisions with a human basis, plan-approval digest.
+            </p>
+          </div>
+          <div class="card">
+            <div class="tag">Abstraction first</div>
+            <h4>Design before you generate</h4>
+            <p>
+              <code>/design</code> reviews types, signatures, and the call
+              stack on the canvas before any product file is written. Proof:
+              decisions that rule things out, canvas structure, Governs,
+              implementable Operations that name files.
+            </p>
+          </div>
+          <div class="card">
+            <div class="tag">Iterative review</div>
+            <h4>Turn output into a controlled loop</h4>
+            <p>
+              <code>plan-review-loop</code> is the bounded dialogue (cap 5).
+              Generate uses writer/grader split, ratchets, and fail-closed
+              sync. Proof: evaluator layers, adversarial review when the
+              tier says so, join sensors on every commit.
+            </p>
+          </div>
+        </div>
+
+        <p>
+          A fourth skill is implicit in this harness and mostly absent from
+          the SPDD article: <strong>leave a receipt</strong>. Coverage
+          verdicts, AT-red, plan approval, evaluator evidence, attestations —
+          if a discipline only lives in a skill file, an agent under pressure
+          will skip it. SUDD assumes that, and puts a sensor on the receipt.
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="section" id="tradeoffs">
+        <h2>Trade-offs to consider</h2>
+        <p class="lede">SUDD is not the shortest path to “generate code quickly.”</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Benefit</th><th>When it shows up</th><th>What you get</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Determinism at the join</td>
+                <td>Immediate</td>
+                <td>Hallucinated ownership, pending Operations, and untraced tests fail closed before spawn.</td>
+              </tr>
+              <tr>
+                <td>Traceability</td>
+                <td>Immediate</td>
+                <td>Every ready story still joins to ACs and, when present, original BRD acceptance.</td>
+              </tr>
+              <tr>
+                <td>Faster, better reviews</td>
+                <td>Short-term</td>
+                <td>Reviewers check intent against a bundle and a canvas, then a bounded diff — not a chat log.</td>
+              </tr>
+              <tr>
+                <td>Safer evolution</td>
+                <td>Long-term</td>
+                <td>Amendments, pinned behaviour, and ratchets make the next change cheaper than rediscovery.</td>
+              </tr>
+              <tr>
+                <td>Cost control</td>
+                <td>First expensive run</td>
+                <td>Shape/clear/render plus generate-from-the-join stop the “read the pile” tax.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Cost</th><th>Nature</th><th>What it takes</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Mindset</td>
+                <td>Ongoing</td>
+                <td>Design-first, record-first. Patching code and leaving the bundle stale is now a failing build, not a shortcut.</td>
+              </tr>
+              <tr>
+                <td>Senior judgement up front</td>
+                <td>Per feature</td>
+                <td>Someone still has to choose scope, rule things out, and refuse a story that is not INVEST.</td>
+              </tr>
+              <tr>
+                <td>Harness complexity</td>
+                <td>Infrastructure</td>
+                <td>Guides × sensors must stay honest. The control budget exists because this machinery accretes if nothing subtracts.</td>
+              </tr>
+              <tr>
+                <td>Variance at the record</td>
+                <td>Honest limit</td>
+                <td>Two developers can still write different Generation Contracts. Sensors raise the floor; they do not define “good” the way a type checker defines well-typed.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="section" id="closing">
+        <h2>Closing</h2>
+        <p>
+          SPDD showed that prompts can be first-class delivery artifacts:
+          versioned, reviewed, reused, and kept in sync with code. SUDD takes
+          that closed loop and aims it at the artifact delivery teams already
+          know how to argue about — the user story — then joins that story to
+          design and tests so generation has one contract and evaluation has
+          one oracle.
+        </p>
+        <p>
+          The Claude Harness Engine is the control plane around that method:
+          human gates on the left, deterministic writers in the middle,
+          generate-from-the-join on the right, an independent grader on the
+          running system, and sensors at every cadence so “the skill said so”
+          is never the only proof.
+        </p>
+        <p>
+          The framework in this essay is the moves. The advantage still comes
+          from the meta-skills behind them: abstraction, systematic analysis,
+          and a deep reading of the business. Those are human strengths. The
+          harness exists to keep those strengths in the loop while the model
+          does the typing.
+        </p>
+        <blockquote class="quote">
+          <p>
+            In science, if you know what you are doing, you shouldn’t be doing
+            it. In engineering, if you don’t know what you are doing, you
+            shouldn’t be doing it.
+          </p>
+          <cite>— Richard W. Hamming, quoted in the SPDD article this essay answers</cite>
+        </blockquote>
+        <p>
+          Further reading in this repo:
+          <code>HARNESS.md</code> (control inventory),
+          <code>.claude/skills/plan-review-loop/references/ssdd.md</code>
+          (operator doctrine),
+          <code>docs/archive/superpowers/specs/2026-08-17-story-bundle-design.md</code>
+          (join design),
+          <code>docs/archive/internal/HARNESS_ENGINEERING_GAP_ANALYSIS.md</code>
+          (SPDD gap map), and
+          <a href="https://martinfowler.com/articles/structured-prompt-driven/">Structured Prompt-Driven Development</a>.
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="section faq" id="faq">
+        <h2>Some questions answered</h2>
+        <p class="lede">The same questions the SPDD article received, answered for SUDD.</p>
+
+        <details>
+          <summary>With hooks and sensors already governing output, what gap does SUDD fill?</summary>
+          <p>
+            Both finer-grained intent and drift prevention, and they reinforce
+            each other. Global hooks are a safety net at the wrong altitude:
+            they cannot tell you whether this story’s Operations still name
+            the files the teammate is about to edit. The bundle is that
+            altitude. Sensors then prove the bundle, the canvas, and the
+            traces still join. Neither layer replaces the other.
+          </p>
+        </details>
+
+        <details>
+          <summary>How is this different from CLAUDE.md plus progressive disclosure?</summary>
+          <p>
+            Project instructions are feedforward for the whole repo. They
+            go stale the moment the code moves, and they are the wrong grain
+            for a single change. SUDD’s record is per story, versioned with
+            the code, two-way synced, and hard to ignore: generate will not
+            spawn if the join is not implementable. Progressive disclosure
+            is how the skills stay small. It is not the delivery artifact.
+          </p>
+        </details>
+
+        <details>
+          <summary>Does SUDD close the “why” loop automatically?</summary>
+          <p>
+            No, and that is deliberate. There is no silent learning loop that
+            makes the model wiser across chats. The “why” is captured in the
+            PRD postconditions, BRD safeguards, design decisions that name
+            what they rule out, and the Generation Contract. Version control
+            makes it durable. Two-way sync keeps it current. Humans remain
+            gatekeepers for load-bearing calls. Automated verification is at
+            the asset layer (IDs, structure, receipts), not a substitute for
+            judgement.
+          </p>
+        </details>
+
+        <details>
+          <summary>If two developers write different contracts, haven’t you just moved the variance up a layer?</summary>
+          <p>
+            Yes, partly. The canvas and the contract narrow the band compared
+            with free-form prompting; they do not eliminate it. What changed
+            is the floor and the review surface. A thin contract fails
+            implementable. A thick but wrong contract is still a human
+            review problem — now aimed at one file instead of a chat.
+            Automated “is this contract substantively good?” is the same
+            remaining gap the SPDD authors named. SUDD’s extra move is
+            traceability: a contract that does not join to ACs and matrix
+            rows cannot ship, however eloquent it is.
+          </p>
+        </details>
+
+        <details>
+          <summary>Why not just keep REASONS prompt files like openspdd?</summary>
+          <p>
+            Because this pipeline already produced stories, design, and tests.
+            A parallel prompt library would have been a second source of
+            truth and a second place to rot. The system canvas is enough
+            constitution. The missing piece was the join at story grain.
+            That is the bundle.
+          </p>
+        </details>
+
+        <details>
+          <summary>Can I skip planning and only run /auto?</summary>
+          <p>
+            Only if a sealed pack already exists.
+            <code>/auto</code> is generate. It will not reopen
+            <code>/brd</code> / <code>/spec</code> / <code>/design</code> /
+            <code>/test</code>. Headless <code>/build --auto</code> waives
+            the human stop and records the waiver; it still runs the
+            writers and the machine gates. There is no honest path that
+            starts from a vibe and exits with a sealed, implementable
+            bundle for a new product.
+          </p>
+        </details>
+
+        <details>
+          <summary>Where should I start in this repository?</summary>
+          <p>
+            Operators: <code>README.md</code> then
+            <code>.claude/skills/plan-review-loop/references/ssdd.md</code>.
+            Control-plane readers: <code>HARNESS.md</code> and
+            <code>open_wiki/wiki/architecture/control-plane.md</code>.
+            Implementers of the join:
+            <code>.claude/hooks/lib/story-bundle.js</code> and
+            <code>generation-contract.js</code>. This HTML is the narrative
+            that ties those files to the SPDD article.
+          </p>
+        </details>
+      </section>
+    </article>
+  </div>
+</div>
+
+<script>
+  const links = [...document.querySelectorAll("#toc a")];
+  const search = document.getElementById("toc-search");
+  search.addEventListener("input", () => {
+    const q = search.value.trim().toLowerCase();
+    links.forEach((a) => {
+      a.classList.toggle("hidden", q && !a.textContent.toLowerCase().includes(q));
+    });
+  });
+  const sections = links
+    .map((a) => document.querySelector(a.getAttribute("href")))
+    .filter(Boolean);
+  const io = new IntersectionObserver((entries) => {
+    const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+    if (!visible) return;
+    links.forEach((a) => a.classList.toggle("active", a.getAttribute("href") === "#" + visible.target.id));
+  }, { rootMargin: "-20% 0px -70% 0px", threshold: [0.1, 0.25, 0.5] });
+  sections.forEach((s) => io.observe(s));
+</script>
+</body>
+</html>

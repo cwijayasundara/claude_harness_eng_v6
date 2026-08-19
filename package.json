@@ -65,6 +65,8 @@
     "test-deletion-gate": "node .claude/scripts/test-deletion-gate.js --staged",
     "test-integrity": "node .claude/scripts/test-integrity-gate.js --emit",
     "live-externals-gate": "node .claude/scripts/live-externals-gate.js --staged",
+    "registry-name-gate": "node .claude/scripts/registry-name-gate.js --staged",
+    "trajectory-contract": "node .claude/scripts/trajectory-contract.js --staged",
     "stub-smell-gate": "node .claude/scripts/stub-smell-gate.js --staged",
     "merge-review-verdicts": "node .claude/scripts/merge-review-verdicts.js",
     "review-tier": "node .claude/scripts/review-tier.js",

@@ -281,6 +281,20 @@ test('renderMd: shows the lead-turn ratio row and the not-in-loop-observable cav
   assert.match(md, /cost-report/);
 });
 
+test('renderMd: surfaces clustered failure causes for /retro', () => {
+  const root = tmpRoot();
+  writeFile(root, '.claude/state/failures.md', [
+    '## Group G1 — Failure #1',
+    '- **Category:** type_error',
+    '## Group G1 — Failure #2',
+    '- **Category:** type_error',
+  ].join('\n'));
+  const md = renderMd(buildScorecard(root), '2026-08-19T00:00:00.000Z');
+  assert.match(md, /## Failure causes/);
+  assert.match(md, /quality/);
+  assert.match(md, /inspect tools, rules, and context before swapping models/);
+});
+
 test('renderMd: surfaces the byLane breakdown sorted by count desc', () => {
   const root = tmpRoot();
   writeFile(root, '.claude/state/telemetry-ledger.jsonl', [

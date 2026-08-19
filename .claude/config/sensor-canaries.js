@@ -218,6 +218,37 @@ const CANARIES = [
       };
     },
   },
+  {
+    probe: 'registry-names',
+    sensors: ['registry-names'],
+    why: 'a lodahs slopsquat must be flagged; a declared axios import must not',
+    run() {
+      const R = require(path.join(LIB, 'registry-names'));
+      const lookup = () => 'exists';
+      const bad = R.evaluateNames([{ name: 'lodahs', ecosystem: 'npm', file: 'package.json' }], lookup);
+      const good = R.evaluateNames([{ name: 'axios', ecosystem: 'npm', file: 'src/a.js' }], lookup);
+      return { bit: bad.pass === false, quiet: good.pass === true };
+    },
+  },
+  {
+    probe: 'trajectory-contract',
+    sensors: ['trajectory-contract'],
+    why: 'an agent session with no test receipt must fail; a human-only commit must skip',
+    run() {
+      const T = require(path.join(LIB, 'trajectory-contract'));
+      const now = Date.parse('2026-08-19T12:00:00.000Z');
+      const bad = T.evaluateTrajectory({
+        storyOwnedFiles: ['src/a.js'],
+        graphReal: false,
+        receipts: { contextPack: { ts: '2026-08-19T11:50:00.000Z' } },
+        now,
+      });
+      const good = T.evaluateTrajectory({
+        storyOwnedFiles: ['src/a.js'], receipts: {}, now,
+      });
+      return { bit: bad.status === 'fail', quiet: good.status === 'skip' };
+    },
+  },
 ];
 
 module.exports = { CANARIES };

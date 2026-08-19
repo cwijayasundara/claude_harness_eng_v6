@@ -1,5 +1,5 @@
 {
-  "count": 168,
+  "count": 170,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -120,6 +120,7 @@
     "record-reuse-decision",
     "red-phase-record",
     "refactor-purity",
+    "registry-names",
     "regression-suite-full",
     "resume-smoke",
     "retro-auto-invoke",
@@ -162,6 +163,7 @@
     "tool-output-pack",
     "topology-templates",
     "trace-check",
+    "trajectory-contract",
     "trust-boundary",
     "type-check",
     "unattended-preflight",
