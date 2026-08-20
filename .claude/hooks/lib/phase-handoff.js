@@ -160,6 +160,11 @@ function renderHandoffBlock(phase) {
     '',
     `  Everything left in this phase reads ${hop.decisions},`,
     ...hop.evidence,
+    '',
+    `  If you are /${phase}, this IS addressed to you: stop here and hand off.`,
+    `  If you are ${phase}-render, it is not: the clear already happened and you`,
+    '  are the hop it asks for — do not halt on it, continue rendering.',
+    '',
     `  ${RENDER_RULE}`,
     '',
   ].join('\n');

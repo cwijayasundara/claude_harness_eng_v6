@@ -15,6 +15,10 @@
 //
 // Usage:
 //   node .claude/scripts/validate-spec-decisions.js [--root DIR] [--lane --auto|--autonomous]
+//                                              [--in-session] [--rendering]
+//
+// --rendering: the caller is spec-render, i.e. already the post-/clear hop.
+// Suppresses the operator checkpoint; the structural checks are unchanged.
 
 const fs = require('fs');
 const path = require('path');
@@ -78,8 +82,13 @@ function readDoc(file) {
 // `session_id` still records who shaped the decisions. The printed checkpoint
 // tells a human to /clear then /spec --render-only. A waived headless lane
 // and /build --in-session get no checkpoint and continue.
-function checkpointOn(result, inSession) {
-  return result.waived || inSession ? '' : renderHandoffBlock('spec');
+// `rendering` is the renderer declaring itself. spec-render runs this same
+// gate at its Step 0; on a live run it read the checkpoint — written for the
+// shaping session's operator — as an instruction to halt, and returned
+// success having written nothing. It IS the post-clear hop the block asks
+// for, so it must not be told to make it.
+function checkpointOn(result, inSession, rendering) {
+  return result.waived || inSession || rendering ? '' : renderHandoffBlock('spec');
 }
 
 function main(argv) {
@@ -90,6 +99,7 @@ function main(argv) {
   const file = path.join(root, REL);
 
   const inSession = argv.includes('--in-session');
+  const rendering = argv.includes('--rendering');
   const result = validateDecisions(readDoc(file), { lane, sessionLane: sessionLane(root) });
   writeDecisionVerdict({
     root,
@@ -99,6 +109,7 @@ function main(argv) {
     result,
     lane,
     inSession,
+    rendering,
   });
   if (!result.ok) {
     process.stderr.write(`validate-spec-decisions: BLOCKED (${file})\n`);
@@ -108,7 +119,7 @@ function main(argv) {
   }
   const suffix = result.waived ? ` (human shaping waived by ${result.waived})` : '';
   process.stdout.write(`validate-spec-decisions: OK${suffix}\n`);
-  process.stdout.write(checkpointOn(result, inSession));
+  process.stdout.write(checkpointOn(result, inSession, rendering));
 }
 
 if (require.main === module) main(process.argv.slice(2));

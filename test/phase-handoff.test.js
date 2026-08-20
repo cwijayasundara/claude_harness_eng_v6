@@ -415,3 +415,32 @@ test('each phase cites evidence it actually has', () => {
   assert.match(renderHandoffBlock('design'), /The equivalent stretch\s+in \/spec was/);
   assert.doesNotMatch(renderHandoffBlock('design'), /On a metered run this/);
 });
+
+// The block is emitted by the decisions gate, which the shaping session AND the
+// renderer both run. A live spec-render read "Run /clear, then /spec" as a stop
+// instruction and returned success having written nothing. --rendering keeps it
+// off the renderer's stdout; naming the audience is the backstop for any caller
+// that does not pass the flag. The line must not read as "carry on" to the
+// shaping session, which genuinely has to stop here.
+test('the render handoff names BOTH audiences by command', () => {
+  for (const phase of ['spec', 'design']) {
+    const block = renderHandoffBlock(phase);
+    assert.match(block, new RegExp(`If you are /${phase}, this IS addressed to you`),
+      `${phase}: the shaping session is told the block binds it`);
+    assert.match(block, new RegExp(`If you are ${phase}-render, it is not`),
+      `${phase}: the renderer is told it does not`);
+    assert.match(block, /do not halt on it/, `${phase}: tells the renderer to continue`);
+  }
+});
+
+// The block's mandatory audience is the shaping session. Any instruction on how
+// to silence it is reachable ONLY by that session — the renderer passes
+// --rendering and never sees the block at all — so the sole effect of
+// documenting the flag here is to hand the one agent that must obey the block a
+// way out of it.
+test('the render handoff does not tell its reader how to suppress itself', () => {
+  for (const phase of ['spec', 'design']) {
+    assert.doesNotMatch(renderHandoffBlock(phase), /--rendering/,
+      `${phase}: the escape hatch is reachable only by the session that must obey`);
+  }
+});

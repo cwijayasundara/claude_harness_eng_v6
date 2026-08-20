@@ -272,3 +272,116 @@ test('the verdict records the decisions digest it was stamped against', () => {
   gate(dir);
   assert.match(verdictOf(dir).decisions_sha256, /^[0-9a-f]{64}$/);
 });
+
+// --- who the checkpoint is addressed to ---------------------------------------
+//
+// spec-render runs this same gate at its Step 0. On a live run it read the
+// checkpoint — written for the operator of the shaping session — as an
+// instruction to halt, and returned a confident success having written no
+// stories. The block is correct for the shaping session and wrong for the one
+// agent that must not obey it, so the renderer declares itself and gets no
+// block; the text names its own audience for any caller that forgets.
+
+test('--rendering suppresses the checkpoint: the renderer IS the post-clear hop', () => {
+  const dir = decisionsRoot('SESSION-A');
+  const out = gate(dir, ['--rendering']);
+  assert.match(out, /OK/);
+  assert.doesNotMatch(out, /\/clear/);
+});
+
+// The renderer never shaped anything, so it must never inherit the shaping
+// stamp — digest changed or not. Carrying it forward on an UNCHANGED digest is
+// already covered above; the case that bites is the documented unresolved-items
+// loop, which changes the digest by design: the renderer returns unresolved
+// items, the post-clear session appends them to decisions[], and re-dispatches.
+// The renderer's own gate is then the first run on the new digest, so without
+// --rendering it restamps the verdict with the post-clear session and the next
+// handoff-check blocks the very session the clear created — punished for having
+// resolved the ambiguity the renderer asked about.
+test('--rendering carries the shaping stamp forward even when decisions changed', () => {
+  const dir = decisionsRoot('SESSION-SHAPING');
+  gate(dir);
+  assert.strictEqual(verdictOf(dir).session_id, 'SESSION-SHAPING');
+
+  // The human clears; the post-clear session resolves an unresolved item.
+  fs.appendFileSync(path.join(dir, '.claude/runs/2026-08-09.jsonl'),
+    `${JSON.stringify({ kind: 'tool', session_id: 'SESSION-RENDER' })}\n`);
+  const file = path.join(dir, 'specs/decisions/spec-decisions.json');
+  const d = JSON.parse(fs.readFileSync(file, 'utf8'));
+  d.decisions.push(decision({ id: 'D-RESOLVED', basis: 'human' }));
+  fs.writeFileSync(file, JSON.stringify(d, null, 2));
+
+  gate(dir, ['--rendering']);
+  assert.strictEqual(verdictOf(dir).session_id, 'SESSION-SHAPING',
+    'the renderer must not claim to have shaped the amended decisions');
+});
+
+// The flag is the renderer declaring itself; a SHAPING session amending its own
+// decisions must still re-stamp. Without this the two behaviours are
+// indistinguishable and the carry-forward above could be an unconditional bug.
+test('without --rendering, changed decisions still re-stamp', () => {
+  const dir = decisionsRoot('SESSION-SHAPING');
+  gate(dir);
+  fs.appendFileSync(path.join(dir, '.claude/runs/2026-08-09.jsonl'),
+    `${JSON.stringify({ kind: 'tool', session_id: 'SESSION-SECOND' })}\n`);
+  const file = path.join(dir, 'specs/decisions/spec-decisions.json');
+  const d = JSON.parse(fs.readFileSync(file, 'utf8'));
+  d.decisions.push(decision({ id: 'D-MORE', basis: 'human' }));
+  fs.writeFileSync(file, JSON.stringify(d, null, 2));
+  gate(dir);
+  assert.strictEqual(verdictOf(dir).session_id, 'SESSION-SECOND');
+});
+
+// /build conducts every phase from one session and cannot /clear. The renderer
+// re-runs the gate WITHOUT --in-session, so in_session must survive the
+// renderer's run too, or §3's handoff-check blocks the conductor and tells it
+// to pass a flag it already passed.
+test('--rendering preserves in_session across an amended decisions file', () => {
+  const dir = decisionsRoot('SESSION-A');
+  gate(dir, ['--in-session']);
+  assert.strictEqual(verdictOf(dir).in_session, true);
+  const file = path.join(dir, 'specs/decisions/spec-decisions.json');
+  const d = JSON.parse(fs.readFileSync(file, 'utf8'));
+  d.decisions.push(decision({ id: 'D-RESOLVED', basis: 'human' }));
+  fs.writeFileSync(file, JSON.stringify(d, null, 2));
+  gate(dir, ['--rendering']);
+  assert.strictEqual(verdictOf(dir).in_session, true,
+    '/build cannot /clear; the renderer must not erase the conductor flag');
+});
+
+const skillText = (rel) => fs.readFileSync(path.join(__dirname, '..', rel), 'utf8');
+
+test('spec-render Step 0 actually passes --rendering, on both lanes', () => {
+  const skill = skillText('.claude/skills/spec-render/SKILL.md');
+  assert.match(skill, /validate-spec-decisions\.js --rendering\s+# gated lane/);
+  assert.match(skill, /validate-spec-decisions\.js --rendering --lane --auto/);
+});
+
+// SKILL.md tells the renderer not to load this file unless a gate fails — i.e.
+// it is read exactly when the renderer is already confused. It must agree.
+test('the renderer fallback procedure passes --rendering too', () => {
+  const doc = skillText('.claude/skills/spec-render/references/render-procedure.md');
+  assert.match(doc, /validate-spec-decisions\.js --rendering\s+# gated lane/);
+  assert.match(doc, /validate-spec-decisions\.js --rendering --lane --auto/);
+});
+
+// The negative half, and the one that matters most. --rendering exists to
+// silence the /clear checkpoint; typed at a SHAPING site it would silence the
+// control outright — the phase boundary that the metered run showed to be the
+// single most expensive stretch of the front half — with a fully green suite.
+// Nothing else in the repo pins these two lines.
+// Join shell continuations first: `cmd \<newline>  --flag` is ONE command, and a
+// per-line regex reads it as two. Without this the assertion below is evadable
+// by an ordinary line wrap — which is exactly how a long invocation gets
+// written when someone adds a flag to it.
+const joinContinuations = (text) => text.replace(/\\\n\s*/g, ' ');
+
+test('the shaping sites must never pass --rendering', () => {
+  for (const rel of [
+    '.claude/skills/spec/references/shape.md',
+    '.claude/skills/design/references/mode-10-step-1-spawn-two-agents-concurrently.md',
+  ]) {
+    assert.doesNotMatch(joinContinuations(skillText(rel)), /-decisions\.js[^\n]*--rendering/,
+      `${rel} shapes the decisions — it must print the /clear checkpoint`);
+  }
+});

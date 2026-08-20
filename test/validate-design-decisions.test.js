@@ -203,3 +203,24 @@ test('a failing gate prints no checkpoint — there is nothing durable yet', () 
     return err.status === 1;
   });
 });
+
+// design-render runs this gate at its own Step 0 and hits the same ambiguity
+// /spec's renderer hit: a checkpoint addressed to the shaping operator read as
+// an instruction to halt. See validate-spec-decisions.test.js.
+test('--rendering suppresses the checkpoint for design-render', () => {
+  const dir = designRoot('SESSION-A');
+  const out = gate(dir, ['--rendering']);
+  assert.match(out, /OK/);
+  assert.doesNotMatch(out, /\/clear/);
+});
+
+test('design-render Step 0 passes --rendering on the gated lane specifically', () => {
+  const skill = fs.readFileSync(
+    path.join(__dirname, '..', '.claude/skills/design-render/SKILL.md'), 'utf8',
+  );
+  // Pin the gated lane, not just "somewhere in the file". On the headless lane
+  // --rendering is a no-op — result.waived already suppresses the checkpoint —
+  // so a bare substring match stays green with the only affected lane unfixed.
+  assert.match(skill, /validate-design-decisions\.js --rendering\s+# gated lane/);
+  assert.match(skill, /validate-design-decisions\.js --rendering --lane --auto/);
+});

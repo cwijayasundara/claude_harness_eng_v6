@@ -312,9 +312,16 @@ function main(argv) {
     : render(rows, coverage));
 }
 
-if (require.main === module) main(process.argv.slice(2));
 
 module.exports = {
   segmentsFromTranscript, costByPhase, commandOf, aggregate,
   subagentTranscriptsFor, transcriptsFor, unpricedNote,
 };
+
+// Exports before the CLI entry, not after. `--write` requires
+// phase-cost-persist.js from inside main(), and that lib requires this file
+// straight back. If main() ran first, the late require handed the lib a
+// still-empty exports object and --write died on `transcriptsFor is not a
+// function` — invisible to any in-process test, which loads this module fully
+// before the persist lib ever asks for it.
+if (require.main === module) main(process.argv.slice(2));

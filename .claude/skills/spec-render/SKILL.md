@@ -17,10 +17,15 @@ agent: generator
 ### 0 — Decisions gate
 
 ```bash
-node .claude/scripts/validate-spec-decisions.js
+node .claude/scripts/validate-spec-decisions.js --rendering                # gated lane
+node .claude/scripts/validate-spec-decisions.js --rendering --lane --auto  # headless only
 ```
 
 Non-zero: halt, report stderr, write nothing.
+
+**Exit 0 means render.** `--rendering` suppresses the checkpoint this gate
+prints for the shaping session. If you ever see a `/clear, then /spec`
+block here, it is not addressed to you — you are that hop. Continue to Step 1.
 
 ### 1 — Write only `specs/stories/stories.json`
 

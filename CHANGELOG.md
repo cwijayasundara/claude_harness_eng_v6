@@ -4,6 +4,36 @@ All notable changes to the Claude Harness Engine are documented here.
 
 ## Unreleased
 
+### The renderer no longer obeys the operator's checkpoint (2026-08-20)
+
+`spec-render` and `design-render` re-run their phase's decisions gate at
+Step 0. On a live run the gate's `Run /clear, then /spec` checkpoint — written
+for the shaping session — was read by the renderer as an instruction to halt,
+and it returned a confident success having written no stories. New
+`--rendering` flag on `validate-spec-decisions.js` and
+`validate-design-decisions.js`: the renderer declares itself and the checkpoint
+is suppressed. Structural checks and the hard block are unchanged; the flag
+cannot suppress a BLOCK or bypass the human-shaping requirement. The banner now
+names both audiences by command rather than by role, and no longer documents
+its own escape hatch — only the session that must obey it could ever read that.
+
+`--rendering` also carries the shaping stamp forward on the verdict. The
+digest-keyed carry-forward covered an unchanged decisions file, but the
+documented unresolved-items loop changes the digest on purpose, so the
+renderer's own gate restamped the verdict with the post-clear session and the
+next `handoff-check --stage render` blocked the session the clear had just
+created — and told `/build --in-session`, which cannot `/clear`, to pass the
+flag it already passed.
+
+### `phase-cost.js --write` was dead on the CLI path (2026-08-20)
+
+`module.exports` was assigned *after* the `require.main` entry line, so the
+late require of `phase-cost-persist.js` from inside `main()` got an empty
+exports object and `--write` died with `transcriptsFor is not a function`. The
+existing tests were green throughout: they load `phase-cost.js` at module scope
+before requiring the persist lib, resolving the cycle before it can bite. Fixed
+by ordering, and now guarded by a subprocess test that runs the real CLI.
+
 ### `/design` and `/test` are the operator commands (2026-08-19)
 
 `--render-only` and `--plan-only` are aliases, not separate phases. After

@@ -40,9 +40,13 @@ without a shaped decisions file, it stops at Step 0 rather than rendering.
 ### Step 0 — Decisions Gate [HARD BLOCK]
 
 ```bash
-node .claude/scripts/validate-spec-decisions.js            # gated lane
-node .claude/scripts/validate-spec-decisions.js --lane --auto   # headless only
+node .claude/scripts/validate-spec-decisions.js --rendering                # gated lane
+node .claude/scripts/validate-spec-decisions.js --rendering --lane --auto  # headless only
 ```
+
+**Exit 0 means render.** `--rendering` suppresses the `/clear, then /spec`
+checkpoint this gate prints for the shaping session. That block is never
+addressed to you — you are the hop it asks for. Do not halt on it.
 
 Non-zero exit: **halt immediately and render nothing.** A failure means the
 decisions file was never shaped by a human, or names no milestone scope. Report

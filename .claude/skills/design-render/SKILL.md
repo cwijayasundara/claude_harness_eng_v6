@@ -37,9 +37,14 @@ and let `/design` run them. Do not edit `design-decisions.json`.
 ### Step 0 — Decisions Gate [HARD BLOCK]
 
 ```bash
-node .claude/scripts/validate-design-decisions.js            # gated lane
-node .claude/scripts/validate-design-decisions.js --lane --auto   # headless only
+node .claude/scripts/validate-design-decisions.js --rendering                # gated lane
+node .claude/scripts/validate-design-decisions.js --rendering --lane --auto  # headless only
 ```
+
+**Exit 0 means render.** `--rendering` suppresses the checkpoint this gate
+prints for the shaping session. If you ever see a `/clear, then /design`
+block here, it is not addressed to you — you are that hop. Continue to the
+next step.
 
 Non-zero exit: **halt and render nothing.** Report stderr verbatim to the
 caller. Do not repair the decisions file — writing the missing decisions is

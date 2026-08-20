@@ -52,9 +52,20 @@ function sessionLane(root) {
  * keyed on a digest, the way plan-approval.js keeps an approval tied to the
  * artifacts it approved. Changed decisions do re-stamp: that is a new shaping
  * dialogue, and the next render stretch should start clear of it.
+ *
+ * The digest alone is not enough, because the documented unresolved-items loop
+ * changes it on purpose: the renderer returns unresolved items, the post-clear
+ * session appends them to decisions[] and re-dispatches, and the renderer's own
+ * Step 0 gate is then the first run on the new digest. `rendering` is the
+ * renderer declaring itself, and a renderer never shaped anything — changed
+ * digest or not — so it carries the stamp forward unconditionally. Without it
+ * the loop self-blocks (and /build --in-session, which cannot /clear, is told
+ * to pass the flag it already passed).
  */
-function stampFor(root, prior, decisionsSha, inSession) {
-  if (prior && prior.decisions_sha256 === decisionsSha && prior.session_id) {
+function stampFor(root, prior, decisionsSha, inSession, rendering) {
+  const carry = prior && prior.session_id
+    && (rendering || prior.decisions_sha256 === decisionsSha);
+  if (carry) {
     return { session_id: prior.session_id, in_session: prior.in_session === true };
   }
   return { session_id: liveSessionId(root), in_session: inSession === true };
@@ -72,11 +83,14 @@ function stampFor(root, prior, decisionsSha, inSession) {
  * @param {{ok: boolean, errors: string[], waived: string|null}} args.result
  * @param {string|null} args.lane the claimed --lane, if any
  * @param {boolean} args.inSession caller conducts every phase in one session
+ * @param {boolean} [args.rendering] caller is the renderer, not the shaping session
  */
-function writeDecisionVerdict({ root, gate, verdictRel, decisionsRel, result, lane, inSession }) {
+function writeDecisionVerdict({
+  root, gate, verdictRel, decisionsRel, result, lane, inSession, rendering,
+}) {
   const out = path.join(root, verdictRel);
   const decisionsSha = sha256Of(path.join(root, decisionsRel));
-  const stamp = stampFor(root, readJson(out), decisionsSha, inSession);
+  const stamp = stampFor(root, readJson(out), decisionsSha, inSession, rendering);
   try {
     fs.mkdirSync(path.dirname(out), { recursive: true });
     fs.writeFileSync(out, `${JSON.stringify({

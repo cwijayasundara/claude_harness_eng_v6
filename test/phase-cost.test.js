@@ -294,3 +294,27 @@ test('a later persist records only the delta since the last write', () => {
   assert.strictEqual(Math.round(ledger[1].delta_usd), 15, 'only the spec increment');
   assert.strictEqual(Math.round(ledger[1].grand_usd), 40);
 });
+
+// The two --write tests above load phase-cost.js at module scope (line 20) and
+// only then require the persist lib, so the require cycle between them is
+// already resolved by the time writeSnapshot runs. The CLI has no such luck:
+// it enters main() before its own module.exports is assigned, so the late
+// require inside writeSnapshot gets a still-empty exports object. Only a
+// subprocess exercises the real entry path.
+test('the --write CLI persists from a cold process (require cycle stays resolved)', () => {
+  const { execFileSync } = require('child_process');
+  const file = writeTranscript([
+    userTurn('2026-08-16T07:00:00.000Z', '/spec'),
+    assistantTurn('2026-08-16T07:30:00.000Z', 'a1', 'claude-opus-5', 1e6),
+  ]);
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'phase-cost-cli-'));
+  const out = execFileSync('node', [
+    path.join(__dirname, '..', '.claude', 'scripts', 'phase-cost.js'),
+    file, '--write', '--step', 'spec-al', '--json',
+  ], { cwd: root, encoding: 'utf8' });
+  assert.strictEqual(JSON.parse(out).step, 'spec-al');
+  const ledger = fs.readFileSync(path.join(root, '.claude/state/phase-cost.jsonl'), 'utf8')
+    .trim().split('\n').map((l) => JSON.parse(l));
+  assert.strictEqual(ledger.length, 1);
+  assert.strictEqual(ledger[0].step, 'spec-al', 'the ledger row carries the step label');
+});

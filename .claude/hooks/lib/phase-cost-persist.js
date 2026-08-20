@@ -14,8 +14,11 @@ const fs = require('fs');
 const path = require('path');
 
 function loadPhaseCost() {
-  // Late require: phase-cost.js's CLI requires this file only inside main(),
-  // so a cycle at module load never forms.
+  // Late require, resolving a genuine cycle: phase-cost.js requires this file
+  // from inside main(). It works only because phase-cost.js assigns its
+  // module.exports BEFORE its `require.main` entry line — keep that order.
+  // Reversed, the CLI's --write gets an empty exports object here, and no
+  // in-process test sees it (they load phase-cost.js first).
   return require('../../scripts/phase-cost.js');
 }
 
