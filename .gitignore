@@ -63,6 +63,11 @@ symphony_clone/logs/
 # Token-governor compact-runner caches (run-compact.js) — transient
 .claude/state/context-cache/
 .claude/state/tool-output/
+# Transcript cost rollup + delta cursor (record-run.js / phase-cost.js --write).
+# Regenerated per machine from ~/.claude/projects transcripts; the cursor is the
+# baseline for the ledger's deltas, so a shared copy would corrupt them.
+.claude/state/phase-cost.json
+.claude/state/phase-cost-cursor.json
 !.claude/templates/state-seeds/pending-reviews.jsonl
 test/e2e/results/*
 !test/e2e/results/.gitkeep
