@@ -194,6 +194,7 @@
         "fill-spec-scope",
         "spec-render-write",
         "test-plan-write",
+        "test-plan-skeleton",
         "test-plan-enrich",
         "contract-freeze",
         "planning-progress",
