@@ -11,9 +11,17 @@ function renderStoryMd(story, cluster, acs, safeguards) {
     `- **${ac.id}** — *Given* ${ac.given}, *when* ${ac.when}, *then* ${ac.then}.`);
   const reqLines = acs.map((ac) =>
     `- **${ac.id}** — Given ${ac.given}, when ${ac.when}, then ${ac.then}`);
-  const sg = asArray(safeguards).length
-    ? asArray(safeguards).slice(0, 3).map((s) => `- ${s.id || s}`).join('\n')
-    : '- none — no listed forbidden action applies';
+  // What this list says is what the generator is handed at implement time.
+  // Rendering `safeguards.slice(0, 3)` made every story claim the project's
+  // first three deny-list entries whatever it did, so a story could be built
+  // without the entry that actually bounded it. Cite what /spec scoped to this
+  // story; unscoped means the whole deny-list still applies, not an arbitrary
+  // three of it.
+  const scoped = asArray(story.safeguards);
+  const cite = (list) => list.map((s) => `- ${s.id || s}`).join('\n');
+  const sg = scoped.length ? cite(scoped)
+    : (asArray(safeguards).length ? cite(asArray(safeguards))
+      : '- none — the BRD lists no forbidden action for this project');
   return `# ${story.id} — ${story.title}
 
 ## Metadata

@@ -143,6 +143,7 @@ For each story:
   { "id": "E1-S1-AC1", "given": "a visitor with no account", "when": "they POST /api/auth/register with a valid email and password", "then": "the response is 201 and the body contains a non-null userId" }
   ```
   Each must be testable (verifiable by running code or inspecting output) and specific (concrete values, states, status codes). Vague criteria ("works properly", "loads fast") are rejected. The `then` clause is the observable outcome — that is what `/test` asserts and what `features.json` steps are generated from, so it must not restate the `when`.
+- `safeguards`: The `SG-n` ids from `specs/brd/brd-safeguards.json` that bound *this* story — the deny-list entries a reviewer would check its diff against. Omit the field (or leave it empty) only when you have not scoped them: the Generation Contract then cites the whole deny-list, because unscoped means all of it still applies. Never list entries that do not bound the story — this list is what the generator is handed at implement time, so a wrong one withholds the entry that actually mattered.
 - `layer`: Tag for the **primary** surface — one of `Types` | `Config` | `Repository` | `Service` | `API` | `UI`. Not a reason to split the story. A story that only exists so a later story can have a layer is a layer-ladder story — merge it into the tracer bullet that a user can demo.
 - `group`: Dependency group letter (`A`, `B`, `C` ...) — see Step 4
 - `depends_on`: Typed dependency edges — see Step 3.5. A bare story-id string is still accepted and read as a `behavior` edge, but new stories must use the typed form.
@@ -242,6 +243,7 @@ Write `specs/stories/stories.json` — the machine view of the same stories whos
     "story_points": 5, "estimation_confidence": "medium", "readiness": "ready",
     "business_value": "Cuts drop-off at signup", 
     "scope_in": ["POST /api/auth/register"], "scope_out": ["must not alter the session cookie format"],
+    "safeguards": ["SG-5", "SG-7"],
     "depends_on": [{ "story": "E1-S0", "kind": "contract", "artifact": "User type", "reason": "..." }],
     "invest": { "independent": null, "negotiable": true, "valuable": true, "estimable": true, "small": true, "testable": true }
   }
