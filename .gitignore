@@ -68,6 +68,12 @@ symphony_clone/logs/
 # baseline for the ledger's deltas, so a shared copy would corrupt them.
 .claude/state/phase-cost.json
 .claude/state/phase-cost-cursor.json
+
+# Pre-run file hashes for the command currently in flight (pre-bash-gate ->
+# red-phase-ledger.js). Rewritten by every Bash call, so it is per-machine
+# in-flight state, never shared history; readSnapshot() returns {} when it is
+# absent and degrades to post-run hashes.
+.claude/state/red-phase-presnap.json
 !.claude/templates/state-seeds/pending-reviews.jsonl
 test/e2e/results/*
 !test/e2e/results/.gitkeep
