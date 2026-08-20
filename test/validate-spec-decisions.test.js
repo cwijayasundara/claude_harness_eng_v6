@@ -381,7 +381,16 @@ test('the shaping sites must never pass --rendering', () => {
     '.claude/skills/spec/references/shape.md',
     '.claude/skills/design/references/mode-10-step-1-spawn-two-agents-concurrently.md',
   ]) {
-    assert.doesNotMatch(joinContinuations(skillText(rel)), /-decisions\.js[^\n]*--rendering/,
+    const text = joinContinuations(skillText(rel));
+    // Anchored on the INVOCATION, not the script name: `spec-decisions.json`
+    // contains the substring `-decisions.js`, so a looser pattern is satisfied
+    // by prose about the decisions file.
+    const invocation = /node \.claude\/scripts\/validate-(?:spec|design)-decisions\.js/;
+    // The positive half is load-bearing: `doesNotMatch` alone is satisfied by a
+    // file that no longer runs the gate AT ALL, which is a worse failure than
+    // the one being guarded against.
+    assert.match(text, invocation, `${rel} must still run the gate`);
+    assert.doesNotMatch(text, new RegExp(`${invocation.source}[^\n]*--rendering`),
       `${rel} shapes the decisions — it must print the /clear checkpoint`);
   }
 });

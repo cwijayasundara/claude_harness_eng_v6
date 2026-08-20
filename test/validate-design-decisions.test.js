@@ -224,3 +224,28 @@ test('design-render Step 0 passes --rendering on the gated lane specifically', (
   assert.match(skill, /validate-design-decisions\.js --rendering\s+# gated lane/);
   assert.match(skill, /validate-design-decisions\.js --rendering --lane --auto/);
 });
+
+
+// The two gates share decision-verdict.js but NOT the call site — each builds
+// its own writeDecisionVerdict({...}) literal, so a `rendering` key dropped
+// from this one is invisible to every spec-side test while design-render's
+// unresolved-items loop self-blocks exactly as /spec's did.
+test('--rendering carries the shaping stamp forward on the design gate too', () => {
+  const dir = designRoot('SESSION-SHAPING');
+  gate(dir);
+  assert.strictEqual(verdictOf(dir).session_id, 'SESSION-SHAPING');
+
+  fs.appendFileSync(path.join(dir, '.claude/runs/2026-08-10.jsonl'),
+    `${JSON.stringify({ kind: 'tool', session_id: 'SESSION-RENDER' })}\n`);
+  const file = path.join(dir, 'specs/decisions/design-decisions.json');
+  const d = JSON.parse(fs.readFileSync(file, 'utf8'));
+  d.decisions.push(decision({ id: 'D-RESOLVED', basis: 'human' }));
+  fs.writeFileSync(file, JSON.stringify(d, null, 2));
+
+  gate(dir, ['--rendering']);
+  const v = verdictOf(dir);
+  assert.strictEqual(v.session_id, 'SESSION-SHAPING',
+    'design-render must not claim to have shaped the amended decisions');
+  assert.strictEqual(v.carried, true);
+  assert.strictEqual(v.revalidated_by, 'SESSION-RENDER');
+});

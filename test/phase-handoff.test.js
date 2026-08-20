@@ -422,7 +422,7 @@ test('each phase cites evidence it actually has', () => {
 // off the renderer's stdout; naming the audience is the backstop for any caller
 // that does not pass the flag. The line must not read as "carry on" to the
 // shaping session, which genuinely has to stop here.
-test('the render handoff names BOTH audiences by command', () => {
+test('the render handoff names both audiences — the obligated one by what it did', () => {
   for (const phase of ['spec', 'design']) {
     const block = renderHandoffBlock(phase);
     // Keyed on what the session DID, not on its command name. A /build
@@ -450,4 +450,48 @@ test('the render handoff does not tell its reader how to suppress itself', () =>
     assert.doesNotMatch(renderHandoffBlock(phase), /--rendering/,
       `${phase}: the escape hatch is reachable only by the session that must obey`);
   }
+});
+
+// The acceptance criterion the carry-forward exists for, asserted where the
+// operator actually experiences it rather than as a field in a JSON file.
+//
+// The unresolved-items loop changes the decisions digest BY DESIGN: the
+// renderer returns unresolved items, the post-clear session appends the
+// answers, and re-dispatches. Before --rendering carried the stamp, the
+// renderer's own Step 0 gate was the first run on the new digest, restamped the
+// verdict with the post-clear session, and this very check then blocked the
+// session the /clear had just created.
+function specGate(dir, extra = []) {
+  return execFileSync('node', [
+    path.join(ROOT, '.claude/scripts/validate-spec-decisions.js'), '--root', dir, ...extra,
+  ], { encoding: 'utf8' });
+}
+
+test('the unresolved-items loop does not self-block at handoff-check', () => {
+  const dir = gatedDecisions('SESSION-A');
+  fs.appendFileSync(path.join(dir, '.claude/runs/2026-08-09.jsonl'),
+    `${JSON.stringify({ kind: 'tool', session_id: 'SESSION-B' })}\n`);
+  assert.strictEqual(
+    handoffCheck(['--phase', 'spec', '--stage', 'render', '--root', dir], dir), 0,
+    'the post-clear session may render',
+  );
+
+  // The renderer returned unresolved items; SESSION-B answers one.
+  const file = path.join(dir, 'specs/decisions/spec-decisions.json');
+  const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
+  doc.decisions.push({
+    id: 'D2',
+    question: 'Split E1 across two stories?',
+    chosen: 'No — one owner end to end.',
+    rationale: 'Splitting it buys no parallelism while the data edge remains.',
+    basis: 'human',
+    load_bearing: true,
+  });
+  fs.writeFileSync(file, JSON.stringify(doc, null, 2));
+  specGate(dir, ['--rendering']); // the re-dispatched renderer's Step 0
+
+  assert.strictEqual(
+    handoffCheck(['--phase', 'spec', '--stage', 'render', '--root', dir], dir), 0,
+    'and may re-dispatch — it resolved the ambiguity, it did not shape the plan',
+  );
 });
