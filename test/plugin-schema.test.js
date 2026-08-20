@@ -83,3 +83,21 @@ test('no settings.json command hook hardcodes an absolute path', () => {
   );
   assert.deepStrictEqual(offenders, [], `hooks must use $CLAUDE_PROJECT_DIR:\n${offenders.join('\n')}`);
 });
+
+test('every kernel hook named in packs.json is wired in settings.json', () => {
+  const packs = readJson(path.join(ROOT, '.claude', 'config', 'packs.json'));
+  const text = fs.readFileSync(SETTINGS, 'utf8');
+  const missing = (packs.kernel.hook || []).filter((h) => !text.includes(`${h}.js`));
+  assert.deepStrictEqual(missing, [], `kernel hooks absent from settings.json: ${missing.join(', ')}`);
+});
+
+test('red-phase-record is PostToolUse matcher Bash only, not the write matcher', () => {
+  const groups = readJson(SETTINGS).hooks.PostToolUse || [];
+  const bashOnly = groups.filter((g) => g.matcher === 'Bash');
+  const writeGroups = groups.filter((g) => /Write|Edit/.test(g.matcher || ''));
+  const cmds = (list) => list.flatMap((g) => (g.hooks || []).map((h) => h.command || ''));
+  assert.ok(cmds(bashOnly).some((c) => c.includes('red-phase-record.js')),
+    'PostToolUse Bash must run red-phase-record.js');
+  assert.ok(!cmds(writeGroups).some((c) => c.includes('red-phase-record.js')),
+    'do not spawn the recorder on every file write');
+});

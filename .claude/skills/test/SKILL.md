@@ -40,7 +40,8 @@ The plan hop gates on `plan-approval.js check --phase spec`. When
 When schemas exist, `references/test-plan.md` runs `constraints-extract.js`.
 Load `references/test-design.md` only to add extra negative rows.
 
-The review surface is `test-plan.md` + `verification-matrix.json`
+The review surface is `test-plan.md` (seams, Given/When/Then, proposed
+evaluator checks, untested) + `verification-matrix.json`
 (`plan-review-loop/references/lean-review-surface.md` and `ssdd.md`).
-SSDD: this gate writes testable Operations (seams + matrix) and joins
-`specs/bundles/` via `bundle-write.js`.
+SSDD: this gate writes testable Operations (seams + behavior spec + matrix)
+and joins `specs/bundles/` via `bundle-write.js`.

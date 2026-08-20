@@ -17,6 +17,14 @@ test('hardRefs finds a node invocation of a script', () => {
   assert.deepStrictEqual(refs, ['script:context-pack']);
 });
 
+test('a skill invoking a .sh script is a hard reference', () => {
+  const refs = hardRefs(
+    '.claude/scripts/migration-roundtrip.sh --ephemeral-postgres',
+    { script: ['migration-roundtrip'] }, new Set(), 'skill'
+  );
+  assert.deepStrictEqual(refs, ['script:migration-roundtrip']);
+});
+
 test('hardRefs finds an npm run alias', () => {
   const refs = hardRefs('npm run duplication-gate', { script: ['duplication-gate'] });
   assert.deepStrictEqual(refs, ['script:duplication-gate']);

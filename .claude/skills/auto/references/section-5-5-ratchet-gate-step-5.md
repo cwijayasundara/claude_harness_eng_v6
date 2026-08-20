@@ -13,7 +13,7 @@ One coding-loop gate. Do not restate the sensor catalog here — `sensor_tier` a
 | Evaluator | **End of run**, not per group | Once against the running app (API + Playwright if UI), then draft PR. |
 | Design-critic | `--mode full` only, **after** the UI slice is green, cap 3 | Skip in lean. See SECTION 9. |
 
-`sensor_tier=standard` (default new web apps) keeps the runner's small always-on set (secrets, test-deletion, types, coverage, stub-smell, live-externals). Cycle, hub, clone, mutation, security-baseline, and secure-baseline-wiring are **`strict` only**. Sprint-contract pre-commit already no-ops when `sprint-contracts/{group}.json` is absent.
+`sensor_tier=standard` (default new web apps) keeps the runner's always-on set (secrets, test-deletion, types, coverage, stub-smell, live-externals, **mutation-smoke**). Cycle, hub, clone, security-baseline, and secure-baseline-wiring are **`strict` only**. Deep-mutation (Stryker/mutmut) is release/`strict`, not this runner. Sprint-contract pre-commit already no-ops when `sprint-contracts/{group}.json` is absent.
 
 ### Tests
 
@@ -31,7 +31,7 @@ Zero failures. Honor `quality.test_discipline` (`outcomes` default: tests and co
 node .claude/scripts/run-gate-checks.js
 ```
 
-Non-zero exit **fails the gate**. Do not invoke `mutation-gate.js`, `cycle-gate.js`, `coupling-gate.js`, or `duplication-gate.js` from this skill — they stay in the registry and run only when `sensor_tier=strict` (or `--only`). Fast-lane / docs-only commits still go through the same runner; the registry filters `runsWithoutSource`.
+Non-zero exit **fails the gate**. Do not invoke `mutation-gate.js`, `cycle-gate.js`, `coupling-gate.js`, or `duplication-gate.js` from this skill — they stay in the registry. Mutation-smoke runs on `standard`+; cycle/coupling/duplication run only when `sensor_tier=strict` (or `--only`). Fast-lane / docs-only commits still go through the same runner; the registry filters `runsWithoutSource`.
 
 ### SSDD join (in the catalog)
 

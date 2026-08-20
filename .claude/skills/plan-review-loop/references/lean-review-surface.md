@@ -17,7 +17,7 @@ edits that record, then re-renders. Do not rubber-stamp the volume.
 | `/brd` | `specs/brd/brd.md` (≤80 lines: problem, success, in/out, risks). Lean `--prd` writes this pointer automatically. | `specs/brd/brd-requirements.json` + `analysis-seed.json` | analysis pack tables, phase-eval JSON (`--full` / `--eval` only) |
 | `/spec` | `specs/stories/epics.md` + **Generation Contract** skeletons as **vertical slices** | `specs/stories/stories.json` + `features.json` + `spec-decisions.json` | layer-ladder schedules, phase-eval JSON |
 | `/design` | `architecture.md` + **`program-design.md`** + **`reasons-canvas.md`** | `specs/design/component-map.md` + `design-decisions.json` | mockups (unless a UI story), deployment essay, per-entity schema dumps |
-| `/test --plan-only` | `specs/test_artefacts/test-plan.md` (named seams + what is untested) | `specs/test_artefacts/verification-matrix.json` + `specs/bundles/` | Playwright, AT source files, phase-eval JSON |
+| `/test --plan-only` | `specs/test_artefacts/test-plan.md` (seams + Given/When/Then scenarios + proposed evaluator checks + untested) | `specs/test_artefacts/verification-matrix.json` + `specs/bundles/` | Playwright files, AT source, `sprint-contracts/*.json`, phase-eval JSON |
 
 ## Vertical slices (spec)
 
@@ -35,9 +35,12 @@ code later.
 
 ## Test plan-only
 
-`--plan-only` names seams and maps every AC onto the verification matrix.
-It does not write Playwright. Acceptance-test source files are written at
-implement time against those seams. `/test --e2e-only` runs after code exists.
+`--plan-only` names seams, restates each AC as Given/When/Then, and lists
+proposed evaluator checks (`api` / `playwright`) derived from the matrix.
+It does not write Playwright files, AT source, or `sprint-contracts/*.json`.
+Acceptance-test source files are written at implement time against those seams
+and must match the reviewed scenario wording. `/test --e2e-only` runs after
+code exists.
 
 ## Phase-eval
 

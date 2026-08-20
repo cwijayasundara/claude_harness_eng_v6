@@ -75,7 +75,7 @@ Env overrides for the dial itself (when wired): `HARNESS_SENSOR_TIER=minimal|sta
 
 ### Commit-time membership (normative for Phase 1)
 
-`standard` is the small always-on product set. `minimal` drops coverage / test-deletion / stub / live-externals ceremony. `strict` adds mutation, cycle, coupling, duplication, and security-baseline. Legacy / sprout still sit on `standard`+ but no-op unless the brownfield graph is real.
+`standard` is the small always-on product set. `minimal` drops coverage / test-deletion / stub / live-externals / mutation-smoke ceremony. `strict` adds cycle, coupling, duplication, security-baseline, and deep-mutation. Legacy / sprout still sit on `standard`+ but no-op unless the brownfield graph is real.
 
 | Gate id | minimal | standard | strict |
 |---|---|---|---|
@@ -92,7 +92,7 @@ Env overrides for the dial itself (when wired): `HARNESS_SENSOR_TIER=minimal|sta
 | `sprint-contract` (+ security + verification-matrix) | ✓ | ✓ | ✓ |
 | `type-check` (tsc at pre-commit) | ✓ | ✓ | ✓ |
 | `coverage-ratchet` | | ✓ | ✓ |
-| `mutation-smoke` | | | ✓ |
+| `mutation-smoke` | | ✓ | ✓ |
 | `cycle-detection` | | | ✓ |
 | `coupling-ratchet` | | | ✓ |
 

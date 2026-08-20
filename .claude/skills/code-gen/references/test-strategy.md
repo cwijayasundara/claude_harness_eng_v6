@@ -1,6 +1,6 @@
 # Test Strategy Reference
 
-The layer model, boundary-condition checklist, and test-data rules read by generator teammates while writing tests. Part of the engineering-standards (code-gen) reference pack. TDD discipline, mock-boundary rules, and the coverage gate are canonical in `code-gen/SKILL.md` and the `superpowers:test-driven-development` skill — this file adds the layer model and boundary checklist, not a second copy of those rules.
+The layer model, boundary-condition checklist, and test-data rules read by generator teammates while writing tests. Part of the engineering-standards (code-gen) reference pack. Mock-boundary rules and the coverage gate are canonical in `code-gen/SKILL.md`. This file adds the layer model and boundary checklist, not a second copy of those rules.
 
 ---
 
@@ -86,9 +86,9 @@ If the only way to test behavior is through fragile internals, flag an interface
 
 ---
 
-## Tracer-Bullet TDD
+## Test order
 
-The red-green-refactor / vertical-slice discipline (one failing behavior test → minimum code → pass → repeat) is canonical in `.claude/skills/code-gen/SKILL.md` and the `superpowers:test-driven-development` skill — follow those rather than a second copy here. This file's contribution is the layer model and the boundary-condition checklist above, not the TDD loop.
+How tests and production code land is canonical in `.claude/skills/code-gen/SKILL.md` Testing Rules, selected by `project-manifest.json#quality.test_discipline`. Follow that, not a second copy here. Invoke `superpowers:test-driven-development` only when the value is `tdd`. This file's contribution is the layer model and the boundary-condition checklist above.
 
 ---
 

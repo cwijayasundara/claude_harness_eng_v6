@@ -55,9 +55,11 @@ test('T2/T4: /auto SECTION 5 names the one runner and does not require critic/mu
   assert.match(auto, /strict only|strict-only|`strict` only/i);
 });
 
-test('T4: mutation-smoke is off on standard', () => {
-  assert.strictEqual(isGateEnabled('standard', 'mutation-smoke'), false);
+test('T4: cycle/coupling stay strict-only; mutation-smoke is on standard', () => {
+  assert.strictEqual(isGateEnabled('standard', 'mutation-smoke'), true);
   assert.strictEqual(isGateEnabled('strict', 'mutation-smoke'), true);
+  assert.strictEqual(isGateEnabled('standard', 'cycle-detection'), false);
+  assert.strictEqual(isGateEnabled('standard', 'coupling-ratchet'), false);
 });
 
 test('T3: one .py file + refresh leaves code-graph.meta.json not empty', () => {

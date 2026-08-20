@@ -106,7 +106,7 @@ A canary failure means fix the pattern (or escalate) before spawning the full te
 
 Read `project-manifest.json#quality.test_discipline` (`outcomes` | `tdd` | `at-first`; default `outcomes` on new scaffolds). Inject the matching **Testing Rules** excerpt from `.claude/skills/code-gen/SKILL.md` plus Core Quality Principles 1–10 — not the whole skill file (API wrappers, LLM, production-standards wait until the story needs them).
 
-- **`outcomes`** — tests and production code together at the named seams in `specs/test_artefacts/test-plan.md`. Coverage and test-deletion still apply. Mutation-smoke is `sensor_tier=strict` only.
+- **`outcomes`** — tests and production code together at the named seams in `specs/test_artefacts/test-plan.md`. Coverage, mutation-smoke, and test-deletion still apply.
 - **`tdd`** — write-lock / red-phase / test-integrity: failing test first, then the minimum code.
 - **`at-first`** — for behavior stories, run `writing-acceptance-tests-first` (AT + red receipt) before production edits.
 

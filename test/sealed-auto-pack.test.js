@@ -83,6 +83,24 @@ test('/implement and code-gen read test_discipline', () => {
   assert.match(readSkillCorpus('code-gen'), /`outcomes` \(default\)/);
 });
 
+test('generator and implementer honor test_discipline instead of always-TDD', () => {
+  const generator = read('.claude/agents/generator.md');
+  const implementer = read('.claude/agents/implementer.md');
+  const strategy = read('.claude/skills/code-gen/references/test-strategy.md');
+  for (const src of [generator, implementer]) {
+    assert.match(src, /quality\.test_discipline/);
+    assert.match(src, /outcomes/);
+    assert.match(src, /at-first/);
+    assert.match(src, /only when(?: the value is| that value is)? `tdd`/);
+  }
+  assert.match(strategy, /quality\.test_discipline/);
+  assert.match(strategy, /only when(?: the value is| that value is)? `tdd`/);
+  const alwaysTdd = /TDD Mandatory|Implement their code with TDD|Every teammate MUST follow TDD|Test-first, always|\*\*TDD the implementation\*\*|red-green-refactor cycle for every function|Tracer-Bullet TDD/;
+  assert.doesNotMatch(generator, alwaysTdd);
+  assert.doesNotMatch(implementer, alwaysTdd);
+  assert.doesNotMatch(strategy, alwaysTdd);
+});
+
 test('Gate 8 / implement Step 7 name Standards vs Spec and do not merge scores', () => {
   const auto = readSkillCorpus('auto');
   const implement = readSkillCorpus('implement');

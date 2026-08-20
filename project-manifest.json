@@ -1,7 +1,7 @@
 {
   "name": "claude-harness-eng-v6",
   "description": "Claude Harness Engine — plugin monorepo (dogfood / Project Zero)",
-  "harness_version": "2.5.0",
+  "harness_version": "3.0.0",
   "topology": "cli-or-library",
   "stack": {
     "backend": { "language": "javascript", "framework": "node" },

@@ -26,12 +26,20 @@ const PARTITION = path.join(ROOT, '.claude', 'config', 'packs.json');
 
 // Where each unit kind lives, and how its name maps to a path. Directories (skills)
 // copy whole; everything else is a single file.
+function scriptRel(n) {
+  const js = `.claude/scripts/${n}.js`;
+  const sh = `.claude/scripts/${n}.sh`;
+  if (fs.existsSync(path.join(ROOT, js))) return js;
+  if (fs.existsSync(path.join(ROOT, sh))) return sh;
+  return js;
+}
+
 const KIND_PATHS = {
   skill: (n) => `.claude/skills/${n}`,
   agent: (n) => `.claude/agents/${n}.md`,
   hook: (n) => `.claude/hooks/${n}.js`,
   lib: (n) => `.claude/hooks/lib/${n}.js`,
-  script: (n) => `.claude/scripts/${n}.js`,
+  script: scriptRel,
   githook: (n) => `.claude/git-hooks/${n}`,
 };
 
@@ -145,8 +153,8 @@ function undeclaredUnits(partition, root = ROOT) {
     let entries;
     try { entries = fs.readdirSync(path.join(root, dir)); } catch { continue; }
     for (const e of entries) {
-      if (!e.endsWith('.js') && !e.endsWith('.md')) continue;
-      const name = e.replace(/\.(js|md)$/, '');
+      if (!e.endsWith('.js') && !e.endsWith('.md') && !e.endsWith('.sh')) continue;
+      const name = e.replace(/\.(js|md|sh)$/, '');
       if (!(declared[kind] && declared[kind].has(name))) holes.push(`${dir}/${e}`);
     }
   }

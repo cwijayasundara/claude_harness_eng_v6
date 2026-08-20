@@ -48,5 +48,5 @@ This skill is an **orchestrator index**. Load only the section file for the step
 
 ### Load-bearing gate names (always visible here for harness integrity)
 
-The sensor layer is one command: `node .claude/scripts/run-gate-checks.js` (honor its exit). `sensor_tier` selects membership. `GATE_CATALOG` includes `generation-contract`, `story-bundle-check`, `canvas-sync-check`, and (during `/auto`) G16 `impact-scoped-regression`. `cycle-gate.js`, `coupling-gate.js`, and `mutation-gate.js` / mutation-smoke run only at `strict`. `regression-gate.js --replay` is the G15 merge-time sweep (SECTION 4B / sequential land / `--once` Success / draft PR). Rewrite the record with `spdd-sync.js --write`. Full procedure lives in SECTION 5.
+The sensor layer is one command: `node .claude/scripts/run-gate-checks.js` (honor its exit). `sensor_tier` selects membership. `GATE_CATALOG` includes `generation-contract`, `story-bundle-check`, `canvas-sync-check`, and (during `/auto`) G16 `impact-scoped-regression`. `cycle-gate.js` and `coupling-gate.js` run only at `strict`. Diff-scoped mutation-smoke runs on `standard` and `strict`. `regression-gate.js --replay` is the G15 merge-time sweep (SECTION 4B / sequential land / `--once` Success / draft PR). Rewrite the record with `spdd-sync.js --write`. Full procedure lives in SECTION 5.
 

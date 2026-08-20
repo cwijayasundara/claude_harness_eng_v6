@@ -3,8 +3,8 @@
 // scaffold-copy.js — the `.claude` tree copy + scaffold-profile selection.
 //
 // Split out of scaffold-apply.js so each file stays within the harness length
-// gate and so "which files get copied" (here) is separate from "what content
-// gets generated" (scaffold-apply.js). copyScaffoldTree, pruneSettings, and
+// gate and so which files get copied (here) is separate from the generated
+// content in scaffold-apply.js. copyScaffoldTree, pruneSettings, and
 // resolveScaffoldProfile moved here verbatim; copyScaffoldTree additionally:
 //   - copies a {"type":"commonjs"} `.claude/package.json` marker so an app whose
 //     root package.json declares "type":"module" cannot reparse the harness's
@@ -46,12 +46,18 @@ function profileUnits(profileName, kind) {
 
 const withExt = (names, ext) => names.map((n) => n + ext);
 
+function scriptFileNames(profileName) {
+  return profileUnits(profileName, 'script').map((n) => {
+    if (fs.existsSync(path.join(__dirname, `${n}.js`))) return `${n}.js`;
+    if (fs.existsSync(path.join(__dirname, `${n}.sh`))) return `${n}.sh`;
+    return `${n}.js`;
+  });
+}
+
 const CORE_AGENTS = withExt(profileUnits('core', 'agent'), '.md');
 const CORE_SKILLS = profileUnits('core', 'skill');
-const CORE_SCRIPTS = withExt(profileUnits('core', 'script'), '.js');
-const BROWNFIELD_AGENTS = withExt(profileUnits('brownfield', 'agent'), '.md');
+const CORE_SCRIPTS = scriptFileNames('core');
 const BROWNFIELD_SKILLS = profileUnits('brownfield', 'skill');
-const BROWNFIELD_SCRIPTS = withExt(profileUnits('brownfield', 'script'), '.js');
 // Skills no profile below `full` installs — the vertical/framework packs.
 const OPTIONAL_SKILLS = profileUnits('full', 'skill').filter((s) => !BROWNFIELD_SKILLS.includes(s));
 
@@ -83,10 +89,14 @@ function copyNamedFiles(srcDir, destDir, names) {
 
 function selectedCopySet(profileName) {
   if (profileName === 'full') return null;
-  if (profileName === 'brownfield') {
-    return { agents: BROWNFIELD_AGENTS, skills: BROWNFIELD_SKILLS, scripts: BROWNFIELD_SCRIPTS };
-  }
-  return { agents: CORE_AGENTS, skills: CORE_SKILLS, scripts: CORE_SCRIPTS };
+  const name = profileName === 'brownfield' ? 'brownfield' : 'core';
+  return {
+    agents: withExt(profileUnits(name, 'agent'), '.md'),
+    skills: profileUnits(name, 'skill'),
+    scripts: scriptFileNames(name),
+    hooks: withExt(profileUnits(name, 'hook'), '.js'),
+    libs: withExt(profileUnits(name, 'lib'), '.js'),
+  };
 }
 
 function resolveScaffoldProfile(profile, opts = {}) {
@@ -98,20 +108,69 @@ function resolveScaffoldProfile(profile, opts = {}) {
   return resolved;
 }
 
+function hookBasename(command) {
+  const m = /hooks\/([^/"'\s]+)/.exec(String(command || ''));
+  return m ? m[1] : null;
+}
+
+function pruneHookBlocks(hooks, allowed) {
+  if (!hooks || typeof hooks !== 'object') return hooks;
+  const out = {};
+  for (const [event, groups] of Object.entries(hooks)) {
+    if (!Array.isArray(groups)) continue;
+    const next = [];
+    for (const group of groups) {
+      const kept = (group.hooks || []).filter((h) => {
+        const name = hookBasename(h.command);
+        return !name || allowed.has(name);
+      });
+      if (kept.length) next.push({ ...group, hooks: kept });
+    }
+    if (next.length) out[event] = next;
+  }
+  return out;
+}
+
 function pruneSettings(target, profileName) {
   if (profileName === 'full') return;
+  const allowed = new Set(withExt(profileUnits(profileName, 'hook'), '.js'));
   for (const file of ['settings.json', 'settings.auto.json']) {
     const p = path.join(target, '.claude', file);
     if (!fs.existsSync(p)) continue;
     const settings = JSON.parse(fs.readFileSync(p, 'utf8'));
     settings.enabledPlugins = { ...LEAN_PLUGIN_ALLOWLIST };
+    if (settings.hooks) settings.hooks = pruneHookBlocks(settings.hooks, allowed);
     fs.writeFileSync(p, `${JSON.stringify(settings, null, 2)}\n`);
   }
 }
 
+function copySelectedUnits(src, dotClaude, selected) {
+  copyNamedFiles(path.join(src, 'agents'), path.join(dotClaude, 'agents'), selected.agents);
+  copyNamedFiles(path.join(src, 'skills'), path.join(dotClaude, 'skills'), selected.skills);
+  copyNamedFiles(path.join(src, 'scripts'), path.join(dotClaude, 'scripts'), selected.scripts);
+  copyNamedFiles(path.join(src, 'hooks'), path.join(dotClaude, 'hooks'), selected.hooks);
+  copyNamedFiles(path.join(src, 'hooks', 'lib'), path.join(dotClaude, 'hooks', 'lib'), selected.libs);
+  for (const dir of ['templates', 'git-hooks', 'workflows', 'config']) {
+    copyTree(path.join(src, dir), path.join(dotClaude, dir));
+  }
+}
+
+function copySeedFiles(src, dotClaude) {
+  for (const file of ['architecture.md', 'program.md', 'settings.json', 'settings.auto.json', 'package.json']) {
+    copyTree(path.join(src, file), path.join(dotClaude, file));
+  }
+  const unattendedPolicy = path.join(dotClaude, 'unattended-policy.json');
+  if (!fs.existsSync(unattendedPolicy)) {
+    copyTree(path.join(src, 'templates', 'unattended-policy.template.json'), unattendedPolicy);
+  }
+  const trustedIssuers = path.join(dotClaude, 'trust', 'issuers.json');
+  if (!fs.existsSync(trustedIssuers)) {
+    copyTree(path.join(src, 'templates', 'trusted-issuers.template.json'), trustedIssuers);
+  }
+  copyDirContents(path.join(src, 'templates', 'state-seeds'), path.join(dotClaude, 'state'));
+}
+
 // Copy the harness `.claude` tree into <target>/.claude per scaffold Step 3.
-// git-hooks/ is copied in every profile (Step 8 wires it via core.hooksPath);
-// package.json pins .claude/** to CommonJS for "type":"module" apps.
 function copyScaffoldTree(src, target, profileName) {
   const dotClaude = path.join(target, '.claude');
   copyTree(path.join(src, '.claude-plugin'), path.join(dotClaude, '.claude-plugin'));
@@ -121,31 +180,10 @@ function copyScaffoldTree(src, target, profileName) {
       copyTree(path.join(src, dir), path.join(dotClaude, dir));
     }
   } else {
-    copyNamedFiles(path.join(src, 'agents'), path.join(dotClaude, 'agents'), selected.agents);
-    copyNamedFiles(path.join(src, 'skills'), path.join(dotClaude, 'skills'), selected.skills);
-    copyNamedFiles(path.join(src, 'scripts'), path.join(dotClaude, 'scripts'), selected.scripts);
-    // These ship whole even under a profile: machinery, plus the DATA the selected
-    // scripts read (run-gate-checks.js cannot run without config/gate-checks.json).
-    // workflows/ carries the fix-diagnostics exemplar (Bun Phase C).
-    for (const dir of ['hooks', 'templates', 'git-hooks', 'workflows', 'config']) {
-      copyTree(path.join(src, dir), path.join(dotClaude, dir));
-    }
+    copySelectedUnits(src, dotClaude, selected);
   }
-  for (const file of ['architecture.md', 'program.md', 'settings.json', 'settings.auto.json', 'package.json']) {
-    copyTree(path.join(src, file), path.join(dotClaude, file));
-  }
-  const unattendedPolicy = path.join(dotClaude, 'unattended-policy.json');
-  if (!fs.existsSync(unattendedPolicy)) {
-    copyTree(
-      path.join(src, 'templates', 'unattended-policy.template.json'),
-      unattendedPolicy
-    );
-  }
-  const trustedIssuers = path.join(dotClaude, 'trust', 'issuers.json');
-  if (!fs.existsSync(trustedIssuers)) {
-    copyTree(path.join(src, 'templates', 'trusted-issuers.template.json'), trustedIssuers);
-  }
-  copyDirContents(path.join(src, 'templates', 'state-seeds'), path.join(dotClaude, 'state'));
+  copySeedFiles(src, dotClaude);
+  pruneSettings(target, profileName);
 }
 
 // Copy a locally-bundled framework-skill-pack's skills into <target>/.claude/skills,

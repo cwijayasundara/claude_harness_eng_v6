@@ -32,7 +32,7 @@ const GATE_TIERS = Object.freeze({
   'type-check': new Set(VALID_TIERS),
   'coverage-ratchet-py': new Set(['standard', 'strict']),
   'coverage-ratchet-js': new Set(['standard', 'strict']),
-  'mutation-smoke': new Set(['strict']),
+  'mutation-smoke': new Set(['standard', 'strict']),
   'test-integrity': new Set(['standard', 'strict']),
   'cycle-detection': new Set(['strict']),
   'coupling-ratchet': new Set(['strict']),

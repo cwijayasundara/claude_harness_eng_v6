@@ -19,6 +19,12 @@ test('root project-manifest.json exists and is valid JSON', () => {
   assert.ok(m !== null);
 });
 
+test('harness_version matches the plugin package version', () => {
+  const m = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+  assert.strictEqual(m.harness_version, pkg.version);
+});
+
 test('Project Zero topology is cli-or-library with architecture disabled', () => {
   const m = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
   assert.strictEqual(m.topology, 'cli-or-library');

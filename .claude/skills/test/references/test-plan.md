@@ -1,10 +1,13 @@
-# `--plan-only` — seams + matrix
+# `--plan-only` — seams + behavior spec + matrix
 
 Use this when `/test` (or `/test --plan-only`) before application source
 exists, or `/build` Phase 3. The review pair is
-`test-plan.md` + `verification-matrix.json`. Do not write Playwright. Do not
-write AT source files. Do not write `test-cases.md`. Do not write `test-data/`
-fixtures. Do not spawn a nested generator. Do not load the evaluate skill.
+`test-plan.md` + `verification-matrix.json`. `test-plan.md` is the human
+behavior spec: named seams, Given/When/Then scenarios, proposed evaluator
+checks, and what is untested. Do not write Playwright files. Do not write AT source files.
+Do not write `sprint-contracts/*.json`. Do not write `test-cases.md`.
+Do not write `test-data/` fixtures. Do not spawn a nested generator.
+Do not load the evaluate skill.
 
 **The matrix is a script, not an LLM job.** A forked generator writing 23
 rows by hand is what billed ~200K tokens on a 6-story API.
@@ -51,13 +54,16 @@ not overwrite a filled `test-plan.md` unless `--reset-plan` is also passed.
 Then edit **`test-plan.md`** only:
 
 - Named **seams** (Ports-and-Adapters) the implementer will test at.
-- What is being tested and what is explicitly **untested**, with a reason.
+- Empty **Given / When / Then** cells — keep one scenario per matrix AC; do not add extra cases.
+- **Observe** on proposed sprint-contract checks (HTTP method/path, or UI steps). Kind is `api` or `playwright` from the matrix.
+- What is explicitly **untested**, with a reason.
 - Environment assumptions. Pass/fail for the sprint.
 
 **`test-traces.json`** — one entry per matrix row, tracing to `{story}-AC{n}`
 and, when `brd-acceptance.json` exists, a `BR-n-AC` / `FR-n-AC` id.
 
-Do not invent a prose case catalog. The matrix *is* the case list.
+The matrix *is* the case list; the scenario table is that list in Given/When/Then.
+Do not invent extra scenarios. Do not write Cucumber or `.feature` files.
 Do not edit `specs/stories/`, `features.json`, or `spec-decisions.json`.
 
 ## Step 2 — Constraint obligations [when schemas exist]
@@ -122,12 +128,26 @@ answer your own questions.
 
 - `specs/reviews/test-grounding.json` and `verification-matrix-verdict.json`
 - `constraint-obligations.json` when Step 2 ran
+- Given/When/Then cells still `(fill)`, or scenarios that do not read as the requirement
+- Proposed evaluator checks with empty Observe, or api/e2e ACs missing a check
 - ACs planned at `unit` only, with no api/e2e evidence
 - What you decided not to test, each with a reason
 
-Brief: which ACs at which layer, and **what you decided not to test**. Record
-with `plan-approval.js`, naming `test-plan.md` and `verification-matrix.json`
+Brief: the behavior scenarios, the proposed evaluator checks, and **what you
+decided not to test**. The human is reviewing what "correct" means — variable
+rigor by criticality — not unit tests or implementation. Record with
+`plan-approval.js`, naming `test-plan.md` and `verification-matrix.json`
 on the approving round. In `--auto` / `--autonomous`, waive with `--lane`.
+
+After an approved or waived receipt, freeze the proposed evaluator checks:
+
+```bash
+node .claude/scripts/contract-freeze.js
+```
+
+That writes `sprint-contracts/{group}.json` and `specs/reviews/contract-freeze.json`.
+A non-zero exit means Observe is still `(fill)` or the test gate is not approved.
+Do not hand-edit frozen contracts; `/auto` must not negotiate a replacement.
 
 This phase reviews the test plan. A spec/design mismatch is a question, not
 an in-phase rewrite. After the human answers, edit only `test-plan.md` and

@@ -126,6 +126,10 @@ for (const profile of ['core', 'brownfield', 'full']) {
         fs.existsSync(path.join(target, '.claude', 'scripts', 'record-modularity-review.js')),
         'record-modularity-review.js must be copied because /brownfield Step 3.6 and /design --delta Step D3.5 invoke it',
       );
+      assert.ok(
+        fs.existsSync(path.join(target, '.claude', 'scripts', 'migration-roundtrip.sh')),
+        'migration-roundtrip.sh must be copied because checking-migration-safety invokes it',
+      );
     } finally {
       fs.rmSync(workDir, { recursive: true, force: true });
     }
@@ -203,6 +207,52 @@ for (const profile of ['core', 'brownfield', 'full']) {
       assert.ok(fs.existsSync(constPath), 'specs/design/constitution.md must be copied by scaffold-apply');
       const body = fs.readFileSync(constPath, 'utf8');
       assert.ok(body.includes('## Invariants'), 'constitution.md must carry the Invariants section');
+    } finally {
+      fs.rmSync(workDir, { recursive: true, force: true });
+    }
+  });
+}
+
+function settingsHookText(target) {
+  const settings = JSON.parse(fs.readFileSync(path.join(target, '.claude', 'settings.json'), 'utf8'));
+  return JSON.stringify(settings.hooks || {});
+}
+
+test('scaffold (core) omits brownfield session hooks and prunes them from settings', () => {
+  const { workDir, target } = scaffoldInto('core');
+  try {
+    const hooksDir = path.join(target, '.claude', 'hooks');
+    assert.ok(!fs.existsSync(path.join(hooksDir, 'graph-refresh.js')));
+    assert.ok(!fs.existsSync(path.join(hooksDir, 'token-advisor.js')));
+    assert.ok(!fs.existsSync(path.join(hooksDir, 'lib', 'verbose-command.js')));
+    assert.ok(fs.existsSync(path.join(hooksDir, 'concurrency-gate.js')),
+      'planning pack is in core — concurrency-gate must still copy');
+    assert.ok(fs.existsSync(path.join(hooksDir, 'red-phase-record.js')));
+    const text = settingsHookText(target);
+    assert.doesNotMatch(text, /graph-refresh\.js/);
+    assert.doesNotMatch(text, /token-advisor\.js/);
+    assert.match(text, /concurrency-gate\.js/);
+    assert.match(text, /red-phase-record\.js/);
+    const settings = JSON.parse(fs.readFileSync(path.join(target, '.claude', 'settings.json'), 'utf8'));
+    const groups = Object.values(settings.hooks || {}).flat();
+    assert.ok(groups.every((g) => Array.isArray(g.hooks) && g.hooks.length > 0));
+    assert.ok(!(settings.hooks.PreToolUse || []).some((g) => g.matcher === 'Read|Bash'));
+  } finally {
+    fs.rmSync(workDir, { recursive: true, force: true });
+  }
+});
+
+for (const profile of ['brownfield', 'full']) {
+  test(`scaffold (${profile}) copies and keeps graph-refresh and token-advisor`, () => {
+    const { workDir, target } = scaffoldInto(profile);
+    try {
+      const hooksDir = path.join(target, '.claude', 'hooks');
+      assert.ok(fs.existsSync(path.join(hooksDir, 'graph-refresh.js')));
+      assert.ok(fs.existsSync(path.join(hooksDir, 'token-advisor.js')));
+      assert.ok(fs.existsSync(path.join(hooksDir, 'lib', 'verbose-command.js')));
+      const text = settingsHookText(target);
+      assert.match(text, /graph-refresh\.js/);
+      assert.match(text, /token-advisor\.js/);
     } finally {
       fs.rmSync(workDir, { recursive: true, force: true });
     }

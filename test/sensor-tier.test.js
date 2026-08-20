@@ -60,8 +60,8 @@ test('strict enables cycle and coupling; standard does not', () => {
   assert.strictEqual(isGateEnabled('standard', 'coupling-ratchet'), false);
 });
 
-test('mutation-smoke is strict only', () => {
-  assert.strictEqual(isGateEnabled('standard', 'mutation-smoke'), false);
+test('mutation-smoke runs on standard and strict, not minimal', () => {
+  assert.strictEqual(isGateEnabled('standard', 'mutation-smoke'), true);
   assert.strictEqual(isGateEnabled('minimal', 'mutation-smoke'), false);
   assert.strictEqual(isGateEnabled('strict', 'mutation-smoke'), true);
 });

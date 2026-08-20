@@ -92,8 +92,26 @@ function checkVerificationMatrix(projectDir, group) {
   }
 }
 
+function checkFrozenContracts(projectDir) {
+  let verifyFreeze;
+  try {
+    ({ verifyFreeze } = requireScript('contract-freeze'));
+  } catch (_) {
+    return;
+  }
+  const result = verifyFreeze(projectDir);
+  if (result.ok) return;
+  failBlock({
+    id: 'sprint-contract',
+    title: result.error,
+    fix: 'Restore the frozen sprint-contracts files, or re-run /test approval and node .claude/scripts/contract-freeze.js.',
+    minTier: 'minimal',
+  });
+}
+
 function checkSprintContract(ctx) {
   const { projectDir } = ctx;
+  checkFrozenContracts(projectDir);
   let progress;
   try {
     progress = fs.readFileSync(path.join(projectDir, 'claude-progress.txt'), 'utf8');

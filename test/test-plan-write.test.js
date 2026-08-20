@@ -5,7 +5,7 @@ const assert = require('node:assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { writePlan, buildPlan, layerFor, run } = require('../.claude/scripts/test-plan-write');
+const { writePlan, buildPlan, layerFor, parseGwt, gwtFromAc, evaluatorKind, run } = require('../.claude/scripts/test-plan-write');
 
 function tmp() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'test-plan-write-'));
@@ -22,6 +22,25 @@ function seed(dir) {
     { id: 'E2-S1', title: 'Page', layer: 'UI', group: 'B' },
   ], null, 2)}\n`);
 }
+
+test('parseGwt splits Given/When/Then without Cucumber', () => {
+  assert.deepStrictEqual(
+    parseGwt('Given a live API, when GET /health, then status is 200'),
+    { given: 'a live API', when: 'GET /health', then: 'status is 200' },
+  );
+  assert.deepStrictEqual(parseGwt('status is 200'), { given: '', when: '', then: 'status is 200' });
+  assert.deepStrictEqual(
+    gwtFromAc({ given: 'a member', when: 'they submit', then: '201' }),
+    { given: 'a member', when: 'they submit', then: '201' },
+  );
+});
+
+test('evaluatorKind maps matrix layers to api or playwright checks', () => {
+  assert.strictEqual(evaluatorKind(['api']), 'api');
+  assert.strictEqual(evaluatorKind(['e2e']), 'playwright');
+  assert.strictEqual(evaluatorKind(['api', 'e2e']), 'playwright');
+  assert.strictEqual(evaluatorKind(['unit']), null);
+});
 
 test('layerFor maps story layer to a matrix layer', () => {
   assert.strictEqual(layerFor({ layer: 'UI' }), 'e2e');
@@ -60,7 +79,14 @@ test('writePlan writes matrix + traces + skeleton and is idempotent', () => {
   assert.strictEqual(first.rows, 3);
   const matrix = JSON.parse(fs.readFileSync(path.join(dir, 'specs/test_artefacts/verification-matrix.json'), 'utf8'));
   assert.strictEqual(matrix.requirements.length, 3);
-  assert.match(fs.readFileSync(path.join(dir, 'specs/test_artefacts/test-plan.md'), 'utf8'), /Named Seams/);
+  const planMd = fs.readFileSync(path.join(dir, 'specs/test_artefacts/test-plan.md'), 'utf8');
+  assert.match(planMd, /Named Seams/);
+  assert.match(planMd, /Behavior scenarios \(Given \/ When \/ Then\)/);
+  assert.match(planMd, /Proposed sprint-contract checks/);
+  assert.match(planMd, /QA-VM-001/);
+  assert.match(planMd, /\| api \|/);
+  assert.match(planMd, /\| playwright \|/);
+  assert.match(planMd, /Do not write `sprint-contracts\/\*\.json`/);
   const second = writePlan(dir);
   assert.strictEqual(second.skipped, true);
   const forced = writePlan(dir, { force: true });
@@ -87,6 +113,39 @@ test('writePlan attaches schema obligations and design-trace paths', () => {
   assert.ok(matrix.requirements[0].implementation_paths.includes('backend/src/boot.py'));
   const traces = JSON.parse(fs.readFileSync(path.join(dir, 'specs/test_artefacts/test-traces.json'), 'utf8'));
   assert.ok(traces.some((t) => t.traces.some((id) => String(id).startsWith('OBL-'))));
+});
+
+test('skeleton GWT uses acceptance-criteria Given/When/Then text', () => {
+  const dir = tmp();
+  seed(dir);
+  fs.writeFileSync(path.join(dir, 'specs/stories/acceptance-criteria.json'), `${JSON.stringify([
+    { id: 'E1-S1-AC1', given: 'a live API', when: 'GET /health', then: 'status is 200' },
+    { id: 'E1-S1-AC2', text: 'Given a live API, when GET /ready, then status is 200' },
+  ], null, 2)}\n`);
+  writePlan(dir);
+  const planMd = fs.readFileSync(path.join(dir, 'specs/test_artefacts/test-plan.md'), 'utf8');
+  assert.match(planMd, /E1-S1-AC1/);
+  assert.match(planMd, /a live API/);
+  assert.match(planMd, /GET \/health/);
+  assert.match(planMd, /status is 200/);
+  assert.match(planMd, /GET \/ready/);
+  assert.match(planMd, /QA-VM-001[\s\S]*\| \(fill\) \|/);
+  assert.match(planMd, /Do not write `\.feature`/);
+});
+
+test('unit-only stories have no evaluator check row', () => {
+  const dir = tmp();
+  fs.mkdirSync(path.join(dir, 'specs/stories'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'specs/stories/story-traces.json'), `${JSON.stringify([
+    { id: 'E1-S1', text: 'hash', traces: ['FRD-1'], acs: ['E1-S1-AC1'] },
+  ], null, 2)}\n`);
+  fs.writeFileSync(path.join(dir, 'specs/stories/stories.json'), `${JSON.stringify([
+    { id: 'E1-S1', title: 'Hash', layer: 'Config', group: 'A' },
+  ], null, 2)}\n`);
+  writePlan(dir);
+  const planMd = fs.readFileSync(path.join(dir, 'specs/test_artefacts/test-plan.md'), 'utf8');
+  assert.match(planMd, /none — unit\/seam only/);
+  assert.doesNotMatch(planMd, /QA-VM-001/);
 });
 
 test('--force rebuilds the matrix but keeps a filled test-plan.md and reviewed layers', () => {

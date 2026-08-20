@@ -381,7 +381,7 @@ Determine the current execution mode from `project-manifest.json` field `executi
 - **Use getByRole, not CSS:** Playwright checks must use semantic locators (`getByRole`, `getByText`, `getByLabel`). CSS selectors break with minor UI changes and are not permitted.
 - **Use expect().toBeVisible(), not waitForTimeout():** Arbitrary timeouts hide real failures. If an element does not appear immediately, the check fails.
 - **Docker won't start — that's a FAIL:** If the stack is unhealthy, record `failure_layer: "docker"` and stop. Do not attempt workarounds or partial evaluations.
-- **Do not modify sprint contracts:** The contract is a read-only input. If the contract appears wrong, report it; do not edit it to make checks pass.
+- **Do not modify sprint contracts:** The contract is a read-only input, including when it was frozen at `/test`. If the contract appears wrong, report it; do not edit it to make checks pass.
 
 ---
 

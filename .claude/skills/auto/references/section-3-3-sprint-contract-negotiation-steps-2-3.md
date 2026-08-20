@@ -1,6 +1,15 @@
 ## SECTION 3: Sprint Contract Negotiation (Steps 2-3)
 
-Sprint contracts define the verifiable done-criteria for a group. Two-step propose-approve process using generator and evaluator agents.
+Sprint contracts define the verifiable done-criteria for a group.
+
+When `specs/test_artefacts/test-plan.md` exists, the `/test` human gate owns the
+QA document. Do not let the generator rewrite it.
+
+1. If `specs/reviews/contract-freeze.json` is missing, run `node .claude/scripts/contract-freeze.js`. A non-zero exit is a halt (unfilled Observe or test review not approved/waived) — do not spawn generator or evaluator to invent checks.
+2. Run `node .claude/scripts/contract-freeze.js --check`. Hash mismatch is a halt; restore the frozen files.
+3. Skip Step 2 and Step 3 below. The evaluator will execute the frozen contract; it must not edit it. Accessibility defaults were applied at freeze time — skip Step 3.5.
+
+When there is no test-plan (lanes that never ran `/test`), keep the propose-approve path:
 
 ### Step 2 — Generator Proposes Contract
 

@@ -2,6 +2,8 @@
 .claude/tdd-guard/
 node_modules/
 dist/
+# Unsubstituted VS Code/MCP ${workspaceFolder} token materializes as a real directory.
+${workspaceFolder}/
 # Generated SKU trees (npm run package:skus); source of truth remains .claude/ + harness-lite/
 dist/skus/
 # specs/ is pipeline runtime output, not part of the base scaffold — /scaffold only

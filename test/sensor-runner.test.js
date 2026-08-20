@@ -30,13 +30,14 @@ test('resolveLane: default sensors; --only and --lane gate select the pack list'
   assert.throws(() => resolveLane(['--lane', 'mystery']), /unknown --lane/);
 });
 
-test('standard sensor catalog excludes mutation/cycle and includes secret-scan', () => {
+test('standard sensor catalog includes mutation-smoke and excludes cycle', () => {
   const ids = selectGates('standard').map((g) => g.id);
   assert.ok(ids.includes('secret-scan'));
   assert.ok(ids.includes('type-check'));
-  assert.ok(!ids.includes('mutation-smoke'));
+  assert.ok(ids.includes('mutation-smoke'));
   assert.ok(!ids.includes('cycle-detection'));
-  assert.strictEqual(isGateEnabled('standard', 'mutation-smoke'), false);
+  assert.strictEqual(isGateEnabled('standard', 'mutation-smoke'), true);
+  assert.strictEqual(isGateEnabled('minimal', 'mutation-smoke'), false);
 });
 
 test('runSensorCatalog on a secret-bearing file blocks secret-scan, not canvas-sync', () => {
@@ -79,7 +80,6 @@ test('CLI default lane writes sensor-checks.json and does not write gate-checks.
   const doc = JSON.parse(fs.readFileSync(sensorOut, 'utf8'));
   assert.strictEqual(doc.lane, 'sensors');
   assert.ok(doc.results.some((x) => x.id === 'secret-scan'));
-  assert.ok(!doc.results.some((x) => x.id === 'mutation-smoke'));
   assert.ok(!doc.results.some((x) => x.id === 'cycle-detection'));
 });
 

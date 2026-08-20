@@ -50,7 +50,7 @@ function scriptPattern(name, fromKind) {
   if (CODE_KINDS.has(fromKind)) {
     return new RegExp(`${EXEC_CALL}[^)]*['"][^'"]*${n}(?:\\.js)?['"]`);
   }
-  return new RegExp(`scripts/${n}\\.js|npm run [\\w:-]*\\b${n}\\b`);
+  return new RegExp(`scripts/${n}\\.(?:js|sh)|npm run [\\w:-]*\\b${n}\\b`);
 }
 
 // `(?:\\.js)?` before the closing quote is load-bearing. Without it the pattern
@@ -254,7 +254,15 @@ function loadUnitTexts() {
   dirEntries('skills', (s) => { if (fs.statSync(c('skills', s)).isDirectory()) put('skill', s, walk(c('skills', s))); });
   dirEntries('agents', (a) => { if (a.endsWith('.md')) put('agent', a.slice(0, -3), [c('agents', a)]); });
   dirEntries('hooks', (h) => { if (h.endsWith('.js')) put('hook', h.slice(0, -3), [c('hooks', h)]); });
-  dirEntries('scripts', (s) => { if (s.endsWith('.js')) put('script', s.slice(0, -3), [c('scripts', s)]); });
+  dirEntries('scripts', (s) => {
+    if (s.endsWith('.js')) put('script', s.slice(0, -3), [c('scripts', s)]);
+  });
+  dirEntries('scripts', (s) => {
+    if (!s.endsWith('.sh')) return;
+    const name = s.slice(0, -3);
+    if (texts[`script:${name}`] !== undefined) return;
+    put('script', name, [c('scripts', s)]);
+  });
   fs.readdirSync(c('hooks', 'lib')).forEach((l) => { if (l.endsWith('.js')) put('lib', l.slice(0, -3), [c('hooks', 'lib', l)]); });
   dirEntries('git-hooks', (g) => { if (fs.statSync(c('git-hooks', g)).isFile()) put('githook', g, [c('git-hooks', g)]); });
   return { texts, names };

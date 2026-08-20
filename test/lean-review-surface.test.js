@@ -62,7 +62,27 @@ test('/auto requires program-design.md before coding', () => {
 test('/test --plan-only does not write Playwright or AT source', () => {
   const test = readSkillCorpus('test');
   assert.match(test, /Do not write Playwright/);
-  assert.match(test, /Do not[\s\S]{0,40}write AT source/i);
+  assert.match(test, /Do not write AT source/i);
+});
+
+test('/auto skips contract negotiation when the /test freeze exists', () => {
+  const auto = readSkillCorpus('auto');
+  assert.match(auto, /contract-freeze\.js/);
+  assert.match(auto, /Skip Step 2 and Step 3/);
+  const generator = fs.readFileSync(path.join(ROOT, '.claude/agents/generator.md'), 'utf8');
+  assert.match(generator, /contract-freeze\.json/);
+  assert.doesNotMatch(generator, /Negotiates sprint contracts with evaluator/);
+});
+
+test('/test human gate reviews GWT scenarios and proposed evaluator checks', () => {
+  const test = readSkillCorpus('test');
+  assert.match(test, /Given\/When\/Then/);
+  assert.match(test, /proposed evaluator checks|Proposed sprint-contract checks/);
+  assert.match(test, /sprint-contracts\/\*\.json/);
+  assert.match(test, /contract-freeze\.js/);
+  assert.match(surface, /Given\/When\/Then scenarios/);
+  assert.match(surface, /proposed evaluator checks/);
+  assert.match(test, /Do not write Cucumber or `\.feature` files/);
 });
 
 test('phase-eval is flag-only — auth is not an implicit trigger', () => {

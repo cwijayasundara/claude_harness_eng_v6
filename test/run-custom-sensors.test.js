@@ -2,7 +2,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs'), os = require('os'), path = require('path');
-const { loadCustomSensors, runOne, runAll } = require('../.claude/scripts/run-custom-sensors');
+const { loadCustomSensors, runOne, runAll, SCHEMA_PATH } = require('../.claude/scripts/run-custom-sensors');
 
 function proj(customSensors) {
   const d = fs.mkdtempSync(path.join(os.tmpdir(), 'cs-'));
@@ -26,6 +26,20 @@ test('runOne treats a non-JSON / failing command as a failed result, never throw
   const d = proj([]);
   const r = runOne({ id: 'boom', command: 'echo not-json; exit 3', parser: 'default' }, d);
   assert.strictEqual(r.result.success, false);
+});
+
+test('loadCustomSensors drops entries that fail custom-sensors.schema.json required fields', () => {
+  assert.ok(fs.existsSync(SCHEMA_PATH), 'runner must load the shipped schema, not a hardcoded fallback');
+  const schema = JSON.parse(fs.readFileSync(SCHEMA_PATH, 'utf8'));
+  assert.deepStrictEqual(schema.required, ['id', 'command']);
+  const d = proj([
+    { id: 'ok', command: 'echo hi' },
+    { id: 'no-command' },
+    { command: 'echo hi' },
+    { id: 1, command: 'echo hi' },
+    null,
+  ]);
+  assert.deepStrictEqual(loadCustomSensors(d).map((e) => e.id), ['ok']);
 });
 
 test('runAll filters by cadence and skips disabled entries', () => {

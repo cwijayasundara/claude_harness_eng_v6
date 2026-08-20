@@ -76,3 +76,67 @@ Append one micro-contract per `/vibe` change. Keep entries short and factual.
 - Out of scope: budget-state.js RATE_USD (no 'fusion' rate-seed — known minor gap, only affects token-LESS estimation; real A/B runs carry tokens, priced per-model — left unedited); ab-report.js, the runbook.
 - Verification: node .claude/scripts/run-compact.js --kind test -- node --test test/cost-per-outcome.test.js (exit 0); git diff --check clean; both files < 300 lines (236, 162); local-regression-gate pass.
 - Rollback: git checkout -- .claude/scripts/cost-per-outcome.js test/cost-per-outcome.test.js
+
+### 2026-08-20 — Default-path agents honor test_discipline (item 1)
+- Class: CV1
+- Change: Stop instructing generator/implementer to TDD unconditionally. They read `quality.test_discipline` and follow `code-gen` Testing Rules. Invoke `superpowers:test-driven-development` only when discipline is `tdd`. Keep `tdd` / `at-first` knobs and the write-lock stack.
+- In scope: `.claude/agents/generator.md`, `.claude/agents/implementer.md`, `.claude/skills/code-gen/references/test-strategy.md` (pointer only), `test/sealed-auto-pack.test.js`
+- Out of scope: mutation-smoke tier (item 4); /test human QA-doc (items 2–3); sprouting skill; CLAUDE.md; deleting write-lock / red-phase hooks
+- Verification: `node --test test/sealed-auto-pack.test.js`; `git diff --check`
+- Rollback: `git checkout --` the four files
+
+### 2026-08-20 — Behavior spec on /test human gate (item 2)
+- Class: CV1
+- Change: Put Given/When/Then scenarios and proposed evaluator (sprint-contract) checks on the existing `/test` review pair. Script derives them from ACs + matrix. No Cucumber, no AT source, no Playwright files, no `sprint-contracts/*.json` yet (item 3).
+- In scope: `test-plan-write.js` skeleton, `/test` plan-only + lean-review-surface prompts, wiring tests
+- Out of scope: freezing sprint contracts; mutation-smoke; at-first default; Gherkin runtime
+- Verification: `node --test test/test-plan-write.test.js test/lean-review-surface.test.js`; `git diff --check`
+- Rollback: checkout the touched files
+
+### 2026-08-20 — Freeze sprint contracts after /test (item 3)
+- Class: CV1
+- Change: After /test approval, `contract-freeze.js` writes `sprint-contracts/{group}.json` from the reviewed Observe table and hashes them. `/auto` skips generator↔evaluator negotiation when the freeze exists. Pre-commit blocks hash mismatch.
+- In scope: contract-freeze.js, gates-planning freeze check, auto SECTION 3, generator/evaluator prompts, packs.json, tests
+- Out of scope: mutation-smoke (item 4); deleting the no-test-plan negotiation fallback
+- Verification: `node --test test/contract-freeze.test.js test/lean-review-surface.test.js`; `git diff --check`
+- Rollback: checkout the touched files
+
+### 2026-08-20 — mutation-smoke on standard (item 4)
+- Class: CV1
+- Change: Diff-scoped mutation-smoke is on sensor_tier standard+strict (off minimal). Deep-mutation stays release/strict. /auto and /implement no longer treat mutation-smoke as strict-only.
+- In scope: sensor-tier.js, gates-verification minTier, auto/implement prompts, harness-manifest, product-skus table, wiring tests
+- Out of scope: removing inAutoBuild scoping; enabling Stryker on every commit
+- Verification: targeted sensor-tier / gate-registry / auto wiring tests
+- Rollback: checkout the touched files
+
+### 2026-08-20 — P0 hygiene (gitignore + migration-roundtrip pack)
+- Class: CV0/CV1
+- Change: Ignore the unsubstituted `${workspaceFolder}/` MCP folder; register `migration-roundtrip` in the legacy-discipline pack and resolve `.sh` scripts in pack-install + scaffold-copy so core/brownfield actually ship the runner.
+- In scope: `.gitignore`; `.claude/config/packs.json`; `tools/pack-install.js`; `.claude/scripts/scaffold-copy.js`; `tools/check-partition.js`; targeted tests. Local untracked junk (`${workspaceFolder}/`, `dist/`, `__pycache__`) deleted if the environment allows.
+- Out of scope: red-phase wiring (P1); scaffold hook over-copy (P2); control merges (P3); deleting planning/domain packs.
+- Verification: `node --test test/pack-install.test.js test/pack-install-smoke.test.js test/scaffold-copy.test.js test/check-partition.test.js`; `git diff --check`.
+- Rollback: checkout the tracked files; regenerate `dist/` with `npm run package:skus`.
+
+### 2026-08-20 — P1 honesty (red-phase wiring, schemas, harness_version)
+- Class: CV1
+- Change: Wire `red-phase-record.js` as PostToolUse matcher `Bash` so G41 actually writes the ledger; load `custom-sensors.schema.json` in the runner; delete unused `run-event.schema.json`; stamp `project-manifest.json#harness_version` to match plugin `3.0.0`.
+- In scope: `.claude/settings.json`; `run-custom-sensors.js`; `project-manifest.json`; `.claude/templates/run-event.schema.json`; targeted tests. `HARNESS_PREFIX_EDIT=1` for the settings edit.
+- Out of scope: turning CI `test-integrity --strict` (needs a live ledger first); P2 scaffold hook over-copy; envelope schemas.
+- Verification: `node --test test/plugin-schema.test.js test/run-custom-sensors.test.js test/dogfood-manifest.test.js`; `git diff --check`.
+- Rollback: checkout the tracked files; restore `run-event.schema.json` from git.
+
+### 2026-08-20 — P2 lean scaffold hook copy
+- Class: CV1
+- Change: core/brownfield `copyScaffoldTree` copies only pack-selected hook entrypoints and `hooks/lib` files (same partition as pack-install). `pruneSettings` drops settings.json hook commands whose files are not in the profile, so core does not fire `graph-refresh` / `token-advisor`.
+- In scope: `.claude/scripts/scaffold-copy.js`; `test/scaffold-copy.test.js`.
+- Out of scope: splitting `templates/` or `config/` (pack-install still ships all of `config/`; scaffold-apply still reads templates from the plugin source). P3 control merges.
+- Verification: `node --test test/scaffold-copy.test.js`; `git diff --check`.
+- Rollback: checkout those two files.
+
+### 2026-08-20 — P3 same-invariant overlap audit
+- Class: CV0
+- Change: First full de-dup backstop. Pre-pass: 51 candidate pairs, 109 residual. Adjudicated; **no merges** (pairs were hubs, guide+sensor of one invariant, or gap-number bundles). Record marker + adjudication notes.
+- In scope: `.claude/state/dedup-audit-adjudication.md`; `node tools/overlap-candidates.js --record` → `dedup-audit-marker.json`.
+- Out of scope: deleting CLI/lib twins; merging G41–G43; merging G15/G16; shrinking planning join gates.
+- Verification: `node tools/overlap-candidates.js --stale` reports none; `node --test test/overlap-candidates.test.js`.
+- Rollback: delete the two state files.

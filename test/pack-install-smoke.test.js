@@ -158,3 +158,11 @@ test('every file in the accounted directories is claimed by some pack', () => {
   // it reports edges between declared units, not units nobody declared.
   assert.deepStrictEqual(undeclaredUnits(loadPartition(), ROOT), []);
 });
+
+test('core profile ships the migration-roundtrip shell runner', () => {
+  const out = coreProfile();
+  assert.ok(
+    fs.existsSync(path.join(out, '.claude', 'scripts', 'migration-roundtrip.sh')),
+    'legacy-discipline skill checking-migration-safety invokes the .sh; a .js-only copy list would drop it',
+  );
+});

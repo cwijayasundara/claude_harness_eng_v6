@@ -11,11 +11,31 @@ const path = require('path');
 const { execSync } = require('child_process');
 const { parseDefault } = require('../hooks/lib/sensor-schema');
 
+const SCHEMA_PATH = path.join(__dirname, '..', 'templates', 'custom-sensors.schema.json');
+
+function schemaRequired() {
+  const schema = JSON.parse(fs.readFileSync(SCHEMA_PATH, 'utf8'));
+  if (!Array.isArray(schema.required) || schema.required.length === 0) {
+    throw new Error(`custom-sensors.schema.json has no required[]: ${SCHEMA_PATH}`);
+  }
+  return schema.required;
+}
+
+function isValidEntry(entry, required) {
+  if (!entry || typeof entry !== 'object') return false;
+  return required.every((key) => typeof entry[key] === 'string' && entry[key].trim() !== '');
+}
+
 function loadCustomSensors(projectDir) {
+  const required = schemaRequired();
   try {
     const m = JSON.parse(fs.readFileSync(path.join(projectDir, 'project-manifest.json'), 'utf8'));
-    return Array.isArray(m.custom_sensors) ? m.custom_sensors : [];
-  } catch (_) { return []; }
+    if (!Array.isArray(m.custom_sensors)) return [];
+    return m.custom_sensors.filter((e) => isValidEntry(e, required));
+  } catch (err) {
+    if (err && (err.code === 'ENOENT' || err instanceof SyntaxError)) return [];
+    throw err;
+  }
 }
 
 function runOne(entry, projectDir) {
@@ -54,4 +74,4 @@ if (require.main === module) {
   catch (e) { process.stderr.write(`custom-sensors: ${e.message}\n`); process.exit(2); }
 }
 
-module.exports = { loadCustomSensors, runOne, runAll, main };
+module.exports = { loadCustomSensors, runOne, runAll, main, SCHEMA_PATH };

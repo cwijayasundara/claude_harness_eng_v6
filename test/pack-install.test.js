@@ -6,7 +6,10 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-const { resolveSelection, filesFor } = require('../tools/pack-install');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { resolveSelection, filesFor, undeclaredUnits } = require('../tools/pack-install');
 
 const PARTITION = {
   kernel: { skill: ['vibe', 'change'], agent: ['implementer'], lib: ['common'], script: ['review-tier'] },
@@ -64,7 +67,30 @@ test('filesFor maps unit kinds to their on-disk paths', () => {
   assert.ok(files.some((f) => f === '.claude/agents/implementer.md'));
 });
 
+test('filesFor maps a script unit to .sh when that is the file on disk', () => {
+  const files = filesFor({
+    skill: [], agent: [], hook: [], lib: [], githook: [], script: ['migration-roundtrip'],
+  });
+  assert.deepStrictEqual(
+    files.filter((f) => f.includes('migration-roundtrip')),
+    ['.claude/scripts/migration-roundtrip.sh'],
+  );
+});
+
 test('filesFor refuses an unknown kind rather than dropping it', () => {
   assert.throws(() => filesFor({ widget: ['x'] }), /unknown unit kind/i,
     'silently dropping a kind would produce an install missing files nobody noticed');
+});
+
+test('undeclaredUnits reports an unclaimed .sh script', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'pack-sh-'));
+  try {
+    const scripts = path.join(tmp, '.claude', 'scripts');
+    fs.mkdirSync(scripts, { recursive: true });
+    fs.writeFileSync(path.join(scripts, 'orphan.sh'), '#!/bin/sh\n');
+    const holes = undeclaredUnits({ kernel: { script: [] }, packs: {} }, tmp);
+    assert.ok(holes.some((h) => h.endsWith('orphan.sh')), holes.join(','));
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
 });

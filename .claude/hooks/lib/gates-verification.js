@@ -54,7 +54,7 @@ function checkMutation(ctx) {
     detail: `${detail}\n`,
     fix: 'add an assertion that fails when the flipped operator above is applied — test the boundary (off-by-one) or the false branch — then re-commit.',
     envOff: 'HARNESS_MUTATION_GATE',
-    minTier: 'strict',
+    minTier: 'standard',
   });
 }
 
