@@ -73,16 +73,30 @@ function storyAcIds(root, rows, group) {
   );
 }
 
+// A row's brd_id is valid if the criterion claims it, or — for a criterion that
+// declares no upstream of its own — if its story does. Checking the story's list
+// alone is what let the story-level id ride on every row unchallenged while the
+// criterion's real requirement went unrecorded.
+function acceptanceUpstream(root) {
+  const acceptance = readJson(path.join(root, 'specs', 'stories', 'acceptance-criteria.json'), []);
+  const map = new Map();
+  for (const row of asArray(acceptance)) {
+    if (row && row.id) map.set(row.id, asArray(row.traces).filter(Boolean));
+  }
+  return map;
+}
+
 function storyTraceMap(root, rows, group) {
   const traces = readJson(path.join(root, 'specs', 'stories', 'story-traces.json'), []);
   const storyIds = group ? new Set(rows.map((row) => row.story_id).filter(Boolean)) : null;
+  const ownUpstream = acceptanceUpstream(root);
   const map = new Map();
   for (const story of asArray(traces)) {
     if (storyIds && !storyIds.has(story.id)) continue;
     for (const ac_id of asArray(story.acs)) {
       map.set(ac_id, {
         story_id: story.id,
-        brd_ids: new Set(asArray(story.traces)),
+        brd_ids: new Set([...asArray(story.traces), ...(ownUpstream.get(ac_id) || [])]),
       });
     }
   }

@@ -185,3 +185,51 @@ test('CLI prints counts and does not dump the matrix', () => {
   assert.match(out, /3 matrix rows over 2 stories/);
   assert.doesNotMatch(out, /E1-S1-AC1/);
 });
+
+test('buildPlan takes brd_id from the criterion, not the story it sits in', () => {
+  // Regression: brd_id was `story.traces[0]`, stamped on every AC of the story,
+  // so criteria verifying a different requirement were filed under the story's
+  // first one. A real run collapsed 17 upstream ids to 4 — the SSRF rule and
+  // every NFR showed as covered by no row at all.
+  const traces = [
+    { id: 'E3-S1', traces: ['FRD-2', 'FRD-6', 'FRD-10'], acs: ['E3-S1-AC1', 'E3-S1-AC3', 'E3-S1-AC9'] },
+  ];
+  const stories = [{ id: 'E3-S1', layer: 'API', group: 'A' }];
+  const acceptance = [
+    { id: 'E3-S1-AC1', traces: ['FRD-2', 'FRD-27'], then: 'a code is returned' },
+    { id: 'E3-S1-AC3', traces: ['FRD-6', 'FRD-31'], then: 'a private-IP target is rejected' },
+    { id: 'E3-S1-AC9', traces: [], then: 'no upstream of its own' },
+  ];
+  const byId = new Map(
+    buildPlan({ traces, stories, acceptance }).requirements.map((r) => [r.ac_id, r]),
+  );
+
+  assert.strictEqual(byId.get('E3-S1-AC1').brd_id, 'FRD-2');
+  // The bug: this was 'FRD-2' because FRD-2 leads the story's trace list.
+  assert.strictEqual(byId.get('E3-S1-AC3').brd_id, 'FRD-6');
+  // A criterion with no upstream of its own still files under the story.
+  assert.strictEqual(byId.get('E3-S1-AC9').brd_id, 'FRD-2');
+});
+
+test('buildPlan prefers the criterion own upstream even when the story omits it', () => {
+  const traces = [{ id: 'E4-S1', traces: ['FRD-3'], acs: ['E4-S1-AC4'] }];
+  const stories = [{ id: 'E4-S1', layer: 'API', group: 'A' }];
+  const acceptance = [{ id: 'E4-S1-AC4', traces: ['FRD-14'], then: '503 with a JSON envelope' }];
+  const plan = buildPlan({ traces, stories, acceptance });
+
+  assert.strictEqual(plan.requirements[0].brd_id, 'FRD-14');
+  // test-traces carries every upstream id the criterion claims, so a coverage
+  // query for one requirement finds the rows that actually verify it.
+  assert.deepStrictEqual(plan.testTraces[0].traces, ['E4-S1-AC4', 'FRD-14']);
+});
+
+test('test-traces carries every upstream id the criterion claims', () => {
+  const traces = [{ id: 'E3-S1', traces: ['FRD-2'], acs: ['E3-S1-AC3'] }];
+  const stories = [{ id: 'E3-S1', layer: 'API', group: 'A' }];
+  const acceptance = [{ id: 'E3-S1-AC3', traces: ['FRD-6', 'FRD-31'], then: 'rejected' }];
+
+  assert.deepStrictEqual(
+    buildPlan({ traces, stories, acceptance }).testTraces[0].traces,
+    ['E3-S1-AC3', 'FRD-6', 'FRD-31'],
+  );
+});

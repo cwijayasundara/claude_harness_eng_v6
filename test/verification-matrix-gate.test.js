@@ -484,3 +484,38 @@ test('CLI exits 2 when any option value is missing', () => {
     assert.strictEqual(code, 2, args.join(' '));
   }
 });
+
+test('plan phase accepts a BRD id the criterion claims but its story omits', () => {
+  // The gate validated brd_id against the *story's* traces, which is what let
+  // the story-level id ride on every row unchallenged. A criterion may verify a
+  // requirement its story does not list (an NFR reached through one AC), and
+  // that id — not the story's lead id — is the honest one to file the row under.
+  const root = baseProject();
+  writeJson(root, 'specs/stories/acceptance-criteria.json', [
+    { id: 'E1-S1-AC1', story: 'E1-S1', traces: ['BR-7'], then: 'a 503 envelope' },
+  ]);
+  const rel = 'specs/test_artefacts/verification-matrix.json';
+  const matrix = JSON.parse(fs.readFileSync(path.join(root, rel), 'utf8'));
+  matrix.requirements[0].brd_id = 'BR-7';
+  writeJson(root, rel, matrix);
+
+  const verdict = gate.runGate({ root, phase: 'plan' });
+  assert.ok(!verdict.failures.some((f) => f.code === 'invalid_brd_trace'));
+});
+
+test('plan phase still fails on a BRD id neither the criterion nor its story claims', () => {
+  const root = baseProject();
+  writeJson(root, 'specs/stories/acceptance-criteria.json', [
+    { id: 'E1-S1-AC1', story: 'E1-S1', traces: ['BR-7'], then: 'a 503 envelope' },
+  ]);
+  const rel = 'specs/test_artefacts/verification-matrix.json';
+  const matrix = JSON.parse(fs.readFileSync(path.join(root, rel), 'utf8'));
+  matrix.requirements[0].brd_id = 'BR-999';
+  writeJson(root, rel, matrix);
+
+  const verdict = gate.runGate({ root, phase: 'plan' });
+  assert.strictEqual(verdict.pass, false);
+  const failure = verdict.failures.find((f) => f.code === 'invalid_brd_trace');
+  assert.strictEqual(failure.matrix_id, 'VM-001');
+  assert.deepStrictEqual(failure.expected_brd_ids.sort(), ['BR-1', 'BR-7']);
+});

@@ -36,41 +36,69 @@ function pad(n) {
   return `VM-${String(n).padStart(3, '0')}`;
 }
 
+// The upstream id a row verifies is the *criterion's*, not the story's. Stamping
+// `story.traces[0]` on every row of a story filed each criterion under whichever
+// requirement happened to lead the story's list: one real run collapsed 17
+// upstream ids to 4, leaving the SSRF rule and every NFR verified by no row at
+// all while trace-check still read green — the row also traces its AC id, and
+// that alone satisfies coverage. Prefer an id the story and the criterion agree
+// on, then the criterion's own, and fall back to the story's lead id only for a
+// criterion that declares no upstream of its own.
+function primaryUpstream(own, storyTraces) {
+  return own.find((t) => storyTraces.includes(t)) || own[0] || storyTraces[0] || null;
+}
+
+function indexAcceptance(acceptance) {
+  const text = new Map();
+  const upstream = new Map();
+  for (const row of asArray(acceptance)) {
+    if (!row || !row.id) continue;
+    text.set(row.id, row.text || row.then || '');
+    upstream.set(row.id, asArray(row.traces).filter(Boolean));
+  }
+  return { text, upstream };
+}
+
+function matrixRow({ id, acId, storyId, group, layer, text, brdId }) {
+  return {
+    id,
+    ac_id: acId,
+    story_id: storyId,
+    brd_id: brdId,
+    group,
+    required_layers: [layer],
+    implementation_paths: [],
+    checks: [{
+      id: `CHK-${id}-${layer}`,
+      layer,
+      description: `Verify ${acId}${text ? `: ${String(text).slice(0, 160)}` : ''}`,
+    }],
+  };
+}
+
 function buildPlan({ traces, stories, acceptance }) {
   const storyById = new Map(asArray(stories).map((s) => [s.id, s]));
-  const acText = new Map();
-  for (const row of asArray(acceptance)) {
-    if (row && row.id) acText.set(row.id, row.text || row.then || '');
-  }
-
+  const ac = indexAcceptance(acceptance);
   const requirements = [];
   const testTraces = [];
   let n = 0;
   for (const story of asArray(traces)) {
     const meta = storyById.get(story.id) || {};
     const layer = layerFor(meta);
-    const brdId = asArray(story.traces)[0] || null;
+    const storyTraces = asArray(story.traces).filter(Boolean);
     for (const acId of asArray(story.acs)) {
       n += 1;
       const id = pad(n);
-      const text = acText.get(acId) || acId;
-      requirements.push({
-        id,
-        ac_id: acId,
-        story_id: story.id,
-        brd_id: brdId,
-        group: meta.group || 'A',
-        required_layers: [layer],
-        implementation_paths: [],
-        checks: [{
-          id: `CHK-${id}-${layer}`,
-          layer,
-          description: `Verify ${acId}${text ? `: ${String(text).slice(0, 160)}` : ''}`,
-        }],
-      });
-      const tracesOut = [acId];
-      if (brdId) tracesOut.push(brdId);
-      testTraces.push({ id, text: text || acId, traces: tracesOut, matrix_id: id });
+      const text = ac.text.get(acId) || acId;
+      const own = ac.upstream.get(acId) || [];
+      const brdId = primaryUpstream(own, storyTraces);
+      requirements.push(matrixRow({
+        id, acId, storyId: story.id, group: meta.group || 'A', layer, text, brdId,
+      }));
+      // Every upstream id the criterion claims travels to test-traces, so a
+      // coverage query for one requirement finds the rows that verify it.
+      const upstream = own.length ? own : [brdId].filter(Boolean);
+      testTraces.push({ id, text: text || acId, traces: [acId, ...upstream], matrix_id: id });
     }
   }
   return { requirements, testTraces };
