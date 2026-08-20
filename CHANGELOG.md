@@ -50,15 +50,19 @@ The import patterns ran over raw source, so an ordinary sentence in a comment
 parsed as a package. `phase-cost.js` carries `// …note from "main-loop only"
 to…`, which `/from\s+['"]…['"]/` matched — the gate blocked a commit claiming a
 hallucinated package `main-loop only`. It scans only STAGED files, so such a
-comment sits latent until the file is next touched; `fleet-retrofit.js:134`
-held a second, unfired instance.
+comment sits latent until the file is next touched. Eight more were already in
+the tree unfired — in `live-session.js`, `sprout-classify.js`,
+`sprout-symbol-check.js`, `toolchain.js`, `attestation-io.js`,
+`fleet-retrofit-core.js`, `fleet-retrofit.js` and (once this fix landed)
+`registry-names.js` itself, which quotes the example.
 
 Comments are now blanked before matching. Over-stripping is the dangerous
 direction — swallowing a real `require()` walks a hallucinated package through a
 security gate — so strings and regex literals are copied through verbatim. An
 unescaped `/` inside a character class is legal JS, and `/[/*]/` blanked the
-rest of the file until regex literals were tracked. Verified across all 837
-JS/TS files in the repo: no real import is lost.
+rest of the file until regex literals were tracked. Verified across all 842
+tracked `.js/.mjs/.cjs/.ts/.tsx` files (`git ls-files`): no real import is lost,
+and the only names dropped are the nine prose matches above.
 
 ### `phase-cost.js --write` was dead on the CLI path (2026-08-20)
 
