@@ -17,6 +17,12 @@ cannot suppress a BLOCK or bypass the human-shaping requirement. The banner now
 names both audiences by command rather than by role, and no longer documents
 its own escape hatch — only the session that must obey it could ever read that.
 
+The verdict now records `carried` and `revalidated_by` alongside the stamp. The
+flag is a self-declaration, so a caller that wrongly passes `--rendering` where
+a prior verdict exists inherits that stamp — a carried stamp was otherwise
+byte-identical to a fresh one on disk, leaving nothing for a human or a later
+control to notice.
+
 `--rendering` also carries the shaping stamp forward on the verdict. The
 digest-keyed carry-forward covered an unchanged decisions file, but the
 documented unresolved-items loop changes the digest on purpose, so the
@@ -24,6 +30,22 @@ renderer's own gate restamped the verdict with the post-clear session and the
 next `handoff-check --stage render` blocked the session the clear had just
 created — and told `/build --in-session`, which cannot `/clear`, to pass the
 flag it already passed.
+
+### `registry-names` no longer reads prose as a dependency (2026-08-20)
+
+The import patterns ran over raw source, so an ordinary sentence in a comment
+parsed as a package. `phase-cost.js` carries `// …note from "main-loop only"
+to…`, which `/from\s+['"]…['"]/` matched — the gate blocked a commit claiming a
+hallucinated package `main-loop only`. It scans only STAGED files, so such a
+comment sits latent until the file is next touched; `fleet-retrofit.js:134`
+held a second, unfired instance.
+
+Comments are now blanked before matching. Over-stripping is the dangerous
+direction — swallowing a real `require()` walks a hallucinated package through a
+security gate — so strings and regex literals are copied through verbatim. An
+unescaped `/` inside a character class is legal JS, and `/[/*]/` blanked the
+rest of the file until regex literals were tracked. Verified across all 837
+JS/TS files in the repo: no real import is lost.
 
 ### `phase-cost.js --write` was dead on the CLI path (2026-08-20)
 

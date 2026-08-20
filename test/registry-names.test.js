@@ -132,3 +132,22 @@ test('extractJsSpecs still finds imports around strings and regex literals', () 
   ].join('\n');
   assert.deepStrictEqual(extractJsSpecs(js).sort(), ['real-pkg', 'sketchy-pkg']);
 });
+
+// An unescaped `/` is legal inside a regex character class (`/[/]/` parses fine
+// since ES2015), so `/[/*]/` opened what looked like a block comment and blanked
+// the rest of the file — losing a real require(). That is the false-negative
+// direction on a security gate: a hallucinated package walks straight through.
+// Regex literals are now consumed as literals, so comment openers inside them
+// are inert.
+test('extractJsSpecs survives regex literals containing comment openers', () => {
+  const cases = [
+    'const re = /[/*]/;\nconst evil = require("sketchy-pkg");',
+    'const re = /[//]/;\nimport a from "real-pkg";',
+    'const re = /a\\/\\/b/;\nconst x = require("axios");',
+    'const d = total / count; // ratio\nconst y = require("lodash");',
+  ];
+  const expected = [['sketchy-pkg'], ['real-pkg'], ['axios'], ['lodash']];
+  cases.forEach((src, i) => {
+    assert.deepStrictEqual(extractJsSpecs(src).sort(), expected[i], `case ${i}: ${src}`);
+  });
+});

@@ -385,3 +385,29 @@ test('the shaping sites must never pass --rendering', () => {
       `${rel} shapes the decisions — it must print the /clear checkpoint`);
   }
 });
+
+// A carried stamp and a freshly-written one are byte-identical on disk, so
+// nothing downstream — or a human — can tell that a verdict names a session
+// that did not validate this content. The flag is a self-declaration: a caller
+// that wrongly passes --rendering inherits whatever stamp was already there.
+// That cannot be detected from the stamp alone, but it can be RECORDED.
+test('a carried stamp records who actually re-validated it', () => {
+  const dir = decisionsRoot('SESSION-SHAPING');
+  gate(dir);
+  assert.strictEqual(verdictOf(dir).revalidated_by, null,
+    'a fresh stamp has nothing to disambiguate');
+
+  fs.appendFileSync(path.join(dir, '.claude/runs/2026-08-09.jsonl'),
+    `${JSON.stringify({ kind: 'tool', session_id: 'SESSION-RENDER' })}\n`);
+  const file = path.join(dir, 'specs/decisions/spec-decisions.json');
+  const d = JSON.parse(fs.readFileSync(file, 'utf8'));
+  d.decisions.push(decision({ id: 'D-RESOLVED', basis: 'human' }));
+  fs.writeFileSync(file, JSON.stringify(d, null, 2));
+  gate(dir, ['--rendering']);
+
+  const v = verdictOf(dir);
+  assert.strictEqual(v.session_id, 'SESSION-SHAPING', 'still names the shaper');
+  assert.strictEqual(v.carried, true, 'and records that the stamp was carried');
+  assert.strictEqual(v.revalidated_by, 'SESSION-RENDER',
+    'and who carried it, so a laundered stamp is auditable after the fact');
+});

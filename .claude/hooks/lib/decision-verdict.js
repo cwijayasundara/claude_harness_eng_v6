@@ -63,12 +63,24 @@ function sessionLane(root) {
  * to pass the flag it already passed).
  */
 function stampFor(root, prior, decisionsSha, inSession, rendering) {
+  const live = liveSessionId(root);
   const carry = prior && prior.session_id
     && (rendering || prior.decisions_sha256 === decisionsSha);
   if (carry) {
-    return { session_id: prior.session_id, in_session: prior.in_session === true };
+    // `carried`/`revalidated_by` exist because the flag is a self-declaration:
+    // a caller that wrongly passes --rendering inherits whatever stamp was
+    // already on disk, and a carried stamp is otherwise byte-identical to a
+    // fresh one. This does not prevent that, but it stops it being invisible.
+    return {
+      session_id: prior.session_id,
+      in_session: prior.in_session === true,
+      carried: true,
+      revalidated_by: live,
+    };
   }
-  return { session_id: liveSessionId(root), in_session: inSession === true };
+  return {
+    session_id: live, in_session: inSession === true, carried: false, revalidated_by: null,
+  };
 }
 
 /**

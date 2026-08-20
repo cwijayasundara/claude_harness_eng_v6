@@ -44,6 +44,39 @@ function jsPackageName(spec) {
   return s.split('/')[0] || null;
 }
 
+/** Whether a `/` at this point can start a regex literal rather than divide. */
+function regexAllowed(emitted) {
+  const before = emitted.replace(/\s+$/, '');
+  if (!before) return true;
+  const last = before[before.length - 1];
+  if ('(,=:[!&|?{};+-*%~^<>'.includes(last)) return true;
+  const word = (before.match(/[A-Za-z_$][\w$]*$/) || [''])[0];
+  return ['return', 'typeof', 'case', 'in', 'of', 'new', 'delete', 'void', 'throw',
+    'do', 'else', 'yield', 'await'].includes(word);
+}
+
+/** Index just past a regex literal starting at `start`, or `start` if unterminated. */
+function regexEnd(text, start) {
+  let i = start + 1;
+  let inClass = false;
+  while (i < text.length) {
+    const ch = text[i];
+    if (ch === '\\') { i += 2; continue; }
+    if (ch === '\n') return start; // regex literals cannot span lines
+    if (inClass) {
+      if (ch === ']') inClass = false;
+    } else if (ch === '[') {
+      inClass = true;
+    } else if (ch === '/') {
+      i += 1;
+      while (i < text.length && /[a-z]/.test(text[i])) i += 1; // flags
+      return i;
+    }
+    i += 1;
+  }
+  return start;
+}
+
 /**
  * Blank out JS comments so prose cannot parse as a dependency.
  *
@@ -52,11 +85,16 @@ function jsPackageName(spec) {
  * and the gate blocked the commit as a slopsquat.
  *
  * Over-stripping is the dangerous direction: swallow a real `require()` and a
- * hallucinated package walks through the gate. So strings are tracked and left
- * intact (`"https://x"` is not a comment), and `/` opens a comment only when
- * followed by `/` or `*` — inside a regex literal an unescaped `//` cannot
- * occur, so regexes survive. Comment bodies become spaces rather than being
- * deleted, keeping every other offset in the file unchanged.
+ * hallucinated package walks through the gate. So strings AND regex literals
+ * are tracked and copied through verbatim — `"https://x"` is not a comment, and
+ * neither is the `/*` in `/[/*]/`, where an unescaped `/` inside a character
+ * class is legal JS and used to blank the rest of the file. A `/` starts a
+ * regex only where one is grammatically possible (after an operator, an opening
+ * bracket, or a keyword), so `a / b` stays division. An unterminated block
+ * comment is treated as not-a-comment rather than swallowing to EOF.
+ *
+ * Comment bodies become spaces rather than being deleted, keeping every other
+ * offset in the file unchanged.
  */
 function stripJsComments(src) {
   const text = String(src || '');
@@ -86,15 +124,18 @@ function stripJsComments(src) {
       continue;
     }
     if (c === '/' && next === '*') {
-      out += '  ';
-      i += 2;
-      while (i < text.length && !(text[i] === '*' && text[i + 1] === '/')) {
-        out += text[i] === '\n' ? '\n' : ' ';
-        i += 1;
-      }
-      out += '  ';
-      i += 2;
+      const close = text.indexOf('*/', i + 2);
+      if (close === -1) { out += c; i += 1; continue; } // unterminated: not a comment
+      for (let j = i; j < close + 2; j += 1) out += text[j] === '\n' ? '\n' : ' ';
+      i = close + 2;
       continue;
+    }
+    if (c === '/' && regexAllowed(out)) {
+      // A regex literal — reached only when this `/` opens neither comment
+      // form. Copy it verbatim, honouring escapes and character classes, so a
+      // `//` or `/*` INSIDE it (legal in a class: `/[/*]/`) stays inert.
+      const end = regexEnd(text, i);
+      if (end > i) { out += text.slice(i, end); i = end; continue; }
     }
     out += c;
     i += 1;

@@ -425,8 +425,15 @@ test('each phase cites evidence it actually has', () => {
 test('the render handoff names BOTH audiences by command', () => {
   for (const phase of ['spec', 'design']) {
     const block = renderHandoffBlock(phase);
-    assert.match(block, new RegExp(`If you are /${phase}, this IS addressed to you`),
-      `${phase}: the shaping session is told the block binds it`);
+    // Keyed on what the session DID, not on its command name. A /build
+    // conductor is neither `/spec` nor `spec-render` and could read a
+    // name-keyed pair as binding neither; the post-clear `--render-only`
+    // driver IS literally `/spec` and would read a name-keyed line as an
+    // instruction to halt — the original bug's family, one hop later.
+    assert.match(block, /If you just shaped these decisions, this IS addressed to you/,
+      `${phase}: the obligated audience is identified by what it did`);
+    assert.doesNotMatch(block, new RegExp(`If you are /${phase}`),
+      `${phase}: not keyed on the command name`);
     assert.match(block, new RegExp(`If you are ${phase}-render, it is not`),
       `${phase}: the renderer is told it does not`);
     assert.match(block, /do not halt on it/, `${phase}: tells the renderer to continue`);
