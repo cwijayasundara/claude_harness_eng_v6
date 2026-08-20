@@ -139,8 +139,25 @@ function applyScope({ required, optional, scope, source }) {
   };
 }
 
+// A hard block with no recorded way past is a block people step around. A live
+// run left four un-oracled NFRs accepted in writing in the decisions file, the
+// phase approved, and the verdict on disk still reading `pass: false` with
+// nothing tying the two together — unreadable to anything but a human.
+//
+// `pass` therefore keeps its meaning exactly: the mechanical verdict, never
+// softened. `blocking` is the one callers gate on, and it clears only when every
+// single finding names the decision that accepted it. One unaccepted finding and
+// the block holds.
+function annotate(items, accepted) {
+  return items.map((item) => {
+    const by = accepted && accepted.get(item.id);
+    return by ? { ...item, accepted_by: by } : item;
+  });
+}
+
 // Pure core. required/optional/downstream are arrays of { id, text?, traces? }.
-function checkTraces({ required, optional, downstream, layer, scope }) {
+// `accepted` is an optional Map of finding id -> the decision id accepting it.
+function checkTraces({ required, optional, downstream, layer, scope, accepted }) {
   const requiredItems = asArray(required);
   const optionalItems = asArray(optional);
   const groundedIds = new Set([...idSet(requiredItems), ...idSet(optionalItems)]);
@@ -150,15 +167,19 @@ function checkTraces({ required, optional, downstream, layer, scope }) {
     .filter((r) => !covered.has(r.id))
     .map((r) => (r.section ? { id: r.id, text: r.text || '', section: r.section } : { id: r.id, text: r.text || '' }));
 
+  const findings = [...annotate(net_new, accepted), ...annotate(dropped, accepted)];
+  const acceptedCount = findings.filter((f) => f.accepted_by).length;
   return {
     layer: layer || null,
     pass: net_new.length === 0 && dropped.length === 0,
+    blocking: findings.some((f) => !f.accepted_by),
+    accepted: acceptedCount,
     required_total: requiredItems.length,
     required_covered: requiredItems.filter((r) => covered.has(r.id)).length,
     downstream_total: asArray(downstream).length,
     scope: scope || null,
-    net_new,
-    dropped,
+    net_new: findings.slice(0, net_new.length),
+    dropped: findings.slice(net_new.length),
   };
 }
 
@@ -193,8 +214,9 @@ function printVerdict(v) {
   const scoped = v.scope
     ? ` [scoped to ${v.scope.milestone || 'milestone'}, ${v.scope.deferred} deferred]`
     : '';
+  const outcome = v.pass ? 'PASS' : `FAIL${v.blocking ? '' : ' (all findings accepted — non-blocking)'}`;
   process.stdout.write(
-    `${label}: ${v.pass ? 'PASS' : 'FAIL'}${scoped} — ` +
+    `${label}: ${outcome}${scoped} — ` +
       `${v.required_covered}/${v.required_total} upstream covered, ` +
       `${v.net_new.length} net-new, ${v.dropped.length} dropped\n`
   );
@@ -204,8 +226,24 @@ function printVerdict(v) {
   if (v.scope && v.scope.unmatched_ids.length) {
     process.stdout.write(`  UNMATCHED (in scope, no record in --required): ${v.scope.unmatched_ids.join(', ')}\n`);
   }
-  for (const n of v.net_new) process.stdout.write(`  NET-NEW  ${n.id}: ${n.reason}\n`);
-  for (const d of v.dropped) process.stdout.write(`  DROPPED  ${d.id}: ${d.text}\n`);
+  const tag = (f) => (f.accepted_by ? ` [ACCEPTED by ${f.accepted_by}]` : '');
+  for (const n of v.net_new) process.stdout.write(`  NET-NEW  ${n.id}: ${n.reason}${tag(n)}\n`);
+  for (const d of v.dropped) process.stdout.write(`  DROPPED  ${d.id}: ${d.text}${tag(d)}\n`);
+}
+
+// Acceptances declared in a /spec or /design decisions file: a decision states
+// `accepts_verdict: { layer, ids[] }`, and only entries naming *this* layer
+// count. A decision cannot blanket-accept a gate it was never put to.
+function loadAccepted(file, layer) {
+  const map = new Map();
+  if (!file) return map;
+  const doc = readJson(file, false);
+  for (const d of asArray(doc && doc.decisions)) {
+    const a = d && d.accepts_verdict;
+    if (!a || !layer || a.layer !== layer) continue;
+    for (const id of asArray(a.ids)) if (!map.has(id)) map.set(id, d.id);
+  }
+  return map;
 }
 
 // The upstream side of the run: every `--required` file pooled, `--optional`
@@ -231,6 +269,7 @@ function main() {
       ...upstream,
       downstream: readJson(args.downstream, false),
       layer: args.layer,
+      accepted: loadAccepted(args.accepted, args.layer),
     });
   } catch (err) {
     process.stderr.write(`trace-check: ${err.message}\n`);
@@ -241,7 +280,7 @@ function main() {
     fs.writeFileSync(args.out, JSON.stringify(verdict, null, 2) + '\n');
   }
   printVerdict(verdict);
-  process.exit(verdict.pass ? 0 : 1);
+  process.exit(verdict.blocking ? 1 : 0);
 }
 
 module.exports = { checkTraces, applyScope };

@@ -545,11 +545,31 @@ node .claude/scripts/trace-check.js \
   --required specs/brd/brd-acceptance.json \
   --downstream specs/stories/acceptance-criteria.json \
   --layer spec-acceptance \
+  --accepted specs/decisions/spec-decisions.json \
   --out specs/reviews/spec-acceptance-grounding.json
 ```
 
 - **`dropped` non-empty** → a BRD acceptance postcondition no criterion asserts. The requirement is covered on paper and unverifiable in practice. Add a criterion (or, if genuinely out of scope, retire the postcondition in `/brd`).
 - **`net_new` non-empty** → a criterion asserting something the BRD never required. Either it is scope creep, or the BRD is missing a postcondition — resolve at the source, not here.
+
+**Gate on `blocking`, not `pass`.** `pass` is the mechanical verdict and is never
+softened. A BRD that writes postconditions only for its functional requirements
+leaves every NFR-derived criterion registering as `net_new` for a reason no
+re-render can fix, and the gate then has no clean exit — which is how a run ends
+up approved over a `pass: false` file with only prose explaining why.
+
+The escape is explicit and human-owned. When the reviewer decides at the
+decisions gate that a finding stands, record it on the deciding entry:
+
+```json
+{ "id": "D13", "question": "...", "chosen": "...", "basis": "human",
+  "accepts_verdict": { "layer": "spec-acceptance", "ids": ["E1-S1-AC1", "E1-S1-AC4"] } }
+```
+
+`--accepted` then stamps `accepted_by: "D13"` on those findings and clears
+`blocking`. One unaccepted finding and the block holds. Never write an
+`accepts_verdict` the human did not decide: it is the record that the exception
+was taken deliberately, and a fabricated one makes the gate worthless.
 
 **Milestone addendum.** As in Step 6.45, add
 `--scope specs/decisions/spec-decisions.json` when D1 scoped the run to one
@@ -588,7 +608,7 @@ Skip only when `brd-acceptance.json` does not exist (a BRD authored before this 
 
 ## Gate
 
-**Grounding gate (FRD-grounded BRD) — hard block.** `trace-check.js` proves mechanically that no story invented scope (`net_new`) and no BRD requirement was dropped (`dropped`) — see Step 6.45. Any violation blocks before the rubric runs, independent of quality score. Step 6.46 repeats the check at acceptance-criterion granularity when `brd-acceptance.json` exists.
+**Grounding gate (FRD-grounded BRD) — hard block.** `trace-check.js` proves mechanically that no story invented scope (`net_new`) and no BRD requirement was dropped (`dropped`) — see Step 6.45. Any violation blocks before the rubric runs, independent of quality score. Step 6.46 repeats the check at acceptance-criterion granularity when `brd-acceptance.json` exists. Both block on `blocking`; a finding clears it only by naming the decision that accepted it (Step 6.46).
 
 **Generation-contract gate — hard block.** `validate-generation-contract.js --mode skeleton` (Step 5) exits non-zero when a ready story is missing the `## Generation Contract` section or its Requirements/Entities/Operations/Safeguards subsections.
 

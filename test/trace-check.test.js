@@ -431,3 +431,78 @@ test('a requirement with no acceptance record is reported, and the rest still ga
   assert.deepStrictEqual(s.scope.unmatched_ids, ['NFR-3'],
     'the requirement with no oracle must be named, not silently dropped');
 });
+
+// A HARD BLOCK with no recorded way past is a block people step around. The
+// shortlink run did exactly that: /spec's decisions file carried D13 accepting
+// four un-oracled NFRs in writing, the phase was approved, and the verdict on
+// disk still read `pass: false` with nothing linking it to the decision. CI
+// reading the file alone could only see an unexplained failure.
+test('checkTraces links each finding to the decision that accepted it', () => {
+  const accepted = new Map([['S1-AC1', 'D13'], ['BR-9', 'D13']]);
+  const v = checkTraces({
+    required: [{ id: 'BR-1' }, { id: 'BR-9', text: 'un-oracled NFR' }],
+    downstream: [{ id: 'S1-AC1', traces: ['BR-77'] }, { id: 'S1-AC2', traces: ['BR-1'] }],
+    layer: 'spec-acceptance',
+    accepted,
+  });
+
+  assert.strictEqual(v.pass, false, 'pass stays the mechanical verdict');
+  assert.strictEqual(v.blocking, false, 'every finding is accepted, so nothing blocks');
+  assert.strictEqual(v.accepted, 2);
+  assert.strictEqual(v.net_new[0].accepted_by, 'D13');
+  assert.strictEqual(v.dropped[0].accepted_by, 'D13');
+});
+
+test('checkTraces still blocks when one finding is unaccepted', () => {
+  const v = checkTraces({
+    required: [{ id: 'BR-1' }],
+    downstream: [{ id: 'S1-AC1', traces: ['BR-77'] }, { id: 'S1-AC2', traces: ['BR-88'] }],
+    layer: 'spec-acceptance',
+    accepted: new Map([['S1-AC1', 'D13']]),
+  });
+
+  assert.strictEqual(v.blocking, true);
+  assert.strictEqual(v.accepted, 1);
+  assert.strictEqual(v.net_new.find((n) => n.id === 'S1-AC2').accepted_by, undefined);
+});
+
+test('checkTraces reports a clean run as non-blocking with no acceptances', () => {
+  const v = checkTraces({
+    required: [{ id: 'BR-1' }],
+    downstream: [{ id: 'S1-AC1', traces: ['BR-1'] }],
+    layer: 'spec',
+  });
+
+  assert.strictEqual(v.pass, true);
+  assert.strictEqual(v.blocking, false);
+  assert.strictEqual(v.accepted, 0);
+});
+
+test('trace-check CLI reads acceptances from the decisions file and exits 0', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'trace-check-accept-'));
+  const w = (name, value) => {
+    const p = path.join(dir, name);
+    fs.writeFileSync(p, `${JSON.stringify(value, null, 2)}\n`);
+    return p;
+  };
+  const required = w('required.json', [{ id: 'BR-1' }]);
+  const downstream = w('downstream.json', [{ id: 'S1-AC1', traces: ['BR-1'] }, { id: 'S1-AC2', traces: [] }]);
+  const decisions = w('decisions.json', {
+    decisions: [
+      { id: 'D13', accepts_verdict: { layer: 'spec-acceptance', ids: ['S1-AC2'] } },
+      { id: 'D14', accepts_verdict: { layer: 'other-layer', ids: ['S1-AC9'] } },
+    ],
+  });
+  const out = path.join(dir, 'verdict.json');
+
+  const stdout = execFileSync(process.execPath, [
+    SCRIPT, '--required', required, '--downstream', downstream,
+    '--layer', 'spec-acceptance', '--accepted', decisions, '--out', out,
+  ], { encoding: 'utf8' });
+
+  const verdict = JSON.parse(fs.readFileSync(out, 'utf8'));
+  assert.strictEqual(verdict.pass, false);
+  assert.strictEqual(verdict.blocking, false);
+  assert.strictEqual(verdict.net_new[0].accepted_by, 'D13');
+  assert.match(stdout, /ACCEPTED/);
+});

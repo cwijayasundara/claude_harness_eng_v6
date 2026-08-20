@@ -46,10 +46,13 @@ node .claude/scripts/trace-check.js \
   --scope specs/decisions/spec-decisions.json \
   --downstream specs/stories/acceptance-criteria.json \
   --layer spec-acceptance \
+  --accepted specs/decisions/spec-decisions.json \
   --out specs/reviews/spec-acceptance-grounding.json
 ```
 
 Skip a `trace-check` only when its `--required` file is absent. Non-zero on the writer or generation-contract: fix `stories.json` and re-run the block. Non-zero on grounding: fix traces in `stories.json`, re-run — do not invent a narrowed `--required` file.
+
+`--accepted` reads `accepts_verdict` off the decisions file. It never softens `pass`; it clears `blocking` only when *every* finding names the decision that accepted it. Gate on `blocking`, and never hand-write an acceptance the human did not make — see Step 6.46.
 
 Load/crypto ACs become `verification: "characterization"` in `features.json`. Leave them; do not drop the AC.
 
