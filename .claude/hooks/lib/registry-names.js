@@ -44,8 +44,67 @@ function jsPackageName(spec) {
   return s.split('/')[0] || null;
 }
 
+/**
+ * Blank out JS comments so prose cannot parse as a dependency.
+ *
+ * The import patterns below match anywhere in the file, so an ordinary English
+ * sentence — `flip the note from "main-loop only" to ...` — read as an import
+ * and the gate blocked the commit as a slopsquat.
+ *
+ * Over-stripping is the dangerous direction: swallow a real `require()` and a
+ * hallucinated package walks through the gate. So strings are tracked and left
+ * intact (`"https://x"` is not a comment), and `/` opens a comment only when
+ * followed by `/` or `*` — inside a regex literal an unescaped `//` cannot
+ * occur, so regexes survive. Comment bodies become spaces rather than being
+ * deleted, keeping every other offset in the file unchanged.
+ */
+function stripJsComments(src) {
+  const text = String(src || '');
+  let out = '';
+  let i = 0;
+  while (i < text.length) {
+    const c = text[i];
+    const next = text[i + 1];
+    if (c === '"' || c === "'" || c === '`') {
+      const quote = c;
+      out += c;
+      i += 1;
+      while (i < text.length) {
+        out += text[i];
+        if (text[i] === '\\') { // escape consumes the next character
+          if (i + 1 < text.length) out += text[i + 1];
+          i += 2;
+          continue;
+        }
+        if (text[i] === quote) { i += 1; break; }
+        i += 1;
+      }
+      continue;
+    }
+    if (c === '/' && next === '/') {
+      while (i < text.length && text[i] !== '\n') { out += ' '; i += 1; }
+      continue;
+    }
+    if (c === '/' && next === '*') {
+      out += '  ';
+      i += 2;
+      while (i < text.length && !(text[i] === '*' && text[i + 1] === '/')) {
+        out += text[i] === '\n' ? '\n' : ' ';
+        i += 1;
+      }
+      out += '  ';
+      i += 2;
+      continue;
+    }
+    out += c;
+    i += 1;
+  }
+  return out;
+}
+
 function extractJsSpecs(content) {
   const names = new Set();
+  const source = stripJsComments(content);
   const patterns = [
     /require\(\s*['"]([^'"]+)['"]/g,
     /from\s+['"]([^'"]+)['"]/g,
@@ -54,7 +113,7 @@ function extractJsSpecs(content) {
   ];
   for (const re of patterns) {
     let m;
-    while ((m = re.exec(String(content || '')))) {
+    while ((m = re.exec(source))) {
       const name = jsPackageName(m[1]);
       if (name) names.add(name);
     }
@@ -225,7 +284,7 @@ function findingLine(f) {
 
 module.exports = {
   POPULAR_NPM, POPULAR_PYPI, PY_STDLIB,
-  jsPackageName, extractJsSpecs, extractPyModules,
+  jsPackageName, extractJsSpecs, extractPyModules, stripJsComments,
   namesFromPackageJson, namesFromRequirements, namesFromLockfile,
   isBuiltin, editDistance, typosquatOf, classifyCandidate,
   collectNewNames, evaluateNames, findingLine, sourceEcosystem,

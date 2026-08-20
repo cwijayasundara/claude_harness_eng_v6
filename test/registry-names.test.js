@@ -100,3 +100,35 @@ test('evaluateNames blocks typosquat and hallucinated, fail-opens lookup errors'
   assert.strictEqual(v.warnings.length, 1);
   assert.strictEqual(v.warnings[0].kind, 'lookup-error');
 });
+
+// The import patterns used to run over raw source, so ordinary prose in a
+// comment parsed as a dependency. `phase-cost.js` carries the line
+//   // honesty note from "main-loop only" to a false "subagents pooled".
+// which the bare /from\s+['"]…['"]/ pattern read as an import of a package
+// called `main-loop only`, and the gate blocked the commit as a slopsquat.
+// The gate only scans STAGED files, so it fired the first time that file was
+// touched — years of commits could pass before a comment like this bites.
+test('extractJsSpecs ignores imports that are only mentioned in comments', () => {
+  const js = [
+    'const real = require("axios");',
+    '// honesty note from "main-loop only" to a false "subagents pooled".',
+    '/* migrate from "old-pkg" to the new one; see import x from "other-pkg" */',
+    'import y from "lodash";',
+  ].join('\n');
+  assert.deepStrictEqual(extractJsSpecs(js).sort(), ['axios', 'lodash']);
+});
+
+// The dangerous direction is the opposite one: stripping comments must never
+// swallow a real import, or a hallucinated package walks through a security
+// gate. `//` inside a string, and the escaped slashes of a regex literal, must
+// not be mistaken for the start of a comment.
+test('extractJsSpecs still finds imports around strings and regex literals', () => {
+  const js = [
+    'const url = "https://example.com/not-a-comment";',
+    'const re = /^https?:\\/\\//;',
+    'const tpl = `see https://x/y`;',
+    'const evil = require("sketchy-pkg");',
+    'import a from "real-pkg";',
+  ].join('\n');
+  assert.deepStrictEqual(extractJsSpecs(js).sort(), ['real-pkg', 'sketchy-pkg']);
+});
