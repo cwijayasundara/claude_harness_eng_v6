@@ -36,7 +36,7 @@ restate:
 | `.github/workflows/` | GitHub Actions for fast CI and upstream Claude Code drift watch |
 | `.github/upstream/` | Checked-in upstream snapshots consumed by `.claude/scripts/upstream-watch.js` |
 | `docs/` | Authoring standards, telemetry/testing guides, design proposals, legacy-change-disciplines map |
-| `docs/archive/` | Completed build journal — the superpowers plans/specs and internal proposals behind shipped work. Rationale for *why* something was built; nothing reads it at runtime |
+| `docs/archive/` | Packed build journal (`historical.tar.gz`) — superpowers plans/specs and internal proposals behind shipped work. Stubs remain for still-linked paths; extract with `tar -tzf docs/archive/historical.tar.gz`. Nothing reads the packed files at runtime |
 | `docs/zl-continuum-rubric.md` | One-page Z/L task-placement rubric (L/M/Z bands → harness lanes + human review) |
 | `telemetry/` | Prometheus/Grafana/OTEL configs for opt-in cache + harness metrics |
 | `test/` | Harness unit tests; `test/e2e/` runs live Claude pipeline checks; `test/evals/` holds golden assertion fixtures |
