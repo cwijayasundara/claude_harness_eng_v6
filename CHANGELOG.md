@@ -14,14 +14,27 @@ and it returned a confident success having written no stories. New
 `validate-design-decisions.js`: the renderer declares itself and the checkpoint
 is suppressed. Structural checks and the hard block are unchanged; the flag
 cannot suppress a BLOCK or bypass the human-shaping requirement. The banner now
-names both audiences by command rather than by role, and no longer documents
-its own escape hatch — only the session that must obey it could ever read that.
+identifies the session that must stop by what it DID ("if you just shaped these
+decisions") rather than by command name — a /build conductor is neither `/spec`
+nor `spec-render`, and the post-clear `--render-only` driver IS literally
+`/spec`. It also no longer documents its own escape hatch — only the session
+that must obey it could ever read that.
 
-The verdict now records `carried` and `revalidated_by` alongside the stamp. The
-flag is a self-declaration, so a caller that wrongly passes `--rendering` where
-a prior verdict exists inherits that stamp — a carried stamp was otherwise
-byte-identical to a fresh one on disk, leaving nothing for a human or a later
-control to notice.
+This has a cost, stated plainly: the render block can no longer fire for a
+post-clear session that re-shapes and then passes `--rendering`. The flag is a
+self-declaration, and at the moment the gate runs, a digest changed by the main
+session and one changed by *this* session are indistinguishable. The call-site
+tests — which pin both renderer invocations and forbid the flag at either
+shaping site — are the guard.
+
+The verdict records `carried`, `revalidated_by` and `stamped_against` so that is
+at least auditable after the fact. A carry happens on every render, so `carried`
+alone says little; `stamped_against` keeps the digest the stamp was originally
+made against, so the gap to the current `decisions_sha256` shows how far the
+content moved under a stamp that never saw it. **Recorded for post-hoc audit —
+nothing reads these fields yet.** A renderer that finds no prior verdict (a
+fresh clone: `specs/reviews/` is gitignored) claims no stamp at all rather than
+making itself the shaper, which would block its own re-dispatch.
 
 `--rendering` also carries the shaping stamp forward on the verdict. The
 digest-keyed carry-forward covered an unchanged decisions file, but the

@@ -140,13 +140,20 @@ test('extractJsSpecs still finds imports around strings and regex literals', () 
 // Regex literals are now consumed as literals, so comment openers inside them
 // are inert.
 test('extractJsSpecs survives regex literals containing comment openers', () => {
+  // The first two are the ones that actually pin the regex-literal branch:
+  // disable it and both lose their import. The rest passed with the branch
+  // disabled — rescued by the unterminated-`/*` guard or by the import simply
+  // being on the next line — so they document intent but guard nothing.
   const cases = [
+    'const re = /[/*]/;\nconst evil = require("sketchy-pkg");\n/* a real comment */',
+    'const re = /[//]/; const a = require("real-pkg");',
     'const re = /[/*]/;\nconst evil = require("sketchy-pkg");',
     'const re = /[//]/;\nimport a from "real-pkg";',
     'const re = /a\\/\\/b/;\nconst x = require("axios");',
     'const d = total / count; // ratio\nconst y = require("lodash");',
   ];
-  const expected = [['sketchy-pkg'], ['real-pkg'], ['axios'], ['lodash']];
+  const expected = [['sketchy-pkg'], ['real-pkg'], ['sketchy-pkg'], ['real-pkg'],
+    ['axios'], ['lodash']];
   cases.forEach((src, i) => {
     assert.deepStrictEqual(extractJsSpecs(src).sort(), expected[i], `case ${i}: ${src}`);
   });

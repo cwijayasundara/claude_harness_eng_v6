@@ -67,19 +67,43 @@ function stampFor(root, prior, decisionsSha, inSession, rendering) {
   const carry = prior && prior.session_id
     && (rendering || prior.decisions_sha256 === decisionsSha);
   if (carry) {
-    // `carried`/`revalidated_by` exist because the flag is a self-declaration:
-    // a caller that wrongly passes --rendering inherits whatever stamp was
-    // already on disk, and a carried stamp is otherwise byte-identical to a
-    // fresh one. This does not prevent that, but it stops it being invisible.
+    // `carried`/`revalidated_by`/`stamped_against` exist because the flag is a
+    // self-declaration: a caller that wrongly passes --rendering inherits
+    // whatever stamp was on disk, and a carried stamp is otherwise
+    // byte-identical to a fresh one. A carry happens on every render, so
+    // `carried` alone says little; `stamped_against` is the discriminating
+    // part — it keeps the digest the stamp was ORIGINALLY made against, so the
+    // gap to the current `decisions_sha256` shows how far the content moved
+    // under a stamp that never saw it. Recorded for post-hoc audit; nothing
+    // reads it yet. `inSession` is deliberately ignored here: the prior record
+    // owns it, or /build's conductor flag would be erased by the renderer.
     return {
       session_id: prior.session_id,
       in_session: prior.in_session === true,
       carried: true,
       revalidated_by: live,
+      stamped_against: prior.stamped_against || prior.decisions_sha256 || null,
+    };
+  }
+  if (rendering) {
+    // First run, nothing to carry. The renderer shaped nothing, so it claims
+    // nothing rather than stamping itself — which would make it the shaper and
+    // block its own re-dispatch after the unresolved-items loop. An unknown id
+    // passes isResident, per this module's "every uncertain case passes" rule.
+    return {
+      session_id: null,
+      in_session: inSession === true,
+      carried: false,
+      revalidated_by: live,
+      stamped_against: null,
     };
   }
   return {
-    session_id: live, in_session: inSession === true, carried: false, revalidated_by: null,
+    session_id: live,
+    in_session: inSession === true,
+    carried: false,
+    revalidated_by: null,
+    stamped_against: decisionsSha,
   };
 }
 
@@ -95,7 +119,8 @@ function stampFor(root, prior, decisionsSha, inSession, rendering) {
  * @param {{ok: boolean, errors: string[], waived: string|null}} args.result
  * @param {string|null} args.lane the claimed --lane, if any
  * @param {boolean} args.inSession caller conducts every phase in one session
- * @param {boolean} [args.rendering] caller is the renderer, not the shaping session
+ * @param {boolean} [args.rendering] caller is the renderer, not the shaping
+ *   session. Note that `inSession` is ignored whenever a stamp is carried.
  */
 function writeDecisionVerdict({
   root, gate, verdictRel, decisionsRel, result, lane, inSession, rendering,

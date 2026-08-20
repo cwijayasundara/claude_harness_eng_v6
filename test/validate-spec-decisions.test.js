@@ -369,7 +369,9 @@ test('the renderer fallback procedure passes --rendering too', () => {
 // silence the /clear checkpoint; typed at a SHAPING site it would silence the
 // control outright — the phase boundary that the metered run showed to be the
 // single most expensive stretch of the front half — with a fully green suite.
-// Nothing else in the repo pins these two lines.
+// Nothing else in the repo pins these two invocations. (The /build
+// conductor sites in build/references/section-04-pipeline-phases.md name
+// the gates too, but with --in-session and not as runnable lines.)
 // Join shell continuations first: `cmd \<newline>  --flag` is ONE command, and a
 // per-line regex reads it as two. Without this the assertion below is evadable
 // by an ordinary line wrap — which is exactly how a long invocation gets
@@ -400,6 +402,45 @@ test('the shaping sites must never pass --rendering', () => {
 // that did not validate this content. The flag is a self-declaration: a caller
 // that wrongly passes --rendering inherits whatever stamp was already there.
 // That cannot be detected from the stamp alone, but it can be RECORDED.
+// `specs/reviews/` is gitignored, so a fresh clone or worktree has no verdict.
+// A renderer invoked there is the FIRST run, so there is no stamp to carry —
+// and stamping itself would make it the shaper, blocking its own re-dispatch
+// after the unresolved-items loop. It shaped nothing, so it claims nothing:
+// an unknown stamp, which isResident() passes under the module's own rule that
+// every uncertain case passes.
+test('a renderer with no prior verdict claims no stamp', () => {
+  const dir = decisionsRoot('SESSION-RENDER');
+  gate(dir, ['--rendering']);
+  const v = verdictOf(dir);
+  assert.strictEqual(v.session_id, null, 'the renderer must not become the shaper');
+  assert.strictEqual(v.revalidated_by, 'SESSION-RENDER', 'but it is on the record');
+});
+
+// A carried stamp names a session that did not see the current content. The
+// carry itself is the normal case on every render, so `carried` alone says
+// almost nothing; what separates the documented loop from a re-shape is how far
+// the content moved under the carry, which needs the digest the stamp was made
+// against.
+test('a carried stamp records the digest it was originally made against', () => {
+  const dir = decisionsRoot('SESSION-SHAPING');
+  gate(dir);
+  const shaped = verdictOf(dir);
+  assert.strictEqual(shaped.stamped_against, shaped.decisions_sha256,
+    'a fresh stamp vouches for the content in front of it');
+
+  const file = path.join(dir, 'specs/decisions/spec-decisions.json');
+  const d = JSON.parse(fs.readFileSync(file, 'utf8'));
+  d.decisions.push(decision({ id: 'D-RESOLVED', basis: 'human' }));
+  fs.writeFileSync(file, JSON.stringify(d, null, 2));
+  gate(dir, ['--rendering']);
+
+  const carried = verdictOf(dir);
+  assert.strictEqual(carried.stamped_against, shaped.decisions_sha256,
+    'the carried stamp still points at what SESSION-SHAPING actually saw');
+  assert.notStrictEqual(carried.decisions_sha256, carried.stamped_against,
+    'and the gap to the current digest is what makes the staleness readable');
+});
+
 test('a carried stamp records who actually re-validated it', () => {
   const dir = decisionsRoot('SESSION-SHAPING');
   gate(dir);
