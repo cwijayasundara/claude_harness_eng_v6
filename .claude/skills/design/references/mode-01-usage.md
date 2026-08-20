@@ -1,8 +1,8 @@
 ## Usage
 
 ```
-/design               # full pipeline mode (default)
-/design --render-only # re-enter after the decisions checkpoint: dispatch the renderer and finish the phase
+/design               # next unfinished hop (shape, or render + human gate)
+/design --render-only # alias for the render hop after /clear (still includes the human gate)
 /design --doc-only    # lightweight architecture narrative, no pipeline
 /design --doc-only [path]   # write the doc to [path] instead of the default
 /design --delta --stories specs/stories/sprint-N/ --amendment-id sprint-N   # sprint delta
@@ -12,7 +12,7 @@
 
 The default reads from `specs/stories/` and produces architecture documents, machine-readable schemas, and HTML mockups concurrently — it is an SDLC gate.
 
-`--render-only` is not a separate lane: it is full mode re-entered after the Step 0.9 checkpoint. `specs/decisions/design-decisions.json` already exists and was already gated, so the architecture dialogue (Steps 0, 0.5, 0.7) is skipped and the run resumes at Step 0.9 §3 — dispatch `design-render`, then Steps 1.9, 2 and 3. Use it after running `/clear` at the checkpoint, and to re-render after resolving `design-unresolved.json`.
+`--render-only` is not a separate lane: it is full mode re-entered after the Step 0.9 checkpoint. After `/clear`, unflagged `/design` takes the same hop. `specs/decisions/design-decisions.json` already exists and was already gated, so the architecture dialogue (Steps 0, 0.5, 0.7) is skipped and the run resumes at Step 0.9 §3 — dispatch `design-render`, then Steps 1.9, 2 and 3 (human approval). Use it after running `/clear` at the checkpoint, and to re-render after resolving `design-unresolved.json`. The hop is not finished until `design-approval.json` is recorded.
 
 `--doc-only` is a different lane entirely: it authors a single architecture / ARB narrative document and does **nothing else**. See **Doc-Only Mode** below. Use it for Architecture Review Board write-ups, design proposals, and discussion documents that are not (yet) driving a build.
 

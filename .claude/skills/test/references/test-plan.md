@@ -1,6 +1,7 @@
 # `--plan-only` — seams + matrix
 
-Use this when `/test --plan-only` (or `/build` Phase 3). The review pair is
+Use this when `/test` (or `/test --plan-only`) before application source
+exists, or `/build` Phase 3. The review pair is
 `test-plan.md` + `verification-matrix.json`. Do not write Playwright. Do not
 write AT source files. Do not write `test-cases.md`. Do not write `test-data/`
 fixtures. Do not spawn a nested generator. Do not load the evaluate skill.
@@ -23,7 +24,7 @@ ids by story. Read one `E*-S*.md` only when a matrix row turns on that wording.
   This gates on `spec`, not `design`, because `/build` Phase 3 can run both.
 
 - If `handoff-check` printed a design-not-rendered warning, prefer
-  `/design --render-only` first unless this is `--in-session`.
+  `/design` first unless this is `--in-session`.
 
 ## Step 0 — Context Handoff [HARD BLOCK]
 
@@ -32,7 +33,7 @@ node .claude/scripts/handoff-check.js --phase test
 ```
 
 Exit 1: this session approved `/design`. Stop and tell the human to `/clear`,
-then `/test --plan-only`. Add `--in-session` only when `/build` is conducting.
+then `/test`. Add `--in-session` only when `/build` is conducting.
 
 ## Step 1 — Write the review pair (script first)
 
@@ -40,29 +41,32 @@ then `/test --plan-only`. Add `--in-session` only when `/build` is conducting.
 node .claude/scripts/test-plan-write.js
 ```
 
-It prints a count (`N matrix rows over M stories`). Do **not** read
-`verification-matrix.json` or `test-traces.json` back into this session.
-Pass `--force` only when the human asked to rebuild.
+It prints a count (`N matrix rows over M stories; K obligations attached`).
+Do **not** read `verification-matrix.json`, `test-traces.json`, or the
+schemas back into this session. Pass `--force` only when the human asked
+to rebuild. `--force` rebuilds the matrix from stories/schemas and merges
+reviewed `required_layers` / `checks` / `obligations` by `ac_id`. It does
+not overwrite a filled `test-plan.md` unless `--reset-plan` is also passed.
 
 Then edit **`test-plan.md`** only:
 
 - Named **seams** (Ports-and-Adapters) the implementer will test at.
 - What is being tested and what is explicitly **untested**, with a reason.
-- Test levels planned (`unit`, `api`, `e2e` only when a UI story exists).
 - Environment assumptions. Pass/fail for the sprint.
-
-**`verification-matrix.json`** — one row per AC: stable `matrix_id`, story/AC
-refs, `required_layers`, group, `implementation_paths` (empty if design has
-not rendered), planned checks.
 
 **`test-traces.json`** — one entry per matrix row, tracing to `{story}-AC{n}`
 and, when `brd-acceptance.json` exists, a `BR-n-AC` / `FR-n-AC` id.
 
 Do not invent a prose case catalog. The matrix *is* the case list.
+Do not edit `specs/stories/`, `features.json`, or `spec-decisions.json`.
 
 ## Step 2 — Constraint obligations [when schemas exist]
 
-Skip silently when `specs/design/*.schema.json` is absent.
+`test-plan-write.js` already ran `constraints-extract.js` and attached each
+`OBL-` to a matrix row / `test-traces.json` entry. Skip this step when
+`constraint-obligations.json` exists.
+
+Re-run the extractor only if schemas changed after the matrix was written:
 
 ```bash
 node .claude/scripts/constraints-extract.js \
@@ -72,8 +76,8 @@ node .claude/scripts/constraints-extract.js \
   --index-out specs/test_artefacts/obligation-index.json
 ```
 
-Each `OBL-` must appear on a matrix row / `test-traces.json` entry. One
-representative negative per obligation — method in `test-design.md`.
+Then `test-plan-write.js --force`. Do not map `OBL-` ids by reading schemas.
+Negative-test method lives in `test-design.md`.
 
 ## Step 3 — Grounding + matrix gates [HARD BLOCK]
 
@@ -124,5 +128,10 @@ answer your own questions.
 Brief: which ACs at which layer, and **what you decided not to test**. Record
 with `plan-approval.js`, naming `test-plan.md` and `verification-matrix.json`
 on the approving round. In `--auto` / `--autonomous`, waive with `--lane`.
+
+This phase reviews the test plan. A spec/design mismatch is a question, not
+an in-phase rewrite. After the human answers, edit only `test-plan.md` and
+`verification-matrix.json`. New ACs or story rewrites wait until `/test`
+closes, then `/spec`.
 
 **STOP HERE.** Report the three artefacts and exit.

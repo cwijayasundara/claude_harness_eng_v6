@@ -196,7 +196,7 @@ test('passing the gate prints the clear-and-render-only checkpoint', () => {
   const out = gate(decisionsRoot('SESSION-A'));
   assert.match(out, /OK/);
   assert.match(out, /\/clear/);
-  assert.match(out, /\/spec --render-only/);
+  assert.match(out, /then \/spec/);
 });
 
 // /build cannot clear itself mid-run, so it must neither be told to nor blocked.

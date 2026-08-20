@@ -4,6 +4,29 @@ All notable changes to the Claude Harness Engine are documented here.
 
 ## Unreleased
 
+### `/design` and `/test` are the operator commands (2026-08-19)
+
+`--render-only` and `--plan-only` are aliases, not separate phases. After
+`/clear`, type `/design` and `/test`. `--render-only` still runs the
+human gate (`mode-13-gate.md`); a render that stopped at the deterministic
+checks left `/auto` blocked with no `design-approval.json`. Unflagged
+`/design` with decisions on disk takes the next unfinished hop (render, or
+the gate when `architecture.md` already exists). Unflagged `/test` is the
+plan hop when no application source exists; `--e2e-only` is the Playwright
+hop after source exists.
+
+### `/test` writer preserves reviewed state (2026-08-19)
+
+A shortlink-p3 `/test` run finished the matrix in ~4 minutes, then spent
+more than an hour remapping 65 `OBL-` ids by hand. `test-plan-write.js`
+now extracts schema obligations, attaches each `OBL-` to a matrix row,
+fills `implementation_paths` from `design-traces.json`, and tags extra
+layers from AC wording. `--force` rebuilds that spine and merges reviewed
+`required_layers` / `checks` / `obligations` by `ac_id`; it does not wipe
+`test-plan.md` unless `--reset-plan` is passed. The model fills seams and
+the untested table only. `/test` does not edit `specs/stories/` or
+`features.json`.
+
 ### SSDD join sensors are catalog-enforced (2026-08-19)
 
 Skipping `/auto` SECTION 5 no longer skips the generate sensors.

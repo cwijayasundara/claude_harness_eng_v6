@@ -291,11 +291,11 @@ test('no PRD copy means an empty plan, not a crash', () => {
 
 // Adoption's classified buckets are only worth writing if something consumes
 // them. brd-context.json already feeds the Forbidden Actions deny-list; these
-// two were written and read by nobody.
+// two were written and read by nobody. Scan the skill corpus (index +
+// references + brd-render) so the contract survives progressive loading.
 test('every classified bucket has a documented consumer', () => {
-  const brd = fs.readFileSync(path.join(__dirname, '..', '.claude', 'skills', 'brd', 'SKILL.md'), 'utf8');
-  const render = fs.readFileSync(path.join(__dirname, '..', '.claude', 'skills', 'brd-render', 'SKILL.md'), 'utf8');
-  const corpus = `${brd}\n${render}`;
+  const { readSkillCorpus } = require('./helpers/skill-corpus');
+  const corpus = readSkillCorpus('brd');
   for (const bucket of ['brd-open-questions.json', 'brd-risks.json', 'brd-context.json']) {
     assert.match(corpus, new RegExp(bucket.replace('.', '\\.')),
       `${bucket} is written by adoption but nothing reads it`);
@@ -306,7 +306,8 @@ test("the PRD's own open questions lead the clarification budget", () => {
   // The audited run: the PRD stated five open questions, the clarification log
   // recorded six entries the planner had written both sides of, and the
   // document's actual unknowns were never systematically asked.
-  const brd = fs.readFileSync(path.join(__dirname, '..', '.claude', 'skills', 'brd', 'SKILL.md'), 'utf8');
+  const { readSkillCorpus } = require('./helpers/skill-corpus');
+  const brd = readSkillCorpus('brd');
   const idx = brd.indexOf('### Step 0.5');
   const step = brd.slice(idx, idx + 1600);
   assert.match(step, /brd-open-questions\.json/, 'the budget must start from the PRD, not from invention');

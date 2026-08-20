@@ -106,7 +106,7 @@ function run(argv, cwd, deps = {}) {
       if (fs.existsSync(decisions) && !fs.existsSync(arch)) {
         process.stdout.write(
           'handoff-check: design decisions exist but architecture.md does not — '
-          + 'prefer /design --render-only first unless this is /build Phase 3.\n',
+          + 'prefer /design first unless this is /build Phase 3.\n',
         );
       }
     }

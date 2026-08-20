@@ -25,7 +25,7 @@ function line(label, value) {
 
 const NEXT_HINT = {
   shape: 'hold the milestone / epic dialogue, then write spec-decisions.json',
-  render: 'run /spec --render-only — do not re-shape; stories are still missing',
+  render: 'run /spec — do not re-shape; stories are still missing (`--render-only` is an alias)',
   review: 'story graph exists — run the Step 8 review loop, do not re-shape or re-render',
 };
 

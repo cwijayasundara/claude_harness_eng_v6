@@ -8,6 +8,8 @@
 
 const fs = require('fs');
 const path = require('path');
+const { layerFor, enrichPlan, persistRow, mergeReviewed } = require('./test-plan-enrich');
+const { extractObligations, obligationIndex } = require('./constraints-extract');
 
 function readJson(file, fallback) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (_) { return fallback; }
@@ -23,13 +25,6 @@ function asArray(v) { return Array.isArray(v) ? v : []; }
 function arg(argv, name, fallback) {
   const i = argv.indexOf(name);
   return i === -1 || argv[i + 1] === undefined ? fallback : argv[i + 1];
-}
-
-function layerFor(story) {
-  const layer = String(story && story.layer || '').toLowerCase();
-  if (layer === 'ui') return 'e2e';
-  if (layer === 'config' || layer === 'types') return 'unit';
-  return 'api';
 }
 
 function pad(n) {
@@ -107,7 +102,29 @@ function skeletonPlan({ traces, stories, requirements }) {
   ].join('\n');
 }
 
-function writePlan(root, { force } = {}) {
+function schemaSources(root) {
+  const files = [
+    path.join(root, 'specs', 'design', 'data-models.schema.json'),
+    path.join(root, 'specs', 'design', 'api-contracts.schema.json'),
+  ];
+  const sources = [];
+  for (const file of files) {
+    if (!fs.existsSync(file)) continue;
+    try {
+      sources.push({ label: path.relative(root, file), schema: JSON.parse(fs.readFileSync(file, 'utf8')) });
+    } catch (_) { /* skip invalid schema */ }
+  }
+  return sources;
+}
+
+function loadObligations(root) {
+  const sources = schemaSources(root);
+  if (!sources.length) return { obligations: [], index: [], generated_from: [] };
+  const extracted = extractObligations(sources);
+  return { ...extracted, index: obligationIndex(extracted) };
+}
+
+function assemblePlan(root) {
   const traces = readJson(path.join(root, 'specs', 'stories', 'story-traces.json'), null);
   if (!asArray(traces).length) {
     return { ok: false, error: 'specs/stories/story-traces.json missing or empty — run /spec first' };
@@ -115,39 +132,76 @@ function writePlan(root, { force } = {}) {
   const stories = readJson(path.join(root, 'specs', 'stories', 'stories.json'), []);
   const acceptance = readJson(path.join(root, 'specs', 'stories', 'acceptance-criteria.json'), []);
   const { requirements, testTraces } = buildPlan({ traces, stories, acceptance });
+  const extracted = loadObligations(root);
+  const designTraces = readJson(path.join(root, 'specs', 'design', 'design-traces.json'), []);
+  const attached = enrichPlan({
+    requirements, testTraces, stories, acceptance,
+    designTraces, obligations: extracted.obligations,
+  });
+  return { ok: true, traces, stories, requirements, testTraces, extracted, attached };
+}
 
+function writeArtifacts(root, plan, resetPlan) {
   const dir = path.join(root, 'specs', 'test_artefacts');
   fs.mkdirSync(dir, { recursive: true });
-  const matrixPath = path.join(dir, 'verification-matrix.json');
-  const tracesPath = path.join(dir, 'test-traces.json');
+  writeJson(path.join(dir, 'verification-matrix.json'), {
+    version: 1, requirements: plan.requirements.map(persistRow),
+  });
+  writeJson(path.join(dir, 'test-traces.json'), plan.testTraces);
+  if (plan.extracted.obligations.length) {
+    writeJson(path.join(dir, 'constraint-obligations.json'), {
+      generated_from: plan.extracted.generated_from, obligations: plan.extracted.obligations,
+    });
+    writeJson(path.join(dir, 'obligation-index.json'), plan.extracted.index);
+  }
   const planPath = path.join(dir, 'test-plan.md');
+  if (!fs.existsSync(planPath) || resetPlan) {
+    fs.writeFileSync(planPath, `${skeletonPlan(plan)}\n`);
+  }
+}
 
-  const existed = fs.existsSync(matrixPath);
-  if (existed && !force) {
+function writePlan(root, { force, resetPlan } = {}) {
+  const plan = assemblePlan(root);
+  if (!plan.ok) return plan;
+  const summary = {
+    ok: true, rows: plan.requirements.length, stories: asArray(plan.traces).length,
+    obligations: plan.attached.attached, unmatched: plan.attached.unmatched.length,
+    dropped: 0,
+  };
+  const matrixPath = path.join(root, 'specs', 'test_artefacts', 'verification-matrix.json');
+  const existing = readJson(matrixPath, null);
+  if (existing && !force) {
     return {
-      ok: true, skipped: true, rows: requirements.length, stories: asArray(traces).length,
+      ...summary, skipped: true,
       message: 'verification-matrix.json exists — not overwritten (pass --force to rebuild)',
     };
   }
-
-  writeJson(matrixPath, { version: 1, requirements });
-  writeJson(tracesPath, testTraces);
-  if (!fs.existsSync(planPath) || force) {
-    fs.writeFileSync(planPath, `${skeletonPlan({ traces, stories, requirements })}\n`);
+  if (existing) {
+    const merged = mergeReviewed(
+      asArray(existing.requirements), plan.requirements, plan.testTraces,
+    );
+    summary.dropped = merged.dropped.length;
   }
-  return { ok: true, skipped: false, rows: requirements.length, stories: asArray(traces).length };
+  writeArtifacts(root, plan, resetPlan);
+  return { ...summary, skipped: false };
 }
 
 function run(argv, cwd) {
   const root = path.resolve(arg(argv, '--root', cwd) || cwd);
-  const result = writePlan(root, { force: argv.includes('--force') });
+  const result = writePlan(root, {
+    force: argv.includes('--force'),
+    resetPlan: argv.includes('--reset-plan'),
+  });
   if (!result.ok) {
     process.stderr.write(`test-plan-write: ${result.error}\n`);
     return 1;
   }
+  const obl = result.obligations ? `; ${result.obligations} obligations attached` : '';
+  const unmatched = result.unmatched ? ` (${result.unmatched} unmatched)` : '';
+  const dropped = result.dropped ? `; ${result.dropped} reviewed row(s) dropped (AC gone)` : '';
   process.stdout.write(
     `test-plan-write: ${result.skipped ? 'kept' : 'wrote'} ${result.rows} matrix rows`
-    + ` over ${result.stories} stories`
+    + ` over ${result.stories} stories${obl}${unmatched}${dropped}`
     + `${result.message ? ` — ${result.message}` : ''}\n`,
   );
   return 0;

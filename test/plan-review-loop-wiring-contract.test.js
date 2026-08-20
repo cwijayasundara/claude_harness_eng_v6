@@ -63,6 +63,17 @@ test('each planning phase blocks on the previous phase review, and /auto on all 
   );
 });
 
+test('/design render hop still runs the human gate', () => {
+  const skill = read('.claude/skills/design/SKILL.md');
+  assert.match(skill, /mode-13-gate/, 'render without the gate left /auto blocked');
+  assert.match(skill, /design-approval\.json/, 'the phase ends on the approval receipt');
+  assert.match(
+    read('.claude/skills/design/references/mode-10-render-and-gates.md'),
+    /mode-13-gate/,
+    '--render-only is an alias, not a skip of Step 3',
+  );
+});
+
 test('/auto states the block as a hard one, naming the post-approval-edit case', () => {
   const auto = readSkillCorpus('auto');
   assert.match(auto, /HARD BLOCK/, 'a prose-only suggestion is what this control replaces');

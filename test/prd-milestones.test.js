@@ -83,19 +83,20 @@ test('a requirement id mentioned in prose is not mistaken for a milestone', () =
 // it is three disconnected artifacts again.
 const fs = require('fs');
 const path = require('path');
+const { readSkillCorpus } = require('./helpers/skill-corpus');
 const read = (...p) => fs.readFileSync(path.join(__dirname, '..', ...p), 'utf8');
 
 test('brd-adopt emits the plan, /spec reads it, /build writes the log', () => {
   assert.match(read('.claude', 'scripts', 'brd-adopt.js'), /brd-milestones\.json/,
     'adoption must emit the plan');
-  assert.match(read('.claude', 'skills', 'spec', 'SKILL.md'), /brd-milestones\.json/,
+  assert.match(readSkillCorpus('spec'), /brd-milestones\.json/,
     '/spec must read the plan rather than re-deriving scope from memory');
   assert.match(read('.claude', 'skills', 'build', 'references', 'section-04-pipeline-phases.md'),
     /milestone-log\.template\.md/, '/build must write the log at the end of a milestone');
 });
 
 test('/spec reads prior milestone logs, closing the cross-session loop', () => {
-  assert.match(read('.claude', 'skills', 'spec', 'SKILL.md'), /specs\/milestones\/\*-log\.md/,
+  assert.match(readSkillCorpus('spec'), /specs\/milestones\/\*-log\.md/,
     'the next milestone must start from what exists, not from what was intended');
 });
 

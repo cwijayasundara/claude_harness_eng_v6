@@ -151,7 +151,7 @@ test('passing the gate prints the clear-and-render-only checkpoint', () => {
   const out = gate(designRoot('SESSION-A'));
   assert.match(out, /OK/);
   assert.match(out, /\/clear/);
-  assert.match(out, /\/design --render-only/);
+  assert.match(out, /then \/design/);
   assert.match(out, /design-decisions\.json/);
 });
 

@@ -119,4 +119,10 @@ Spawn Agent with subagent_type="evaluator", the model chosen above, and prompt:
 3. **Ratchet rule:** weighted_average must be >= previous iteration. Revert on regression.
 4. After 3 iterations — present best version with findings.
 
+### Step 3 — Human review
+
+Load `mode-13-gate.md` and run the review loop. This hop includes the
+human gate. `--render-only` is an alias, not a skip. Stop only after
+`plan-approval.js` records `design-approval.json` (or a documented waiver).
+
 ---

@@ -194,6 +194,7 @@
         "fill-spec-scope",
         "spec-render-write",
         "test-plan-write",
+        "test-plan-enrich",
         "planning-progress",
         "scaffold-project-files",
         "verification-matrix-gate",

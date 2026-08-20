@@ -25,6 +25,7 @@ function seed(dir) {
 
 test('layerFor maps story layer to a matrix layer', () => {
   assert.strictEqual(layerFor({ layer: 'UI' }), 'e2e');
+  assert.strictEqual(layerFor({ layer: 'frontend' }), 'e2e');
   assert.strictEqual(layerFor({ layer: 'Config' }), 'unit');
   assert.strictEqual(layerFor({ layer: 'API' }), 'api');
 });
@@ -64,6 +65,52 @@ test('writePlan writes matrix + traces + skeleton and is idempotent', () => {
   assert.strictEqual(second.skipped, true);
   const forced = writePlan(dir, { force: true });
   assert.strictEqual(forced.skipped, false);
+});
+
+test('writePlan attaches schema obligations and design-trace paths', () => {
+  const dir = tmp();
+  seed(dir);
+  fs.mkdirSync(path.join(dir, 'specs/design'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'specs/design/design-traces.json'), `${JSON.stringify([
+    { id: 'backend/src/boot.py', traces: ['E1-S1'] },
+  ])}\n`);
+  fs.writeFileSync(path.join(dir, 'specs/design/data-models.schema.json'), `${JSON.stringify({
+    $defs: { HealthResponse: { type: 'object', required: ['status'], properties: { status: { type: 'string', enum: ['ok'] } } } },
+  })}\n`);
+  fs.writeFileSync(path.join(dir, 'specs/stories/acceptance-criteria.json'), `${JSON.stringify([
+    { id: 'E1-S1-AC1', then: 'health status is ok' },
+  ])}\n`);
+  const first = writePlan(dir);
+  assert.strictEqual(first.ok, true);
+  assert.ok(first.obligations >= 1);
+  const matrix = JSON.parse(fs.readFileSync(path.join(dir, 'specs/test_artefacts/verification-matrix.json'), 'utf8'));
+  assert.ok(matrix.requirements[0].implementation_paths.includes('backend/src/boot.py'));
+  const traces = JSON.parse(fs.readFileSync(path.join(dir, 'specs/test_artefacts/test-traces.json'), 'utf8'));
+  assert.ok(traces.some((t) => t.traces.some((id) => String(id).startsWith('OBL-'))));
+});
+
+test('--force rebuilds the matrix but keeps a filled test-plan.md and reviewed layers', () => {
+  const dir = tmp();
+  seed(dir);
+  writePlan(dir);
+  const planPath = path.join(dir, 'specs/test_artefacts/test-plan.md');
+  fs.writeFileSync(planPath, '# Test Plan\n\n## Named Seams\n\nReviewed seams stay.\n');
+  const matrixPath = path.join(dir, 'specs/test_artefacts/verification-matrix.json');
+  const matrix = JSON.parse(fs.readFileSync(matrixPath, 'utf8'));
+  matrix.requirements[0].required_layers = ['api', 'security'];
+  matrix.requirements[0].checks = [{ id: 'CHK-VM-001-security', layer: 'security', description: 'isolation' }];
+  matrix.requirements[0].obligations = ['OBL-reviewed'];
+  fs.writeFileSync(matrixPath, `${JSON.stringify(matrix, null, 2)}\n`);
+  const forced = writePlan(dir, { force: true });
+  assert.strictEqual(forced.skipped, false);
+  assert.match(fs.readFileSync(planPath, 'utf8'), /Reviewed seams stay/);
+  const rebuilt = JSON.parse(fs.readFileSync(matrixPath, 'utf8'));
+  assert.deepStrictEqual(rebuilt.requirements[0].required_layers, ['api', 'security']);
+  assert.ok(rebuilt.requirements[0].obligations.includes('OBL-reviewed'));
+  const reset = writePlan(dir, { force: true, resetPlan: true });
+  assert.strictEqual(reset.skipped, false);
+  assert.match(fs.readFileSync(planPath, 'utf8'), /Named Seams \(Ports-and-Adapters\)/);
+  assert.doesNotMatch(fs.readFileSync(planPath, 'utf8'), /Reviewed seams stay/);
 });
 
 test('CLI prints counts and does not dump the matrix', () => {

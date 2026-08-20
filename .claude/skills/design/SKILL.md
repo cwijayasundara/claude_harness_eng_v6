@@ -34,7 +34,7 @@ This skill is an **orchestrator index**. Read only the reference file for the mo
 | Step 0.5 — Clarify Load-Bearing Design Decisions | `references/mode-08-step-0-5-clarify-load-bearing-design-decisions.md` |
 | Step 0.7 — Pre-Code Modularity Assessment | `references/mode-09-step-0-7-pre-code-modularity-assessment.md` |
 | Step 0.9 — Record decisions + checkpoint | `references/mode-10-step-1-spawn-two-agents-concurrently.md` |
-| `--render-only` — dispatch + gates | `references/mode-10-render-and-gates.md` |
+| `--render-only` / next hop — dispatch + gates + human review | `references/mode-10-render-and-gates.md` then `references/mode-13-gate.md` |
 | Machine-Readable Artifacts | `references/mode-11-machine-readable-artifacts.md` |
 | Output | `references/mode-12-output.md` |
 | Gate | `references/mode-13-gate.md` |
@@ -42,11 +42,17 @@ This skill is an **orchestrator index**. Read only the reference file for the mo
 
 ### Route
 
+Operators run `/design`. `--render-only` is an alias for the render hop after
+`/clear`, not a skip of the human gate.
+
 1. Parse flags (`--doc-only`, `--delta`, `--baseline-recovery`, `--render-only`, `--brainstorm`, default full).
 2. Load **only** that mode's reference file and execute it.
 3. Do not load delta/full procedure when running `--doc-only`.
 4. **Skip Step 0 Superpowers** unless `--brainstorm` or `execution.ceremony` is `full`. The PRD + approved spec + manifest stack are enough to write `rules_out`.
-5. **With `--render-only`, load only `references/mode-10-render-and-gates.md`.** Skip Steps 0, 0.5, 0.7 and the record file. Do not re-ask settled questions.
+5. **Render hop** when `--render-only` **or** unflagged `/design` and `specs/decisions/design-decisions.json` exists:
+   - No `architecture.md`, or `--render-only`: load `references/mode-10-render-and-gates.md`, then `references/mode-13-gate.md`.
+   - `architecture.md` already exists and the flag was not passed: load only `references/mode-13-gate.md` (the review that `--render-only` used to skip).
+   Skip Steps 0, 0.5, 0.7. Do not re-ask settled questions. The phase is not done until `plan-approval.js` records `design-approval.json`.
 
 ### Load-bearing names (always visible)
 

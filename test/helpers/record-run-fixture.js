@@ -8,9 +8,9 @@ const REPO_ROOT = path.join(__dirname, '..', '..');
 
 // record-run.js requires telemetry-memory, which in turn requires
 // telemetry-skill-helpers, telemetry-phase-eval, telemetry-ledger-rotate, and
-// telemetry-pipeline-gauges (→ pipeline-snapshot → pipeline-state-readers →
-// budget-state) — all must be present in the temp project or the hook child
-// crashes with MODULE_NOT_FOUND.
+// telemetry-pipeline-gauges (→ pipeline-snapshot → planning-progress +
+// pipeline-state-readers → budget-state) — all must be present in the temp
+// project or the hook child loads telemetry as null and writes no ledger.
 const HOOK_DEP_SCRIPTS = [
   'build-lane.js',
   'telemetry-memory.js',
@@ -21,6 +21,7 @@ const HOOK_DEP_SCRIPTS = [
   'telemetry-pipeline-gauges.js',
   'pipeline-snapshot.js',
   'pipeline-state-readers.js',
+  'planning-progress.js',
   'budget-state.js',
   'phase-cost.js',
 ];

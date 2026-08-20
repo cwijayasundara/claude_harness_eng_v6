@@ -66,16 +66,18 @@ Add `--in-session` only when `/build` is conducting every phase from one session
 ### 2.5. Checkpoint: stop here and clear [HARD BLOCK]
 
 When the gate passes it prints a checkpoint. **Obey it: stop, and tell the human
-to run `/clear` then `/design --render-only`.** Do not continue into §3 in this
-session.
+to run `/clear` then `/design`.** Do not continue into §3 in this
+session. `--render-only` is an alias for the same hop.
 
-Everything from §3 on — the renderer, Step 1.9's gates, the Step 2 evaluator —
-reads `specs/decisions/design-decisions.json`, not this conversation. The
-equivalent stretch in `/spec` was 40 of 47 turns at a **284K average context**;
-`/design` carries the same shape, and its dialogue (Step 0 brainstorm, Step 0.5
-clarify, Step 0.7 modularity) is the largest of any planning phase.
+Everything from §3 on — the renderer, Step 1.9's gates, the Step 2 evaluator,
+and Step 3's human review — reads `specs/decisions/design-decisions.json`, not
+this conversation. The equivalent stretch in `/spec` was 40 of 47 turns at a
+**284K average context**; `/design` carries the same shape, and its dialogue
+(Step 0 brainstorm, Step 0.5 clarify, Step 0.7 modularity) is the largest of
+any planning phase.
 
 No checkpoint is printed when the gate was waived by a headless lane or run
 `--in-session` — neither has a human who can clear, and both continue into §3.
 
-Shaping stops at §2.5. `--render-only` loads `mode-10-render-and-gates.md`.
+Shaping stops at §2.5. The next `/design` loads `mode-10-render-and-gates.md`
+then `mode-13-gate.md`.

@@ -674,7 +674,7 @@ Agent contract: in brownfield mode, "module X depends on Y" claims must cite `co
 | `/brd` | Socratic interview → BRD | Yes | brainstorming |
 | `/spec` | BRD → stories + dependency graph + features.json | Yes | — |
 | `/design` | Architecture + schemas + mockups (runs parallel with `/test`) | Yes | brainstorming |
-| `/test` | Test plan + cases + fixtures (`--plan-only`) or Playwright E2E (`--e2e-only`) | No | — |
+| `/test` | Test plan + matrix (before source) or Playwright E2E (`--e2e-only` after source) | Yes (plan hop) | — |
 | `/implement` | Code generation with agent teams | No | writing-plans, TDD |
 | `/evaluate` | Run app, verify sprint contract | No | verification |
 | `/gate` | Evaluator + security review (renamed from `/review`) | No | — |

@@ -11,8 +11,9 @@ decision dialogue and the human review gate. The renderer it dispatches forks.
 
 This skill is an **orchestrator index** (SSDD `/spdd-story`). Read only the
 reference for `NEXT`. Two sessions produce the story graph: shape
-`spec-decisions.json`, `/clear`, then `/spec --render-only`. `/build` passes
-`--in-session`. Upstream pointer: `specs/brd/brd.md`.
+`spec-decisions.json`, `/clear`, then `/spec`. `--render-only` is an alias
+for the render hop. `/build` passes `--in-session`. Upstream pointer:
+`specs/brd/brd.md`.
 
 | Flag / NEXT | Read |
 |---|---|

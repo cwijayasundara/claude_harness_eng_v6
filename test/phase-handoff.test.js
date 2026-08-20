@@ -269,13 +269,15 @@ const { staleRenderContext, renderHandoffBlock } = require(
 test('the spec render handoff names the clear and the re-entry command', () => {
   const block = renderHandoffBlock('spec');
   assert.match(block, /\/clear/);
-  assert.match(block, /\/spec --render-only/);
+  assert.match(block, /then \/spec/);
+  assert.match(block, /--render-only is an alias/);
 });
 
 test('design still names the clear and the re-entry command', () => {
   const block = renderHandoffBlock('design');
   assert.match(block, /\/clear/);
-  assert.match(block, /\/design --render-only/);
+  assert.match(block, /then \/design/);
+  assert.match(block, /--render-only is an alias/);
 });
 
 test('the spec render stretch is blocked in the session that shaped the decisions', () => {
