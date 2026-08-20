@@ -295,13 +295,13 @@ test('a later persist records only the delta since the last write', () => {
   assert.strictEqual(Math.round(ledger[1].grand_usd), 40);
 });
 
-// The two --write tests above load phase-cost.js at module scope (line 20) and
-// only then require the persist lib, so the require cycle between them is
-// already resolved by the time writeSnapshot runs. The CLI has no such luck:
-// it enters main() before its own module.exports is assigned, so the late
-// require inside writeSnapshot gets a still-empty exports object. Only a
-// subprocess exercises the real entry path.
-test('the --write CLI persists from a cold process (require cycle stays resolved)', () => {
+// The two --write tests above call writeSnapshot() in-process. The CLI is a
+// different entry path — argument parsing, transcript discovery, the persist
+// hop — and only a subprocess exercises it. This test was originally written to
+// catch an export-ordering bug that made --write die on a require cycle; the
+// cycle is gone now (the shared half lives in phase-cost-core.js), but the
+// end-to-end CLI path is worth pinning on its own account.
+test('the --write CLI persists from a cold process', () => {
   const { execFileSync } = require('child_process');
   const file = writeTranscript([
     userTurn('2026-08-16T07:00:00.000Z', '/spec'),
@@ -317,4 +317,43 @@ test('the --write CLI persists from a cold process (require cycle stays resolved
     .trim().split('\n').map((l) => JSON.parse(l));
   assert.strictEqual(ledger.length, 1);
   assert.strictEqual(ledger[0].step, 'spec-al', 'the ledger row carries the step label');
+});
+
+
+// The invariant the phase-cost-core.js split establishes. Nothing else would
+// notice it being undone: re-adding `require('../../scripts/phase-cost.js')` to
+// the persist lib re-forms the cycle, and every test here would stay green
+// until someone ran the CLI — which is exactly how the original bug survived.
+test('the persist lib does not require the CLI back', () => {
+  const persist = fs.readFileSync(
+    path.join(__dirname, '..', '.claude/hooks/lib/phase-cost-persist.js'), 'utf8',
+  );
+  assert.doesNotMatch(persist, /require\(['"][^'"]*scripts\/phase-cost(\.js)?['"]\)/,
+    'the shared half belongs in phase-cost-core.js, not behind a cycle');
+  assert.match(persist, /require\(['"]\.\/phase-cost-core\.js['"]\)/,
+    'and it must actually use the core');
+});
+
+
+// The human-readable table had no test, so a ReferenceError in renderRow
+// survived the full suite — the extraction moved FREEFORM into the core and
+// only eslint noticed the renderer still referenced it. The default CLI mode is
+// the table, so this is the path a human actually sees.
+test('the CLI renders a table, including a pre-command (freeform) segment', () => {
+  const { execFileSync } = require('child_process');
+  const file = writeTranscript([
+    userTurn('2026-08-16T06:00:00.000Z', 'just chatting, no slash command'),
+    assistantTurn('2026-08-16T06:10:00.000Z', 'a0', 'claude-opus-5', 1e5),
+    userTurn('2026-08-16T07:00:00.000Z', '/spec'),
+    assistantTurn('2026-08-16T07:30:00.000Z', 'a1', 'claude-opus-5', 1e6),
+  ]);
+  const out = execFileSync('node', [
+    path.join(__dirname, '..', '.claude', 'scripts', 'phase-cost.js'), file,
+  ], { encoding: 'utf8' });
+  // Line-anchored on purpose: an unbound FREEFORM makes the comparison false
+  // and the renderer emits `/(freeform)`, which an unanchored /\(freeform\)/
+  // still matches. The bug this test exists for would slip straight through.
+  assert.match(out, /^\(freeform\)/m, 'the pre-command segment is labelled, not slash-prefixed');
+  assert.match(out, /\/spec/);
+  assert.match(out, /TOTAL/);
 });

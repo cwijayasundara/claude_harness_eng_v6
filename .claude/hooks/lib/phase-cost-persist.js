@@ -9,18 +9,15 @@
 //   .claude/state/phase-cost-cursor.json  last persisted totals
 //
 // Hook payloads have no usage fields. The transcript is the source of truth.
+//
+// Requires phase-cost-core.js, not phase-cost.js: the attribution half lives in
+// the lib so this file and the CLI are siblings rather than a require cycle.
 
 const fs = require('fs');
 const path = require('path');
-
-function loadPhaseCost() {
-  // Late require, resolving a genuine cycle: phase-cost.js requires this file
-  // from inside main(). It works only because phase-cost.js assigns its
-  // module.exports BEFORE its `require.main` entry line — keep that order.
-  // Reversed, the CLI's --write gets an empty exports object here, and no
-  // in-process test sees it (they load phase-cost.js first).
-  return require('../../scripts/phase-cost.js');
-}
+const {
+  transcriptsFor, costByPhase, subagentTranscriptsFor, aggregate,
+} = require('./phase-cost-core.js');
 
 function tokenTotals(rows) {
   return (rows || []).reduce((acc, r) => {
@@ -51,9 +48,6 @@ function serializeTotals(totals) {
 }
 
 function snapshotFrom(target, opts = {}) {
-  const {
-    transcriptsFor, costByPhase, subagentTranscriptsFor, aggregate,
-  } = loadPhaseCost();
   const files = opts.transcriptPath ? [opts.transcriptPath] : transcriptsFor(target);
   const coverage = { subagentFiles: 0, sessions: files.length };
   const rows = files.flatMap((file) => {

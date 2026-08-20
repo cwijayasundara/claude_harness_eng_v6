@@ -444,6 +444,7 @@
         "merge-provenance",
         "stale-stamp",
         "transcript-usage",
+        "phase-cost-core",
         "phase-cost-persist",
         "withhold-verdicts"
       ],

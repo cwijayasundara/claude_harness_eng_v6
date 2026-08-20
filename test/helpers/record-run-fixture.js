@@ -134,9 +134,11 @@ function runHook(projectDir, input, env) {
 // /scaffold copies the whole hooks/ dir, so production always has them.
 // model-pricing.js is here because budget-state.js requires it; without it the
 // scripts/ copy fails to load and the hook silently pushes nothing.
+// phase-cost-core.js is here because phase-cost-persist.js requires it — the
+// attribution half that used to be reached back through the CLI.
 const HOOK_LIB_SCRIPTS = [
   'common.js', 'record-skills.js', 'agent-model.js', 'run-context.js', 'model-pricing.js',
-  'transcript-usage.js', 'phase-cost-persist.js',
+  'transcript-usage.js', 'phase-cost-core.js', 'phase-cost-persist.js',
 ];
 
 function copyHookLibFiles(hooksDir) {

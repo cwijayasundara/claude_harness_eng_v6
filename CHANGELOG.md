@@ -44,6 +44,26 @@ next `handoff-check --stage render` blocked the session the clear had just
 created — and told `/build --in-session`, which cannot `/clear`, to pass the
 flag it already passed.
 
+### `phase-cost` attribution split out of the CLI (2026-08-20)
+
+`phase-cost.js` and `phase-cost-persist.js` required each other: the CLI pulled
+in the persist lib from inside `main()`, and that lib required the CLI straight
+back for `transcriptsFor`/`costByPhase`/`subagentTranscriptsFor`/`aggregate`.
+The earlier fix made that work by assigning `module.exports` before the
+`require.main` entry line — correct, but an ordering invariant policed by a
+comment in two files, and reversing it broke `--write` invisibly to every
+in-process test.
+
+The attribution half now lives in `.claude/hooks/lib/phase-cost-core.js`, which
+both require. There is no cycle left to police: moving `module.exports` back
+after the entry line is now harmless, verified by running the CLI both ways.
+Repo-wide cycle detection over 827 files reports zero (it was exactly one).
+
+Caught during the split, by eslint rather than the suite: `FREEFORM` moved to
+the core while the renderer still referenced it, so the default table output —
+which had no test at all — would have thrown. Now exported as shared vocabulary
+and covered by a CLI test.
+
 ### `registry-names` no longer reads prose as a dependency (2026-08-20)
 
 The import patterns ran over raw source, so an ordinary sentence in a comment
