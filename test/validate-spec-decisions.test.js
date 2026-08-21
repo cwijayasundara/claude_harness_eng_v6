@@ -146,6 +146,52 @@ test('a headless lane confirmed by the session marker still waives', () => {
   assert.strictEqual(res.waived, '--auto');
 });
 
+// ── An unattended run must still record a deliberate basis ────────────────
+// A recorded lane used to skip the human rules ENTIRELY, so an unattended run
+// could pass with every decision left at "default-accepted" — the model's own
+// default, chosen by nobody — or with no load-bearing decision at all. The lane
+// now relaxes WHICH basis counts, not WHETHER one is required: "headless-default"
+// says an unattended operator settled the call, and that is visible in the
+// record instead of being indistinguishable from human review.
+
+test('a recorded lane accepts headless-default without a single human decision', () => {
+  const res = validateDecisions(
+    doc({ decisions: [decision({ basis: 'headless-default', load_bearing: true })] }),
+    { lane: '--auto', sessionLane: 'build --auto' },
+  );
+  assert.deepStrictEqual(res.errors, []);
+  assert.strictEqual(res.ok, true);
+});
+
+test('a recorded lane still rejects default-accepted on a load-bearing decision', () => {
+  // The distinction the whole change is for: "headless-default" is an
+  // unattended decision, "default-accepted" is no decision.
+  const res = validateDecisions(
+    doc({ decisions: [decision({ basis: 'default-accepted', load_bearing: true })] }),
+    { lane: '--auto', sessionLane: 'build --auto' },
+  );
+  assert.strictEqual(res.ok, false, 'a lane relaxes which basis counts, not whether one is required');
+  assert.ok(res.errors.some((e) => /default-accepted/.test(e) && /headless-default/.test(e)),
+    `the error must name both the basis found and the one expected: ${JSON.stringify(res.errors)}`);
+});
+
+test('a recorded lane still requires a load-bearing decision to exist', () => {
+  const res = validateDecisions(
+    doc({ decisions: [decision({ basis: 'headless-default', load_bearing: false })] }),
+    { lane: '--auto', sessionLane: 'build --auto' },
+  );
+  assert.strictEqual(res.ok, false, 'an unattended run that marked nothing load-bearing shaped nothing');
+  assert.ok(res.errors.some((e) => /load_bearing/.test(e)));
+});
+
+test('without a lane, headless-default does not stand in for human', () => {
+  const res = validateDecisions(
+    doc({ decisions: [decision({ basis: 'headless-default', load_bearing: true })] }),
+  );
+  assert.strictEqual(res.ok, false, 'a gated run must not settle its own load-bearing calls');
+  assert.ok(res.errors.some((e) => /must be "human"/.test(e)));
+});
+
 test('a headless waiver never excuses structural errors', () => {
   const res = validateDecisions(doc({ decisions: [] }), { lane: '--auto' });
   assert.strictEqual(res.ok, false, 'structure is not waivable — only the human requirement is');

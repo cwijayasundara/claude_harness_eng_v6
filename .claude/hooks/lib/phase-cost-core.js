@@ -181,6 +181,59 @@ function subagentTranscriptsFor(transcriptPath) {
   }
 }
 
+/**
+ * Per-phase turn shape: how big the context was on each turn, and how much of
+ * the phase was pure conversation.
+ *
+ * costByPhase answers "what did this phase cost". It cannot answer "why", and on
+ * this harness the why is nearly always the same two things: cache reads are
+ * ~5x output, so cost is turns x resident context, and a phase that grows its
+ * context as it runs pays that growth on every remaining turn. A measured /spec
+ * opened at 56K and closed at 120K across 59 turns — 35 of which called no tool
+ * at all, each re-reading ~93K to ask or answer a question.
+ *
+ * Neither number is visible in a cost table, so the lever stays invisible too.
+ */
+function turnProfile(transcriptPath, opts = {}) {
+  const extras = (opts.extraTranscripts || []).map((p) => ({ path: p, subagent: true }));
+  const sources = [transcriptPath, ...extras];
+  const segments = segmentsFromTranscript(transcriptPath);
+  const { turns } = loadTurns(sources);
+  return segments.map((seg, i) => {
+    const isLast = i === segments.length - 1;
+    const mine = turns
+      .filter((t) => !t.sidechain && t.ts != null && t.ts >= seg.start && (isLast || t.ts < seg.end))
+      .sort((a, b) => a.ts - b.ts);
+    const seen = new Set();
+    const unique = mine.filter((t) => (seen.has(t.id) ? false : seen.add(t.id)));
+    return { command: seg.command, start: new Date(seg.start).toISOString(), ...shapeOf(unique) };
+  });
+}
+
+/** Context-per-turn statistics for one phase's turns, in order. */
+function shapeOf(turns) {
+  const ctx = turns.map((t) => (t.usage.cache_read_input_tokens || 0)
+    + (t.usage.cache_creation_input_tokens || 0)
+    + (t.usage.input_tokens || 0));
+  if (ctx.length === 0) {
+    return { turns: 0, ctx_first: 0, ctx_median: 0, ctx_last: 0, ctx_total: 0, growth: 0, toolless: 0, toolless_pct: 0 };
+  }
+  const sorted = [...ctx].sort((a, b) => a - b);
+  const first = ctx[0];
+  const last = ctx[ctx.length - 1];
+  const toolless = turns.filter((t) => (t.tools || 0) === 0).length;
+  return {
+    turns: ctx.length,
+    ctx_first: first,
+    ctx_median: sorted[Math.floor(sorted.length / 2)],
+    ctx_last: last,
+    ctx_total: ctx.reduce((a, b) => a + b, 0),
+    growth: first > 0 ? Number((last / first).toFixed(2)) : 0,
+    toolless,
+    toolless_pct: Math.round((toolless / ctx.length) * 100),
+  };
+}
+
 function aggregate(rows) {
   const byCommand = new Map();
   for (const row of rows) {
@@ -201,6 +254,7 @@ function aggregate(rows) {
 }
 
 module.exports = {
+  turnProfile,
   segmentsFromTranscript, costByPhase, commandOf, aggregate,
   subagentTranscriptsFor, transcriptsFor,
   // Shared vocabulary: the core emits this command name for turns before any

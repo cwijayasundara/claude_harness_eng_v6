@@ -47,6 +47,12 @@ function parseTurn(line) {
     model: message.model || null,
     ts: row.timestamp ? Date.parse(row.timestamp) : null,
     sidechain: row.isSidechain === true,
+    // How many tools this turn called. A turn that called none did nothing but
+    // talk — and still paid a full context re-read. The share of those is what
+    // separates an expensive shaping dialogue from an expensive build.
+    tools: Array.isArray(message.content)
+      ? message.content.filter((b) => b && b.type === 'tool_use').length
+      : 0,
     usage,
   };
 }

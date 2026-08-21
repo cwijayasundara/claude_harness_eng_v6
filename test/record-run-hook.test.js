@@ -87,13 +87,15 @@ test('record-run emits prompt telemetry and updates lane for slash commands', as
   gateway.server.close();
 
   assert.match(gateway.body, /harness_conversation_turns_total\{[^}]*kind="prompt"/);
-  assert.match(gateway.body, /harness_conversation_turns_total\{[^}]*lane="brd"/);
+  // lane is the autonomy lane (still the seeded one); the command travels on
+  // its own label, which is where it always belonged.
+  assert.match(gateway.body, /harness_conversation_turns_total\{[^}]*lane="improve"/);
   assert.match(gateway.body, /harness_command_invocations_total\{[^}]*command="brd"/);
   assert.match(gateway.body, /harness_skill_info\{[^}]*skill="brd"[^}]*path="\.claude\/skills\/brd\/SKILL\.md"/);
   assert.match(gateway.body, /harness_skill_info\{[^}]*skill="spec"[^}]*path="\.claude\/skills\/spec\/SKILL\.md"/);
   assert.match(gateway.body, /harness_skill_usage_total\{[^}]*skill="brd"[^}]*kind="prompt"[^}]*command="brd"/);
   assert.equal(
-    fs.readFileSync(path.join(projectDir, '.claude', 'state', 'current-lane'), 'utf8').trim(),
+    fs.readFileSync(path.join(projectDir, '.claude', 'state', 'current-command'), 'utf8').trim(),
     'brd'
   );
   const ledger = fs.readFileSync(path.join(projectDir, '.claude', 'state', 'telemetry-ledger.jsonl'), 'utf8')
@@ -166,11 +168,87 @@ test('record-run emits command telemetry for any non-scaffold slash command', as
   gateway.server.close();
 
   assert.match(gateway.body, /harness_command_invocations_total\{[^}]*command="brownfield"/);
-  assert.match(gateway.body, /harness_conversation_turns_total\{[^}]*lane="brownfield"/);
+  assert.match(gateway.body, /harness_conversation_turns_total\{[^}]*lane="improve"/);
   assert.equal(
-    fs.readFileSync(path.join(projectDir, '.claude', 'state', 'current-lane'), 'utf8').trim(),
+    fs.readFileSync(path.join(projectDir, '.claude', 'state', 'current-command'), 'utf8').trim(),
     'brownfield'
   );
+});
+
+// ── current-lane is an AUTONOMY lane, not the last command ────────────────
+// It used to hold whichever command last ran, so /spec wrote "spec" there. Two
+// controls read it as a lane and were wrong as a result: the decisions gate
+// corroborates a claimed `--lane --auto` against it and refused every
+// phase-by-phase run as "a gated run cannot waive itself", and
+// gate-receipt-sensor's appliesTo() never matched a command name so it stayed
+// inert. The command still gets recorded — to its own marker.
+
+const laneOf = (dir) => {
+  try {
+    return fs.readFileSync(path.join(dir, '.claude', 'state', 'current-lane'), 'utf8').trim();
+  } catch (_) { return null; }
+};
+const commandOf = (dir) => {
+  try {
+    return fs.readFileSync(path.join(dir, '.claude', 'state', 'current-command'), 'utf8').trim();
+  } catch (_) { return null; }
+};
+
+async function promptHook(projectDir, prompt) {
+  const result = await runHook(projectDir, {
+    hook_event_name: 'UserPromptSubmit', session_id: 'lane-session', prompt,
+  }, {});
+  assert.strictEqual(result.status, 0, result.stderr);
+  return result;
+}
+
+test('a planning command records the command and leaves the lane alone', async () => {
+  const projectDir = makeProject();          // seeded current-lane: improve
+  await promptHook(projectDir, '/spec');
+  assert.strictEqual(laneOf(projectDir), 'improve', 'a command name must never masquerade as a lane');
+  assert.strictEqual(commandOf(projectDir), 'spec', 'the command is still recorded, to its own marker');
+});
+
+test('every planning phase leaves the lane untouched', async () => {
+  for (const command of ['brd', 'spec', 'design', 'test', 'brownfield', 'change']) {
+    const projectDir = makeProject();
+    await promptHook(projectDir, `/${command} something`);
+    assert.strictEqual(laneOf(projectDir), 'improve', `/${command} must not overwrite the lane`);
+    assert.strictEqual(commandOf(projectDir), command);
+  }
+});
+
+test('an autonomous invocation declares its lane', async () => {
+  for (const [prompt, lane] of [
+    ['/auto', 'auto'],
+    ['/feature --auto add a login page', 'auto'],
+    ['/sprint prd-sprint-2.md --autonomous', 'autonomous'],
+    ['/build --auto --lite docs/prd.md', 'lite-auto'],
+    ['/build docs/prd.md', 'gated'],
+  ]) {
+    const projectDir = makeProject();
+    await promptHook(projectDir, prompt);
+    assert.strictEqual(laneOf(projectDir), lane, `${prompt} should record lane ${lane}`);
+  }
+});
+
+test('--auto-merge is not an autonomy declaration', async () => {
+  // Substring matching here would silently promote a gated run to headless,
+  // which is exactly the direction that must never happen by accident.
+  const projectDir = makeProject();
+  await promptHook(projectDir, '/feature --auto-merge ship it');
+  assert.strictEqual(laneOf(projectDir), 'improve');
+});
+
+test('a lane declared once survives the phases that follow it', async () => {
+  // The property the decisions gate depends on: an unattended run declares its
+  // lane at the top, and /spec later does not erase it.
+  const projectDir = makeProject();
+  await promptHook(projectDir, '/build --auto docs/prd.md');
+  assert.strictEqual(laneOf(projectDir), 'auto');
+  await promptHook(projectDir, '/spec');
+  assert.strictEqual(laneOf(projectDir), 'auto', 'the session is still the autonomous run it declared');
+  assert.strictEqual(commandOf(projectDir), 'spec');
 });
 
 test('record-run skips command telemetry for scaffold', async () => {

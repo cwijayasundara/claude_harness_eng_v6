@@ -80,8 +80,10 @@ function validateDesignDecisions(doc, opts = {}) {
   errors.push(...checkRulesOut(doc.decisions));
   if (doc.decisions.length === 0) {
     errors.push('decisions must contain at least one decision');
-  } else if (!effectiveLane) {
-    errors.push(...checkHumanShaping(doc.decisions));
+  } else {
+    // The lane no longer skips these rules — it changes which basis satisfies
+    // them, so an unattended run still has to record a deliberate decision.
+    errors.push(...checkHumanShaping(doc.decisions, { lane: effectiveLane }));
   }
   return { ok: errors.length === 0, errors, waived: effectiveLane };
 }
