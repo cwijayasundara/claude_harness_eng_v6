@@ -1,0 +1,72 @@
+[
+  {
+    "id": "FRD-26",
+    "requirement": "FR-1",
+    "text": "Given a registered email and correct password, when signing in, then the response sets an HTTP-only session cookie and a subsequent authenticated request succeeds."
+  },
+  {
+    "id": "FRD-27",
+    "requirement": "FR-2",
+    "text": "Given a signed-in member and `https://example.com/a/long/path`, when creating a link, then the response is 201 with a code of at least 7 characters."
+  },
+  {
+    "id": "FRD-28",
+    "requirement": "FR-3",
+    "text": "Given an existing code, when requesting `/{code}`, then the response is 302 with `Location` set to the target URL."
+  },
+  {
+    "id": "FRD-29",
+    "requirement": "FR-4",
+    "text": "Given a member owning 25 links, when listing page 1, then exactly 20 links are returned, newest first, and none belongs to another user."
+  },
+  {
+    "id": "FRD-30",
+    "requirement": "FR-5",
+    "text": "Given a member's own link, when deleting it, then the response is 204, a later request for that code returns 404, and the code is not issued to a new link."
+  },
+  {
+    "id": "FRD-31",
+    "requirement": "FR-6",
+    "text": "Given a target of `ftp://example.com`, when creating a link, then the response is 422; the same holds for a host matching `PUBLIC_BASE_URL` and for each of `http://192.168.1.1/`, `http://10.0.0.1/`, `http://127.0.0.1/`, `http://[::1]/`, `http://169.254.169.254/` and `http://localhost/`."
+  },
+  {
+    "id": "FRD-32",
+    "requirement": "FR-7",
+    "text": "Given a signed-in member, when signing out, then a subsequent authenticated request returns 401."
+  },
+  {
+    "id": "FRD-33",
+    "requirement": "FR-8",
+    "text": "Given a reachable database, when fetching `/healthz`, then the response is 200; when the database is stopped, the response is 503."
+  },
+  {
+    "id": "FRD-34",
+    "requirement": "NFR-2",
+    "text": "Given 10,000 codes generated in one run, when they are inspected, then every code is at least 7 characters drawn from a 62-character alphanumeric alphabet (≥ 41.7 bits), no two are equal, and the bytes come from `secrets` / `os.urandom` rather than the `random` module."
+  },
+  {
+    "id": "FRD-35",
+    "requirement": "NFR-3",
+    "text": "Given a member registering and then signing in, when the stored credential is read, then it begins with `$argon2id$`; and when the application's full log output for those two requests is scanned, then it contains neither the plaintext password nor the stored hash."
+  },
+  {
+    "id": "FRD-36",
+    "requirement": "NFR-5",
+    "text": "Given a clean checkout with no project images cached, when `docker compose up` is run once, then the stack reaches healthy with exactly one Postgres 16 container, and no service makes a request to a host outside the compose network at build or run time."
+  },
+  {
+    "id": "FRD-37",
+    "requirement": "NFR-6",
+    "text": "Given the Postgres container is stopped, when any API endpoint other than `/healthz` is called, then the response is 503 with a JSON body carrying an `error` field, and the body contains no stack trace, exception class name, or filesystem path."
+  },
+  {
+    "id": "FRD-38",
+    "requirement": "NFR-1",
+    "text": "Given an account holding 100 links, when calling the create-link and list endpoints repeatedly, then the p95 response time across the sample is under 300 ms for each, and a single machine-readable report records both p95 figures for the evaluator to check."
+  },
+  {
+    "id": "FRD-39",
+    "requirement": "NFR-4",
+    "text": "Given the rendered console list page, when it is scanned with an automated WCAG 2.2 AA checker and operated with keyboard only, then zero level-A or level-AA violations are reported, every interactive element is reachable and operable in a visible focus order, and every element meets the WCAG 2.2 AA minimum contrast ratio."
+  }
+]

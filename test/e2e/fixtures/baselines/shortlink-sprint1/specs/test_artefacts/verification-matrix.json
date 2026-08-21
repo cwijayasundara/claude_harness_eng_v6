@@ -1,0 +1,942 @@
+{
+  "version": 1,
+  "requirements": [
+    {
+      "id": "VM-001",
+      "ac_id": "E1-S1-AC1",
+      "story_id": "E1-S1",
+      "brd_id": "FRD-26",
+      "group": "A",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "app-bootstrap",
+        "auth-service",
+        "frontend-auth-proxy"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-001-api",
+          "layer": "api",
+          "description": "Verify E1-S1-AC1: the response sets an HTTP-only session cookie and a subsequent authenticated request succeeds"
+        }
+      ],
+      "obligations": [
+        "OBL-RegisterRequest.email-format",
+        "OBL-RegisterRequest.email-required",
+        "OBL-RegisterRequest.password-minLength",
+        "OBL-RegisterRequest.password-required",
+        "OBL-Session.expires_at-format",
+        "OBL-Session.id-format",
+        "OBL-Session.id-required",
+        "OBL-Session.revoked_at-format",
+        "OBL-Session.revoked_at-required",
+        "OBL-SignInRequest.email-format",
+        "OBL-SignInRequest.email-required",
+        "OBL-SignInRequest.password-minLength",
+        "OBL-SignInRequest.password-required"
+      ]
+    },
+    {
+      "id": "VM-002",
+      "ac_id": "E1-S1-AC2",
+      "story_id": "E1-S1",
+      "brd_id": "FRD-35",
+      "group": "A",
+      "required_layers": [
+        "api",
+        "unit"
+      ],
+      "implementation_paths": [
+        "app-bootstrap",
+        "auth-service",
+        "frontend-auth-proxy"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-002-api",
+          "layer": "api",
+          "description": "Verify E1-S1-AC2: it begins with `$argon2id$`"
+        },
+        {
+          "id": "CHK-VM-002-unit",
+          "layer": "unit",
+          "description": "Verify E1-S1-AC2: it begins with `$argon2id$`"
+        }
+      ],
+      "obligations": [
+        "OBL-Member.email-format",
+        "OBL-Member.email-required",
+        "OBL-Member.id-format",
+        "OBL-Member.id-required",
+        "OBL-Member.password_hash-pattern",
+        "OBL-Member.password_hash-required",
+        "OBL-MemberView.email-format",
+        "OBL-MemberView.email-required",
+        "OBL-MemberView.id-format",
+        "OBL-MemberView.id-required"
+      ]
+    },
+    {
+      "id": "VM-003",
+      "ac_id": "E1-S1-AC3",
+      "story_id": "E1-S1",
+      "brd_id": "FRD-35",
+      "group": "A",
+      "required_layers": [
+        "api",
+        "unit"
+      ],
+      "implementation_paths": [
+        "app-bootstrap",
+        "auth-service",
+        "frontend-auth-proxy"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-003-api",
+          "layer": "api",
+          "description": "Verify E1-S1-AC3: it contains neither the plaintext password nor the stored hash"
+        },
+        {
+          "id": "CHK-VM-003-unit",
+          "layer": "unit",
+          "description": "Verify E1-S1-AC3: it contains neither the plaintext password nor the stored hash"
+        }
+      ]
+    },
+    {
+      "id": "VM-004",
+      "ac_id": "E1-S1-AC4",
+      "story_id": "E1-S1",
+      "brd_id": "FRD-26",
+      "group": "A",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "app-bootstrap",
+        "auth-service",
+        "frontend-auth-proxy"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-004-api",
+          "layer": "api",
+          "description": "Verify E1-S1-AC4: the response is 401 and no session cookie is set"
+        }
+      ]
+    },
+    {
+      "id": "VM-005",
+      "ac_id": "E1-S2-AC1",
+      "story_id": "E1-S2",
+      "brd_id": "FRD-32",
+      "group": "B",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "auth-service",
+        "frontend-auth-proxy"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-005-api",
+          "layer": "api",
+          "description": "Verify E1-S2-AC1: a subsequent authenticated request returns 401"
+        }
+      ],
+      "obligations": [
+        "OBL-Session.member_id-format",
+        "OBL-Session.member_id-required"
+      ]
+    },
+    {
+      "id": "VM-006",
+      "ac_id": "E1-S2-AC2",
+      "story_id": "E1-S2",
+      "brd_id": "FRD-32",
+      "group": "B",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "auth-service",
+        "frontend-auth-proxy"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-006-api",
+          "layer": "api",
+          "description": "Verify E1-S2-AC2: the request is rejected with 401 rather than succeeding, because the session was invalidated server-side and not merely cleared client-side"
+        }
+      ]
+    },
+    {
+      "id": "VM-007",
+      "ac_id": "E1-S2-AC3",
+      "story_id": "E1-S2",
+      "brd_id": "FRD-32",
+      "group": "B",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "auth-service",
+        "frontend-auth-proxy"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-007-api",
+          "layer": "api",
+          "description": "Verify E1-S2-AC3: the response is 401 and no server state changes"
+        }
+      ]
+    },
+    {
+      "id": "VM-008",
+      "ac_id": "E2-S1-AC1",
+      "story_id": "E2-S1",
+      "brd_id": "FRD-27",
+      "group": "B",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "link-service",
+        "frontend-links-proxy"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-008-api",
+          "layer": "api",
+          "description": "Verify E2-S1-AC1: the response is 201 with a code of at least 7 characters"
+        }
+      ],
+      "obligations": [
+        "OBL-Link.code-minLength",
+        "OBL-Link.code-pattern",
+        "OBL-Link.code-required",
+        "OBL-Link.id-format",
+        "OBL-Link.id-required",
+        "OBL-Link.owner_id-format",
+        "OBL-Link.owner_id-required",
+        "OBL-LinkPage.items-required",
+        "OBL-LinkPage.page-minimum",
+        "OBL-LinkPage.page-required",
+        "OBL-LinkPage.pageSize-enum",
+        "OBL-LinkPage.pageSize-required",
+        "OBL-LinkPage.total-minimum",
+        "OBL-LinkPage.total-required",
+        "OBL-LinkView.code-minLength",
+        "OBL-LinkView.code-required"
+      ]
+    },
+    {
+      "id": "VM-009",
+      "ac_id": "E2-S1-AC2",
+      "story_id": "E2-S1",
+      "brd_id": "FRD-31",
+      "group": "B",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "link-service",
+        "frontend-links-proxy"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-009-api",
+          "layer": "api",
+          "description": "Verify E2-S1-AC2: the response is 422; the same holds for a host matching PUBLIC_BASE_URL and for each of `http://192.168.1.1/`, `http://10.0.0.1/`, `http://127.0.0.1/`, `http://"
+        }
+      ],
+      "obligations": [
+        "OBL-CreateLinkRequest.targetUrl-format",
+        "OBL-CreateLinkRequest.targetUrl-required",
+        "OBL-Link.target_url-format",
+        "OBL-Link.target_url-required",
+        "OBL-LinkView.targetUrl-format",
+        "OBL-LinkView.targetUrl-required"
+      ]
+    },
+    {
+      "id": "VM-010",
+      "ac_id": "E2-S1-AC3",
+      "story_id": "E2-S1",
+      "brd_id": "FRD-31",
+      "group": "B",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "link-service",
+        "frontend-links-proxy"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-010-api",
+          "layer": "api",
+          "description": "Verify E2-S1-AC3: only literal scheme/host/IP-range checks run — no DNS lookup and no outbound network fetch occurs"
+        }
+      ]
+    },
+    {
+      "id": "VM-011",
+      "ac_id": "E2-S1-AC4",
+      "story_id": "E2-S1",
+      "brd_id": "FRD-34",
+      "group": "B",
+      "required_layers": [
+        "api",
+        "unit"
+      ],
+      "implementation_paths": [
+        "link-service",
+        "frontend-links-proxy"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-011-api",
+          "layer": "api",
+          "description": "Verify E2-S1-AC4: every code is at least 7 characters drawn from a 62-character alphanumeric alphabet (>= 41.7 bits), no two are equal, and the bytes come from `secrets`/`os.uran"
+        },
+        {
+          "id": "CHK-VM-011-unit",
+          "layer": "unit",
+          "description": "Verify E2-S1-AC4: every code is at least 7 characters drawn from a 62-character alphanumeric alphabet (>= 41.7 bits), no two are equal, and the bytes come from `secrets`/`os.uran"
+        }
+      ]
+    },
+    {
+      "id": "VM-012",
+      "ac_id": "E2-S1-AC5",
+      "story_id": "E2-S1",
+      "brd_id": "FRD-27",
+      "group": "B",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "link-service",
+        "frontend-links-proxy"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-012-api",
+          "layer": "api",
+          "description": "Verify E2-S1-AC5: the response is 401 and no link row is created"
+        }
+      ],
+      "obligations": [
+        "OBL-Link.created_at-format",
+        "OBL-Link.created_at-required",
+        "OBL-LinkView.createdAt-format",
+        "OBL-LinkView.createdAt-required",
+        "OBL-Session.created_at-format",
+        "OBL-Session.created_at-required"
+      ]
+    },
+    {
+      "id": "VM-013",
+      "ac_id": "E3-S1-AC1",
+      "story_id": "E3-S1",
+      "brd_id": "FRD-28",
+      "group": "C",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "redirect-service"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-013-api",
+          "layer": "api",
+          "description": "Verify E3-S1-AC1: the response is 302 with `Location` set to the target URL"
+        }
+      ]
+    },
+    {
+      "id": "VM-014",
+      "ac_id": "E3-S1-AC2",
+      "story_id": "E3-S1",
+      "brd_id": "FRD-28",
+      "group": "C",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "redirect-service"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-014-api",
+          "layer": "api",
+          "description": "Verify E3-S1-AC2: the response is 404"
+        }
+      ]
+    },
+    {
+      "id": "VM-015",
+      "ac_id": "E3-S1-AC3",
+      "story_id": "E3-S1",
+      "brd_id": "FRD-28",
+      "group": "C",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "redirect-service"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-015-api",
+          "layer": "api",
+          "description": "Verify E3-S1-AC3: it returns the Location header to the caller without itself following or fetching the target URL"
+        }
+      ]
+    },
+    {
+      "id": "VM-016",
+      "ac_id": "E4-S1-AC1",
+      "story_id": "E4-S1",
+      "brd_id": "FRD-29",
+      "group": "C",
+      "required_layers": [
+        "e2e"
+      ],
+      "implementation_paths": [
+        "link-service",
+        "frontend-links-proxy",
+        "console-ui"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-016-e2e",
+          "layer": "e2e",
+          "description": "Verify E4-S1-AC1: exactly 20 links are returned, newest first, and none belongs to another user"
+        }
+      ]
+    },
+    {
+      "id": "VM-017",
+      "ac_id": "E4-S1-AC2",
+      "story_id": "E4-S1",
+      "brd_id": "FRD-29",
+      "group": "C",
+      "required_layers": [
+        "e2e"
+      ],
+      "implementation_paths": [
+        "link-service",
+        "frontend-links-proxy",
+        "console-ui"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-017-e2e",
+          "layer": "e2e",
+          "description": "Verify E4-S1-AC2: the remaining 5 links are returned, newest-first order preserved across the page boundary"
+        }
+      ]
+    },
+    {
+      "id": "VM-018",
+      "ac_id": "E4-S1-AC3",
+      "story_id": "E4-S1",
+      "brd_id": "FRD-29",
+      "group": "C",
+      "required_layers": [
+        "e2e"
+      ],
+      "implementation_paths": [
+        "link-service",
+        "frontend-links-proxy",
+        "console-ui"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-018-e2e",
+          "layer": "e2e",
+          "description": "Verify E4-S1-AC3: the page renders an empty state with no links and no error"
+        }
+      ],
+      "obligations": [
+        "OBL-ErrorBody.error-required"
+      ]
+    },
+    {
+      "id": "VM-019",
+      "ac_id": "E4-S1-AC4",
+      "story_id": "E4-S1",
+      "brd_id": "FRD-29",
+      "group": "C",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "link-service",
+        "frontend-links-proxy",
+        "console-ui"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-019-api",
+          "layer": "api",
+          "description": "Verify E4-S1-AC4: only the second member's own links appear — never the first member's"
+        }
+      ]
+    },
+    {
+      "id": "VM-020",
+      "ac_id": "E4-S2-AC1",
+      "story_id": "E4-S2",
+      "brd_id": "FRD-9",
+      "group": "D",
+      "required_layers": [
+        "api",
+        "performance"
+      ],
+      "implementation_paths": [
+        "perf-tests"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-020-api",
+          "layer": "api",
+          "description": "Verify E4-S2-AC1: the p95 response time across the sample is under 300 ms"
+        },
+        {
+          "id": "CHK-VM-020-performance",
+          "layer": "performance",
+          "description": "Verify E4-S2-AC1: the p95 response time across the sample is under 300 ms"
+        }
+      ]
+    },
+    {
+      "id": "VM-021",
+      "ac_id": "E4-S2-AC2",
+      "story_id": "E4-S2",
+      "brd_id": "FRD-9",
+      "group": "D",
+      "required_layers": [
+        "api",
+        "performance"
+      ],
+      "implementation_paths": [
+        "perf-tests"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-021-api",
+          "layer": "api",
+          "description": "Verify E4-S2-AC2: the p95 response time across the sample is under 300 ms"
+        },
+        {
+          "id": "CHK-VM-021-performance",
+          "layer": "performance",
+          "description": "Verify E4-S2-AC2: the p95 response time across the sample is under 300 ms"
+        }
+      ]
+    },
+    {
+      "id": "VM-022",
+      "ac_id": "E4-S2-AC3",
+      "story_id": "E4-S2",
+      "brd_id": "FRD-9",
+      "group": "D",
+      "required_layers": [
+        "api",
+        "performance"
+      ],
+      "implementation_paths": [
+        "perf-tests"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-022-api",
+          "layer": "api",
+          "description": "Verify E4-S2-AC3: it writes a single machine-readable report recording both p95 figures for the evaluator to check"
+        },
+        {
+          "id": "CHK-VM-022-performance",
+          "layer": "performance",
+          "description": "Verify E4-S2-AC3: it writes a single machine-readable report recording both p95 figures for the evaluator to check"
+        }
+      ]
+    },
+    {
+      "id": "VM-023",
+      "ac_id": "E4-S3-AC1",
+      "story_id": "E4-S3",
+      "brd_id": "FRD-12",
+      "group": "D",
+      "required_layers": [
+        "e2e",
+        "accessibility"
+      ],
+      "implementation_paths": [
+        "console-ui",
+        "a11y-tests"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-023-e2e",
+          "layer": "e2e",
+          "description": "Verify E4-S3-AC1: zero level-A or level-AA violations are reported"
+        },
+        {
+          "id": "CHK-VM-023-accessibility",
+          "layer": "accessibility",
+          "description": "Verify E4-S3-AC1: zero level-A or level-AA violations are reported"
+        }
+      ]
+    },
+    {
+      "id": "VM-024",
+      "ac_id": "E4-S3-AC2",
+      "story_id": "E4-S3",
+      "brd_id": "FRD-12",
+      "group": "D",
+      "required_layers": [
+        "e2e",
+        "accessibility"
+      ],
+      "implementation_paths": [
+        "console-ui",
+        "a11y-tests"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-024-e2e",
+          "layer": "e2e",
+          "description": "Verify E4-S3-AC2: every interactive element (pagination, delete action) is reachable and operable in a visible focus order"
+        },
+        {
+          "id": "CHK-VM-024-accessibility",
+          "layer": "accessibility",
+          "description": "Verify E4-S3-AC2: every interactive element (pagination, delete action) is reachable and operable in a visible focus order"
+        }
+      ]
+    },
+    {
+      "id": "VM-025",
+      "ac_id": "E4-S3-AC3",
+      "story_id": "E4-S3",
+      "brd_id": "FRD-12",
+      "group": "D",
+      "required_layers": [
+        "e2e",
+        "accessibility"
+      ],
+      "implementation_paths": [
+        "console-ui",
+        "a11y-tests"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-025-e2e",
+          "layer": "e2e",
+          "description": "Verify E4-S3-AC3: every element meets the WCAG 2.2 AA minimum contrast ratio"
+        },
+        {
+          "id": "CHK-VM-025-accessibility",
+          "layer": "accessibility",
+          "description": "Verify E4-S3-AC3: every element meets the WCAG 2.2 AA minimum contrast ratio"
+        }
+      ]
+    },
+    {
+      "id": "VM-026",
+      "ac_id": "E5-S1-AC1",
+      "story_id": "E5-S1",
+      "brd_id": "FRD-30",
+      "group": "C",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "link-service",
+        "frontend-links-proxy"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-026-api",
+          "layer": "api",
+          "description": "Verify E5-S1-AC1: the response is 204"
+        }
+      ]
+    },
+    {
+      "id": "VM-027",
+      "ac_id": "E5-S1-AC2",
+      "story_id": "E5-S1",
+      "brd_id": "FRD-30",
+      "group": "C",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "link-service",
+        "frontend-links-proxy"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-027-api",
+          "layer": "api",
+          "description": "Verify E5-S1-AC2: the response is 404"
+        }
+      ],
+      "obligations": [
+        "OBL-Link.deleted_at-format",
+        "OBL-Link.deleted_at-required"
+      ]
+    },
+    {
+      "id": "VM-028",
+      "ac_id": "E5-S1-AC3",
+      "story_id": "E5-S1",
+      "brd_id": "FRD-30",
+      "group": "C",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "link-service",
+        "frontend-links-proxy"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-028-api",
+          "layer": "api",
+          "description": "Verify E5-S1-AC3: the deleted code is never reissued to the new link"
+        }
+      ],
+      "obligations": [
+        "OBL-Member.created_at-format",
+        "OBL-Member.created_at-required",
+        "OBL-MemberView.createdAt-format",
+        "OBL-MemberView.createdAt-required"
+      ]
+    },
+    {
+      "id": "VM-029",
+      "ac_id": "E5-S1-AC4",
+      "story_id": "E5-S1",
+      "brd_id": "FRD-30",
+      "group": "C",
+      "required_layers": [
+        "api",
+        "security"
+      ],
+      "implementation_paths": [
+        "link-service",
+        "frontend-links-proxy"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-029-api",
+          "layer": "api",
+          "description": "Verify E5-S1-AC4: the response is 404, not 204, and the other member's link is unaffected"
+        },
+        {
+          "id": "CHK-VM-029-security",
+          "layer": "security",
+          "description": "Verify E5-S1-AC4: the response is 404, not 204, and the other member's link is unaffected"
+        }
+      ]
+    },
+    {
+      "id": "VM-030",
+      "ac_id": "E6-S1-AC1",
+      "story_id": "E6-S1",
+      "brd_id": "FRD-33",
+      "group": "A",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "health-service"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-030-api",
+          "layer": "api",
+          "description": "Verify E6-S1-AC1: the response is 200"
+        }
+      ],
+      "obligations": [
+        "OBL-HealthBody.database-enum",
+        "OBL-HealthBody.database-required"
+      ]
+    },
+    {
+      "id": "VM-031",
+      "ac_id": "E6-S1-AC2",
+      "story_id": "E6-S1",
+      "brd_id": "FRD-33",
+      "group": "A",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "health-service"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-031-api",
+          "layer": "api",
+          "description": "Verify E6-S1-AC2: the response is 503"
+        }
+      ]
+    },
+    {
+      "id": "VM-032",
+      "ac_id": "E6-S1-AC3",
+      "story_id": "E6-S1",
+      "brd_id": "FRD-33",
+      "group": "A",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "health-service"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-032-api",
+          "layer": "api",
+          "description": "Verify E6-S1-AC3: no authentication was required and the body is JSON describing database status"
+        }
+      ],
+      "obligations": [
+        "OBL-HealthBody.status-enum",
+        "OBL-HealthBody.status-required"
+      ]
+    },
+    {
+      "id": "VM-033",
+      "ac_id": "E6-S2-AC1",
+      "story_id": "E6-S2",
+      "brd_id": "FRD-37",
+      "group": "B",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "error-handling"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-033-api",
+          "layer": "api",
+          "description": "Verify E6-S2-AC1: the response is 503 with a JSON body carrying an `error` field"
+        }
+      ]
+    },
+    {
+      "id": "VM-034",
+      "ac_id": "E6-S2-AC2",
+      "story_id": "E6-S2",
+      "brd_id": "FRD-37",
+      "group": "B",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "error-handling"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-034-api",
+          "layer": "api",
+          "description": "Verify E6-S2-AC2: it contains no stack trace, exception class name, or filesystem path"
+        }
+      ]
+    },
+    {
+      "id": "VM-035",
+      "ac_id": "E6-S2-AC3",
+      "story_id": "E6-S2",
+      "brd_id": "FRD-37",
+      "group": "B",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "error-handling"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-035-api",
+          "layer": "api",
+          "description": "Verify E6-S2-AC3: the response returns to its normal, non-503 status"
+        }
+      ]
+    },
+    {
+      "id": "VM-036",
+      "ac_id": "E7-S1-AC1",
+      "story_id": "E7-S1",
+      "brd_id": "FRD-36",
+      "group": "A",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "deployment"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-036-api",
+          "layer": "api",
+          "description": "Verify E7-S1-AC1: the stack reaches healthy with exactly one Postgres 16 container"
+        }
+      ]
+    },
+    {
+      "id": "VM-037",
+      "ac_id": "E7-S1-AC2",
+      "story_id": "E7-S1",
+      "brd_id": "FRD-36",
+      "group": "A",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "deployment"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-037-api",
+          "layer": "api",
+          "description": "Verify E7-S1-AC2: no service makes a request to a host outside the compose network"
+        }
+      ]
+    },
+    {
+      "id": "VM-038",
+      "ac_id": "E7-S1-AC3",
+      "story_id": "E7-S1",
+      "brd_id": "FRD-36",
+      "group": "A",
+      "required_layers": [
+        "api"
+      ],
+      "implementation_paths": [
+        "deployment"
+      ],
+      "checks": [
+        {
+          "id": "CHK-VM-038-api",
+          "layer": "api",
+          "description": "Verify E7-S1-AC3: it defines exactly one Postgres 16 service and no other third-party managed service"
+        }
+      ]
+    }
+  ]
+}

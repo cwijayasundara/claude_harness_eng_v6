@@ -1,0 +1,69 @@
+{
+  "group": "D",
+  "stories": ["E4-S2", "E4-S3"],
+  "features": ["F020", "F021", "F022", "F023", "F024", "F025"],
+  "contract": {
+    "api_checks": [],
+    "playwright_checks": [
+      {
+        "id": "E4-S3-AC2-keyboard-operability",
+        "matrix_ids": ["VM-024"],
+        "description": "Verify E4-S3-AC2: keyboard-only navigation (no mouse) reaches every pagination and delete control on the console list page in a visible, logical focus order, with no keyboard trap. This is distinct from the automated axe scan (VM-023/VM-025 via accessibility_checks) because focus-order and operability are behavioral, not purely a static rule scan.",
+        "url": "/console",
+        "steps": [
+          {
+            "action": "navigate",
+            "value": "/console",
+            "assertion": "the console list page loads and an initial element (e.g. the page's first focusable control) can receive focus"
+          },
+          {
+            "action": "press_key_repeatedly",
+            "value": "Tab",
+            "assertion": "each successive Tab press moves focus to the next interactive element in visual top-to-bottom, left-to-right order, and the currently focused element always shows a visible focus indicator"
+          },
+          {
+            "action": "press_key",
+            "value": "Tab",
+            "assertion": "tabbing reaches the pagination previous-page and next-page controls, and pressing Enter or Space while one is focused changes the displayed page exactly as a mouse click would"
+          },
+          {
+            "action": "press_key",
+            "value": "Tab",
+            "assertion": "continuing to tab reaches each visible row's delete control in order, and pressing Enter or Space while one is focused triggers the same delete action as a mouse click"
+          },
+          {
+            "action": "press_key",
+            "value": "Shift+Tab",
+            "assertion": "tabbing backward from the last control retraces the same order in reverse, confirming no element is skipped or traps focus in either direction"
+          }
+        ]
+      }
+    ],
+    "performance_checks": [
+      {
+        "matrix_ids": ["VM-020"],
+        "endpoint": "/links",
+        "method": "POST",
+        "max_response_time_ms": 300
+      },
+      {
+        "matrix_ids": ["VM-021"],
+        "endpoint": "/links",
+        "method": "GET",
+        "max_response_time_ms": 300
+      }
+    ],
+    "accessibility_checks": {
+      "matrix_ids": ["VM-023", "VM-024", "VM-025"],
+      "required": true,
+      "block_impacts": ["serious", "critical"],
+      "urls": ["/console"]
+    },
+    "architecture_checks": {
+      "files_must_exist": [
+        "backend/tests/perf/test_latency.py",
+        "backend/tests/perf/report.json"
+      ]
+    }
+  }
+}

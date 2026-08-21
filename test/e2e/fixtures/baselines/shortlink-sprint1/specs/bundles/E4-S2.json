@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "story_id": "E4-S2",
+  "sprint": 1,
+  "title": "Create and list responses stay under a 300ms p95 at 100 links",
+  "readiness": "ready",
+  "requirements": {
+    "ac_ids": [
+      "E4-S2-AC1",
+      "E4-S2-AC2",
+      "E4-S2-AC3"
+    ],
+    "brd_ids": [
+      "FRD-9"
+    ],
+    "br_acceptance_ids": [
+      "FRD-38"
+    ],
+    "scope_out": [
+      "General-purpose rate limiting (SG-8); Optimizing endpoints other than create/list"
+    ]
+  },
+  "entities": [
+    {
+      "name": "Create and list responses stay under a 300ms p95 at 100 links",
+      "status": "unknown"
+    }
+  ],
+  "approach": {
+    "program_design": "specs/design/program-design.md",
+    "canvas": "specs/design/reasons-canvas.md",
+    "amendment": null
+  },
+  "structure": {
+    "owned_files": [],
+    "layer": "backend"
+  },
+  "operations": {
+    "pending": false,
+    "files": [
+      "backend/tests/perf/test_latency.py",
+      "POST /links",
+      "GET /links",
+      "backend/tests/perf/report.json"
+    ],
+    "text": "1. Create `backend/tests/perf/test_latency.py` — seeds 100 links via `POST /links`, samples repeated `POST /links` and `GET /links` calls, computes p95, asserts under 300ms.\n2. Write the machine-readable report to `backend/tests/perf/report.json` for the evaluator to read."
+  },
+  "safeguards": {
+    "ids": [
+      "SG-1",
+      "SG-2",
+      "SG-3",
+      "SG-4",
+      "SG-5",
+      "SG-6",
+      "SG-7",
+      "SG-8",
+      "SG-9",
+      "SG-10",
+      "SG-11"
+    ],
+    "none": false
+  },
+  "tests": {
+    "matrix_ids": [
+      "VM-020",
+      "VM-021",
+      "VM-022"
+    ],
+    "case_ids": [
+      "VM-020",
+      "VM-021",
+      "VM-022"
+    ],
+    "layers": [
+      "api",
+      "performance"
+    ]
+  },
+  "provenance": {
+    "story_path": "specs/stories/E4-S2.md",
+    "parents": [
+      "E4-S1",
+      "E2-S1"
+    ],
+    "tracker_key": null
+  }
+}

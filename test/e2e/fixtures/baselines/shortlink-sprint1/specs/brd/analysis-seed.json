@@ -1,0 +1,155 @@
+{
+  "version": 1,
+  "kind": "lean-analysis-seed",
+  "domain_concepts": [
+    {
+      "name": "Code",
+      "status": "unknown",
+      "evidence": "requirement-frequency"
+    },
+    {
+      "name": "Console",
+      "status": "unknown",
+      "evidence": "requirement-frequency"
+    },
+    {
+      "name": "Create",
+      "status": "unknown",
+      "evidence": "requirement-frequency"
+    },
+    {
+      "name": "Database",
+      "status": "unknown",
+      "evidence": "requirement-frequency"
+    },
+    {
+      "name": "Later",
+      "status": "unknown",
+      "evidence": "requirement-frequency"
+    },
+    {
+      "name": "Least",
+      "status": "unknown",
+      "evidence": "requirement-frequency"
+    },
+    {
+      "name": "Links",
+      "status": "unknown",
+      "evidence": "requirement-frequency"
+    },
+    {
+      "name": "List",
+      "status": "unknown",
+      "evidence": "requirement-frequency"
+    },
+    {
+      "name": "Member",
+      "status": "unknown",
+      "evidence": "requirement-frequency"
+    },
+    {
+      "name": "Never",
+      "status": "unknown",
+      "evidence": "requirement-frequency"
+    },
+    {
+      "name": "Request",
+      "status": "unknown",
+      "evidence": "requirement-frequency"
+    },
+    {
+      "name": "Returns",
+      "status": "unknown",
+      "evidence": "requirement-frequency"
+    },
+    {
+      "name": "Session",
+      "status": "unknown",
+      "evidence": "requirement-frequency"
+    },
+    {
+      "name": "Short",
+      "status": "unknown",
+      "evidence": "requirement-frequency"
+    },
+    {
+      "name": "Sign",
+      "status": "unknown",
+      "evidence": "requirement-frequency"
+    },
+    {
+      "name": "Signed-In",
+      "status": "unknown",
+      "evidence": "requirement-frequency"
+    },
+    {
+      "name": "Target",
+      "status": "unknown",
+      "evidence": "requirement-frequency"
+    },
+    {
+      "name": "Time",
+      "status": "unknown",
+      "evidence": "requirement-frequency"
+    }
+  ],
+  "open_questions": [],
+  "risks": [],
+  "safeguards": [
+    {
+      "id": "SG-1",
+      "kind": "forbidden_action",
+      "text": "Custom or vanity codes — codes are generated, never chosen."
+    },
+    {
+      "id": "SG-2",
+      "kind": "forbidden_action",
+      "text": "Editing a link's target after creation — delete and recreate."
+    },
+    {
+      "id": "SG-3",
+      "kind": "forbidden_action",
+      "text": "Link expiry (sprint 2)."
+    },
+    {
+      "id": "SG-4",
+      "kind": "forbidden_action",
+      "text": "Click counts, analytics, referrers, charts, or GeoIP (sprint 2 for a count only)."
+    },
+    {
+      "id": "SG-5",
+      "kind": "forbidden_action",
+      "text": "Teams, shared ownership, or an admin role."
+    },
+    {
+      "id": "SG-6",
+      "kind": "forbidden_action",
+      "text": "Billing, plans, or usage quotas."
+    },
+    {
+      "id": "SG-7",
+      "kind": "forbidden_action",
+      "text": "Password reset by email, SSO, and multi-factor authentication."
+    },
+    {
+      "id": "SG-8",
+      "kind": "forbidden_action",
+      "text": "Rate limiting."
+    },
+    {
+      "id": "SG-9",
+      "kind": "forbidden_action",
+      "text": "Bulk import or export."
+    },
+    {
+      "id": "SG-10",
+      "kind": "forbidden_action",
+      "text": "Following redirect chains or resolving hostnames on FR-6 (an outbound fetch or DNS lookup would violate NFR-5)."
+    },
+    {
+      "id": "SG-11",
+      "kind": "forbidden_action",
+      "text": "OpenAPI publication, scheduled purge jobs, and structured request logs as required deliverables."
+    }
+  ]
+}

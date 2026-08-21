@@ -1,0 +1,142 @@
+[
+  {
+    "id": "E1-S1",
+    "text": "Register and sign in with a hashed, non-logged credential",
+    "traces": [
+      "FRD-1",
+      "FRD-11"
+    ],
+    "acs": [
+      "E1-S1-AC1",
+      "E1-S1-AC2",
+      "E1-S1-AC3",
+      "E1-S1-AC4"
+    ]
+  },
+  {
+    "id": "E1-S2",
+    "text": "Sign out invalidates the session server-side",
+    "traces": [
+      "FRD-7"
+    ],
+    "acs": [
+      "E1-S2-AC1",
+      "E1-S2-AC2",
+      "E1-S2-AC3"
+    ]
+  },
+  {
+    "id": "E2-S1",
+    "text": "Create a short link with an SSRF-safe target and a cryptographically random code",
+    "traces": [
+      "FRD-2",
+      "FRD-6",
+      "FRD-10"
+    ],
+    "acs": [
+      "E2-S1-AC1",
+      "E2-S1-AC2",
+      "E2-S1-AC3",
+      "E2-S1-AC4",
+      "E2-S1-AC5"
+    ]
+  },
+  {
+    "id": "E3-S1",
+    "text": "Redirect a known code to its target",
+    "traces": [
+      "FRD-3"
+    ],
+    "acs": [
+      "E3-S1-AC1",
+      "E3-S1-AC2",
+      "E3-S1-AC3"
+    ]
+  },
+  {
+    "id": "E4-S1",
+    "text": "List the signed-in member's own links",
+    "traces": [
+      "FRD-4"
+    ],
+    "acs": [
+      "E4-S1-AC1",
+      "E4-S1-AC2",
+      "E4-S1-AC3",
+      "E4-S1-AC4"
+    ]
+  },
+  {
+    "id": "E4-S2",
+    "text": "Create and list responses stay under a 300ms p95 at 100 links",
+    "traces": [
+      "FRD-9"
+    ],
+    "acs": [
+      "E4-S2-AC1",
+      "E4-S2-AC2",
+      "E4-S2-AC3"
+    ]
+  },
+  {
+    "id": "E4-S3",
+    "text": "Console list page meets WCAG 2.2 AA",
+    "traces": [
+      "FRD-12"
+    ],
+    "acs": [
+      "E4-S3-AC1",
+      "E4-S3-AC2",
+      "E4-S3-AC3"
+    ]
+  },
+  {
+    "id": "E5-S1",
+    "text": "Delete a member's own link",
+    "traces": [
+      "FRD-5"
+    ],
+    "acs": [
+      "E5-S1-AC1",
+      "E5-S1-AC2",
+      "E5-S1-AC3",
+      "E5-S1-AC4"
+    ]
+  },
+  {
+    "id": "E6-S1",
+    "text": "Expose /healthz reflecting database reachability",
+    "traces": [
+      "FRD-8"
+    ],
+    "acs": [
+      "E6-S1-AC1",
+      "E6-S1-AC2",
+      "E6-S1-AC3"
+    ]
+  },
+  {
+    "id": "E6-S2",
+    "text": "Return a safe 503 JSON envelope when the database is unreachable",
+    "traces": [
+      "FRD-14"
+    ],
+    "acs": [
+      "E6-S2-AC1",
+      "E6-S2-AC2",
+      "E6-S2-AC3"
+    ]
+  },
+  {
+    "id": "E7-S1",
+    "text": "Run the whole stack from one docker compose up",
+    "traces": [
+      "FRD-13"
+    ],
+    "acs": [
+      "E7-S1-AC1",
+      "E7-S1-AC2",
+      "E7-S1-AC3"
+    ]
+  }
+]

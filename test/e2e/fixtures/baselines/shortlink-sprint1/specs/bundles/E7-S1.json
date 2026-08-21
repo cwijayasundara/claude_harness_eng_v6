@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "story_id": "E7-S1",
+  "sprint": 1,
+  "title": "Run the whole stack from one docker compose up",
+  "readiness": "ready",
+  "requirements": {
+    "ac_ids": [
+      "E7-S1-AC1",
+      "E7-S1-AC2",
+      "E7-S1-AC3"
+    ],
+    "brd_ids": [
+      "FRD-13"
+    ],
+    "br_acceptance_ids": [
+      "FRD-36"
+    ],
+    "scope_out": [
+      "OpenAPI publication, scheduled purge jobs, and structured request logs as required deliverables (SG-11)"
+    ]
+  },
+  "entities": [
+    {
+      "name": "Run the whole stack from one docker compose up",
+      "status": "unknown"
+    }
+  ],
+  "approach": {
+    "program_design": "specs/design/program-design.md",
+    "canvas": "specs/design/reasons-canvas.md",
+    "amendment": null
+  },
+  "structure": {
+    "owned_files": [],
+    "layer": "infra"
+  },
+  "operations": {
+    "pending": false,
+    "files": [
+      "backend/Dockerfile",
+      "frontend/Dockerfile"
+    ],
+    "text": "1. Create `docker-compose.yml` — `backend`, `frontend`, and one `postgres:16` service; healthchecks for each.\n2. Create `backend/Dockerfile` — builds the FastAPI app with `uv`.\n3. Create `frontend/Dockerfile` — builds the Next.js app with `npm`.\n4. Create `.env.example` — `DATABASE_URL`, `PUBLIC_BASE_URL`, `SESSION_COOKIE_NAME`.\n5. Verify via `docker compose up` that the stack reaches healthy and no service calls a host outside the compose network, per AC1–AC3."
+  },
+  "safeguards": {
+    "ids": [
+      "SG-11"
+    ],
+    "none": false
+  },
+  "tests": {
+    "matrix_ids": [
+      "VM-036",
+      "VM-037",
+      "VM-038"
+    ],
+    "case_ids": [
+      "VM-036",
+      "VM-037",
+      "VM-038"
+    ],
+    "layers": [
+      "api"
+    ]
+  },
+  "provenance": {
+    "story_path": "specs/stories/E7-S1.md",
+    "parents": [],
+    "tracker_key": null
+  }
+}

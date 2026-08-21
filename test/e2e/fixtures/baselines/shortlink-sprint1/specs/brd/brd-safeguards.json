@@ -1,0 +1,90 @@
+[
+  {
+    "id": "SG-1",
+    "kind": "forbidden_action",
+    "text": "Custom or vanity codes — codes are generated, never chosen.",
+    "traces": [
+      "FRD-15"
+    ]
+  },
+  {
+    "id": "SG-2",
+    "kind": "forbidden_action",
+    "text": "Editing a link's target after creation — delete and recreate.",
+    "traces": [
+      "FRD-16"
+    ]
+  },
+  {
+    "id": "SG-3",
+    "kind": "forbidden_action",
+    "text": "Link expiry (sprint 2).",
+    "traces": [
+      "FRD-17"
+    ]
+  },
+  {
+    "id": "SG-4",
+    "kind": "forbidden_action",
+    "text": "Click counts, analytics, referrers, charts, or GeoIP (sprint 2 for a count only).",
+    "traces": [
+      "FRD-18"
+    ]
+  },
+  {
+    "id": "SG-5",
+    "kind": "forbidden_action",
+    "text": "Teams, shared ownership, or an admin role.",
+    "traces": [
+      "FRD-19"
+    ]
+  },
+  {
+    "id": "SG-6",
+    "kind": "forbidden_action",
+    "text": "Billing, plans, or usage quotas.",
+    "traces": [
+      "FRD-20"
+    ]
+  },
+  {
+    "id": "SG-7",
+    "kind": "forbidden_action",
+    "text": "Password reset by email, SSO, and multi-factor authentication.",
+    "traces": [
+      "FRD-21"
+    ]
+  },
+  {
+    "id": "SG-8",
+    "kind": "forbidden_action",
+    "text": "Rate limiting.",
+    "traces": [
+      "FRD-22"
+    ]
+  },
+  {
+    "id": "SG-9",
+    "kind": "forbidden_action",
+    "text": "Bulk import or export.",
+    "traces": [
+      "FRD-23"
+    ]
+  },
+  {
+    "id": "SG-10",
+    "kind": "forbidden_action",
+    "text": "Following redirect chains or resolving hostnames on FR-6 (an outbound fetch or DNS lookup would violate NFR-5).",
+    "traces": [
+      "FRD-24"
+    ]
+  },
+  {
+    "id": "SG-11",
+    "kind": "forbidden_action",
+    "text": "OpenAPI publication, scheduled purge jobs, and structured request logs as required deliverables.",
+    "traces": [
+      "FRD-25"
+    ]
+  }
+]

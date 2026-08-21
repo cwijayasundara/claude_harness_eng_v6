@@ -1,0 +1,117 @@
+{
+  "group": "B",
+  "stories": ["E1-S2", "E2-S1", "E6-S2"],
+  "features": ["F005", "F006", "F007", "F008", "F009", "F010", "F011", "F012", "F033", "F034", "F035"],
+  "contract": {
+    "api_checks": [
+      {
+        "id": "E1-S2-AC1",
+        "matrix_ids": ["VM-005"],
+        "method": "GET",
+        "path": "/links",
+        "expected_status": 401,
+        "description": "POST /auth/sign-out with a valid session cookie, then GET /links reusing that same (now-old) cookie: response is 401 — sign-out invalidates the session server-side so a subsequent authenticated request is rejected."
+      },
+      {
+        "id": "E1-S2-AC2",
+        "matrix_ids": ["VM-006"],
+        "method": "GET",
+        "path": "/links",
+        "expected_status": 401,
+        "description": "After POST /auth/sign-out, replay the identical original session-cookie value (i.e. do not rely on the client clearing/replacing the cookie) against GET /links: still 401, proving the session was revoked server-side (deleted/marked revoked_at in the session store) rather than merely relying on the client discarding it."
+      },
+      {
+        "id": "E1-S2-AC3",
+        "matrix_ids": ["VM-007"],
+        "method": "POST",
+        "path": "/auth/sign-out",
+        "expected_status": 401,
+        "description": "Call POST /auth/sign-out with no session cookie (or one already invalidated by a prior sign-out): response is 401 and no server state changes — no session row is created, mutated, or deleted as a side effect."
+      },
+      {
+        "id": "E2-S1-AC1",
+        "matrix_ids": ["VM-008"],
+        "method": "POST",
+        "path": "/links",
+        "body": { "targetUrl": "https://example.com/safe-target" },
+        "expected_status": 201,
+        "description": "Authenticated POST /links with a safe (non-loopback, non-private, non-base-url) target: response is 201 and the returned code is at least 7 characters."
+      },
+      {
+        "id": "E2-S1-AC2",
+        "matrix_ids": ["VM-009"],
+        "method": "POST",
+        "path": "/links",
+        "body": { "targetUrl": "http://127.0.0.1/" },
+        "expected_status": 422,
+        "description": "Authenticated POST /links with an unsafe target: response is 422. Also repeat for http://192.168.1.1/, http://10.0.0.1/, and a target whose host matches PUBLIC_BASE_URL — every one of these must independently return 422."
+      },
+      {
+        "id": "E2-S1-AC3",
+        "matrix_ids": ["VM-010"],
+        "method": "POST",
+        "path": "/links",
+        "body": { "targetUrl": "http://localtest.me/probe" },
+        "expected_status": 201,
+        "description": "Authenticated POST /links with a target hostname that is not on any literal deny-list but would resolve via DNS to a loopback address (e.g. localtest.me -> 127.0.0.1): response is 201 (accepted), proving target_validation performs only literal scheme/host/IP-range string checks and never performs a DNS lookup or outbound network fetch to resolve/probe the host."
+      },
+      {
+        "id": "E2-S1-AC4",
+        "matrix_ids": ["VM-011"],
+        "method": "POST",
+        "path": "/links",
+        "body": { "targetUrl": "https://example.com/random-code-probe" },
+        "expected_status": 201,
+        "description": "Issue a batch of authenticated POST /links calls with safe targets: every returned code is at least 7 characters drawn from a 62-character alphanumeric alphabet (>= 41.7 bits of entropy) and no two codes in the batch collide. (The `secrets`/`os.urandom` sourcing of the underlying bytes is verified at the unit layer by backend/tests/unit/test_code_generator.py, CHK-VM-011-unit — this api check is the runtime-observable half of VM-011.)"
+      },
+      {
+        "id": "E2-S1-AC5",
+        "matrix_ids": ["VM-012"],
+        "method": "POST",
+        "path": "/links",
+        "body": { "targetUrl": "https://example.com/unauthenticated-probe" },
+        "expected_status": 401,
+        "description": "POST /links with no (or an invalid) session cookie: response is 401 and no link row is created."
+      },
+      {
+        "id": "E6-S2-AC1",
+        "matrix_ids": ["VM-033"],
+        "method": "GET",
+        "path": "/links",
+        "expected_status": 503,
+        "description": "With the database stopped/unreachable, GET /links (any non-/healthz endpoint) returns 503 with a JSON body carrying an `error` field."
+      },
+      {
+        "id": "E6-S2-AC2",
+        "matrix_ids": ["VM-034"],
+        "method": "GET",
+        "path": "/links",
+        "expected_status": 503,
+        "description": "With the database stopped/unreachable, inspect the 503 JSON body from GET /links and assert it contains no stack trace, no exception class name, and no filesystem path — only the safe `error` envelope."
+      },
+      {
+        "id": "E6-S2-AC3",
+        "matrix_ids": ["VM-035"],
+        "method": "GET",
+        "path": "/healthz",
+        "expected_status": 200,
+        "description": "After database reachability is restored, GET /healthz (and other endpoints) return to their normal, non-503 status — the 503 envelope does not persist once the database is reachable again."
+      }
+    ],
+    "playwright_checks": [],
+    "architecture_checks": {
+      "files_must_exist": [
+        "backend/src/services/auth_service.py",
+        "backend/src/api/auth.py",
+        "backend/src/main.py",
+        "backend/src/services/link_service.py",
+        "backend/src/api/links.py",
+        "frontend/src/app/api/links/route.ts",
+        "backend/src/repository/link_repository.py",
+        "backend/src/types/models.py",
+        "backend/src/config/settings.py",
+        "backend/CLAUDE.md"
+      ]
+    }
+  }
+}

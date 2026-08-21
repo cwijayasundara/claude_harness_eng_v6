@@ -1,0 +1,258 @@
+[
+  {
+    "id": "OBL-CreateLinkRequest.targetUrl-format",
+    "text": "CreateLinkRequest.targetUrl: format"
+  },
+  {
+    "id": "OBL-CreateLinkRequest.targetUrl-required",
+    "text": "CreateLinkRequest.targetUrl: required"
+  },
+  {
+    "id": "OBL-ErrorBody.error-required",
+    "text": "ErrorBody.error: required"
+  },
+  {
+    "id": "OBL-HealthBody.database-enum",
+    "text": "HealthBody.database: enum"
+  },
+  {
+    "id": "OBL-HealthBody.database-required",
+    "text": "HealthBody.database: required"
+  },
+  {
+    "id": "OBL-HealthBody.status-enum",
+    "text": "HealthBody.status: enum"
+  },
+  {
+    "id": "OBL-HealthBody.status-required",
+    "text": "HealthBody.status: required"
+  },
+  {
+    "id": "OBL-Link.code-minLength",
+    "text": "Link.code: minLength"
+  },
+  {
+    "id": "OBL-Link.code-pattern",
+    "text": "Link.code: pattern"
+  },
+  {
+    "id": "OBL-Link.code-required",
+    "text": "Link.code: required"
+  },
+  {
+    "id": "OBL-Link.created_at-format",
+    "text": "Link.created_at: format"
+  },
+  {
+    "id": "OBL-Link.created_at-required",
+    "text": "Link.created_at: required"
+  },
+  {
+    "id": "OBL-Link.deleted_at-format",
+    "text": "Link.deleted_at: format"
+  },
+  {
+    "id": "OBL-Link.deleted_at-required",
+    "text": "Link.deleted_at: required"
+  },
+  {
+    "id": "OBL-Link.id-format",
+    "text": "Link.id: format"
+  },
+  {
+    "id": "OBL-Link.id-required",
+    "text": "Link.id: required"
+  },
+  {
+    "id": "OBL-Link.owner_id-format",
+    "text": "Link.owner_id: format"
+  },
+  {
+    "id": "OBL-Link.owner_id-required",
+    "text": "Link.owner_id: required"
+  },
+  {
+    "id": "OBL-Link.target_url-format",
+    "text": "Link.target_url: format"
+  },
+  {
+    "id": "OBL-Link.target_url-required",
+    "text": "Link.target_url: required"
+  },
+  {
+    "id": "OBL-LinkPage.items-required",
+    "text": "LinkPage.items: required"
+  },
+  {
+    "id": "OBL-LinkPage.page-minimum",
+    "text": "LinkPage.page: minimum"
+  },
+  {
+    "id": "OBL-LinkPage.page-required",
+    "text": "LinkPage.page: required"
+  },
+  {
+    "id": "OBL-LinkPage.pageSize-enum",
+    "text": "LinkPage.pageSize: enum"
+  },
+  {
+    "id": "OBL-LinkPage.pageSize-required",
+    "text": "LinkPage.pageSize: required"
+  },
+  {
+    "id": "OBL-LinkPage.total-minimum",
+    "text": "LinkPage.total: minimum"
+  },
+  {
+    "id": "OBL-LinkPage.total-required",
+    "text": "LinkPage.total: required"
+  },
+  {
+    "id": "OBL-LinkView.code-minLength",
+    "text": "LinkView.code: minLength"
+  },
+  {
+    "id": "OBL-LinkView.code-required",
+    "text": "LinkView.code: required"
+  },
+  {
+    "id": "OBL-LinkView.createdAt-format",
+    "text": "LinkView.createdAt: format"
+  },
+  {
+    "id": "OBL-LinkView.createdAt-required",
+    "text": "LinkView.createdAt: required"
+  },
+  {
+    "id": "OBL-LinkView.targetUrl-format",
+    "text": "LinkView.targetUrl: format"
+  },
+  {
+    "id": "OBL-LinkView.targetUrl-required",
+    "text": "LinkView.targetUrl: required"
+  },
+  {
+    "id": "OBL-Member.created_at-format",
+    "text": "Member.created_at: format"
+  },
+  {
+    "id": "OBL-Member.created_at-required",
+    "text": "Member.created_at: required"
+  },
+  {
+    "id": "OBL-Member.email-format",
+    "text": "Member.email: format"
+  },
+  {
+    "id": "OBL-Member.email-required",
+    "text": "Member.email: required"
+  },
+  {
+    "id": "OBL-Member.id-format",
+    "text": "Member.id: format"
+  },
+  {
+    "id": "OBL-Member.id-required",
+    "text": "Member.id: required"
+  },
+  {
+    "id": "OBL-Member.password_hash-pattern",
+    "text": "Member.password_hash: pattern"
+  },
+  {
+    "id": "OBL-Member.password_hash-required",
+    "text": "Member.password_hash: required"
+  },
+  {
+    "id": "OBL-MemberView.createdAt-format",
+    "text": "MemberView.createdAt: format"
+  },
+  {
+    "id": "OBL-MemberView.createdAt-required",
+    "text": "MemberView.createdAt: required"
+  },
+  {
+    "id": "OBL-MemberView.email-format",
+    "text": "MemberView.email: format"
+  },
+  {
+    "id": "OBL-MemberView.email-required",
+    "text": "MemberView.email: required"
+  },
+  {
+    "id": "OBL-MemberView.id-format",
+    "text": "MemberView.id: format"
+  },
+  {
+    "id": "OBL-MemberView.id-required",
+    "text": "MemberView.id: required"
+  },
+  {
+    "id": "OBL-RegisterRequest.email-format",
+    "text": "RegisterRequest.email: format"
+  },
+  {
+    "id": "OBL-RegisterRequest.email-required",
+    "text": "RegisterRequest.email: required"
+  },
+  {
+    "id": "OBL-RegisterRequest.password-minLength",
+    "text": "RegisterRequest.password: minLength"
+  },
+  {
+    "id": "OBL-RegisterRequest.password-required",
+    "text": "RegisterRequest.password: required"
+  },
+  {
+    "id": "OBL-Session.created_at-format",
+    "text": "Session.created_at: format"
+  },
+  {
+    "id": "OBL-Session.created_at-required",
+    "text": "Session.created_at: required"
+  },
+  {
+    "id": "OBL-Session.expires_at-format",
+    "text": "Session.expires_at: format"
+  },
+  {
+    "id": "OBL-Session.id-format",
+    "text": "Session.id: format"
+  },
+  {
+    "id": "OBL-Session.id-required",
+    "text": "Session.id: required"
+  },
+  {
+    "id": "OBL-Session.member_id-format",
+    "text": "Session.member_id: format"
+  },
+  {
+    "id": "OBL-Session.member_id-required",
+    "text": "Session.member_id: required"
+  },
+  {
+    "id": "OBL-Session.revoked_at-format",
+    "text": "Session.revoked_at: format"
+  },
+  {
+    "id": "OBL-Session.revoked_at-required",
+    "text": "Session.revoked_at: required"
+  },
+  {
+    "id": "OBL-SignInRequest.email-format",
+    "text": "SignInRequest.email: format"
+  },
+  {
+    "id": "OBL-SignInRequest.email-required",
+    "text": "SignInRequest.email: required"
+  },
+  {
+    "id": "OBL-SignInRequest.password-minLength",
+    "text": "SignInRequest.password: minLength"
+  },
+  {
+    "id": "OBL-SignInRequest.password-required",
+    "text": "SignInRequest.password: required"
+  }
+]

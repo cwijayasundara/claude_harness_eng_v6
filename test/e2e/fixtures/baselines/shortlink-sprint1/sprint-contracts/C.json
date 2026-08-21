@@ -1,0 +1,136 @@
+{
+  "group": "C",
+  "stories": ["E3-S1", "E4-S1", "E5-S1"],
+  "features": ["F013", "F014", "F015", "F016", "F017", "F018", "F019", "F026", "F027", "F028", "F029"],
+  "contract": {
+    "api_checks": [
+      {
+        "id": "E3-S1-AC1",
+        "matrix_ids": ["VM-013"],
+        "method": "GET",
+        "path": "/{code}",
+        "expected_status": 302,
+        "description": "Seed a link owned by a member with a known code and target URL, then GET /{code} unauthenticated with redirects disabled. Response is 302 and the Location header equals the seeded target URL exactly."
+      },
+      {
+        "id": "E3-S1-AC2",
+        "matrix_ids": ["VM-014"],
+        "method": "GET",
+        "path": "/{code}",
+        "expected_status": 404,
+        "description": "GET /{code} for a code that was never issued (no matching row) returns 404, with no Location header set."
+      },
+      {
+        "id": "E3-S1-AC3",
+        "matrix_ids": ["VM-015"],
+        "method": "GET",
+        "path": "/{code}",
+        "expected_status": 302,
+        "description": "Seed a link whose target URL is a distinguishable canary page. GET /{code} with redirects disabled: response is 302 with Location set to that canary URL, and the response body is empty/short — proving the backend relays the Location header to the caller rather than itself fetching the target and returning its content. Assert the response body does not contain the canary page's marker text."
+      },
+      {
+        "id": "E4-S1-AC4",
+        "matrix_ids": ["VM-019"],
+        "method": "GET",
+        "path": "/links",
+        "expected_status": 200,
+        "description": "Seed two members, each owning at least one link with distinguishable codes. Sign in as the second member and GET /links: the returned link list contains only codes owned by the second member; none of the first member's codes appear anywhere in the response."
+      },
+      {
+        "id": "E5-S1-AC1",
+        "matrix_ids": ["VM-026"],
+        "method": "DELETE",
+        "path": "/links/{code}",
+        "expected_status": 204,
+        "description": "Sign in as a member who owns a link, DELETE /links/{code} for that code: response is 204."
+      },
+      {
+        "id": "E5-S1-AC2",
+        "matrix_ids": ["VM-027"],
+        "method": "DELETE",
+        "path": "/links/{code}",
+        "expected_status": 404,
+        "description": "Immediately after deleting a member's own link (E5-S1-AC1 flow), repeat DELETE /links/{code} for the same code as the same member: response is 404, since the link is already soft-deleted."
+      },
+      {
+        "id": "E5-S1-AC3",
+        "matrix_ids": ["VM-028"],
+        "method": "POST",
+        "path": "/links",
+        "expected_status": 201,
+        "description": "After deleting a member's link and capturing its now-freed code, create enough new links for the same member (or repeat creation attempts) to exercise code assignment, and assert none of the newly issued codes equals the deleted code — the deleted code is never reissued to a new link."
+      },
+      {
+        "id": "E5-S1-AC4",
+        "matrix_ids": ["VM-029"],
+        "method": "DELETE",
+        "path": "/links/{code}",
+        "expected_status": 404,
+        "description": "Seed two members; member B owns a link. Sign in as member A and DELETE /links/{code} for member B's code: response is 404 (not 204). Then GET /{code} unauthenticated with redirects disabled still returns 302 with the original Location — member B's link is unaffected by member A's attempt."
+      }
+    ],
+    "playwright_checks": [
+      {
+        "id": "E4-S1-AC1",
+        "matrix_ids": ["VM-016"],
+        "description": "A member owning 25 links, viewing page 1 of the console list, sees exactly 20 links, newest first, and none belonging to another member.",
+        "url": "/console",
+        "steps": [
+          { "action": "navigate", "value": "/sign-in" },
+          { "action": "fill", "selector": "input[name=email]", "value": "console-member-25-links@example.com" },
+          { "action": "fill", "selector": "input[name=password]", "value": "correct-horse-battery-staple" },
+          { "action": "click", "selector": "button[type=submit]" },
+          { "action": "navigate", "value": "/console" },
+          { "action": "assert_count", "selector": "[data-testid=link-row]", "value": "20", "assertion": "exactly 20 rows render on page 1" },
+          { "action": "assert_order", "selector": "[data-testid=link-row]", "assertion": "rows are ordered newest-created first" },
+          { "action": "assert_text_absent", "selector": "[data-testid=link-row]", "assertion": "no row shows a code or owner belonging to another member" }
+        ]
+      },
+      {
+        "id": "E4-S1-AC2",
+        "matrix_ids": ["VM-017"],
+        "description": "The same member owning 25 links, navigating to page 2 of the console list, sees the remaining 5 links with newest-first order preserved across the page boundary.",
+        "url": "/console?page=2",
+        "steps": [
+          { "action": "navigate", "value": "/sign-in" },
+          { "action": "fill", "selector": "input[name=email]", "value": "console-member-25-links@example.com" },
+          { "action": "fill", "selector": "input[name=password]", "value": "correct-horse-battery-staple" },
+          { "action": "click", "selector": "button[type=submit]" },
+          { "action": "navigate", "value": "/console" },
+          { "action": "click", "selector": "[data-testid=pagination-next]" },
+          { "action": "assert_count", "selector": "[data-testid=link-row]", "value": "5", "assertion": "exactly 5 rows render on page 2" },
+          { "action": "assert_order", "selector": "[data-testid=link-row]", "assertion": "page 2 rows continue the newest-first order from page 1, with no gap or duplicate" }
+        ]
+      },
+      {
+        "id": "E4-S1-AC3",
+        "matrix_ids": ["VM-018"],
+        "description": "A member with zero links sees an empty-state message on the console list and no error banner.",
+        "url": "/console",
+        "steps": [
+          { "action": "navigate", "value": "/sign-in" },
+          { "action": "fill", "selector": "input[name=email]", "value": "console-member-zero-links@example.com" },
+          { "action": "fill", "selector": "input[name=password]", "value": "correct-horse-battery-staple" },
+          { "action": "click", "selector": "button[type=submit]" },
+          { "action": "navigate", "value": "/console" },
+          { "action": "assert_visible", "selector": "[data-testid=empty-state]", "assertion": "empty-state component is rendered" },
+          { "action": "assert_count", "selector": "[data-testid=link-row]", "value": "0", "assertion": "no link rows render" },
+          { "action": "assert_hidden", "selector": "[data-testid=error-banner]", "assertion": "no error banner is shown" }
+        ]
+      }
+    ],
+    "design_checks": {},
+    "architecture_checks": {
+      "files_must_exist": [
+        "backend/src/main.py",
+        "backend/src/services/link_service.py",
+        "backend/src/api/links.py",
+        "backend/src/repository/link_repository.py",
+        "backend/CLAUDE.md",
+        "frontend/src/app/api/links/route.ts",
+        "frontend/src/components/LinkList.tsx",
+        "frontend/src/components/Pagination.tsx"
+      ]
+    }
+  }
+}

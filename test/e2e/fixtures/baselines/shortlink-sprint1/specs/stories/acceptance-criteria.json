@@ -1,0 +1,382 @@
+[
+  {
+    "id": "E1-S1-AC1",
+    "story": "E1-S1",
+    "traces": [
+      "FRD-26"
+    ],
+    "given": "a registered email and correct password",
+    "when": "signing in",
+    "then": "the response sets an HTTP-only session cookie and a subsequent authenticated request succeeds"
+  },
+  {
+    "id": "E1-S1-AC2",
+    "story": "E1-S1",
+    "traces": [
+      "FRD-35"
+    ],
+    "given": "a member registering with a new email and password",
+    "when": "the stored credential is read back",
+    "then": "it begins with `$argon2id$`"
+  },
+  {
+    "id": "E1-S1-AC3",
+    "story": "E1-S1",
+    "traces": [
+      "FRD-35"
+    ],
+    "given": "a member registering and then signing in",
+    "when": "the application's full log output for those two requests is scanned",
+    "then": "it contains neither the plaintext password nor the stored hash"
+  },
+  {
+    "id": "E1-S1-AC4",
+    "story": "E1-S1",
+    "traces": [
+      "FRD-26"
+    ],
+    "given": "an unregistered email or a wrong password",
+    "when": "signing in",
+    "then": "the response is 401 and no session cookie is set"
+  },
+  {
+    "id": "E1-S2-AC1",
+    "story": "E1-S2",
+    "traces": [
+      "FRD-32"
+    ],
+    "given": "a signed-in member",
+    "when": "signing out",
+    "then": "a subsequent authenticated request returns 401"
+  },
+  {
+    "id": "E1-S2-AC2",
+    "story": "E1-S2",
+    "traces": [
+      "FRD-32"
+    ],
+    "given": "a signed-in member who has just signed out",
+    "when": "the same session cookie from before sign-out is replayed",
+    "then": "the request is rejected with 401 rather than succeeding, because the session was invalidated server-side and not merely cleared client-side"
+  },
+  {
+    "id": "E1-S2-AC3",
+    "story": "E1-S2",
+    "traces": [
+      "FRD-32"
+    ],
+    "given": "a request with no active session",
+    "when": "calling sign-out",
+    "then": "the response is 401 and no server state changes"
+  },
+  {
+    "id": "E2-S1-AC1",
+    "story": "E2-S1",
+    "traces": [
+      "FRD-27"
+    ],
+    "given": "a signed-in member and `https://example.com/a/long/path`",
+    "when": "creating a link",
+    "then": "the response is 201 with a code of at least 7 characters"
+  },
+  {
+    "id": "E2-S1-AC2",
+    "story": "E2-S1",
+    "traces": [
+      "FRD-31"
+    ],
+    "given": "a target of `ftp://example.com`",
+    "when": "creating a link",
+    "then": "the response is 422; the same holds for a host matching PUBLIC_BASE_URL and for each of `http://192.168.1.1/`, `http://10.0.0.1/`, `http://127.0.0.1/`, `http://[::1]/`, `http://169.254.169.254/` and `http://localhost/`"
+  },
+  {
+    "id": "E2-S1-AC3",
+    "story": "E2-S1",
+    "traces": [
+      "FRD-31"
+    ],
+    "given": "the host-validation code path",
+    "when": "a target URL is inspected during creation",
+    "then": "only literal scheme/host/IP-range checks run — no DNS lookup and no outbound network fetch occurs"
+  },
+  {
+    "id": "E2-S1-AC4",
+    "story": "E2-S1",
+    "traces": [
+      "FRD-34"
+    ],
+    "given": "10,000 codes generated in one run",
+    "when": "they are inspected",
+    "then": "every code is at least 7 characters drawn from a 62-character alphanumeric alphabet (>= 41.7 bits), no two are equal, and the bytes come from `secrets`/`os.urandom` rather than the `random` module"
+  },
+  {
+    "id": "E2-S1-AC5",
+    "story": "E2-S1",
+    "traces": [
+      "FRD-27"
+    ],
+    "given": "a request with no valid session",
+    "when": "creating a link",
+    "then": "the response is 401 and no link row is created"
+  },
+  {
+    "id": "E3-S1-AC1",
+    "story": "E3-S1",
+    "traces": [
+      "FRD-28"
+    ],
+    "given": "an existing code",
+    "when": "requesting `/{code}`",
+    "then": "the response is 302 with `Location` set to the target URL"
+  },
+  {
+    "id": "E3-S1-AC2",
+    "story": "E3-S1",
+    "traces": [
+      "FRD-28"
+    ],
+    "given": "a code that was never issued",
+    "when": "requesting `/{code}`",
+    "then": "the response is 404"
+  },
+  {
+    "id": "E3-S1-AC3",
+    "story": "E3-S1",
+    "traces": [
+      "FRD-28"
+    ],
+    "given": "the redirect handler",
+    "when": "it resolves a code to a target URL",
+    "then": "it returns the Location header to the caller without itself following or fetching the target URL"
+  },
+  {
+    "id": "E4-S1-AC1",
+    "story": "E4-S1",
+    "traces": [
+      "FRD-29"
+    ],
+    "given": "a member owning 25 links",
+    "when": "listing page 1",
+    "then": "exactly 20 links are returned, newest first, and none belongs to another user"
+  },
+  {
+    "id": "E4-S1-AC2",
+    "story": "E4-S1",
+    "traces": [
+      "FRD-29"
+    ],
+    "given": "a member owning 25 links",
+    "when": "listing page 2",
+    "then": "the remaining 5 links are returned, newest-first order preserved across the page boundary"
+  },
+  {
+    "id": "E4-S1-AC3",
+    "story": "E4-S1",
+    "traces": [
+      "FRD-29"
+    ],
+    "given": "a member with zero links",
+    "when": "opening the console list page",
+    "then": "the page renders an empty state with no links and no error"
+  },
+  {
+    "id": "E4-S1-AC4",
+    "story": "E4-S1",
+    "traces": [
+      "FRD-29"
+    ],
+    "given": "two members who each own links",
+    "when": "the second member requests the list endpoint",
+    "then": "only the second member's own links appear — never the first member's"
+  },
+  {
+    "id": "E4-S2-AC1",
+    "story": "E4-S2",
+    "traces": [
+      "FRD-9"
+    ],
+    "given": "an account holding 100 links",
+    "when": "calling the create-link endpoint repeatedly",
+    "then": "the p95 response time across the sample is under 300 ms"
+  },
+  {
+    "id": "E4-S2-AC2",
+    "story": "E4-S2",
+    "traces": [
+      "FRD-9"
+    ],
+    "given": "an account holding 100 links",
+    "when": "calling the list endpoint for page 1 repeatedly",
+    "then": "the p95 response time across the sample is under 300 ms"
+  },
+  {
+    "id": "E4-S2-AC3",
+    "story": "E4-S2",
+    "traces": [
+      "FRD-9"
+    ],
+    "given": "the load-test harness",
+    "when": "it seeds 100 links and samples both endpoints in one run",
+    "then": "it writes a single machine-readable report recording both p95 figures for the evaluator to check"
+  },
+  {
+    "id": "E4-S3-AC1",
+    "story": "E4-S3",
+    "traces": [
+      "FRD-12"
+    ],
+    "given": "the rendered console list page",
+    "when": "it is scanned with an automated WCAG 2.2 AA checker (e.g. axe)",
+    "then": "zero level-A or level-AA violations are reported"
+  },
+  {
+    "id": "E4-S3-AC2",
+    "story": "E4-S3",
+    "traces": [
+      "FRD-12"
+    ],
+    "given": "the console list page",
+    "when": "operated with keyboard only, no mouse",
+    "then": "every interactive element (pagination, delete action) is reachable and operable in a visible focus order"
+  },
+  {
+    "id": "E4-S3-AC3",
+    "story": "E4-S3",
+    "traces": [
+      "FRD-12"
+    ],
+    "given": "the console list page",
+    "when": "its text and interactive elements are measured for contrast",
+    "then": "every element meets the WCAG 2.2 AA minimum contrast ratio"
+  },
+  {
+    "id": "E5-S1-AC1",
+    "story": "E5-S1",
+    "traces": [
+      "FRD-30"
+    ],
+    "given": "a member's own link",
+    "when": "deleting it",
+    "then": "the response is 204"
+  },
+  {
+    "id": "E5-S1-AC2",
+    "story": "E5-S1",
+    "traces": [
+      "FRD-30"
+    ],
+    "given": "a member's own link that was just deleted",
+    "when": "requesting that code again",
+    "then": "the response is 404"
+  },
+  {
+    "id": "E5-S1-AC3",
+    "story": "E5-S1",
+    "traces": [
+      "FRD-30"
+    ],
+    "given": "a deleted code",
+    "when": "a new link is created",
+    "then": "the deleted code is never reissued to the new link"
+  },
+  {
+    "id": "E5-S1-AC4",
+    "story": "E5-S1",
+    "traces": [
+      "FRD-30"
+    ],
+    "given": "a link owned by another member",
+    "when": "the signed-in member attempts to delete it",
+    "then": "the response is 404, not 204, and the other member's link is unaffected"
+  },
+  {
+    "id": "E6-S1-AC1",
+    "story": "E6-S1",
+    "traces": [
+      "FRD-33"
+    ],
+    "given": "a reachable database",
+    "when": "fetching `/healthz`",
+    "then": "the response is 200"
+  },
+  {
+    "id": "E6-S1-AC2",
+    "story": "E6-S1",
+    "traces": [
+      "FRD-33"
+    ],
+    "given": "the database is stopped",
+    "when": "fetching `/healthz`",
+    "then": "the response is 503"
+  },
+  {
+    "id": "E6-S1-AC3",
+    "story": "E6-S1",
+    "traces": [
+      "FRD-33"
+    ],
+    "given": "`/healthz` is called",
+    "when": "the response body is inspected",
+    "then": "no authentication was required and the body is JSON describing database status"
+  },
+  {
+    "id": "E6-S2-AC1",
+    "story": "E6-S2",
+    "traces": [
+      "FRD-37"
+    ],
+    "given": "the Postgres container is stopped",
+    "when": "any API endpoint other than `/healthz` is called",
+    "then": "the response is 503 with a JSON body carrying an `error` field"
+  },
+  {
+    "id": "E6-S2-AC2",
+    "story": "E6-S2",
+    "traces": [
+      "FRD-37"
+    ],
+    "given": "the same 503 response",
+    "when": "the body is inspected",
+    "then": "it contains no stack trace, exception class name, or filesystem path"
+  },
+  {
+    "id": "E6-S2-AC3",
+    "story": "E6-S2",
+    "traces": [
+      "FRD-37"
+    ],
+    "given": "the database becomes reachable again",
+    "when": "the same endpoint is called",
+    "then": "the response returns to its normal, non-503 status"
+  },
+  {
+    "id": "E7-S1-AC1",
+    "story": "E7-S1",
+    "traces": [
+      "FRD-36"
+    ],
+    "given": "a clean checkout with no project images cached",
+    "when": "`docker compose up` is run once",
+    "then": "the stack reaches healthy with exactly one Postgres 16 container"
+  },
+  {
+    "id": "E7-S1-AC2",
+    "story": "E7-S1",
+    "traces": [
+      "FRD-36"
+    ],
+    "given": "the stack is running",
+    "when": "build and runtime network traffic is inspected",
+    "then": "no service makes a request to a host outside the compose network"
+  },
+  {
+    "id": "E7-S1-AC3",
+    "story": "E7-S1",
+    "traces": [
+      "FRD-36"
+    ],
+    "given": "the compose file",
+    "when": "it is reviewed",
+    "then": "it defines exactly one Postgres 16 service and no other third-party managed service"
+  }
+]

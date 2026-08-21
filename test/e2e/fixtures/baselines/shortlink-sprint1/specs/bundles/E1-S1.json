@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "story_id": "E1-S1",
+  "sprint": 1,
+  "title": "Register and sign in with a hashed, non-logged credential",
+  "readiness": "ready",
+  "requirements": {
+    "ac_ids": [
+      "E1-S1-AC1",
+      "E1-S1-AC2",
+      "E1-S1-AC3",
+      "E1-S1-AC4"
+    ],
+    "brd_ids": [
+      "FRD-1",
+      "FRD-11"
+    ],
+    "br_acceptance_ids": [
+      "FRD-26",
+      "FRD-35"
+    ],
+    "scope_out": [
+      "Password reset by email, SSO, or multi-factor authentication (SG-7); Sign-out (owned by E1-S2)"
+    ]
+  },
+  "entities": [
+    {
+      "name": "Register and sign in with a hashed, non-logged credential",
+      "status": "unknown"
+    }
+  ],
+  "approach": {
+    "program_design": "specs/design/program-design.md",
+    "canvas": "specs/design/reasons-canvas.md",
+    "amendment": null
+  },
+  "structure": {
+    "owned_files": [
+      "backend/src/types/models.py",
+      "backend/src/config/settings.py",
+      "backend/src/repository/db.py",
+      "backend/src/services/auth_service.py",
+      "backend/src/api/auth.py",
+      "POST /auth/register",
+      "POST /auth/sign-in",
+      "backend/src/main.py",
+      "POST /auth/sign-out",
+      "DELETE /links/{code}"
+    ],
+    "layer": "backend"
+  },
+  "operations": {
+    "pending": false,
+    "files": [
+      "backend/src/types/models.py",
+      "backend/src/config/settings.py",
+      "backend/src/repository/db.py",
+      "engine/session",
+      "backend/src/repository/member_repository.py",
+      "backend/src/repository/session_repository.py",
+      "insert/get",
+      "backend/src/services/auth_service.py",
+      "backend/src/api/deps.py",
+      "backend/src/api/auth.py",
+      "POST /auth/register",
+      "POST /auth/sign-in",
+      "backend/src/logging_config.py",
+      "password/hash",
+      "backend/src/main.py",
+      "frontend/src/app/api/auth/register/route.ts",
+      "frontend/src/app/api/auth/sign-in/route.ts",
+      "backend/tests/unit/test_auth_service.py",
+      "backend/tests/integration/test_auth_api.py"
+    ],
+    "text": "1. Create `backend/src/types/models.py` — `Member`, `Session`, `RegisterRequest`, `SignInRequest`, `MemberView`, `ErrorBody`.\n2. Create `backend/src/config/settings.py` — `DATABASE_URL`, `SESSION_COOKIE_NAME`.\n3. Create `backend/src/repository/db.py` — SQLAlchemy engine/session factory.\n4. Create `backend/src/repository/member_repository.py` — insert member, get by email.\n5. Create `backend/src/repository/session_repository.py` — insert/get session by id.\n6. Create `backend/src/services/auth_service.py` — `register`, `sign_in`, `get_current_member`; Argon2id hashing.\n7. Create `backend/src/api/deps.py` — `require_session` dependency.\n8. Create `backend/src/api/auth.py` — `POST /auth/register`, `POST /auth/sign-in`; sets HTTP-only session cookie.\n9. Create `backend/src/logging_config.py` — redacts password/hash from all log output.\n10. Create `backend/src/main.py` — FastAPI app wiring; registers the auth router.\n11. Create `frontend/src/app/api/auth/register/route.ts` — same-origin proxy to backend register.\n12. Create `frontend/src/app/api/auth/sign-in/route.ts` — same-origin proxy to backend sign-in; relays `Set-Cookie`.\n13. Add `backend/tests/unit/test_auth_service.py` and `backend/tests/integration/test_auth_api.py` covering AC1–AC4."
+  },
+  "safeguards": {
+    "ids": [
+      "SG-7"
+    ],
+    "none": false
+  },
+  "tests": {
+    "matrix_ids": [
+      "VM-001",
+      "VM-002",
+      "VM-003",
+      "VM-004"
+    ],
+    "case_ids": [
+      "VM-001",
+      "VM-002",
+      "VM-003",
+      "VM-004"
+    ],
+    "layers": [
+      "api",
+      "unit"
+    ]
+  },
+  "provenance": {
+    "story_path": "specs/stories/E1-S1.md",
+    "parents": [],
+    "tracker_key": null
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "phase": "design",
+  "source": "specs/stories/stories.json",
+  "confirmed_at": "2026-08-21T16:30:00Z",
+  "stack": {
+    "backend": "Python 3.12 / FastAPI / uv",
+    "frontend": "Next.js / TypeScript",
+    "datastores": ["Postgres 16 (primary)"]
+  },
+  "decisions": [
+    {
+      "id": "D-1",
+      "question": "How does the Next.js frontend reach the FastAPI backend, and how is the session cookie scoped?",
+      "options": [
+        "Next.js Route Handlers proxy all API calls server-side to FastAPI (browser only ever talks to the Next.js origin; cookie is HttpOnly, Secure, SameSite=Lax, scoped to the Next.js origin)",
+        "Browser calls FastAPI directly, cross-origin (requires CORS with credentials, SameSite=None; Secure cookies, HTTPS even in local dev)"
+      ],
+      "proposed_default": "Next.js Route Handlers proxy all API calls server-side to FastAPI (browser only ever talks to the Next.js origin; cookie is HttpOnly, Secure, SameSite=Lax, scoped to the Next.js origin)",
+      "chosen": "Next.js Route Handlers proxy all API calls server-side to FastAPI (browser only ever talks to the Next.js origin; cookie is HttpOnly, Secure, SameSite=Lax, scoped to the Next.js origin)",
+      "rules_out": "Direct cross-origin browser-to-FastAPI calls; CORS-with-credentials configuration; SameSite=None cookies; any requirement for HTTPS in local/dev compose to keep cookies working.",
+      "rationale": "Keeps cookies same-site, avoids CORS, and fits NFR-5's single-compose-stack posture. The two contract shapes are documented in api-contracts.md.",
+      "basis": "human",
+      "load_bearing": true
+    },
+    {
+      "id": "D-2",
+      "question": "Are sessions DB-backed or a stateless JWT?",
+      "options": [
+        "DB-backed sessions table (id, user_id, expires_at, created_at, revoked_at)",
+        "Stateless JWT with a server-side denylist table for revocation"
+      ],
+      "proposed_default": "DB-backed sessions table (id, user_id, expires_at, created_at, revoked_at)",
+      "chosen": "DB-backed sessions table (id, user_id, expires_at, created_at, revoked_at)",
+      "rules_out": "Stateless JWT issuance; any client-held bearer token not tied to a server-side revocable row.",
+      "rationale": "FR-7 requires sign-out to invalidate the session server-side. A stateless JWT cannot satisfy that without a denylist table, which is strictly more machinery than a sessions table for no benefit here.",
+      "basis": "human",
+      "load_bearing": true
+    },
+    {
+      "id": "D-3",
+      "question": "Is link delete a hard delete or a soft delete?",
+      "options": [
+        "Soft delete: deleted_at column on links, unique constraint on code across all rows (deleted or not)",
+        "Hard delete: row removed, code uniqueness enforced only among live rows, plus a separate reserved-codes mechanism to prevent reissue"
+      ],
+      "proposed_default": "Soft delete: deleted_at column on links, unique constraint on code across all rows (deleted or not)",
+      "chosen": "Soft delete: deleted_at column on links, unique constraint on code across all rows (deleted or not)",
+      "rules_out": "Hard-deleting link rows; any separate reserved-codes table or bookkeeping structure to prevent code reissue after deletion.",
+      "rationale": "FR-5 requires the code is never reissued. A unique constraint on code across all rows (including soft-deleted ones) guarantees that without a second structure.",
+      "basis": "human",
+      "load_bearing": true
+    },
+    {
+      "id": "D-4",
+      "question": "What CSRF mitigation strategy applies to state-changing endpoints?",
+      "options": [
+        "SameSite=Lax cookies plus same-origin-only route handlers (no separate CSRF token)",
+        "Double-submit CSRF token issued and validated on every state-changing request"
+      ],
+      "proposed_default": "SameSite=Lax cookies plus same-origin-only route handlers (no separate CSRF token)",
+      "chosen": "SameSite=Lax cookies plus same-origin-only route handlers (no separate CSRF token)",
+      "rules_out": "A separate CSRF token issuance/validation mechanism.",
+      "rationale": "Given D-1's proxy topology, requests are same-site by construction. SameSite=Lax blocks cross-site submissions from attaching the cookie, closing CSRF without extra token machinery.",
+      "basis": "human",
+      "load_bearing": true
+    }
+  ]
+}

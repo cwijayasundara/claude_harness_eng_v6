@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>shortlink — Mockup Index</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 720px; margin: 4rem auto; padding: 0 1.5rem; color: #1B1A17; background: #F6F1E7; }
+  h1 { font-size: 1.75rem; }
+  ul { padding-left: 1.25rem; }
+  li { margin-bottom: 1.25rem; }
+  code { background: #E4DCC9; padding: 0.1rem 0.35rem; border-radius: 3px; }
+  .meta { color: #6B6558; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<h1>shortlink — Design Mockups (sprint 1)</h1>
+<p>One mockup per UI-bearing story. Only <code>E4-S1</code> renders a screen
+this sprint — <code>E4-S3</code> is an accessibility audit of the same page,
+not a separate one, and every other story is API-only (<code>layer: backend</code>
+or <code>infra</code>).</p>
+<ul>
+  <li>
+    <a href="./E4-S1.html">E4-S1 — Console (list your links)</a>
+    <div class="meta">
+      Story: list the signed-in member's own links, newest first, paginated,
+      with a per-link delete action (E5-S1's endpoint) and an empty state.<br />
+      Endpoints: <code>GET /links</code>, <code>DELETE /links/{code}</code>
+      (via the Next.js Route Handlers at <code>/api/links</code> and
+      <code>/api/links/{code}</code> — see <code>api-contracts.md</code>).<br />
+      Audited for WCAG 2.2 AA by E4-S3 (keyboard operability, contrast,
+      zero axe violations) against this same page.
+    </div>
+  </li>
+</ul>
+<p class="meta">Aesthetic direction: <a href="./aesthetic-direction.md">aesthetic-direction.md</a></p>
+</body>
+</html>

@@ -1,0 +1,10 @@
+[
+  {
+    "slot": "privacy_retention",
+    "na_reason": "The source PRD states no requirement for this slot; /spec authors one only if a later story needs it."
+  },
+  {
+    "slot": "observability",
+    "na_reason": "The source PRD states no requirement for this slot; /spec authors one only if a later story needs it."
+  }
+]

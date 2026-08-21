@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "story_id": "E2-S1",
+  "sprint": 1,
+  "title": "Create a short link with an SSRF-safe target and a cryptographically random code",
+  "readiness": "ready",
+  "requirements": {
+    "ac_ids": [
+      "E2-S1-AC1",
+      "E2-S1-AC2",
+      "E2-S1-AC3",
+      "E2-S1-AC4",
+      "E2-S1-AC5"
+    ],
+    "brd_ids": [
+      "FRD-2",
+      "FRD-6",
+      "FRD-10"
+    ],
+    "br_acceptance_ids": [
+      "FRD-27",
+      "FRD-31",
+      "FRD-34"
+    ],
+    "scope_out": [
+      "Custom or vanity codes (SG-1); Editing a link's target after creation (SG-2); Following redirect chains or resolving hostnames to validate them (SG-10)"
+    ]
+  },
+  "entities": [
+    {
+      "name": "Create a short link with an SSRF-safe target and a cryptographically random code",
+      "status": "unknown"
+    }
+  ],
+  "approach": {
+    "program_design": "specs/design/program-design.md",
+    "canvas": "specs/design/reasons-canvas.md",
+    "amendment": null
+  },
+  "structure": {
+    "owned_files": [
+      "backend/src/services/link_service.py",
+      "backend/src/api/links.py",
+      "POST /links",
+      "frontend/src/app/api/links/route.ts",
+      "backend/src/repository/link_repository.py",
+      "GET /links",
+      "DELETE /links/{code}",
+      "backend/src/types/models.py",
+      "backend/src/config/settings.py",
+      "backend/CLAUDE.md",
+      "POST/GET /links"
+    ],
+    "layer": "backend"
+  },
+  "operations": {
+    "pending": false,
+    "files": [
+      "backend/src/types/models.py",
+      "backend/src/config/settings.py",
+      "backend/src/repository/link_repository.py",
+      "backend/src/services/target_validation.py",
+      "; literal scheme/host/IP-range checks only.\n5. Create ",
+      "backend/src/services/link_service.py",
+      "backend/src/api/links.py",
+      "POST /links",
+      "frontend/src/app/api/links/route.ts",
+      "backend/tests/unit/test_target_validation.py",
+      "backend/tests/unit/test_code_generator.py",
+      "backend/tests/integration/test_links_api.py"
+    ],
+    "text": "1. Extend `backend/src/types/models.py` — add `Link`, `CreateLinkRequest`, `LinkView`.\n2. Extend `backend/src/config/settings.py` — add `PUBLIC_BASE_URL`.\n3. Create `backend/src/repository/link_repository.py` — insert link, unique-code collision handling.\n4. Create `backend/src/services/target_validation.py` — `validate_target(url, public_base_url)`; literal scheme/host/IP-range checks only.\n5. Create `backend/src/services/code_generator.py` — `generate_code()` via `secrets`, 62-char alphabet, >=7 chars.\n6. Create `backend/src/services/link_service.py` — `create_link(owner_id, target_url)`.\n7. Create `backend/src/api/links.py` — `POST /links`; requires `require_session`.\n8. Create `frontend/src/app/api/links/route.ts` — `POST` handler proxying to backend.\n9. Add `backend/tests/unit/test_target_validation.py`, `backend/tests/unit/test_code_generator.py`, `backend/tests/integration/test_links_api.py` covering AC1–AC5."
+  },
+  "safeguards": {
+    "ids": [
+      "SG-1",
+      "SG-2",
+      "SG-10"
+    ],
+    "none": false
+  },
+  "tests": {
+    "matrix_ids": [
+      "VM-008",
+      "VM-009",
+      "VM-010",
+      "VM-011",
+      "VM-012"
+    ],
+    "case_ids": [
+      "VM-008",
+      "VM-009",
+      "VM-010",
+      "VM-011",
+      "VM-012"
+    ],
+    "layers": [
+      "api",
+      "unit"
+    ]
+  },
+  "provenance": {
+    "story_path": "specs/stories/E2-S1.md",
+    "parents": [
+      "E1-S1"
+    ],
+    "tracker_key": null
+  }
+}

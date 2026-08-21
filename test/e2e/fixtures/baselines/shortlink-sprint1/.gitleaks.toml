@@ -1,0 +1,21 @@
+# Secret-scan allowlist for a scaffolded repo (Increment 1 secure-repo baseline).
+# The baseline regex scanner still runs in pre-write + pre-commit; gitleaks is the
+# enhanced CI tier wired by .github/workflows/security.yml. Generic — no
+# project- or client-specific literals; extend the allowlist per repo as needed.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test/template fixtures only."
+# NOTE: .env / .env.* are deliberately NOT allowlisted. They belong in .gitignore;
+# if one is ever committed by accident (gitignore removed, `git add -f`, a
+# submodule), that is exactly the case gitleaks must catch — the one place secret
+# scanning matters most. Keep this allowlist narrow: a catch-all (.*) entry is
+# rejected by the secure-baseline-wiring gate (VULN-003).
+paths = [
+  '''(^|/)test/fixtures/''',
+  '''(^|/)tests/fixtures/''',
+  '''(^|/)e2e/fixtures/''',
+  '''(^|/)\.claude/templates/''',
+]
