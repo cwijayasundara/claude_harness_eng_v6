@@ -18,6 +18,13 @@ const IN_SCOPE = /(^|\/)(tests\/integration\/|e2e\/|__tests__\/)|\.(test|spec)\.
 // extension rather than by path, and kept deliberately short: a URL in .json or
 // .yaml can genuinely point a test at a live host, but nothing dials a .md.
 const PROSE = /\.(md|markdown|rst|txt)$/i;
+// A captured project tree, not a test the harness wrote. make-sprint1-baseline.js
+// writes here and the /sprint route SEEDS from it: the tree is the INPUT under
+// test, so its DSNs and package-index URLs belong to the generated product and
+// are judged by that project's own gates when the route runs it. Keyed to the
+// capture tool's output directory, not to `fixtures/` at large — a fixture that
+// aims a runner at a live host is exactly what this sensor is for.
+const CAPTURED = /(^|\/)fixtures\/baselines\//;
 // A line carrying this marker is an explicit, greppable, reviewer-visible
 // exception (e.g. a test that deliberately hits a real staging endpoint, or one
 // asserting on a URL string). Suppresses findings on THAT line only — the same
@@ -56,7 +63,7 @@ function classifyFile(file, content) {
 
 function classifyFiles(changes) {
   return changes
-    .filter((c) => IN_SCOPE.test(c.file) && !PROSE.test(c.file))
+    .filter((c) => IN_SCOPE.test(c.file) && !PROSE.test(c.file) && !CAPTURED.test(c.file))
     .flatMap((c) => classifyFile(c.file, c.content));
 }
 
