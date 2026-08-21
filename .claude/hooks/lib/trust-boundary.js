@@ -48,12 +48,16 @@ const MACHINERY_DIRS = [
   '.claude/scripts',
 ];
 
-const HARNESS_PKG_NAME = 'claude-harness-eng-v5';
+// The harness's own naming series, and nothing else. An exact match on a name
+// carrying a version number is a control with an expiry date: the repo was
+// renamed -v5 -> -v6 and the constant did not follow, so the harness stopped
+// recognizing itself. Anchored both ends — a lookalike must not reach the bypass.
+const HARNESS_PKG_NAME = /^claude-harness-eng(?:-v\d+)?$/;
 
 function isHarnessRepo(projectDir) {
   try {
     const pkg = JSON.parse(fs.readFileSync(path.join(projectDir, 'package.json'), 'utf8'));
-    return pkg.name === HARNESS_PKG_NAME;
+    return typeof pkg.name === 'string' && HARNESS_PKG_NAME.test(pkg.name);
   } catch (_) {
     return false;
   }
