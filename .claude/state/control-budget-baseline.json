@@ -1,5 +1,5 @@
 {
-  "count": 170,
+  "count": 171,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -170,6 +170,7 @@
     "unit-tests",
     "verification-matrix-gate",
     "vocabulary-check",
+    "work-claim-guard",
     "write-scope"
   ]
 }

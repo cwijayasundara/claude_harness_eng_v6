@@ -1,5 +1,25 @@
 ## SECTION 4: Agent Team Execution (Step 4)
 
+### Claim the group before dispatching [HARD BLOCK]
+
+```bash
+node .claude/scripts/work-claim.js claim group:{GROUP_ID}
+```
+
+**Exit 2 means a lead is already implementing this group — do NOT dispatch.** Report the holder and stop; the claim message names the session and how long it has held it.
+
+This exists because it happened: `/auto` ran twice in one session and each invocation dispatched a generator lead for Group A. Two `implementer` agents then implemented story E1-S1 concurrently for 35 and 29 minutes and wrote **seven of the same files** (`auth_service.py`, `deps.py`, `main.py`, `session_repository.py`, `auth.py`, `logging_config.py`, `test_auth_service.py`), leaving last-writer-wins contents across files meant to be consistent. `concurrency-gate.js` cannot catch it — it caps how many subagents run, not what they work on.
+
+Release the claim when the group finishes, on **every** path including failure:
+
+```bash
+node .claude/scripts/work-claim.js release group:{GROUP_ID}
+```
+
+A claim goes stale after 90 minutes so a crashed run cannot block its group forever; a takeover is reported, and it means a previous run died mid-implementation with partial work on disk — verify the tree before trusting it.
+
+### Spawning the lead
+
 Spawn the generator agent for the current group. Multi-story groups follow **generator.md Rule 2 + `team-policy.js`** (team vs `solo_sequential` vs solo) — do not force multi-agent boundary tax on tiny independent stories.
 
 ### Orchestrator Spawn Prompt (Mandatory Template)
@@ -14,7 +34,7 @@ Concretely:
 2. Persist the Generation Contract before any teammate spawn (`/implement` Step 0.2): Operations must name repo-relative files, then `node .claude/scripts/validate-generation-contract.js --mode implementable --story {id}`, `bundle-write.js --story {id}`, `bundle-check.js --mode implementable --story {id}`. Non-zero: halt.
 3. Build the micro-DAG from `structure.owned_files` and Produces/Consumes on the cited component-map slice (Step 2.5). When specs/brownfield/code-graph.json is real, run context-pack.js --diff --budget 1600 per story and inject read_next into teammate prompts.
 4. Decide team_mode via team-policy (solo | solo_sequential | team). Log the decision + reason to .claude/state/iteration-log.md.
-5. If team: create `.claude/state/parallel-implement.lock` (empty file) and set env `HARNESS_PARALLEL_AGENTS=1` for the team window so pre-bash git-safety is active; spawn one Agent(subagent_type=implementer) per story — parallel Phase 1, then Phase 2 after Phase 1 commits. You are dispatching, not implementing (except designated Phase 3 integrator). Remove the lock when the team finishes.
+5. If team: create `.claude/state/parallel-implement.lock` (empty file) and set env `HARNESS_PARALLEL_AGENTS=1` for the team window so pre-bash git-safety is active; claim each story before its teammate spawns (`node .claude/scripts/work-claim.js claim story:{id}`, release when it returns) — the story is the unit that owns files, so this is the guard that actually stops two agents writing one file; spawn one Agent(subagent_type=implementer) per story — parallel Phase 1, then Phase 2 after Phase 1 commits. You are dispatching, not implementing (except designated Phase 3 integrator). Remove the lock when the team finishes.
 6. If solo_sequential: implement stories one-by-one in this context — do NOT spawn per-story teammates.
 7. If solo (N=1): implement yourself.
 8. After implementation, run SECTION 5 (tests, `spdd-sync.js --write`, then `node .claude/scripts/run-gate-checks.js`). Do not spawn the evaluator per group — it runs once at the end of the run.
