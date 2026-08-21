@@ -13,8 +13,8 @@ _Source: `README.md`_
 
 | Metric | Value |
 |---|---|
-| Indexed files | 482 |
-| Graph edges | 2228 |
+| Indexed files | 487 |
+| Graph edges | 2260 |
 | Concept pages | 20 |
 | Wiki cluster pages | 20 |
 
@@ -35,14 +35,14 @@ npm run ask -- "..."     # ask the codebase
 |---|---|---|
 | `test/helpers/hook-fixture.js` | 25 | 0 |
 | `test/helpers/skill-corpus.js` | 25 | 0 |
-| `test/e2e/helpers/claude-runner.js` | 17 | 0 |
+| `test/e2e/helpers/claude-runner.js` | 18 | 0 |
 | `test/e2e/helpers/project-suite.js` | 9 | 0 |
 | `test/helpers/pre-commit-fixtures.js` | 9 | 0 |
 | `symphony_clone/src/orchestrator/scheduler.js` | 7 | 6 |
+| `test/e2e/helpers/fresh-project.js` | 6 | 1 |
 | `test/helpers/pack-membership.js` | 6 | 0 |
 | `symphony_clone/src/config.js` | 5 | 0 |
 | `symphony_clone/src/orchestrator/workspace-manager.js` | 5 | 0 |
-| `test/e2e/helpers/fresh-project.js` | 5 | 0 |
 | `test/helpers/record-run-fixture.js` | 5 | 0 |
 | `test/e2e/full-auto-output/src/server.js` | 4 | 1 |
 

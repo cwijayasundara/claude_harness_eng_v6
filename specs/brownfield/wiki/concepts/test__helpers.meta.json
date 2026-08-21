@@ -13,9 +13,9 @@
     "test/helpers/pack-membership.js": "3eeba718efbfbeb9",
     "test/helpers/pipeline-status-fixtures.js": "aef89497cb41d312",
     "test/helpers/pre-commit-fixtures.js": "a5714f16842662e2",
-    "test/helpers/record-run-fixture.js": "99ffa57ef59f53c8",
+    "test/helpers/record-run-fixture.js": "e78c07f3da2d625c",
     "test/helpers/skill-corpus.js": "7a6412042ad969d1"
   },
-  "content_hash": "a1ccfe85d5714166",
+  "content_hash": "7d0132f10ade1ed4",
   "stale": false
 }

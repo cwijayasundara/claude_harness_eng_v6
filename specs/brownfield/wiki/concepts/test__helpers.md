@@ -12,7 +12,7 @@ Cluster `test/helpers` groups **6** file(s) (hub fan-in hint 25).
 - `test/helpers/pack-membership.js` (hash 3eeba718efbfbeb9)
 - `test/helpers/pipeline-status-fixtures.js` (hash aef89497cb41d312)
 - `test/helpers/pre-commit-fixtures.js` (hash a5714f16842662e2)
-- `test/helpers/record-run-fixture.js` (hash 99ffa57ef59f53c8)
+- `test/helpers/record-run-fixture.js` (hash e78c07f3da2d625c)
 - `test/helpers/skill-corpus.js` (hash 7a6412042ad969d1)
 
 ## Symbols

@@ -1,6 +1,6 @@
-# `test/e2e/` — 18 module(s)
+# `test/e2e/` — 19 module(s)
 
-18 module(s).
+19 module(s).
 
 ## Dependencies
 
@@ -13,6 +13,7 @@ flowchart LR
   n_js_test_e2e_harness_brownfield_test_js["harness-brownfield.test.js"]
   n_js_test_e2e_harness_feature_route_test_js["harness-feature-route.test.js"]
   n_js_test_e2e_harness_framework_test_js["harness-framework.test.js"]
+  n_js_test_e2e_harness_front_half_test_js["harness-front-half.test.js"]
   n_js_test_e2e_harness_full_auto_run_test_js["harness-full-auto-run.test.js"]
   n_js_test_e2e_harness_gated_build_test_js["harness-gated-build.test.js"]
   n_js_test_e2e_harness_native_commands_test_js["harness-native-commands.test.js"]
@@ -88,6 +89,18 @@ flowchart LR
 ### Symbols
   - `logResult` (function) → js:test/e2e/harness-framework.test.js:18 — `function logResult(stage, data)`
   - `runHook` (function) → js:test/e2e/harness-framework.test.js:23 — `function runHook(hookName, stdinData, cwd)`
+
+## `js:test/e2e/harness-front-half.test.js`
+
+- fan-in: 0, fan-out: 10
+
+### Symbols
+  - `coldPhase` (function) → js:test/e2e/harness-front-half.test.js:52 — `function coldPhase(label, prompt, budgetUsd, timeoutMs)`
+  - `exists` (function) → js:test/e2e/harness-front-half.test.js:63 — `function exists(...rel)`
+  - `readJson` (function) → js:test/e2e/harness-front-half.test.js:67 — `function readJson(...rel)`
+  - `script` (function) → js:test/e2e/harness-front-half.test.js:77 — `function script(name, args)`
+  - `waive` (function) → js:test/e2e/harness-front-half.test.js:87 — `function waive(phase)`
+  - `storyFiles` (function) → js:test/e2e/harness-front-half.test.js:92 — `function storyFiles()`
 
 ## `js:test/e2e/harness-full-auto-run.test.js`
 
@@ -185,7 +198,7 @@ flowchart LR
 
 ## `js:test/e2e/run-pack.js`
 
-- fan-in: 1, fan-out: 3
+- fan-in: 3, fan-out: 3
 
 ### Symbols
   - `layer` (function) → js:test/e2e/run-pack.js:61 — `function layer(id, name, timeoutSec, command, opts = {})`

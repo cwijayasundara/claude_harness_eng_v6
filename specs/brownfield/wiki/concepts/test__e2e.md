@@ -4,7 +4,7 @@
 
 ## Summary
 
-Cluster `test/e2e` groups **57** file(s) (hub fan-in hint 17).
+Cluster `test/e2e` groups **60** file(s) (hub fan-in hint 18).
 
 ## Files
 
@@ -29,21 +29,21 @@ Cluster `test/e2e` groups **57** file(s) (hub fan-in hint 17).
 - `test/e2e/full-auto-output/tests/server.test.js` (hash n/a)
 - `test/e2e/harness-adversarial-fixtures.test.js` (hash cd641cd127b8641b)
 - `test/e2e/harness-adversarial-live.test.js` (hash cca0795a44067809)
-- `test/e2e/harness-auto-run.test.js` (hash 28e42e4b65fadf10)
-- `test/e2e/harness-brownfield-run.test.js` (hash 53319f379719aed3)
-- `test/e2e/harness-brownfield.test.js` (hash 01f3aee74a25be21)
-- `test/e2e/harness-feature-route.test.js` (hash a3bb8a7932823890)
+- `test/e2e/harness-auto-run.test.js` (hash c7f6796f57cff976)
+- `test/e2e/harness-brownfield-run.test.js` (hash 4466625aaecc95b3)
+- `test/e2e/harness-brownfield.test.js` (hash 850439d4b5cb5cff)
+- `test/e2e/harness-feature-route.test.js` (hash 986e28bab01538c9)
 - `test/e2e/harness-framework.test.js` (hash 1ba59d398742efb0)
-- `test/e2e/harness-full-auto-run.test.js` (hash 706cc0268488f54d)
-- `test/e2e/harness-gated-build.test.js` (hash 4618575fd1067364)
-- `test/e2e/harness-native-commands.test.js` (hash 004fac8c27c84769)
-- `test/e2e/harness-pipeline-build.test.js` (hash dbda8abe4d5faeb7)
-- `test/e2e/harness-pipeline.test.js` (hash c564628b7d86c191)
-- `test/e2e/harness-plan-only.test.js` (hash bf3ce666525d40d2)
-- `test/e2e/harness-real-workflow.test.js` (hash eea4fc9134249e5f)
-- `test/e2e/harness-selfheal-smoke.test.js` (hash 1331e5c394a13891)
-- `test/e2e/harness-semi-auto-run.test.js` (hash d8ab4c80f54e00d4)
-- `test/e2e/harness-vibe-run.test.js` (hash 4b8ea505613827df)
+- `test/e2e/harness-full-auto-run.test.js` (hash 5c47921ea7e1e047)
+- `test/e2e/harness-gated-build.test.js` (hash ef67f8828b4ab25d)
+- `test/e2e/harness-native-commands.test.js` (hash cd21cfaa426f48b4)
+- `test/e2e/harness-pipeline-build.test.js` (hash cef4e6d19f77c5f5)
+- `test/e2e/harness-pipeline.test.js` (hash 09959fb8c5e21470)
+- `test/e2e/harness-plan-only.test.js` (hash bddfbefd644127f9)
+- `test/e2e/harness-real-workflow.test.js` (hash 59ba55ed78ed298a)
+- `test/e2e/harness-selfheal-smoke.test.js` (hash 06cf79de4723b37a)
+- `test/e2e/harness-semi-auto-run.test.js` (hash d3ec8b1dc516d671)
+- `test/e2e/harness-vibe-run.test.js` (hash 28d74893a107f5c3)
 - `test/e2e/helpers/alter-and-verify.js` (hash a66a10415a792e7f)
 - `test/e2e/helpers/alter-and-verify.test.js` (hash 8524961c99b1933e)
 - `test/e2e/helpers/app-runtime.js` (hash 9eb7dc6f53bbba2c)
@@ -83,6 +83,8 @@ Cluster `test/e2e` groups **57** file(s) (hub fan-in hint 17).
 ## Inbound edges (sample)
 
 - test/e2e-route-matrix-contract.test.js → test/e2e/run-pack.js (imports)
+- test/front-half-contract.test.js → test/e2e/run-pack.js (imports)
+- test/front-half-contract.test.js → test/e2e/run-pack.js (imports)
 
 ## Citations
 
