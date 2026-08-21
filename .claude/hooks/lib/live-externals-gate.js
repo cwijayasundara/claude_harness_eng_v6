@@ -11,6 +11,13 @@ const LOCAL_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'host.docker.internal'
 // invisible. Deliberately NOT .js/.jsx: that would scan the harness's own
 // test/*.test.js fixtures (which contain SDK-shaped strings as test data).
 const IN_SCOPE = /(^|\/)(tests\/integration\/|e2e\/|__tests__\/)|\.(test|spec)\.tsx?$/;
+// Prose living in a test directory. The directory branch above matches on path
+// alone, so a PRD fixture under e2e/ was scanned as if it were a call site — and
+// a PRD that specifies an SSRF deny-list names the very hosts the product must
+// REFUSE to reach, so describing the safeguard tripped the sensor. Excluded by
+// extension rather than by path, and kept deliberately short: a URL in .json or
+// .yaml can genuinely point a test at a live host, but nothing dials a .md.
+const PROSE = /\.(md|markdown|rst|txt)$/i;
 // A line carrying this marker is an explicit, greppable, reviewer-visible
 // exception (e.g. a test that deliberately hits a real staging endpoint, or one
 // asserting on a URL string). Suppresses findings on THAT line only — the same
@@ -49,7 +56,7 @@ function classifyFile(file, content) {
 
 function classifyFiles(changes) {
   return changes
-    .filter((c) => IN_SCOPE.test(c.file))
+    .filter((c) => IN_SCOPE.test(c.file) && !PROSE.test(c.file))
     .flatMap((c) => classifyFile(c.file, c.content));
 }
 
