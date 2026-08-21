@@ -1,0 +1,33 @@
+{
+  "phases": {
+    "auto": {
+      "runs": 1,
+      "output_total": 91686,
+      "cost_usd": 36.6143
+    },
+    "design": {
+      "runs": 2,
+      "output_total": 42006,
+      "cost_usd": 4.1592
+    },
+    "spec": {
+      "runs": 2,
+      "output_total": 10421,
+      "cost_usd": 1.8956
+    },
+    "test": {
+      "runs": 1,
+      "output_total": 21894,
+      "cost_usd": 1.2073
+    },
+    "(freeform)": {
+      "runs": 6,
+      "output_total": 0,
+      "cost_usd": 0
+    }
+  },
+  "total": {
+    "output_total": 166007,
+    "cost_usd": 43.8764
+  }
+}

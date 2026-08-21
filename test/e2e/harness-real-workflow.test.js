@@ -7,10 +7,11 @@ const { describe, test, before, after } = require('node:test');
 const { execFileSync } = require('child_process');
 
 const { runClaude, HARNESS_ROOT } = require('./helpers/claude-runner');
+const { e2eWorkdir } = require('./helpers/e2e-workdir');
 const { runProjectSuite } = require('./helpers/project-suite');
 
 const RESULTS_DIR = path.join(__dirname, 'results');
-const PROJECT_DIR = path.join(__dirname, 'real-workflow-output');
+const PROJECT_DIR = e2eWorkdir('real-workflow');
 
 function logResult(stage, data) {
   fs.mkdirSync(RESULTS_DIR, { recursive: true });

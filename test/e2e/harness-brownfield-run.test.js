@@ -25,8 +25,10 @@ const { execFileSync } = require('child_process');
 const { test } = require('node:test');
 
 const { runClaude } = require('./helpers/claude-runner');
+const { e2eWorkdir } = require('./helpers/e2e-workdir');
+const { assertDisposable } = require('./helpers/fresh-project');
 
-const PROJECT_DIR = path.join(__dirname, 'brownfield-run-output');
+const PROJECT_DIR = e2eWorkdir('brownfield-run');
 const PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
 const { randomUUID } = require('crypto');
 // Fresh id per run — hardcoded session ids fail with "already in use" on re-run.
@@ -69,10 +71,7 @@ function seedExistingProject(resolved) {
 
 // Confinement guard: never rm a path outside this package.
 function resetExistingProject() {
-  const resolved = path.resolve(PROJECT_DIR);
-  if (!resolved.startsWith(__dirname + path.sep)) {
-    throw new Error(`refusing to wipe ${resolved}: outside ${__dirname}`);
-  }
+  const resolved = assertDisposable(PROJECT_DIR);
   fs.rmSync(resolved, { recursive: true, force: true });
   fs.mkdirSync(resolved, { recursive: true });
   seedExistingProject(resolved);

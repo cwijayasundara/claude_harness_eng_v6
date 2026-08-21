@@ -9,10 +9,11 @@ const assert = require('assert');
 const { test } = require('node:test');
 
 const { runClaude } = require('./helpers/claude-runner');
+const { e2eWorkdir } = require('./helpers/e2e-workdir');
 const { runProjectSuite } = require('./helpers/project-suite');
 const { freshProject } = require('./helpers/fresh-project');
 
-const PROJECT_DIR = path.join(__dirname, 'full-auto-output');
+const PROJECT_DIR = e2eWorkdir('full-auto');
 const PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
 const PRD = path.join(__dirname, 'fixtures', 'counter-prd.md');
 const { randomUUID } = require('crypto');

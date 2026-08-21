@@ -21,12 +21,14 @@ const CERT_LAYERS = [
 ];
 
 const LIVE_LAYERS = [
-  layer('plan', 'Plan-only Build', 1320, ['node', '--test', '--test-force-exit', '--test-timeout=1200000', 'test/e2e/harness-plan-only.test.js']),
+  layer('plan', 'Plan-only Build', 3000, ['node', '--test', '--test-force-exit', '--test-timeout=2900000', 'test/e2e/harness-plan-only.test.js']),
+  layer('front-half', 'Front-half Separate-Invocation Route', 6000, ['node', '--test', '--test-force-exit', '--test-timeout=5900000', 'test/e2e/harness-front-half.test.js']),
   layer('semi', 'Semi-auto Build', 2820, ['node', '--test', '--test-force-exit', '--test-timeout=2700000', 'test/e2e/harness-semi-auto-run.test.js']),
   layer('auto', 'Lite Full-auto Build', 2820, ['node', '--test', '--test-force-exit', '--test-timeout=2700000', 'test/e2e/harness-auto-run.test.js']),
   layer('full-auto', 'Full-auto Build', 3420, ['node', '--test', '--test-force-exit', '--test-timeout=3300000', 'test/e2e/harness-full-auto-run.test.js']),
   layer('gated', 'Gated Build', 1020, ['node', '--test', '--test-force-exit', '--test-timeout=900000', 'test/e2e/harness-gated-build.test.js']),
   layer('feature', 'Brownfield Feature Route', 1620, ['node', '--test', '--test-force-exit', '--test-timeout=1500000', 'test/e2e/harness-feature-route.test.js']),
+  layer('sprint', 'Sprint-N Delta Lane (SPDD)', 7200, ['node', '--test', '--test-force-exit', '--test-timeout=7100000', 'test/e2e/harness-sprint-delta.test.js']),
   layer('vibe', 'Controlled Vibe Lane', 1020, ['node', '--test', '--test-force-exit', '--test-timeout=900000', 'test/e2e/harness-vibe-run.test.js']),
   layer('brownfield-run', 'Real /brownfield --seams Discovery', 1200, ['node', '--test', '--test-force-exit', '--test-timeout=1080000', 'test/e2e/harness-brownfield-run.test.js']),
   layer('smoke', 'Self-healing Browser Smoke', 1320, ['node', '--test', '--test-force-exit', '--test-timeout=1200000', 'test/e2e/harness-selfheal-smoke.test.js'], { needsBrowser: true }),
@@ -36,6 +38,9 @@ const FAST_FILES = [
   'test/automated-e2e-contract.test.js',
   'test/e2e-no-hang-contract.test.js',
   'test/plan-only-contract.test.js',
+  'test/front-half-contract.test.js',
+  'test/sprint-delta-contract.test.js',
+  'test/sprint-baseline-capture.test.js',
   'test/auto-semi-contract.test.js',
   'test/full-auto-contract.test.js',
   'test/real-workflow-e2e-contract.test.js',

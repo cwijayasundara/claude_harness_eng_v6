@@ -17,9 +17,10 @@ const { describe, test, before } = require('node:test');
 const { execFileSync } = require('child_process');
 
 const { runClaude } = require('./helpers/claude-runner');
+const { e2eWorkdir } = require('./helpers/e2e-workdir');
 const { runProjectSuite } = require('./helpers/project-suite');
 
-const OUTPUT_DIR = path.join(__dirname, 'output');
+const OUTPUT_DIR = e2eWorkdir('output');
 const RESULTS_DIR = path.join(__dirname, 'results');
 
 let PROJECT_DIR;
