@@ -80,7 +80,8 @@ function decideCeiling(opts = {}) {
   // cannot clear themselves.
   if (!isSubagent || context == null) return { level: 'ok', context: context == null ? null : context };
   // Refusing the handoff write would strand the very work the handoff exists to
-  // carry — the escape has to stay open at every level.
+  // carry — the escape has to stay open at every level. So must evidence and
+  // state writes: the ceiling governs an agent that keeps BUILDING.
   if (writingHandoff) return { level: 'ok', context };
 
   const k = Math.round(context / 1000);
@@ -114,7 +115,20 @@ function isHandoffPath(filePath) {
   return /[/\\]\.claude[/\\]state[/\\]handoff[/\\]/.test(String(filePath || ''));
 }
 
+// Paths that are EVIDENCE or STATE rather than product source. The ceiling is
+// about an agent that keeps building; refusing these would strand a different
+// job entirely — an evaluator past the ceiling could not write the
+// specs/reviews/*.json verdict a downstream gate then reads as missing.
+// implementer.md and HARNESS.md both promise "source writes", so the block has
+// to mean that.
+const NON_SOURCE = /[/\\](?:\.claude|specs|docs)[/\\]/;
+
+/** True when the write is not product source, and so outside the ceiling's remit. */
+function isNonSourcePath(filePath) {
+  return isHandoffPath(filePath) || NON_SOURCE.test(String(filePath || ''));
+}
+
 module.exports = {
   SOFT_CEILING_TOKENS, HARD_CEILING_TOKENS, TAIL_BYTES,
-  contextOf, currentContext, decideCeiling, isHandoffPath,
+  contextOf, currentContext, decideCeiling, isHandoffPath, isNonSourcePath,
 };

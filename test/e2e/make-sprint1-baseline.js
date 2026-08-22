@@ -152,12 +152,26 @@ function rememberSession(sessionId) {
   } catch (_) { /* the bill degrades to this process's sessions; never fail the run */ }
 }
 
-function loadRememberedSessions() {
+/**
+ * Which sessions a run starts from.
+ *
+ * ONLY a resume inherits. liveBuild() -> freshProject() wipes BUILD_DIR and the
+ * session log inside it, but the transcripts those sessions wrote live in
+ * ~/.claude/projects/<slug>/ and are never touched — so reading the log on a
+ * FRESH run put the previous run's ids into the bill before the wipe, and the
+ * baseline recorded both runs at roughly double the real cost. expectPhases
+ * cannot catch that: it only sees phases that are MISSING, never billed twice.
+ */
+function startingSessions(resume, logPath = SESSION_LOG) {
+  if (!resume) return [];
   try {
-    for (const id of JSON.parse(fs.readFileSync(SESSION_LOG, 'utf8'))) {
-      if (typeof id === 'string' && !SESSIONS.includes(id)) SESSIONS.push(id);
-    }
-  } catch (_) { /* first run, or an unreadable log */ }
+    const ids = JSON.parse(fs.readFileSync(logPath, 'utf8'));
+    return Array.isArray(ids) ? ids.filter((id) => typeof id === 'string') : [];
+  } catch (_) { return []; /* first run, or an unreadable log */ }
+}
+
+function loadRememberedSessions() {
+  for (const id of startingSessions(RESUME)) if (!SESSIONS.includes(id)) SESSIONS.push(id);
 }
 
 // `/spec` and `/design` are SHAPING phases: they present their load-bearing
@@ -478,8 +492,13 @@ function liveBuild() {
 function main(argv) {
   const opts = parseArgs(argv);
   RESUME = opts.resume;
-  // Restore the sessions earlier processes created, so a resumed run bills the
-  // phases it skips instead of quietly dropping them from the baseline.
+  // ONLY on resume. liveBuild() -> freshProject() wipes BUILD_DIR (and the
+  // session log inside it), but the transcripts those sessions wrote live in
+  // ~/.claude/projects/<slug>/ and are never touched — so loading the log
+  // unconditionally put the PREVIOUS run's session ids into SESSIONS before the
+  // wipe, and a fresh run then billed both runs and recorded a roughly doubled
+  // baseline. expectPhases cannot see that: it only catches phases that are
+  // MISSING, never a phase billed twice.
   loadRememberedSessions();
   const source = opts.from ? path.resolve(opts.from)
     : (opts.snapshotOnly ? BUILD_DIR : liveBuild());
@@ -498,5 +517,5 @@ if (require.main === module) {
 
 module.exports = {
   EXCLUDED, REQUIRED, OUT_DIR, MIN_SOURCE_FILES,
-  copyTree, snapshot, parseArgs, countSourceFiles,
+  copyTree, snapshot, parseArgs, countSourceFiles, startingSessions,
 };

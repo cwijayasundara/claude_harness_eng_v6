@@ -237,12 +237,35 @@ function billWithBatching(batching) {
   return { ...billRoute(sprintTranscript(dir, 'sess-1')), batching };
 }
 
-test('the bill reports turn density, not only cost', () => {
+test('the bill computes turn density from the real transcript, not just its keys', () => {
+  // Every ratchet test below overrides bill.batching with a literal, so without
+  // this one nothing exercises batchingTotals() against real turns and the
+  // whole metric could be miscomputed with the suite green.
   const dir = tmpDir();
-  const bill = billRoute(sprintTranscript(dir, 'sess-1'));
-  for (const key of ['all_turns', 'tool_calls', 'calls_per_turn', 'single_call_pct', 'ctx_re_read_tokens']) {
-    assert.ok(key in bill.batching, `bill.batching must report ${key}`);
-  }
+  const file = path.join(dir, 'real.jsonl');
+  const usage = (cr) => ({ input_tokens: 0, output_tokens: 10, cache_read_input_tokens: cr });
+  const blocks = (ts, id, cr, tools) => [
+    { type: 'assistant', isSidechain: false, timestamp: ts, requestId: id,
+      message: { id, model: 'claude-sonnet-5', usage: usage(cr), content: [{ type: 'thinking', thinking: 'x' }] } },
+    ...tools.map((name, i) => ({
+      type: 'assistant', isSidechain: false, timestamp: ts, requestId: id,
+      message: { id, model: 'claude-sonnet-5', usage: usage(cr), content: [{ type: 'tool_use', name, id: `${id}-${i}`, input: {} }] },
+    })),
+  ];
+  fs.writeFileSync(file, `${[
+    userTurn('2026-08-21T07:00:00.000Z', '/auto'),
+    ...blocks('2026-08-21T07:01:00.000Z', 'a1', 100000, ['Bash']),
+    ...blocks('2026-08-21T07:02:00.000Z', 'a2', 100000, ['Read', 'Read', 'Read']),
+  ].map((r) => JSON.stringify(r)).join('\n')}\n`);
+
+  const { batching } = billRoute(file);
+  assert.strictEqual(batching.all_turns, 2, 'block-lines of one message are ONE turn');
+  assert.strictEqual(batching.tool_calls, 4);
+  assert.strictEqual(batching.calls_per_turn, 2);
+  assert.strictEqual(batching.single_call_turns, 1);
+  assert.strictEqual(batching.single_call_pct, 50);
+  assert.strictEqual(batching.ctx_re_read_tokens, 200000,
+    'usage is billed once per message even though it repeats on every block-line');
 });
 
 test('a FALL in calls-per-turn is a regression — agents stopped batching', () => {

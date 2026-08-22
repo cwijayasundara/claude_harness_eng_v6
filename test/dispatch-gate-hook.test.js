@@ -47,17 +47,30 @@ const dispatch = (over) => ({
   transcript_path: SUB, tool_input: { subagent_type: 'implementer', description: 'Implement E1-S1' }, ...over,
 });
 
-test('the hook denies a duplicate in-flight story with exit 2 and an actionable reason', () => {
+test('the hook denies a dispatch onto a story ANOTHER session holds', () => {
   const dir = projectDir();
-  assert.equal(runHook(dir, dispatch()).status, 0, 'first dispatch must pass');
-  assert.deepEqual(claims(dir), ['story:E1-S1']);
-
-  const dup = runHook(dir, dispatch({
-    tool_input: { subagent_type: 'implementer', description: 'Implement E1-S1 auth backend skeleton' },
-  }));
-  assert.equal(dup.status, 2, 'a duplicate dispatch must exit 2 (deny)');
-  assert.match(dup.stderr, /story:E1-S1 is already being implemented/);
+  workClaim.claim(dir, 'story:E1-S1', { session: 'lead-A' });
+  const dup = runHook(dir, dispatch({ session_id: 'rogue-B' }));
+  assert.equal(dup.status, 2, 'a cross-session duplicate dispatch must exit 2 (deny)');
+  assert.match(dup.stderr, /story:E1-S1 is already being implemented by session lead-A/);
   assert.match(dup.stderr, /work-claim\.js release story:E1-S1/, 'a hard block must name its way past');
+});
+
+test('the hook lets the /auto lead dispatch the teammate it just claimed for', () => {
+  // The whole documented team flow: claim story:{id}, then spawn the teammate.
+  // A gate that blocks this stops /auto team mode dead — which the first
+  // version of this hook did, for every teammate.
+  const dir = projectDir();
+  workClaim.claim(dir, 'story:E1-S1', { session: 's1' });
+  assert.equal(runHook(dir, dispatch()).status, 0, 'same-session dispatch is the normal path');
+  assert.deepEqual(claims(dir), ['story:E1-S1'], 'the check must not touch the ledger');
+});
+
+test('the hook claims nothing, so nothing can leak or be mis-released', () => {
+  const dir = projectDir();
+  assert.equal(runHook(dir, dispatch()).status, 0);
+  assert.deepEqual(claims(dir), [], 'the gate is read-only; work-claim owns the lifecycle');
+  assert.equal(runHook(dir, dispatch()).status, 0, 'and a retry is never blocked by an invented claim');
 });
 
 test('the hook denies a subagent spawning a generator', () => {
@@ -79,18 +92,20 @@ test('the hook fires for tool_name "Agent" AND "Task"', () => {
 
 test('the hook ignores an unrelated tool and writes no claim', () => {
   const dir = projectDir();
-  const r = runHook(dir, dispatch({ tool_name: 'Bash', tool_input: { command: 'echo E1-S1' } }));
-  assert.equal(r.status, 0);
-  assert.deepEqual(claims(dir), [], 'an unrelated tool must claim nothing');
+  workClaim.claim(dir, 'story:E1-S1', { session: 'lead-A' });
+  const r = runHook(dir, dispatch({ tool_name: 'Bash', tool_input: { command: 'echo E1-S1' }, session_id: 'rogue-B' }));
+  assert.equal(r.status, 0, 'a Bash call naming a story is not a dispatch');
 });
 
-test('SubagentStop releases the claim so the retry path is not stalled', () => {
+test('SubagentStop is a no-op: the gate never releases a claim it did not make', () => {
+  // Releasing on stop released the WRONG teammate's live story under parallel
+  // fan-out, because a stop event carries no story to correlate with.
   const dir = projectDir();
-  runHook(dir, dispatch());
+  workClaim.claim(dir, 'story:E1-S1', { session: 'lead-A' });
   const stop = runHook(dir, { hook_event_name: 'SubagentStop', agent_type: 'implementer' });
   assert.equal(stop.status, 0);
-  assert.deepEqual(claims(dir), [], 'the claim must be released on stop');
-  assert.equal(runHook(dir, dispatch()).status, 0, 'the retry must pass after release');
+  assert.deepEqual(claims(dir), ['story:E1-S1'],
+    'a live claim must survive an unrelated teammate finishing');
 });
 
 test('the hook fails open on malformed stdin rather than stalling the loop', () => {
@@ -104,17 +119,18 @@ test('the hook fails open on malformed stdin rather than stalling the loop', () 
 
 test('work-claim.js release unblocks a claimed story', () => {
   const dir = projectDir();
-  runHook(dir, dispatch());
+  workClaim.claim(dir, 'story:E1-S1', { session: 'lead-A' });
   const out = execFileSync('node', [CLI, 'release', 'story:E1-S1', '--root', dir], {
     encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: dir },
   });
   assert.match(out, /released story:E1-S1/);
-  assert.equal(runHook(dir, dispatch()).status, 0, 'the story must be dispatchable after an explicit release');
+  assert.equal(runHook(dir, dispatch({ session_id: 'rogue-B' })).status, 0,
+    'the story must be dispatchable after an explicit release');
 });
 
-test('work-claim.js list reports a claim the gate made', () => {
+test('work-claim.js list reports a live claim', () => {
   const dir = projectDir();
-  runHook(dir, dispatch());
+  workClaim.claim(dir, 'story:E1-S1', { session: 'lead-A' });
   const out = execFileSync('node', [CLI, 'list', '--root', dir], {
     encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: dir },
   });

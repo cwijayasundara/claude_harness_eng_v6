@@ -35,6 +35,25 @@ test('the subagent-tool lib agrees that "Task" alone cannot select a real dispat
   assert.ok(SUBAGENT_TOOL_NAMES.includes(LIVE_SUBAGENT_TOOL));
 });
 
+// context-ceiling rides the Write|Edit|MultiEdit block, not the dispatch one.
+test('context-ceiling is wired to a matcher that selects a real source write', () => {
+  const groups = groupsRunning('PreToolUse', 'context-ceiling.js');
+  assert.ok(groups.length > 0, 'PreToolUse must run context-ceiling.js');
+  for (const tool of ['Write', 'Edit', 'MultiEdit']) {
+    assert.ok(groups.some((m) => matcherSelects(m.matcher, tool)),
+      `context-ceiling must fire for ${tool}; saw ${JSON.stringify(groups.map((m) => m.matcher))}`);
+  }
+});
+
+test('dispatch-gate is NOT wired to SubagentStop — it owns no claim lifecycle', () => {
+  // It briefly did, and released the wrong teammate's live story: a stop event
+  // names an agent type but no story, so there is nothing to correlate a
+  // release with. Pinned so the wiring cannot quietly come back.
+  const groups = groupsRunning('SubagentStop', 'dispatch-gate.js');
+  assert.deepEqual(groups, [],
+    'work-claim.js owns the claim lifecycle; a stop-driven release cannot know which story finished');
+});
+
 for (const script of ['concurrency-gate.js', 'record-run.js', 'dispatch-gate.js']) {
   test(`PreToolUse ${script} is wired to a matcher that selects a real dispatch`, () => {
     const groups = groupsRunning('PreToolUse', script);

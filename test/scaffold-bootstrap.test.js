@@ -198,7 +198,14 @@ test('scaffold-apply runs the bootstrap and reports it', () => {
   assert.ok(fs.existsSync(path.join(target, 'backend', 'pyproject.toml')),
     'a scaffolded project must arrive with its dependency manifest — the first story should not own bootstrap');
   assert.ok(fs.existsSync(path.join(target, 'frontend', 'package.json')));
-  assert.ok(result.written.includes('backend/pyproject.toml'));
+  // `written` holds ABSOLUTE paths everywhere else, and report() runs
+  // path.relative(target, ...) over it — pushing repo-relative entries printed
+  // `../../../Users/.../backend/pyproject.toml` to the operator.
+  assert.ok(result.written.includes(path.join(target, 'backend', 'pyproject.toml')),
+    'bootstrap paths must be absolute, like every other entry in written');
+  for (const w of result.written) {
+    assert.ok(path.isAbsolute(w), `written entries must be absolute; saw ${w}`);
+  }
 });
 
 test('the production default installs; only an explicit flag skips it', () => {

@@ -1,16 +1,19 @@
 'use strict';
 
-// PreToolUse(Task|Agent) + SubagentStop dispatch gate: blocks a subagent from
-// spawning a generator, and blocks a second in-flight dispatch of a story that
-// is already being built. Decision logic (and the evidence for both rules)
-// lives in lib/dispatch-claims.js; this file is the hook wrapper only.
+// PreToolUse(Task|Agent) dispatch gate: blocks a subagent from spawning a
+// generator, and blocks a dispatch onto a story a DIFFERENT session is already
+// implementing. Decision logic (and the evidence for both rules) lives in
+// lib/dispatch-claims.js; this file is the hook wrapper only.
+//
+// No SubagentStop handling: the claim lifecycle belongs to work-claim.js, since
+// a stop event carries no story to correlate a release with.
 //
 // Fail-open on any error, like every other gate here: a gate that crashes must
 // not be able to stall the build loop.
 
 const fs = require('fs');
 const { SUBAGENT_TOOL_NAMES } = require('./lib/subagent-tool.js');
-const { decideNesting, claimStories, releaseOldest, storiesIn } = require('./lib/dispatch-claims.js');
+const { decideNesting, checkClaims, storiesIn } = require('./lib/dispatch-claims.js');
 
 const TOOL_NAMES = new Set(SUBAGENT_TOOL_NAMES);
 
@@ -28,18 +31,8 @@ function main() {
       const nesting = decideNesting({ subagentType: agent, transcriptPath: input.transcript_path || '' });
       if (!nesting.allow) { process.stderr.write(`${nesting.reason}\n`); process.exit(2); }
 
-      const stories = storiesIn(toolInput);
-      if (stories.length > 0) {
-        const claimed = claimStories(root, stories, { agent, session: input.session_id || undefined });
-        if (!claimed.allow) { process.stderr.write(`${claimed.reason}\n`); process.exit(2); }
-      }
-      process.exit(0);
-    }
-
-    if (event === 'SubagentStop') {
-      const agentType = input.agent_type || input.subagent_type
-        || (input.tool_input && input.tool_input.subagent_type) || '';
-      releaseOldest(root, { agentType });
+      const claimed = checkClaims(root, storiesIn(toolInput), { sessionId: input.session_id });
+      if (!claimed.allow) { process.stderr.write(`${claimed.reason}\n`); process.exit(2); }
       process.exit(0);
     }
   } catch (_) { process.exit(0); }

@@ -344,13 +344,17 @@ function cacheProfile(transcriptPath, opts = {}) {
     if (t.source && !firstOf.has(t.source)) firstOf.set(t.source, t.id);
   }
 
+  // Last turn timestamp per source, carried ACROSS segments: a phase's FIRST
+  // miss is preceded by a turn in the previous phase, and a per-segment map
+  // made that gap invisible — which is exactly the gap that explains the miss.
+  const prevTs = new Map();
+
   return segments.map((seg, i) => {
     const isLast = i === segments.length - 1;
     const mine = unique
       .filter((t) => t.ts != null && t.ts >= seg.start && (isLast || t.ts < seg.end))
       .sort((a, b) => a.ts - b.ts);
 
-    const prevTs = new Map();
     let cacheRead = 0; let cacheWrite = 0; let ttl5 = 0; let ttl1h = 0;
     let missCount = 0; let missTokens = 0; let wasted = 0;
     const gapsSec = [];

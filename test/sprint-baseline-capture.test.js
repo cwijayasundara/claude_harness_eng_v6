@@ -10,7 +10,8 @@ const path = require('path');
 const { test } = require('node:test');
 
 const {
-  copyTree, snapshot, parseArgs, countSourceFiles, EXCLUDED, REQUIRED, MIN_SOURCE_FILES,
+  copyTree, snapshot, parseArgs, countSourceFiles, startingSessions,
+  EXCLUDED, REQUIRED, MIN_SOURCE_FILES,
 } = require('./e2e/make-sprint1-baseline.js');
 
 function tmp() { return fs.mkdtempSync(path.join(os.tmpdir(), 'harness-baseline-')); }
@@ -180,4 +181,46 @@ test('source counting ignores dependency trees', () => {
   const src = tmp();
   for (let i = 0; i < 10; i += 1) write(src, path.join('node_modules', 'p', `f${i}.js`), '//');
   assert.strictEqual(countSourceFiles(src), 0, 'vendored code is not this project being built');
+});
+
+// ── Which sessions a run bills ──────────────────────────────────────────────
+//
+// A fresh run that inherits the previous run's session ids records a roughly
+// DOUBLED baseline — and the expectPhases guard cannot see it, because it only
+// catches phases that are missing, never a phase billed twice. freshProject()
+// wipes BUILD_DIR and the log inside it, but the transcripts those sessions
+// wrote live in ~/.claude/projects/<slug>/ and survive.
+
+test('a FRESH run inherits nothing from the previous run', () => {
+  const dir = tmp();
+  const log = path.join(dir, 'e2e-sessions.json');
+  fs.writeFileSync(log, JSON.stringify(['old-session-a', 'old-session-b']));
+  assert.deepStrictEqual(startingSessions(false, log), [],
+    'a non-resume run must bill only the sessions it creates');
+});
+
+test('a RESUMED run inherits the sessions it skipped', () => {
+  const dir = tmp();
+  const log = path.join(dir, 'e2e-sessions.json');
+  fs.writeFileSync(log, JSON.stringify(['scaffold-session', 'brd-session']));
+  assert.deepStrictEqual(startingSessions(true, log), ['scaffold-session', 'brd-session'],
+    'without this a resumed run drops the phases it skipped from the baseline');
+});
+
+test('an unreadable or malformed session log yields nothing, never a throw', () => {
+  const dir = tmp();
+  const bad = path.join(dir, 'bad.json');
+  fs.writeFileSync(bad, 'not json');
+  assert.deepStrictEqual(startingSessions(true, bad), []);
+  assert.deepStrictEqual(startingSessions(true, path.join(dir, 'missing.json')), []);
+  const notArray = path.join(dir, 'obj.json');
+  fs.writeFileSync(notArray, JSON.stringify({ sessions: ['x'] }));
+  assert.deepStrictEqual(startingSessions(true, notArray), []);
+});
+
+test('non-string entries are dropped rather than billed', () => {
+  const dir = tmp();
+  const log = path.join(dir, 'mixed.json');
+  fs.writeFileSync(log, JSON.stringify(['good', 42, null, { id: 'x' }]));
+  assert.deepStrictEqual(startingSessions(true, log), ['good']);
 });

@@ -255,9 +255,16 @@ function checkBudget(routeId, bill, opts = {}) {
   // this check a route that crashed after /brd would pass its budget check
   // green. Reported as a `missing` regression so it fails loudly.
   for (const name of Object.keys((baseline && baseline.phases) || {})) {
-    if (!(current.phases || {})[name]) {
+    // Presence is not measurement. writeBaseline already treats a phase billed
+    // at exactly $0.00 as absent — the "(freeform) at $0.00 across six runs"
+    // symptom that made the first baseline wrong — so the comparison has to
+    // apply the same rule, or a phase that ran and billed nothing passes here
+    // as measured.
+    const now = (current.phases || {})[name];
+    if (!now || !(now.cost_usd > 0)) {
       regressions.push({
-        label: `/${name}`, metric: 'coverage', before: baseline.phases[name].cost_usd, after: 0,
+        label: `/${name}`, metric: 'coverage', before: baseline.phases[name].cost_usd,
+        after: (now && now.cost_usd) || 0,
         reason: 'phase present in the baseline produced no bill in this run — it did not run, '
           + 'or its session id was not recorded. An absent phase is not an under-budget phase.',
       });

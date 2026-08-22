@@ -140,8 +140,8 @@ function renderWhy(profiles) {
 function renderBatching(profiles) {
   const by = new Map();
   for (const p of profiles) {
-    const cur = by.get(p.command) || { command: p.command, all_turns: 0, tool_calls: 0, single_call_turns: 0, toolless: 0, all_ctx_total: 0 };
-    for (const k of ['all_turns', 'tool_calls', 'single_call_turns', 'toolless', 'all_ctx_total']) cur[k] += p[k] || 0;
+    const cur = by.get(p.command) || { command: p.command, all_turns: 0, tool_calls: 0, single_call_turns: 0, all_ctx_total: 0 };
+    for (const k of ['all_turns', 'tool_calls', 'single_call_turns', 'all_ctx_total']) cur[k] += p[k] || 0;
     by.set(p.command, cur);
   }
   const rows = [...by.values()].filter((r) => r.all_turns > 0).sort((a, b) => b.all_ctx_total - a.all_ctx_total);

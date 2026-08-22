@@ -16,7 +16,7 @@ Release the claim when the group finishes, on **every** path including failure:
 node .claude/scripts/work-claim.js release group:{GROUP_ID}
 ```
 
-A claim goes stale after 90 minutes so a crashed run cannot block its group forever; a takeover is reported, and it means a previous run died mid-implementation with partial work on disk — verify the tree before trusting it.
+A claim goes stale after 4 hours so a crashed run cannot block its group forever; a takeover is reported, and it means a previous run died mid-implementation with partial work on disk — verify the tree before trusting it.
 
 ### Spawning the lead
 

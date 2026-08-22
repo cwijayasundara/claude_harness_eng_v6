@@ -274,7 +274,9 @@ function applyScaffold(rawOpts) {
   // $16.87. Installing here also keeps `uv sync` / `npm install` out of an
   // implementer's turn, where a multi-minute wait expires its 5-minute cache.
   const bootstrap = bootstrapProject(target, { install: rawOpts.installDeps !== false });
-  written.push(...bootstrap.written);
+  // bootstrap.written is repo-relative; every other entry in `written` is
+  // absolute, and report() runs path.relative(target, ...) over the list.
+  written.push(...bootstrap.written.map((rel) => path.join(target, rel)));
   const navigation = refreshNavigation({ projectDir: target, mode: 'scaffold' });
   const cal = writeCalibration(target, profile);
   if (cal) written.push(cal);

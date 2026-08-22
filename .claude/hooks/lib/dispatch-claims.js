@@ -2,26 +2,36 @@
 
 // Decision layer for the subagent-dispatch gate.
 //
-// Two rules, from two measured failures of the same live route:
+// RULE 1 — NESTING (this module owns it). In the 2026-08-21 sprint-1 baseline a
+// generator dispatched to PROPOSE a Group B sprint contract implemented Group A
+// instead, by spawning a second generator, which spawned a second E1-S1
+// implementer. generator.md carries the Agent tool and no rule against spawning
+// its own role. This is the guard that would have stopped the real incident.
 //
-//  1. NESTING. In the 2026-08-21 sprint-1 baseline run, a generator dispatched
-//     to PROPOSE a Group B sprint contract implemented Group A instead, by
-//     spawning a second generator, which spawned a second E1-S1 implementer.
-//     generator.md carries the Agent tool and no rule against spawning its own
-//     role, so nesting was unguarded. This invariant is owned here.
+// RULE 2 — IDENTITY (work-claim.js owns it; this module only READS it).
 //
-//  2. IDENTITY — "this work already has an owner". That invariant is NOT owned
-//     here: it belongs to work-claim.js (HARNESS.md: work-claim-guard), whose
-//     atomic `wx` create is what makes it race-safe. This module only routes a
-//     dispatch into that ledger. The guard existed during the audited run and
-//     still did not fire, because the /auto skill invokes it in PROSE — so an
-//     agent that goes off-script never calls it. A PreToolUse hook claims at
-//     dispatch time instead, which an off-script agent cannot skip.
+// An earlier version of this file CLAIMED at dispatch time. Review found three
+// Criticals in that design, all reproduced:
 //
-// Claims made here are stamped `via: 'dispatch-gate'` so the release path can
-// only ever drop its OWN records and can never release one the prose path
-// holds. Ambiguity resolves toward ALLOW throughout: over-allowing costs money,
-// over-blocking stalls the build loop.
+//   * /auto's documented team dispatch already claims `story:{id}` before
+//     spawning (auto/references/section-4-4, step 5). Claiming again collided
+//     with it, and work-claim refuses a live key regardless of session — so the
+//     gate blocked EVERY teammate dispatch. Team mode could not run at all.
+//   * SubagentStop names an agent type but no story, so releasing the "oldest"
+//     claim released a DIFFERENT teammate's live story under normal parallel
+//     fan-out — making the live story re-dispatchable and re-creating the exact
+//     duplicate this gate exists to prevent.
+//   * A dispatch naming N stories claimed N and released 1, leaking the rest
+//     for the full TTL and blocking the self-heal retry path.
+//
+// A lifecycle needs a correlation key between dispatch and stop, and the stop
+// event does not carry one. So this module no longer writes: it CHECKS the
+// ledger the cooperative path maintains, and refuses a dispatch onto a story a
+// DIFFERENT session is already implementing. Same-session dispatch is the
+// normal path and always passes; an unknown session on either side passes too,
+// because over-blocking stalls the build loop and over-allowing only costs
+// money. A second lead in the SAME session is already refused by work-claim
+// itself, which is session-blind by design.
 
 const workClaim = require('../../scripts/work-claim.js');
 
@@ -57,49 +67,38 @@ function decideNesting({ subagentType, transcriptPath }) {
 }
 
 /**
- * Rule 2 — claim every story a dispatch names, via work-claim.js.
- * Returns the first refusal, having released whatever it claimed first, so a
- * denied dispatch leaves no half-held work behind.
+ * Rule 2 — refuse a dispatch onto a story another session is implementing.
+ *
+ * Read-only: the claim lifecycle belongs to work-claim.js and the /auto prose
+ * path that calls it. Returns allow:true whenever the answer is not certain.
  */
-function claimStories(root, stories, { agent, session, now } = {}) {
-  const held = [];
+function checkClaims(root, stories, { sessionId } = {}) {
+  if (stories.length === 0) return { allow: true };
+  let held;
+  try { held = workClaim.holders(root); } catch (_) { return { allow: true }; }
+
+  const byKey = new Map(held.map((h) => [h.key, h]));
   for (const story of stories) {
-    const key = `story:${story}`;
-    let res;
-    try {
-      res = workClaim.claim(root, key, { session, now, note: 'dispatch-gate', via: 'dispatch-gate', agent });
-    } catch (_) {
-      continue; // an unusable ledger must not stall a dispatch
-    }
-    if (!res.ok) {
-      for (const k of held) workClaim.release(root, k);
-      return {
-        allow: false,
-        reason: `${res.reason}\nTwo agents building one story race on the same files and bill twice.`,
-      };
-    }
-    held.push(key);
+    const claim = byKey.get(`story:${story}`);
+    if (!claim) continue;
+    // holders() lists claim FILES and does not prune — that is work-claim's own
+    // claim() path. Without this a crashed run's stale claim would block its
+    // story for good, which is the deadlock the TTL exists to prevent.
+    const age = Number.isFinite(claim.claimed_at) ? Date.now() - claim.claimed_at : null;
+    if (age === null || age >= workClaim.TTL_MS) continue;
+    const owner = claim.session;
+    // Unknown on either side, or the same session: not a duplicate we can prove.
+    if (!owner || owner === 'unknown' || !sessionId || owner === sessionId) continue;
+    const mins = Math.round(age / 60000);
+    return {
+      allow: false,
+      reason: `story:${story} is already being implemented by session ${owner}`
+        + ` (claimed ${mins} min ago). Two agents building one story `
+        + 'race on the same files and bill twice — that pattern cost $8.73 of a $47.97 build. '
+        + `Wait for it, or release it deliberately: work-claim.js release story:${story}`,
+    };
   }
-  return { allow: true, claimed: held };
+  return { allow: true };
 }
 
-/**
- * Release on SubagentStop. The stop event names an agent type but not a story,
- * so this drops the OLDEST claim THIS GATE made for that agent type. Restricted
- * to `via: 'dispatch-gate'` records, so a claim the /auto prose path holds is
- * never released out from under a live implementer.
- */
-function releaseOldest(root, { agentType } = {}) {
-  const agent = String(agentType || '').trim();
-  let mine;
-  try {
-    mine = workClaim.holders(root)
-      .filter((h) => h.via === 'dispatch-gate' && (!agent || h.agent === agent))
-      .sort((a, b) => (a.claimed_at || 0) - (b.claimed_at || 0));
-  } catch (_) { return { released: null }; }
-  if (mine.length === 0) return { released: null };
-  workClaim.release(root, mine[0].key);
-  return { released: mine[0].key };
-}
-
-module.exports = { STORY_RE, storiesIn, isSubagentDispatcher, decideNesting, claimStories, releaseOldest };
+module.exports = { STORY_RE, storiesIn, isSubagentDispatcher, decideNesting, checkClaims };

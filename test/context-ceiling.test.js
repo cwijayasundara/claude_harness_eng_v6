@@ -11,7 +11,7 @@ const path = require('path');
 const { execFileSync, spawnSync } = require('child_process');
 const { test } = require('node:test');
 const {
-  decideCeiling, currentContext, contextOf, isHandoffPath,
+  decideCeiling, currentContext, contextOf, isHandoffPath, isNonSourcePath,
   SOFT_CEILING_TOKENS, HARD_CEILING_TOKENS,
 } = require('../.claude/hooks/lib/context-ceiling.js');
 
@@ -57,6 +57,22 @@ test('contextOf sums everything the request had to carry', () => {
 test('isHandoffPath recognises the note and nothing else', () => {
   assert.equal(isHandoffPath('/w/.claude/state/handoff/E1-S1.md'), true);
   assert.equal(isHandoffPath('/w/backend/src/services/auth.py'), false);
+});
+
+test('the ceiling governs SOURCE writes only, as implementer.md and HARNESS.md promise', () => {
+  // Blocking every write past 200K would strand a different job entirely: an
+  // evaluator subagent past the ceiling could not write its specs/reviews/*.json
+  // verdict, which a downstream gate then reads as missing evidence.
+  for (const evidence of ['/w/specs/reviews/gate.json', '/w/docs/notes.md', '/w/.claude/state/x.json']) {
+    assert.equal(isNonSourcePath(evidence), true, `${evidence} is evidence or state, not product source`);
+    assert.equal(decideCeiling({ context: 900000, isSubagent: true, writingHandoff: isNonSourcePath(evidence) }).level,
+      'ok', `${evidence} must stay writable past the ceiling`);
+  }
+  for (const source of ['/w/backend/src/services/auth.py', '/w/frontend/src/App.tsx']) {
+    assert.equal(isNonSourcePath(source), false);
+    assert.equal(decideCeiling({ context: 900000, isSubagent: true, writingHandoff: isNonSourcePath(source) }).level,
+      'hard', `${source} is what the ceiling exists to stop`);
+  }
 });
 
 test('currentContext reads the NEWEST usage from a transcript tail', () => {
@@ -124,6 +140,11 @@ test('the hook refuses a source write past the hard ceiling', () => {
 test('the hook allows the handoff write past the hard ceiling', () => {
   const r = runHook(write(transcriptAt(400000), '/w/.claude/state/handoff/E1-S1.md'));
   assert.equal(r.status, 0, 'the escape must stay open');
+});
+
+test('the hook allows an evaluator verdict past the hard ceiling', () => {
+  const r = runHook(write(transcriptAt(400000), '/w/specs/reviews/gate.json'));
+  assert.equal(r.status, 0, 'refusing evidence would break a downstream gate, not save money');
 });
 
 test('the hook warns but allows at the soft ceiling', () => {

@@ -244,7 +244,7 @@ test('sprint: /sprint amends the living design and builds sprint 2', { timeout: 
   const bill = billRoute(PROJECT_DIR, { sessionIds: sessions });
   const verdict = checkBudget(ROUTE, bill, { update: UPDATE_BASELINE });
   if (verdict.status === 'recorded') {
-    console.log(`[${ROUTE}] budget baseline recorded: ${writeBaseline(ROUTE, bill)}`);
+    console.log(`[${ROUTE}] budget baseline recorded: ${writeBaseline(ROUTE, bill, undefined, { expectPhases: ['sprint', 'auto'] })}`);
   } else {
     assert.strictEqual(
       verdict.status, 'pass',

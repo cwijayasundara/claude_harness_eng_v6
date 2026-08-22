@@ -11,9 +11,17 @@
 // note — and the note itself is exempt. Fail-open on any error.
 
 const fs = require('fs');
-const { currentContext, decideCeiling, isHandoffPath } = require('./lib/context-ceiling.js');
+const { currentContext, decideCeiling, isNonSourcePath } = require('./lib/context-ceiling.js');
 
 const SUBAGENT_TRANSCRIPT = /[/\\]subagents[/\\]/;
+
+/** An env override, where 0 means "disabled" rather than "use the default". */
+function ceilingFrom(raw) {
+  if (raw === undefined || raw === '') return undefined;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return undefined;
+  return n === 0 ? Infinity : n;
+}
 
 function main() {
   let input;
@@ -32,9 +40,11 @@ function main() {
     const verdict = decideCeiling({
       context: currentContext(transcriptPath),
       isSubagent,
-      writingHandoff: isHandoffPath(ti.file_path || ti.path || ''),
-      soft: Number(process.env.HARNESS_CONTEXT_SOFT_CEILING) || undefined,
-      hard: Number(process.env.HARNESS_CONTEXT_HARD_CEILING) || undefined,
+      writingHandoff: isNonSourcePath(ti.file_path || ti.path || ''),
+      // `|| undefined` would turn an explicit 0 back into the default. A 0 is a
+      // deliberate "no ceiling", so it has to survive as Infinity.
+      soft: ceilingFrom(process.env.HARNESS_CONTEXT_SOFT_CEILING),
+      hard: ceilingFrom(process.env.HARNESS_CONTEXT_HARD_CEILING),
     });
 
     if (verdict.level === 'hard') { process.stderr.write(`${verdict.message}\n`); process.exit(2); }
@@ -45,4 +55,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { main };
+module.exports = { main, ceilingFrom };
