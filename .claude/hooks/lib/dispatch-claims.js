@@ -44,17 +44,16 @@ function storiesIn(toolInput) {
   return [...new Set(text.match(STORY_RE) || [])];
 }
 
-/** True when the dispatcher is itself a subagent (its transcript is a subagent transcript). */
-function isSubagentDispatcher(transcriptPath) {
-  return /[/\\]subagents[/\\]/.test(String(transcriptPath || ''));
-}
+// Subagent detection lives in subagent-tool.js: a subagent's tool call reports
+// the PARENT's transcript_path, so the `/subagents/` test this used to do was
+// always false and the nesting rule never fired.
 
 /**
  * Rule 1 only — pure, so the nesting invariant is testable without a filesystem.
  * @returns {{allow:boolean, reason?:string}}
  */
-function decideNesting({ subagentType, transcriptPath }) {
-  if (String(subagentType || '').trim() === 'generator' && isSubagentDispatcher(transcriptPath)) {
+function decideNesting({ subagentType, dispatcherIsSubagent }) {
+  if (String(subagentType || '').trim() === 'generator' && dispatcherIsSubagent) {
     return {
       allow: false,
       reason: 'A subagent may not spawn a generator. Only the /auto main loop dispatches generators; '
@@ -101,4 +100,4 @@ function checkClaims(root, stories, { sessionId } = {}) {
   return { allow: true };
 }
 
-module.exports = { STORY_RE, storiesIn, isSubagentDispatcher, decideNesting, checkClaims };
+module.exports = { STORY_RE, storiesIn, decideNesting, checkClaims };

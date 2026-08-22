@@ -14,30 +14,26 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { test } = require('node:test');
-const {
-  decideNesting, checkClaims, storiesIn, isSubagentDispatcher,
-} = require('../.claude/hooks/lib/dispatch-claims.js');
+const { decideNesting, checkClaims, storiesIn } = require('../.claude/hooks/lib/dispatch-claims.js');
 const workClaim = require('../.claude/scripts/work-claim.js');
 
-const MAIN = '/p/projects/slug/e8ec9632.jsonl';
-const SUB = '/p/projects/slug/e8ec9632/subagents/agent-aae1486987.jsonl';
 const root = () => fs.mkdtempSync(path.join(os.tmpdir(), 'dispatch-claims-'));
 
 // ── Rule 1: nesting ─────────────────────────────────────────────────────────
 
 test('the nested generator is blocked: a subagent may not spawn a generator', () => {
-  const r = decideNesting({ subagentType: 'generator', transcriptPath: SUB });
+  const r = decideNesting({ subagentType: 'generator', dispatcherIsSubagent: true });
   assert.equal(r.allow, false);
   assert.match(r.reason, /may not spawn a generator/);
 });
 
 test('the /auto main loop may still dispatch generators', () => {
-  assert.equal(decideNesting({ subagentType: 'generator', transcriptPath: MAIN }).allow, true);
+  assert.equal(decideNesting({ subagentType: 'generator', dispatcherIsSubagent: false }).allow, true);
 });
 
 test('a non-generator subagent dispatch is not caught by the nesting rule', () => {
-  assert.equal(decideNesting({ subagentType: 'implementer', transcriptPath: SUB }).allow, true);
-  assert.equal(decideNesting({ subagentType: 'evaluator', transcriptPath: SUB }).allow, true);
+  assert.equal(decideNesting({ subagentType: 'implementer', dispatcherIsSubagent: true }).allow, true);
+  assert.equal(decideNesting({ subagentType: 'evaluator', dispatcherIsSubagent: true }).allow, true);
 });
 
 // ── Rule 2: read-only claim check ───────────────────────────────────────────
@@ -118,10 +114,8 @@ test('a claim older than the TTL no longer blocks', () => {
     'holders() prunes by TTL so a crashed run cannot block its story forever');
 });
 
-test('storiesIn / isSubagentDispatcher recognise the real shapes', () => {
+test('storiesIn recognises the real shapes', () => {
   assert.deepEqual(storiesIn({ description: 'Implement E12-S3 and E1-S1', prompt: 'E1-S1 again' }), ['E12-S3', 'E1-S1']);
   assert.deepEqual(storiesIn({ description: 'no stories here' }), []);
   assert.deepEqual(storiesIn({}), []);
-  assert.equal(isSubagentDispatcher('/a/b/sess/subagents/agent-x.jsonl'), true);
-  assert.equal(isSubagentDispatcher('/a/b/sess.jsonl'), false);
 });

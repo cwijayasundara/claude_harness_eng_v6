@@ -107,15 +107,22 @@ test('currentContext returns null for a missing or usage-free transcript', () =>
 
 // ── hook wrapper ────────────────────────────────────────────────────────────
 
-function transcriptAt(ctx) {
+// A real subagent payload: agent_id set, transcript_path pointing at the
+// PARENT session. The subagent's own transcript is derived from session_id +
+// agent_id — testing the parent's would measure the wrong agent entirely.
+const SESSION = 'sess-1111';
+const AGENT_ID = 'a903f01c6c876463e';
+
+function subagentAt(ctx) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ctx-hook-'));
-  const sub = path.join(dir, 'sess', 'subagents');
+  const sub = path.join(dir, SESSION, 'subagents');
   fs.mkdirSync(sub, { recursive: true });
-  const file = path.join(sub, 'agent-a1.jsonl');
-  fs.writeFileSync(file, `${JSON.stringify({
+  fs.writeFileSync(path.join(sub, `agent-${AGENT_ID}.jsonl`), `${JSON.stringify({
     type: 'assistant', message: { id: 'm1', usage: { cache_read_input_tokens: ctx, input_tokens: 0 } },
   })}\n`);
-  return file;
+  const parent = path.join(dir, `${SESSION}.jsonl`);
+  fs.writeFileSync(parent, `${JSON.stringify({ type: 'user', message: { content: 'go' } })}\n`);
+  return parent;
 }
 
 // spawnSync, not execFileSync: the soft ceiling exits 0 AND writes to stderr,
@@ -126,40 +133,56 @@ function runHook(payload) {
   return { status: r.status, stderr: r.stderr || '' };
 }
 
-const write = (transcriptPath, filePath) => ({
-  hook_event_name: 'PreToolUse', tool_name: 'Write', transcript_path: transcriptPath,
+const write = (parentTranscript, filePath) => ({
+  hook_event_name: 'PreToolUse', tool_name: 'Write',
+  agent_id: AGENT_ID, agent_type: 'implementer', session_id: SESSION,
+  transcript_path: parentTranscript,
   tool_input: { file_path: filePath, content: 'x' },
 });
 
 test('the hook refuses a source write past the hard ceiling', () => {
-  const r = runHook(write(transcriptAt(HARD_CEILING_TOKENS + 1), '/w/backend/src/auth.py'));
+  const r = runHook(write(subagentAt(HARD_CEILING_TOKENS + 1), '/w/backend/src/auth.py'));
   assert.equal(r.status, 2);
   assert.match(r.stderr, /hand-off ceiling/);
 });
 
 test('the hook allows the handoff write past the hard ceiling', () => {
-  const r = runHook(write(transcriptAt(400000), '/w/.claude/state/handoff/E1-S1.md'));
+  const r = runHook(write(subagentAt(400000), '/w/.claude/state/handoff/E1-S1.md'));
   assert.equal(r.status, 0, 'the escape must stay open');
 });
 
 test('the hook allows an evaluator verdict past the hard ceiling', () => {
-  const r = runHook(write(transcriptAt(400000), '/w/specs/reviews/gate.json'));
+  const r = runHook(write(subagentAt(400000), '/w/specs/reviews/gate.json'));
   assert.equal(r.status, 0, 'refusing evidence would break a downstream gate, not save money');
 });
 
 test('the hook warns but allows at the soft ceiling', () => {
-  const r = runHook(write(transcriptAt(SOFT_CEILING_TOKENS + 1), '/w/backend/src/auth.py'));
+  const r = runHook(write(subagentAt(SOFT_CEILING_TOKENS + 1), '/w/backend/src/auth.py'));
   assert.equal(r.status, 0);
   assert.match(r.stderr, /approaching/);
 });
 
-test('the hook ignores the main loop entirely', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ctx-hook-main-'));
-  const file = path.join(dir, 'sess.jsonl');
-  fs.writeFileSync(file, `${JSON.stringify({
-    type: 'assistant', message: { id: 'm1', usage: { cache_read_input_tokens: 900000 } },
-  })}\n`);
-  assert.equal(runHook(write(file, '/w/backend/src/auth.py')).status, 0);
+test('the hook ignores the main loop entirely — no agent_id means not a subagent', () => {
+  const parent = subagentAt(900000);
+  const payload = write(parent, '/w/backend/src/auth.py');
+  delete payload.agent_id;
+  delete payload.agent_type;
+  assert.equal(runHook(payload).status, 0, 'the main loop has /clear and a human');
+});
+
+test('the hook measures the SUBAGENT context, not the parent transcript', () => {
+  // The payload names the parent's transcript. Measuring that would read the
+  // wrong agent — and testing it for `/subagents/` (the original predicate)
+  // made this hook inert, because a real payload never contains that path.
+  const parent = subagentAt(HARD_CEILING_TOKENS + 1);
+  assert.ok(!/[/\\]subagents[/\\]/.test(parent), 'the payload path is the parent, as in the real capture');
+  assert.equal(runHook(write(parent, '/w/backend/src/auth.py')).status, 2,
+    "the derived subagent transcript is what carries the agent's real context");
+});
+
+test('an unresolvable subagent transcript fails open', () => {
+  const payload = write('/nonexistent/parent.jsonl', '/w/backend/src/auth.py');
+  assert.equal(runHook(payload).status, 0, 'no transcript means no verdict, never a block');
 });
 
 test('the hook fails open on malformed stdin', () => {

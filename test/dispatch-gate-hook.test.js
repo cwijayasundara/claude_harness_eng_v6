@@ -39,13 +39,21 @@ function claims(dir) {
   return workClaim.holders(dir).map((h) => h.key);
 }
 
-const SUB = '/p/projects/slug/sess/subagents/agent-a1.jsonl';
-const MAIN = '/p/projects/slug/sess.jsonl';
-
+// A dispatch made INSIDE a subagent: agent_id is set, and transcript_path is
+// the PARENT's — the shape captured from live payloads.
 const dispatch = (over) => ({
   hook_event_name: 'PreToolUse', tool_name: 'Agent', session_id: 's1',
-  transcript_path: SUB, tool_input: { subagent_type: 'implementer', description: 'Implement E1-S1' }, ...over,
+  agent_id: 'a903f01c6c876463e', agent_type: 'generator',
+  transcript_path: '/p/projects/slug/sess.jsonl',
+  tool_input: { subagent_type: 'implementer', description: 'Implement E1-S1' }, ...over,
 });
+
+/** The same dispatch, made from the main loop: no agent_id. */
+const mainLoopDispatch = (over) => {
+  const d = dispatch(over);
+  delete d.agent_id; delete d.agent_type;
+  return d;
+};
 
 test('the hook denies a dispatch onto a story ANOTHER session holds', () => {
   const dir = projectDir();
@@ -80,6 +88,16 @@ test('the hook denies a subagent spawning a generator', () => {
   }));
   assert.equal(r.status, 2);
   assert.match(r.stderr, /may not spawn a generator/);
+});
+
+test('the MAIN LOOP may still spawn a generator — agent_id is the discriminator', () => {
+  // Detection used to read transcript_path for `/subagents/`, which a real
+  // subagent payload never contains, so this rule never fired at all.
+  const dir = projectDir();
+  const r = runHook(dir, mainLoopDispatch({
+    tool_input: { subagent_type: 'generator', description: 'Propose Group A sprint contract' },
+  }));
+  assert.equal(r.status, 0, '/auto dispatches generators and must not be blocked');
 });
 
 test('the hook fires for tool_name "Agent" AND "Task"', () => {

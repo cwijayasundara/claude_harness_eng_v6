@@ -12,7 +12,7 @@
 // not be able to stall the build loop.
 
 const fs = require('fs');
-const { SUBAGENT_TOOL_NAMES } = require('./lib/subagent-tool.js');
+const { SUBAGENT_TOOL_NAMES, isSubagentCall } = require('./lib/subagent-tool.js');
 const { decideNesting, checkClaims, storiesIn } = require('./lib/dispatch-claims.js');
 
 const TOOL_NAMES = new Set(SUBAGENT_TOOL_NAMES);
@@ -28,7 +28,7 @@ function main() {
       const toolInput = input.tool_input || {};
       const agent = toolInput.subagent_type || toolInput.agent_type || '';
 
-      const nesting = decideNesting({ subagentType: agent, transcriptPath: input.transcript_path || '' });
+      const nesting = decideNesting({ subagentType: agent, dispatcherIsSubagent: isSubagentCall(input) });
       if (!nesting.allow) { process.stderr.write(`${nesting.reason}\n`); process.exit(2); }
 
       const claimed = checkClaims(root, storiesIn(toolInput), { sessionId: input.session_id });

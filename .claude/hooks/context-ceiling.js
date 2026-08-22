@@ -12,8 +12,7 @@
 
 const fs = require('fs');
 const { currentContext, decideCeiling, isNonSourcePath } = require('./lib/context-ceiling.js');
-
-const SUBAGENT_TRANSCRIPT = /[/\\]subagents[/\\]/;
+const { isSubagentCall, subagentTranscript } = require('./lib/subagent-tool.js');
 
 /** An env override, where 0 means "disabled" rather than "use the default". */
 function ceilingFrom(raw) {
@@ -28,18 +27,19 @@ function main() {
   try { input = JSON.parse(fs.readFileSync(0, 'utf8')); } catch (_) { process.exit(0); }
   try {
     if (String(input.hook_event_name || '') !== 'PreToolUse') process.exit(0);
-    const transcriptPath = String(input.transcript_path || '');
-    const isSubagent = SUBAGENT_TRANSCRIPT.test(transcriptPath);
-    // Short-circuit only: decideCeiling exempts the main loop anyway. This
-    // exists so a main-loop write does not pay a transcript read on every
-    // Write/Edit — removing it changes cost, not behavior, which is why no
-    // test pins it.
-    if (!isSubagent) process.exit(0);
+    // `agent_id` is the discriminator, captured from live subagent payloads.
+    // The transcript_path a subagent's tool call reports is the PARENT's, so
+    // testing it for `/subagents/` was always false and made this hook inert.
+    if (!isSubagentCall(input)) process.exit(0);
+    // ...and the parent's transcript is the wrong context to measure, so the
+    // subagent's own is derived. No transcript means no verdict.
+    const transcriptPath = subagentTranscript(input);
+    if (!transcriptPath) process.exit(0);
 
     const ti = input.tool_input || {};
     const verdict = decideCeiling({
       context: currentContext(transcriptPath),
-      isSubagent,
+      isSubagent: true,
       writingHandoff: isNonSourcePath(ti.file_path || ti.path || ''),
       // `|| undefined` would turn an explicit 0 back into the default. A 0 is a
       // deliberate "no ceiling", so it has to survive as Infinity.
