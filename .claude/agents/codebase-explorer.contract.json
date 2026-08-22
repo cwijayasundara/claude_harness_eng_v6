@@ -1,0 +1,6 @@
+{
+  "agent": "codebase-explorer",
+  "may_spawn": false,
+  "artifact_roots": [],
+  "why": "Read-only discovery — it maps subsystems and reports findings without modifying any files"
+}

@@ -1,0 +1,8 @@
+{
+  "agent": "code-reviewer",
+  "may_spawn": false,
+  "artifact_roots": [
+    "specs/reviews/"
+  ],
+  "why": "Fresh-context reviewer — it reports findings and never applies them to the code it is judging"
+}

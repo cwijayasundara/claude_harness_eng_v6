@@ -1,0 +1,8 @@
+{
+  "agent": "security-reviewer",
+  "may_spawn": false,
+  "artifact_roots": [
+    "specs/reviews/"
+  ],
+  "why": "Vulnerability reviewer — it reports findings and never applies them to the code it is judging"
+}

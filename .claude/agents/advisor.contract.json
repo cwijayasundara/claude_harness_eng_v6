@@ -1,0 +1,6 @@
+{
+  "agent": "advisor",
+  "may_spawn": false,
+  "artifact_roots": [],
+  "why": "Read-only mid-run advisor — it re-ranks and unblocks, and never implements"
+}

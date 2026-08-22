@@ -1,0 +1,9 @@
+{
+  "agent": "implementer",
+  "may_spawn": false,
+  "forbidden_artifact_roots": [
+    "sprint-contracts/",
+    "specs/reviews/"
+  ],
+  "why": "Story worker — it may write product code, but never the frozen sprint contract it is judged against nor the verdicts that judge it"
+}

@@ -1,0 +1,9 @@
+{
+  "agent": "generator",
+  "may_spawn": true,
+  "forbidden_artifact_roots": [
+    "sprint-contracts/",
+    "specs/reviews/"
+  ],
+  "why": "Builder — it may write product code, but never the frozen sprint contract it is judged against nor the verdicts that judge it"
+}

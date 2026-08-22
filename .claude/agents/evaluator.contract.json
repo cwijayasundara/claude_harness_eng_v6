@@ -1,0 +1,10 @@
+{
+  "agent": "evaluator",
+  "may_spawn": false,
+  "artifact_roots": [
+    "specs/reviews/",
+    "specs/evaluation/",
+    ".claude/runs/"
+  ],
+  "why": "Skeptical verifier — it never generates, so it writes verdicts and evidence only"
+}

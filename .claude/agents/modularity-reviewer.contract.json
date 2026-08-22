@@ -1,0 +1,8 @@
+{
+  "agent": "modularity-reviewer",
+  "may_spawn": false,
+  "artifact_roots": [
+    "specs/reviews/"
+  ],
+  "why": "Inferential modularity review — it judges coupling and reports, and never refactors what it judged"
+}

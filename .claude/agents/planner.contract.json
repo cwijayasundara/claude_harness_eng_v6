@@ -1,0 +1,8 @@
+{
+  "agent": "planner",
+  "may_spawn": false,
+  "artifact_roots": [
+    "specs/"
+  ],
+  "why": "Planning artifacts only — the BRD, story graph and design are its output; source code is not"
+}

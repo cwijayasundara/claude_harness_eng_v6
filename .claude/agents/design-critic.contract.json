@@ -1,0 +1,8 @@
+{
+  "agent": "design-critic",
+  "may_spawn": false,
+  "artifact_roots": [
+    "specs/reviews/"
+  ],
+  "why": "GAN counterpart for frontend quality — it scores screenshots and never edits the UI it scored"
+}
