@@ -251,6 +251,30 @@ const CANARIES = [
       return { bit: bad.status === 'fail', quiet: good.status === 'skip' };
     },
   },
+  {
+    probe: 'spec-mutation',
+    sensors: ['spec-mutation'],
+    why: 'a corrupted expectation the verification still passes must be reported; an all-killed run must not',
+    run() {
+      const S = require(path.join(LIB, 'spec-mutation'));
+      const survived = S.classifyResults([{ checkId: 'AC1', field: 'expected_status', verificationPassed: true }]);
+      const killed = S.classifyResults([{ checkId: 'AC1', field: 'expected_status', verificationPassed: false }]);
+      return { bit: survived.survivors.length === 1, quiet: killed.clean === true };
+    },
+  },
+  {
+    probe: 'spec-contract-shape',
+    sensors: ['spec-mutation'],
+    why: 'the flat contract shape must be refused; the nested shape real contracts use must be read',
+    run() {
+      const S = require(path.join(LIB, 'spec-mutation'));
+      const flat = { group: 'A', api_checks: [{ id: 'x', expected_status: 200 }] };
+      const nested = { group: 'A', contract: { api_checks: [{ id: 'x', expected_status: 200 }] } };
+      let refused = false;
+      try { S.readChecks(flat); } catch (_) { refused = true; }
+      return { bit: refused, quiet: S.readChecks(nested).length === 1 };
+    },
+  },
   ...AGENT_CANARIES,
 ];
 

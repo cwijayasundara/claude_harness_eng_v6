@@ -81,6 +81,7 @@
     "sensor-canary": "node .claude/scripts/sensor-canary.js",
     "agent-contracts": "node .claude/scripts/validate-agent-contracts.js",
     "dead-path": "node .claude/scripts/dead-path-gate.js",
+    "spec-mutation": "node .claude/scripts/spec-mutation-gate.js",
     "sensor-withhold": "node .claude/scripts/sensor-withhold.js",
     "sensor-comprehension-debt": "node .claude/scripts/sensor-comprehension-debt.js",
     "approved-fixtures": "node .claude/scripts/approved-fixtures-gate.js",
