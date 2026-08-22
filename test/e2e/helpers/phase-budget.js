@@ -356,6 +356,12 @@ function formatBill(routeId, bill) {
       + `${b.calls_per_turn.toFixed(2)}/turn  ${b.single_call_pct}% single-call  `
       + `${(b.ctx_re_read_tokens / 1e6).toFixed(1)}M re-read`);
   }
+  const c = bill.cache;
+  if (c && (c.cache_read_tokens || c.full_misses)) {
+    lines.push(`  ${'cache'.padEnd(22)}${''.padStart(3)}      `
+      + `${(c.cache_read_tokens / 1e6).toFixed(1)}M read  ${(c.cache_write_tokens / 1e6).toFixed(1)}M write  `
+      + `${c.full_misses} expiry/expiries  $${c.wasted_usd.toFixed(2)} avoidable`);
+  }
   if (bill.coverage.mainLoopOnly) {
     lines.push('  NOTE: no subagent transcripts pooled — figures are MAIN-LOOP ONLY and undercount.');
   }

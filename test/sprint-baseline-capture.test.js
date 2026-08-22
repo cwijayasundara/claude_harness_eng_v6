@@ -224,3 +224,82 @@ test('non-string entries are dropped rather than billed', () => {
   fs.writeFileSync(log, JSON.stringify(['good', 42, null, { id: 'x' }]));
   assert.deepStrictEqual(startingSessions(true, log), ['good']);
 });
+
+// ── The baseline must be compared, not silently replaced ────────────────────
+//
+// The builder used to call writeBaseline unconditionally and never compare —
+// backwards for the question a re-run exists to answer. It overwrote the very
+// number the run was meant to beat and reported nothing.
+
+const { reportAgainstBaseline } = require('./e2e/make-sprint1-baseline.js');
+const { writeBaseline, readBaseline, baselinePath } = require('./e2e/helpers/phase-budget.js');
+
+function fakeBill(costUsd, turns) {
+  return {
+    phases: ['scaffold', 'brd', 'spec', 'design', 'test', 'auto']
+      .map((command) => ({ command, runs: 1, output_tokens: 1000, subagent_output_tokens: 0, cost_usd: costUsd / 6 })),
+    totals: { output_tokens: 6000, subagent_output_tokens: 0, cache_read_tokens: 0, cost_usd: costUsd },
+    batching: {
+      all_turns: turns, tool_calls: turns, calls_per_turn: 1.2,
+      single_call_turns: turns, single_call_pct: 83, ctx_re_read_tokens: turns * 100000,
+    },
+    coverage: { sessions: 1, subagentFiles: 1, mainLoopOnly: false, requestedSessions: 1 },
+  };
+}
+
+/** Run reportAgainstBaseline against a scratch baseline dir, capturing stdout. */
+function report(bill, { update } = {}) {
+  const before = process.env.HARNESS_E2E_UPDATE_BASELINE;
+  const chunks = [];
+  const write = process.stdout.write.bind(process.stdout);
+  process.stdout.write = (c) => { chunks.push(String(c)); return true; };
+  if (update) process.env.HARNESS_E2E_UPDATE_BASELINE = '1';
+  else delete process.env.HARNESS_E2E_UPDATE_BASELINE;
+  try { reportAgainstBaseline(bill); } finally {
+    process.stdout.write = write;
+    if (before === undefined) delete process.env.HARNESS_E2E_UPDATE_BASELINE;
+    else process.env.HARNESS_E2E_UPDATE_BASELINE = before;
+  }
+  return chunks.join('');
+}
+
+test('a re-run REPORTS the comparison instead of silently overwriting', (t) => {
+  const committed = baselinePath('sprint1-baseline');
+  const original = fs.readFileSync(committed, 'utf8');
+  t.after(() => fs.writeFileSync(committed, original));
+
+  writeBaseline('sprint1-baseline', fakeBill(47.97, 833), undefined,
+    { expectPhases: ['scaffold', 'brd', 'spec', 'design', 'test', 'auto'] });
+
+  const out = report(fakeBill(19.50, 372));
+  assert.match(out, /vs committed baseline/);
+  assert.match(out, /cost\s+\$47\.97 -> \$19\.50/, 'the cost delta is the headline');
+  assert.match(out, /turns\s+833 -> 372/, 'turn count is what actually moves the cache bill');
+  assert.match(out, /baseline left unchanged/);
+  assert.strictEqual(readBaseline('sprint1-baseline').total.cost_usd, 47.97,
+    'a re-run must not destroy the number it is being compared against');
+});
+
+test('HARNESS_E2E_UPDATE_BASELINE=1 re-records deliberately', (t) => {
+  const committed = baselinePath('sprint1-baseline');
+  const original = fs.readFileSync(committed, 'utf8');
+  t.after(() => fs.writeFileSync(committed, original));
+
+  writeBaseline('sprint1-baseline', fakeBill(47.97, 833), undefined,
+    { expectPhases: ['scaffold', 'brd', 'spec', 'design', 'test', 'auto'] });
+  const out = report(fakeBill(19.50, 372), { update: true });
+  assert.match(out, /baseline recorded/);
+  assert.strictEqual(readBaseline('sprint1-baseline').total.cost_usd, 19.5);
+});
+
+test('a regression is named, not swallowed', (t) => {
+  const committed = baselinePath('sprint1-baseline');
+  const original = fs.readFileSync(committed, 'utf8');
+  t.after(() => fs.writeFileSync(committed, original));
+
+  writeBaseline('sprint1-baseline', fakeBill(20.00, 400), undefined,
+    { expectPhases: ['scaffold', 'brd', 'spec', 'design', 'test', 'auto'] });
+  const out = report(fakeBill(60.00, 1200));
+  assert.match(out, /REGRESSED/, 'a run that got worse must say so');
+  assert.match(out, /regressed/, 'and the verdict line must carry the status');
+});

@@ -208,11 +208,62 @@ test('scaffold-apply runs the bootstrap and reports it', () => {
   }
 });
 
-test('the production default installs; only an explicit flag skips it', () => {
+test('the production default ATTEMPTS the install; only an explicit flag skips it', () => {
   // The install is the half that keeps `uv sync` out of an implementer's turn,
   // where a multi-minute wait expires its 5-minute cache. A default of "skip"
   // would leave the manifests written and the cost exactly where it was.
-  const { parseArgs } = require('../.claude/scripts/scaffold-apply.js');
-  assert.equal(parseArgs([]).installDeps, undefined, 'absent means install (=== false is the only skip)');
+  //
+  // An earlier version of this test asserted only parseArgs([]).installDeps ===
+  // undefined — a property of the PARSER, never of the call site. Inverting
+  // `install: rawOpts.installDeps !== false` at scaffold-apply.js left the file
+  // 17/17 green while every real scaffold silently stopped installing. So this
+  // binds the call site instead, by proving an install was ATTEMPTED.
+  //
+  // No network: PATH is emptied, so uv/npm resolve to ENOENT immediately and
+  // the attempt is recorded as a skip with a reason. What is under test is that
+  // the attempt HAPPENED at all.
+  const { applyScaffold } = require('../.claude/scripts/scaffold-apply.js');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'scaffold-default-'));
+  const profilePath = path.join(dir, 'profile.json');
+  fs.writeFileSync(profilePath, JSON.stringify({
+    name: 'shortlink',
+    projectType: 'D',
+    stack: { backend: { language: 'python', framework: 'fastapi' }, frontend: null, database: null },
+  }));
+
+  const realPath = process.env.PATH;
+  process.env.PATH = fs.mkdtempSync(path.join(os.tmpdir(), 'empty-path-'));
+  let result;
+  try {
+    // NOTE: installDeps deliberately NOT passed — this is the production default.
+    result = applyScaffold({
+      profile: profilePath, pluginSource: path.join(__dirname, '..', '.claude'),
+      target: path.join(dir, 'project'), scaffoldProfile: 'core',
+    });
+  } finally { process.env.PATH = realPath; }
+
+  assert.equal(result.bootstrap.installs.length, 1,
+    'the default must ATTEMPT the install; an empty installs[] means it was skipped');
+  assert.equal(result.bootstrap.installs[0].installed, false, 'ENOENT on an empty PATH');
+  assert.match(result.bootstrap.installs[0].reason, /not on PATH/);
+});
+
+test('--no-install-deps skips the install but still writes the manifests', () => {
+  const { applyScaffold, parseArgs } = require('../.claude/scripts/scaffold-apply.js');
   assert.equal(parseArgs(['--no-install-deps']).installDeps, false);
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'scaffold-noinstall-'));
+  const profilePath = path.join(dir, 'profile.json');
+  fs.writeFileSync(profilePath, JSON.stringify({
+    name: 'shortlink', projectType: 'D',
+    stack: { backend: { language: 'python', framework: 'fastapi' }, frontend: null, database: null },
+  }));
+  const target = path.join(dir, 'project');
+  const result = applyScaffold({
+    installDeps: false, profile: profilePath,
+    pluginSource: path.join(__dirname, '..', '.claude'), target, scaffoldProfile: 'core',
+  });
+  assert.deepEqual(result.bootstrap.installs, [], 'the flag skips only the install');
+  assert.ok(fs.existsSync(path.join(target, 'backend', 'pyproject.toml')),
+    'the manifests are written either way');
 });

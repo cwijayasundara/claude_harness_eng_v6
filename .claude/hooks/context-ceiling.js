@@ -47,8 +47,13 @@ function main() {
       hard: ceilingFrom(process.env.HARNESS_CONTEXT_HARD_CEILING),
     });
 
+    // Channel matters, and the harness has one rule for it (token-advisor.js:
+    // exit-2 feedback MUST go on stderr; a `warn` goes to stdout). The soft tier
+    // wrote to stderr on an exit-0 path, which the model never sees — confirmed
+    // live by a subagent 50K past the soft ceiling that wrote a file and
+    // received nothing. A warning on the wrong channel is not a warning.
     if (verdict.level === 'hard') { process.stderr.write(`${verdict.message}\n`); process.exit(2); }
-    if (verdict.level === 'soft') { process.stderr.write(`${verdict.message}\n`); process.exit(0); }
+    if (verdict.level === 'soft') { process.stdout.write(`${verdict.message}\n`); process.exit(0); }
   } catch (_) { process.exit(0); }
   process.exit(0);
 }

@@ -130,7 +130,7 @@ function subagentAt(ctx) {
 // would be invisible and the soft-ceiling assertion would pass vacuously.
 function runHook(payload) {
   const r = spawnSync('node', [HOOK], { input: JSON.stringify(payload), encoding: 'utf8' });
-  return { status: r.status, stderr: r.stderr || '' };
+  return { status: r.status, stderr: r.stderr || '', stdout: r.stdout || '' };
 }
 
 const write = (parentTranscript, filePath) => ({
@@ -140,7 +140,9 @@ const write = (parentTranscript, filePath) => ({
   tool_input: { file_path: filePath, content: 'x' },
 });
 
-test('the hook refuses a source write past the hard ceiling', () => {
+test('the hook refuses a source write past the hard ceiling, on STDERR', () => {
+  // Claude Code surfaces a blocking hook's stderr to the model and reports a
+  // bare "hook error: No stderr output" when exit 2 carries none.
   const r = runHook(write(subagentAt(HARD_CEILING_TOKENS + 1), '/w/backend/src/auth.py'));
   assert.equal(r.status, 2);
   assert.match(r.stderr, /hand-off ceiling/);
@@ -156,10 +158,15 @@ test('the hook allows an evaluator verdict past the hard ceiling', () => {
   assert.equal(r.status, 0, 'refusing evidence would break a downstream gate, not save money');
 });
 
-test('the hook warns but allows at the soft ceiling', () => {
+test('the soft warning goes to STDOUT, the channel the model actually reads', () => {
+  // token-advisor.js documents the rule: exit-2 feedback MUST go on stderr, a
+  // `warn` goes to stdout. This assertion used to pin stderr, so it could not
+  // tell "warned" from "warned into a void" — and a subagent 50K past the soft
+  // ceiling did write a file and receive nothing.
   const r = runHook(write(subagentAt(SOFT_CEILING_TOKENS + 1), '/w/backend/src/auth.py'));
-  assert.equal(r.status, 0);
-  assert.match(r.stderr, /approaching/);
+  assert.equal(r.status, 0, 'the soft tier advises, it does not refuse');
+  assert.match(r.stdout, /approaching/, 'an advisory on stderr with exit 0 never reaches the model');
+  assert.equal(r.stderr, '', 'stderr is reserved for the exit-2 tier');
 });
 
 test('the hook ignores the main loop entirely — no agent_id means not a subagent', () => {

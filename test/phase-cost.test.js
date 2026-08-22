@@ -470,3 +470,92 @@ test('a phase that batches well is distinguishable from one that does not', () =
   assert.ok(a.ctx_total > b.ctx_total * 3,
     `the drip re-reads its context per call (${a.ctx_total} vs ${b.ctx_total}) — that is the whole lever`);
 });
+
+// ── `--why`: the renderers a human actually reads ───────────────────────────
+//
+// Same reasoning as the table test above — a ReferenceError in a renderer once
+// survived the whole suite, and `--why` added ~90 more lines of renderer with no
+// coverage at all. These run the real CLI end to end.
+
+test('--why renders the cache accounting, naming the misses and the idle gaps', () => {
+  const { execFileSync } = require('child_process');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-why-'));
+  const file = path.join(dir, 'transcript.jsonl');
+  const turn = (ts, id, cr, cw) => ({
+    type: 'assistant', isSidechain: false, timestamp: ts, requestId: id,
+    message: {
+      id, model: 'claude-sonnet-5',
+      usage: {
+        input_tokens: 0, output_tokens: 10, cache_read_input_tokens: cr, cache_creation_input_tokens: cw,
+        cache_creation: { ephemeral_5m_input_tokens: cw, ephemeral_1h_input_tokens: 0 },
+      },
+      content: [{ type: 'tool_use', name: 'Bash', id: `${id}-t`, input: {} }],
+    },
+  });
+  fs.writeFileSync(file, `${[
+    userTurn('2026-08-21T07:00:00.000Z', '<command-name>/auto</command-name>'),
+    turn('2026-08-21T07:01:00.000Z', 'a1', 0, 30000),          // cold start
+    turn('2026-08-21T07:20:00.000Z', 'a2', 0, 250000),         // 19-min idle -> TTL expiry
+  ].map((r) => JSON.stringify(r)).join('\n')}\n`);
+
+  const out = execFileSync('node', [
+    path.join(__dirname, '..', '.claude', 'scripts', 'phase-cost.js'), file, '--why',
+  ], { encoding: 'utf8' });
+
+  assert.match(out, /WHY — cache accounting/);
+  assert.match(out, /mid-session cache expiry/);
+  assert.match(out, /Idle seconds before each: 1140/, 'the gap that caused the miss is the actionable part');
+  assert.match(out, /5-minute cache TTL/);
+});
+
+test('--why renders the batching table with a real single-call share', () => {
+  const { execFileSync } = require('child_process');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-why-'));
+  const file = path.join(dir, 'transcript.jsonl');
+  fs.writeFileSync(file, `${[
+    userTurn('2026-08-21T07:00:00.000Z', '<command-name>/auto</command-name>'),
+    ...blockLines('2026-08-21T07:01:00.000Z', 'a1', 100000, ['Bash']),
+    ...blockLines('2026-08-21T07:02:00.000Z', 'a2', 100000, ['Read', 'Read', 'Read']),
+  ].map((r) => JSON.stringify(r)).join('\n')}\n`);
+
+  const out = execFileSync('node', [
+    path.join(__dirname, '..', '.claude', 'scripts', 'phase-cost.js'), file, '--why',
+  ], { encoding: 'utf8' });
+
+  assert.match(out, /WHY — turn batching/);
+  assert.match(out, /issued exactly ONE tool call/);
+  assert.match(out, /1 of 2 turns \(50%\)/, 'the single-call share is the lever');
+  assert.match(out, /0\.2M tokens re-read for 4 tool calls/);
+});
+
+test('--json carries both profiles so the numbers are machine-readable', () => {
+  const { execFileSync } = require('child_process');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-why-'));
+  const file = path.join(dir, 'transcript.jsonl');
+  fs.writeFileSync(file, `${[
+    userTurn('2026-08-21T07:00:00.000Z', '<command-name>/auto</command-name>'),
+    ...blockLines('2026-08-21T07:01:00.000Z', 'a1', 100000, ['Bash']),
+  ].map((r) => JSON.stringify(r)).join('\n')}\n`);
+
+  const out = execFileSync('node', [
+    path.join(__dirname, '..', '.claude', 'scripts', 'phase-cost.js'), file, '--why', '--json',
+  ], { encoding: 'utf8' });
+  const parsed = JSON.parse(out);
+  assert.ok(Array.isArray(parsed.cache), '--why --json must carry the cache profile');
+  assert.ok(Array.isArray(parsed.turns), '--why --json must carry the turn profile');
+  assert.strictEqual(parsed.turns[0].tool_calls, 1);
+});
+
+test('a plain run emits neither WHY section', () => {
+  const { execFileSync } = require('child_process');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-why-'));
+  const file = path.join(dir, 'transcript.jsonl');
+  fs.writeFileSync(file, `${[
+    userTurn('2026-08-21T07:00:00.000Z', '<command-name>/auto</command-name>'),
+    ...blockLines('2026-08-21T07:01:00.000Z', 'a1', 100000, ['Bash']),
+  ].map((r) => JSON.stringify(r)).join('\n')}\n`);
+  const out = execFileSync('node', [
+    path.join(__dirname, '..', '.claude', 'scripts', 'phase-cost.js'), file,
+  ], { encoding: 'utf8' });
+  assert.ok(!/WHY —/.test(out), '--why is opt-in');
+});

@@ -28,7 +28,9 @@ const { e2eWorkdir } = require('./helpers/e2e-workdir');
 const { freshProject } = require('./helpers/fresh-project');
 const { runManifestSuite } = require('./helpers/manifest-suite');
 const { resolvePrd, spineGap } = require('./helpers/prd-fixture');
-const { billRoute, formatBill, writeBaseline } = require('./helpers/phase-budget');
+const {
+  billRoute, formatBill, writeBaseline, readBaseline, checkBudget,
+} = require('./helpers/phase-budget');
 
 const BUILD_DIR = e2eWorkdir('sprint1-baseline');
 const OUT_DIR = path.join(__dirname, 'fixtures', 'baselines', 'shortlink-sprint1');
@@ -474,11 +476,7 @@ function liveBuild() {
   const bill = billRoute(BUILD_DIR, { sessionIds: SESSIONS });
   process.stdout.write(`\n${formatBill('sprint1-baseline', bill)}\n`);
   process.stdout.write(`\nphases:\n${PHASE_LOG.map((p) => `  ${p.label}: exit=${p.exitCode} ${p.seconds}s`).join('\n')}\n`);
-  // Every phase the route runs must appear in the bill, or the baseline is
-  // recorded blind to the rest — see writeBaseline.
-  writeBaseline('sprint1-baseline', bill, undefined, {
-    expectPhases: ['scaffold', 'brd', 'spec', 'design', 'test', 'auto'],
-  });
+  reportAgainstBaseline(bill);
 
   if (suite.status !== 0) {
     throw new Error(
@@ -487,6 +485,54 @@ function liveBuild() {
     );
   }
   return BUILD_DIR;
+}
+
+const EXPECT_PHASES = ['scaffold', 'brd', 'spec', 'design', 'test', 'auto'];
+
+/**
+ * Compare this run against the committed baseline, then decide whether to
+ * replace it.
+ *
+ * This used to call writeBaseline unconditionally and never compare, which is
+ * backwards for the question a re-run exists to answer: it OVERWROTE the very
+ * number the run was meant to beat, and reported nothing. The comparison is the
+ * point — cost is only half of it, since the turn count and calls-per-turn are
+ * what actually move the cache-read bill.
+ *
+ * Never throws on a regression: this builds a baseline, it does not gate a
+ * merge. Re-record deliberately with HARNESS_E2E_UPDATE_BASELINE=1, the same
+ * idiom the delta route documents.
+ */
+function reportAgainstBaseline(bill) {
+  const update = process.env.HARNESS_E2E_UPDATE_BASELINE === '1';
+  const previous = readBaseline('sprint1-baseline');
+
+  if (previous) {
+    const verdict = checkBudget('sprint1-baseline', bill, { baseline: previous });
+    const b = previous.batching || {};
+    const now = bill.batching || {};
+    process.stdout.write(`\nvs committed baseline: ${verdict.status}\n`);
+    process.stdout.write(`  cost      $${previous.total.cost_usd.toFixed(2)} -> $${bill.totals.cost_usd.toFixed(2)}\n`);
+    if (b.all_turns) {
+      process.stdout.write(`  turns     ${b.all_turns} -> ${now.all_turns}\n`);
+      process.stdout.write(`  per turn  ${b.calls_per_turn} -> ${now.calls_per_turn}\n`);
+      process.stdout.write(`  re-read   ${(b.ctx_re_read_tokens / 1e6).toFixed(1)}M -> ${(now.ctx_re_read_tokens / 1e6).toFixed(1)}M\n`);
+    }
+    for (const r of verdict.regressions) {
+      process.stdout.write(`  REGRESSED ${r.label} ${r.metric}: ${r.before} -> ${r.after}\n`);
+    }
+  } else {
+    process.stdout.write('\nno committed baseline yet — recording this run as the first.\n');
+  }
+
+  if (previous && !update) {
+    process.stdout.write('  baseline left unchanged. Re-record with HARNESS_E2E_UPDATE_BASELINE=1.\n');
+    return;
+  }
+  // Every phase the route runs must appear in the bill, or the baseline is
+  // recorded blind to the rest — see writeBaseline.
+  writeBaseline('sprint1-baseline', bill, undefined, { expectPhases: EXPECT_PHASES });
+  process.stdout.write('  baseline recorded.\n');
 }
 
 function main(argv) {
@@ -517,5 +563,5 @@ if (require.main === module) {
 
 module.exports = {
   EXCLUDED, REQUIRED, OUT_DIR, MIN_SOURCE_FILES,
-  copyTree, snapshot, parseArgs, countSourceFiles, startingSessions,
+  copyTree, snapshot, parseArgs, countSourceFiles, startingSessions, reportAgainstBaseline,
 };
