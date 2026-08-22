@@ -89,8 +89,8 @@
     "test/e2e/helpers/alter-and-verify.test.js": "8524961c99b1933e",
     "test/e2e/helpers/app-runtime.js": "9eb7dc6f53bbba2c",
     "test/e2e/helpers/app-runtime.test.js": "3d66ead5dc224dbd",
-    "test/e2e/helpers/claude-runner.js": "74c90dbeb61c9cdc",
-    "test/e2e/helpers/claude-runner.test.js": "bd5d326d2bebf246",
+    "test/e2e/helpers/claude-runner.js": "249f5312eb9dcd36",
+    "test/e2e/helpers/claude-runner.test.js": "06e4be3deec8ef3c",
     "test/e2e/helpers/fresh-project.js": "70bfc360af8dfdb8",
     "test/e2e/helpers/fresh-project.test.js": "2b335cfd353978d2",
     "test/e2e/helpers/grafana-checker.js": "498114588cebc6f5",
@@ -99,11 +99,11 @@
     "test/e2e/helpers/prometheus-checker.js": "10e41a3760169d5b",
     "test/e2e/helpers/specs-summary.js": "c24a4ad7e88d1599",
     "test/e2e/helpers/specs-summary.test.js": "c98815a76bfa0741",
-    "test/e2e/run-pack.js": "3e9a58777ea37c44",
+    "test/e2e/run-pack.js": "ddc7f8151d14e830",
     "test/e2e/helpers/e2e-workdir.js": "443c55ff39f00fa6",
     "test/e2e/helpers/e2e-workdir.test.js": "fcd9297795386b1e",
-    "test/e2e/harness-front-half.test.js": "d8f2b7c23717f161"
+    "test/e2e/harness-front-half.test.js": "b2c3e38d3bffc13b"
   },
-  "content_hash": "1c7a2ab2b562435e",
+  "content_hash": "310a53f561919346",
   "stale": false
 }

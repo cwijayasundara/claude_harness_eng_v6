@@ -14,7 +14,9 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { usageFromTranscripts, loadTurns, priceOf } = require('./transcript-usage.js');
+const {
+  usageFromTranscripts, loadTurns, mergeTurnsById, priceOf,
+} = require('./transcript-usage.js');
 
 const COMMAND_TAG = /<command-name>\s*([^<]+?)\s*<\/command-name>/;
 const LEADING_SLASH = /^\/([A-Za-z0-9_:-]+)/;
@@ -186,13 +188,28 @@ function subagentTranscriptsFor(transcriptPath) {
  * the phase was pure conversation.
  *
  * costByPhase answers "what did this phase cost". It cannot answer "why", and on
- * this harness the why is nearly always the same two things: cache reads are
- * ~5x output, so cost is turns x resident context, and a phase that grows its
- * context as it runs pays that growth on every remaining turn. A measured /spec
- * opened at 56K and closed at 120K across 59 turns — 35 of which called no tool
- * at all, each re-reading ~93K to ask or answer a question.
+ * this harness the why is turns x resident context: cache reads were $27.88 of
+ * a $47.97 run against $2.70 of output.
  *
- * Neither number is visible in a cost table, so the lever stays invisible too.
+ * Three numbers separate the ways a phase gets expensive, and none is visible
+ * in a cost table:
+ *
+ *  - GROWTH — a phase that grows its context pays that growth on every
+ *    remaining turn (ctx_first -> ctx_last).
+ *  - CONVERSATION — turns that called no tool at all, each re-reading the whole
+ *    context to ask or answer a question (toolless_pct).
+ *  - BATCHING — turns that called exactly ONE tool. This is the big one and it
+ *    was invisible until the block-line bug below was fixed: over the sprint-1
+ *    baseline, 695 of 835 turns issued a single tool call at ~116K resident
+ *    context each. Batching independent calls is the difference between 835
+ *    turns and ~372 for the same work.
+ *
+ * MAIN-LOOP vs SUBAGENT. The ctx_* curve covers main-loop turns only, because a
+ * pooled curve across agents with separate context spaces means nothing. But
+ * reporting ONLY those made /auto read as "5 turns, 100% toolless" when its
+ * real cost was 576 turns of near-continuous tool use in subagents — so the
+ * subagent population is counted too, in its own fields, and the batching
+ * statistics span both.
  */
 function turnProfile(transcriptPath, opts = {}) {
   const extras = (opts.extraTranscripts || []).map((p) => ({ path: p, subagent: true }));
@@ -201,20 +218,52 @@ function turnProfile(transcriptPath, opts = {}) {
   const { turns } = loadTurns(sources);
   return segments.map((seg, i) => {
     const isLast = i === segments.length - 1;
-    const mine = turns
-      .filter((t) => !t.sidechain && t.ts != null && t.ts >= seg.start && (isLast || t.ts < seg.end))
-      .sort((a, b) => a.ts - b.ts);
-    const seen = new Set();
-    const unique = mine.filter((t) => (seen.has(t.id) ? false : seen.add(t.id)));
-    return { command: seg.command, start: new Date(seg.start).toISOString(), ...shapeOf(unique) };
+    const inSeg = (t) => t.ts != null && t.ts >= seg.start && (isLast || t.ts < seg.end);
+    const all = mergeTurnsById(turns.filter(inSeg)).sort((a, b) => a.ts - b.ts);
+    const main = all.filter((t) => !t.sidechain);
+    const sub = all.filter((t) => t.sidechain);
+    return {
+      command: seg.command,
+      start: new Date(seg.start).toISOString(),
+      ...shapeOf(main),
+      ...batchingOf(all, sub),
+    };
   });
+}
+
+/**
+ * Tool-call density across every turn the phase caused, subagents included.
+ * A turn that calls one tool pays the same full context re-read as a turn that
+ * calls five, so `calls_per_turn` is the lever and `single_call_pct` is how
+ * much of it is unclaimed.
+ */
+function batchingOf(all, sub) {
+  const calls = all.reduce((n, t) => n + (t.tools || 0), 0);
+  const single = all.filter((t) => (t.tools || 0) === 1).length;
+  return {
+    all_turns: all.length,
+    subagent_turns: sub.length,
+    tool_calls: calls,
+    calls_per_turn: all.length ? Number((calls / all.length).toFixed(2)) : 0,
+    single_call_turns: single,
+    single_call_pct: all.length ? Math.round((single / all.length) * 100) : 0,
+    // Context re-read across EVERY turn the phase caused. ctx_total above is
+    // main-loop only, which for /auto is 5 turns of a 574-turn phase — reporting
+    // that as the phase's re-read understated it by more than 100x.
+    all_ctx_total: all.reduce((n, t) => n + residentContext(t.usage), 0),
+  };
+}
+
+/** Everything a request had to carry: cache read + cache creation + fresh input. */
+function residentContext(usage) {
+  return (usage.cache_read_input_tokens || 0)
+    + (usage.cache_creation_input_tokens || 0)
+    + (usage.input_tokens || 0);
 }
 
 /** Context-per-turn statistics for one phase's turns, in order. */
 function shapeOf(turns) {
-  const ctx = turns.map((t) => (t.usage.cache_read_input_tokens || 0)
-    + (t.usage.cache_creation_input_tokens || 0)
-    + (t.usage.input_tokens || 0));
+  const ctx = turns.map((t) => residentContext(t.usage));
   if (ctx.length === 0) {
     return { turns: 0, ctx_first: 0, ctx_median: 0, ctx_last: 0, ctx_total: 0, growth: 0, toolless: 0, toolless_pct: 0 };
   }

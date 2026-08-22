@@ -1,6 +1,6 @@
-# `test/` — 340 module(s)
+# `test/` — 342 module(s)
 
-340 module(s).
+342 module(s).
 
 ## Dependencies
 
@@ -61,6 +61,7 @@ flowchart LR
   n_js_test_concurrency_gate_test_js["concurrency-gate.test.js"]
   n_js_test_constitution_invariants_test_js["constitution-invariants.test.js"]
   n_js_test_constraints_extract_test_js["constraints-extract.test.js"]
+  n_js_test_context_ceiling_test_js["context-ceiling.test.js"]
   n_js_test_context_compact_wrappers_test_js["context-compact-wrappers.test.js"]
   n_js_test_context_pack_test_js["context-pack.test.js"]
   n_js_test_context_store_test_js["context-store.test.js"]
@@ -85,7 +86,6 @@ flowchart LR
   n_js_test_deepwiki_determinism_test_js["deepwiki-determinism.test.js"]
   n_js_test_diagnostics_parse_test_js["diagnostics-parse.test.js"]
   n_js_test_diff_hunks_test_js["diff-hunks.test.js"]
-  n_js_test_dogfood_manifest_test_js["dogfood-manifest.test.js"]
 ```
 
 ## `js:test/accessibility-contract.test.js`
@@ -523,6 +523,15 @@ flowchart LR
   - `byRule` (function) → js:test/constraints-extract.test.js:34 — `function byRule(obs, field, rule)`
   - `writeJson` (function) → js:test/constraints-extract.test.js:143 — `function writeJson(dir, name, data)`
 
+## `js:test/context-ceiling.test.js`
+
+- fan-in: 0, fan-out: 7
+
+### Symbols
+  - `transcriptAt` (function) → js:test/context-ceiling.test.js:94 — `function transcriptAt(ctx)`
+  - `runHook` (function) → js:test/context-ceiling.test.js:108 — `function runHook(payload)`
+  - `write` (function) → js:test/context-ceiling.test.js:113 — `write = (transcriptPath, filePath) => (`
+
 ## `js:test/context-compact-wrappers.test.js`
 
 - fan-in: 0, fan-out: 6
@@ -707,11 +716,4 @@ flowchart LR
 ### Symbols
   _(no extracted symbols)_
 
-## `js:test/dogfood-manifest.test.js`
-
-- fan-in: 0, fan-out: 4
-
-### Symbols
-  _(no extracted symbols)_
-
-_+ 260 more module(s) not shown (page capped at 80)._
+_+ 262 more module(s) not shown (page capped at 80)._

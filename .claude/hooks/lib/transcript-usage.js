@@ -188,6 +188,38 @@ function loadTurns(sources) {
 }
 
 /**
+ * Collapse a transcript's repeated block-lines into one turn each.
+ *
+ * A single assistant message is written once PER CONTENT BLOCK, and every line
+ * repeats the same usage object — which is why usage must be deduplicated. But
+ * `tools` is a property of the message, not of the line: the thinking block and
+ * each tool_use block arrive as separate lines, so keeping the first occurrence
+ * (as a plain dedup does) reads the thinking line and reports zero tools.
+ *
+ * That is not hypothetical. It made turnProfile report /auto as "5 turns, 100%
+ * toolless" for a phase that really ran 576 turns at 3% toolless, and it hid
+ * the largest cost driver in the harness: 695 of 835 turns issuing exactly ONE
+ * tool call, each paying a full ~116K context re-read.
+ *
+ * The unit fixtures never caught it because they put every content block in ONE
+ * line, a shape no real transcript has.
+ *
+ * Usage is taken from the first line and tool counts are SUMMED across lines.
+ */
+function mergeTurnsById(turns) {
+  const byKey = new Map();
+  for (const turn of turns) {
+    // Two agents can hold the same message id only across different files, so
+    // the source is part of the identity.
+    const key = `${turn.source || ''}|${turn.id}`;
+    const cur = byKey.get(key);
+    if (cur) { cur.tools += turn.tools || 0; continue; }
+    byKey.set(key, { ...turn, tools: turn.tools || 0 });
+  }
+  return [...byKey.values()];
+}
+
+/**
  * Aggregate usage across several transcripts as one pool, deduplicating by
  * message id across files. Same options and shape as usageFromTranscript.
  * Pass `opts.loaded` (from loadTurns) to skip re-reading the sources.
@@ -213,4 +245,6 @@ function usageFromTranscripts(sources, opts = {}) {
   };
 }
 
-module.exports = { usageFromTranscript, usageFromTranscripts, loadTurns, parseTurn, priceOf };
+module.exports = {
+  usageFromTranscript, usageFromTranscripts, loadTurns, mergeTurnsById, parseTurn, priceOf,
+};
