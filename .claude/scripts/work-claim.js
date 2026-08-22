@@ -28,10 +28,14 @@
 const fs = require('fs');
 const path = require('path');
 
-// A real implementer ran 35 minutes on one story, so the TTL has to clear that
-// comfortably; it exists only so a CRASHED run cannot block its group forever,
-// not as a normal expiry.
-const TTL_MS = 90 * 60 * 1000;
+// The TTL exists only so a CRASHED run cannot block its group forever, not as a
+// normal expiry — so it must clear the longest LIVE implementer comfortably.
+// First set to 90 min against a 35-minute implementer. The 2026-08-21 sprint-1
+// baseline then ran an E1-S1 implementer for 133 minutes, which a 90-minute TTL
+// would have declared stale WHILE IT WAS STILL WRITING FILES — a second
+// dispatcher would have taken the claim over and produced exactly the duplicate
+// this guard exists to stop. 4h clears the measured worst case ~1.8x.
+const TTL_MS = 4 * 60 * 60 * 1000;
 
 // `group:A`, `story:E1-S1`. Anything that could walk out of the state dir is
 // refused rather than sanitised — a silently rewritten key would claim the
@@ -70,6 +74,11 @@ function claim(root, key, opts = {}) {
     session: opts.session || process.env.CLAUDE_SESSION_ID || 'unknown',
     note: opts.note || null,
     claimed_at: now,
+    // Who made the claim. dispatch-gate.js releases only its OWN records, so an
+    // automatic release can never drop a claim the /auto prose path is holding
+    // for a live implementer.
+    via: opts.via || 'cli',
+    agent: opts.agent || null,
   };
   fs.mkdirSync(claimsDir(root), { recursive: true });
 

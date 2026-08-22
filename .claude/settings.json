@@ -66,8 +66,13 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Task",
+        "matcher": "Task|Agent",
         "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/dispatch-gate.js\"",
+            "timeout": 5000
+          },
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/concurrency-gate.js\"",
@@ -123,7 +128,7 @@
         ]
       },
       {
-        "matcher": "Task",
+        "matcher": "Task|Agent",
         "hooks": [
           {
             "type": "command",
@@ -206,6 +211,11 @@
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/record-run.js\"",
+            "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/dispatch-gate.js\"",
             "timeout": 5000
           }
         ]

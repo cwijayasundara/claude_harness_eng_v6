@@ -1,5 +1,5 @@
 {
-  "count": 171,
+  "count": 172,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -50,6 +50,7 @@
     "deploy-gate-verify",
     "design-decisions-gate",
     "diff-review",
+    "dispatch-integrity",
     "drift-architecture",
     "drift-dead-code",
     "drift-deps",
