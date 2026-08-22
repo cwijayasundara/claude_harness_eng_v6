@@ -30,8 +30,17 @@
 // DIFFERENT session is already implementing. Same-session dispatch is the
 // normal path and always passes; an unknown session on either side passes too,
 // because over-blocking stalls the build loop and over-allowing only costs
-// money. A second lead in the SAME session is already refused by work-claim
-// itself, which is session-blind by design.
+// money.
+//
+// KNOWN GAP, stated rather than papered over: the audited incident was two
+// generators inside ONE /auto session, and this check allows same-session
+// dispatch. work-claim itself is session-blind and would refuse the second lead
+// — but only if the PROSE path calls it, and that is precisely the path that
+// did not fire. So Rule 2 does not cover the same-session case; **Rule 1
+// (nesting) is what actually catches the audited failure**, because the second
+// lead arrived by a subagent spawning a generator. Rule 2 adds the
+// cross-session case on top. Closing the same-session gap needs a correlation
+// key the dispatch payload does not currently carry.
 
 const workClaim = require('../../scripts/work-claim.js');
 
