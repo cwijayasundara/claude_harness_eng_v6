@@ -40,6 +40,8 @@ function withTempPatterns(rules, fn) {
   }
 }
 
+const { AGENT_CANARIES } = require("./canaries-agent-integrity");
+
 const CANARIES = [
   {
     probe: 'length-caps',
@@ -249,45 +251,7 @@ const CANARIES = [
       return { bit: bad.status === 'fail', quiet: good.status === 'skip' };
     },
   },
-  {
-    probe: 'agent-write-scope',
-    sensors: ['agent-write-scope'],
-    why: 'a reviewer writing production code must be refused; writing its own review surface must not be',
-    run() {
-      const A = require(path.join(LIB, 'agent-contract'));
-      const reviewer = {
-        agent: 'code-reviewer', may_spawn: false, artifact_roots: ['specs/reviews/'], why: 'canary',
-      };
-      return {
-        bit: A.writeDecision(reviewer, 'backend/app/auth.py').allow === false,
-        quiet: A.writeDecision(reviewer, 'specs/reviews/code-review.md').allow === true,
-      };
-    },
-  },
-  {
-    probe: 'agent-contract-drift',
-    sensors: ['agent-contract-drift'],
-    why: 'a read-only contract beside a Write grant must be flagged; an honest pair must not',
-    run() {
-      const A = require(path.join(LIB, 'agent-contract'));
-      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'canary-contract-'));
-      const write = (name, tools, contract) => {
-        fs.writeFileSync(path.join(dir, `${name}.md`),
-          `---\nname: ${name}\ndescription: t\ntools:\n${tools.map((t) => `  - ${t}`).join('\n')}\n---\n`);
-        fs.writeFileSync(path.join(dir, `${name}.contract.json`), JSON.stringify(contract));
-      };
-      try {
-        write('liar', ['Read', 'Write'], { agent: 'liar', may_spawn: false, artifact_roots: [], why: 'x' });
-        const bit = A.validateContracts(dir).length > 0;
-        fs.rmSync(path.join(dir, 'liar.md'));
-        fs.rmSync(path.join(dir, 'liar.contract.json'));
-        write('honest', ['Read'], { agent: 'honest', may_spawn: false, artifact_roots: [], why: 'x' });
-        return { bit, quiet: A.validateContracts(dir).length === 0 };
-      } finally {
-        fs.rmSync(dir, { recursive: true, force: true });
-      }
-    },
-  },
+  ...AGENT_CANARIES,
 ];
 
 module.exports = { CANARIES };
