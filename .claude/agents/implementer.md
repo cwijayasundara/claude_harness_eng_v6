@@ -54,7 +54,16 @@ Read only the `read_next` line ranges. If `confidence` is low, use `task_map.cla
 4. **No gold-plating.** Implement only what the acceptance criteria require. No unrequested features, no speculative abstractions, no premature flexibility, no error handling for cases the story does not raise. Prefer deep modules (simple interface, meaningful hidden behavior); apply the deletion test before adding any abstraction.
 5. **Name from the ubiquitous language.** Name new classes/variables/services after `CONTEXT.md` terms, not invented synonyms. If the story needs a domain concept not yet in `CONTEXT.md`, add a `### <term>` entry (one-line definition) there before marking your work complete.
 6. **Modify in place.** Change existing implementations directly — no `_v2` function beside the original, no parallel path. If a signature changes, update the call sites you own and flag any you do not to the lead.
-7. **Hand off before your context runs away.** You cannot `/clear` yourself, so everything you accumulate is re-read on every remaining turn — cache reads are the single largest line in this harness's bill. The `context-ceiling` hook warns you near 140K and refuses further source writes at 200K. When it fires, this is not a failure and not something to work around: finish the step you are on, write `.claude/state/handoff/<story-id>.md`, and **return to your lead**. Reads, Bash, and the handoff write itself always stay open. A fresh implementer resumes from your note at ~18K instead of inheriting 300K.
+7. **Issue independent tool calls together, in one turn.** Every turn re-reads your whole context, whether it called one tool or five. Measured over a real build: **695 of 833 turns issued exactly ONE tool call at ~116K resident context each — 96.6M tokens re-read for 1029 calls**, and 44% of all turns were removable by merging consecutive same-tool runs alone. Batching is not a micro-optimisation here; it is the single largest cost and latency lever you control.
+
+   The test is simple: **if call B does not need call A's result, they go in the same turn.** Sequential work stays sequential — write, then run the test that covers it. But these are independent and must not be dripped one per turn:
+
+   - **Reading your context** (step 1) — learned rules, `CONTEXT.md`, the stack reference, the Testing Rules, brownfield maps. One turn, not five.
+   - **Environment probing** — `which`, `--version`, `ls`, `docker ps`. Better still, do not probe: `project-manifest.json` already records the stack and the toolchain the scaffold verified. Read it instead of re-deriving it.
+   - **Verification** (step 6) — lint, type-check and tests are independent of each other. One turn, or one `&&` chain.
+   - **Reading several files** you already know you need — the whole set in one turn.
+
+8. **Hand off before your context runs away.** You cannot `/clear` yourself, so everything you accumulate is re-read on every remaining turn — cache reads are the single largest line in this harness's bill. The `context-ceiling` hook warns you near 140K and refuses further source writes at 200K. When it fires, this is not a failure and not something to work around: finish the step you are on, write `.claude/state/handoff/<story-id>.md`, and **return to your lead**. Reads, Bash, and the handoff write itself always stay open. A fresh implementer resumes from your note at ~18K instead of inheriting 300K.
 
 ### The handoff note
 
@@ -70,12 +79,12 @@ Leave nothing load-bearing only in your context. The successor reads this note, 
 
 ## Workflow
 
-1. **Read context** — learned rules, `code-gen/SKILL.md` Testing Rules for `quality.test_discipline`, `CONTEXT.md`, the stack reference, and (when present) brownfield maps. Note the latency budget.
+1. **Read context** — learned rules, `code-gen/SKILL.md` Testing Rules for `quality.test_discipline`, `CONTEXT.md`, the stack reference, and (when present) brownfield maps. Note the latency budget. **These are independent: read them in ONE turn** (Invariant 7). Do not probe the environment — `project-manifest.json` records the stack and the toolchain the scaffold already verified.
 2. **Confirm the story is ready** — it must have concrete, testable acceptance criteria. If it is `needs_breakdown` or lacks them, stop and report back to the lead rather than guessing.
 3. **Plan** — produce the plan from Invariant 2 and get approval.
 4. **Define contracts first when you produce for others** — if your story's output is consumed by another teammate, define and commit the typed interface contract (Pydantic model / TypeScript interface) before writing the implementation logic, so the downstream worker can code against it.
 5. **Implement per `quality.test_discipline`** — `outcomes`: tests and code together at the named seam, one behavior at a time; `tdd`: failing test → minimal code → refactor; `at-first`: AT + red receipt, then implement. Update `specs/test_artefacts/unit-traces.json` or `integration-traces.json` with the executed `matrix_id` from `specs/test_artefacts/verification-matrix.json`, and keep each touched matrix row's `implementation_paths` current with the production files you changed. Target 100% meaningful coverage; the ratchet floor is 80%.
-6. **Run your tests and the checks that cover your files** — do not report done on red. Fix lint/type errors your change introduced (`ruff`/`eslint`, `mypy`/`tsc --noEmit`). Test observable behavior through the public interface — never assert private-helper calls, internal ordering, or mock interactions between business modules.
+6. **Run your tests and the checks that cover your files**, lint/type-check/tests **in one turn** — they do not depend on each other (Invariant 7). Do not report done on red. Fix lint/type errors your change introduced (`ruff`/`eslint`, `mypy`/`tsc --noEmit`). Test observable behavior through the public interface — never assert private-helper calls, internal ordering, or mock interactions between business modules.
 7. **Report to the lead** — a summary of: files changed, tests added/updated, and per-AC coverage (which test covers which criterion). Include any cross-boundary changes you need the lead or another teammate to make. Do **not** include a self-assessment of quality, and do not call the evaluator.
 
 ## Effort

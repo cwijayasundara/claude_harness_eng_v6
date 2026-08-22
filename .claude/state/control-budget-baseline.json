@@ -1,5 +1,5 @@
 {
-  "count": 174,
+  "count": 175,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -168,6 +168,7 @@
     "trace-check",
     "trajectory-contract",
     "trust-boundary",
+    "turn-batching",
     "type-check",
     "unattended-preflight",
     "unit-tests",

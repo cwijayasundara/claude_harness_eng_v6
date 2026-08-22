@@ -39,5 +39,13 @@
   "total": {
     "output_total": 223583,
     "cost_usd": 47.9697
+  },
+  "batching": {
+    "all_turns": 833,
+    "tool_calls": 1029,
+    "calls_per_turn": 1.235,
+    "single_call_turns": 695,
+    "single_call_pct": 83,
+    "ctx_re_read_tokens": 96616627
   }
 }

@@ -21,7 +21,7 @@ const fs = require('fs');
 const path = require('path');
 
 const {
-  costByPhase, aggregate, transcriptsFor, subagentTranscriptsFor, cacheProfile,
+  costByPhase, aggregate, transcriptsFor, subagentTranscriptsFor, cacheProfile, turnProfile,
 } = require('../../../.claude/hooks/lib/phase-cost-core.js');
 
 const E2E_DIR = path.join(__dirname, '..');
@@ -51,12 +51,14 @@ function billRoute(target, opts = {}) {
 
   const rows = [];
   const cacheRows = [];
+  const shapeRows = [];
   let subagentFiles = 0;
   for (const transcript of transcripts) {
     const extras = subagentTranscriptsFor(transcript);
     subagentFiles += extras.length;
     rows.push(...costByPhase(transcript, { extraTranscripts: extras }));
     cacheRows.push(...cacheProfile(transcript, { extraTranscripts: extras }));
+    shapeRows.push(...turnProfile(transcript, { extraTranscripts: extras }));
   }
 
   // aggregate() returns a Set for models; a receipt has to serialise.
@@ -64,6 +66,7 @@ function billRoute(target, opts = {}) {
   return {
     phases,
     cache: cacheTotals(cacheRows),
+    batching: batchingTotals(shapeRows),
     totals: totalsOf(phases),
     coverage: {
       sessions: transcripts.length,
@@ -96,6 +99,32 @@ function cacheTotals(cacheRows) {
     full_miss_tokens: sum('full_miss_tokens'),
     wasted_usd: Number(sum('wasted_usd').toFixed(4)),
     idle_gaps_sec: cacheRows.flatMap((r) => r.idle_gaps_sec || []).sort((a, b) => a - b),
+  };
+}
+
+/**
+ * Turn density for the route: how many turns did the work take, and how many
+ * tool calls did each carry.
+ *
+ * The largest cost driver measured on this harness is not what a turn does but
+ * how many turns there are — 695 of 833 turns in the sprint-1 baseline issued
+ * exactly ONE tool call at ~116K resident context each, 96.6M tokens re-read
+ * for 1029 calls. Cost and wall clock both fall with the turn count, so the
+ * ratchet has to watch it directly: a prompt change that quietly stops agents
+ * batching would otherwise show up only as a cost regression nobody can explain.
+ */
+function batchingTotals(shapeRows) {
+  const sum = (key) => shapeRows.reduce((acc, r) => acc + (r[key] || 0), 0);
+  const turns = sum('all_turns');
+  const calls = sum('tool_calls');
+  const single = sum('single_call_turns');
+  return {
+    all_turns: turns,
+    tool_calls: calls,
+    calls_per_turn: turns ? Number((calls / turns).toFixed(3)) : 0,
+    single_call_turns: single,
+    single_call_pct: turns ? Math.round((single / turns) * 100) : 0,
+    ctx_re_read_tokens: sum('all_ctx_total'),
   };
 }
 
@@ -147,6 +176,7 @@ function baselineFrom(bill) {
       output_total: bill.totals.output_tokens + bill.totals.subagent_output_tokens,
       cost_usd: bill.totals.cost_usd,
     },
+    batching: bill.batching,
   };
 }
 
@@ -256,10 +286,46 @@ function checkBudget(routeId, bill, opts = {}) {
     }
   }
 
+  regressions.push(...batchingRegressions(baseline.batching, current.batching, tolerance));
+
   return {
     status: regressions.length ? 'regressed' : 'pass',
     tolerance, current, regressions, unratcheted,
   };
+}
+
+/**
+ * Efficiency regressions, which move in the opposite direction to cost.
+ *
+ * `ctx_re_read_tokens` is the direct driver of the cache-read bill, so a RISE
+ * is the regression. `calls_per_turn` is the lever that produces it, so a FALL
+ * is the regression — a prompt change that quietly stops agents batching shows
+ * up here as itself rather than as an unexplained cost increase two phases
+ * downstream. Both are skipped when the baseline predates the measurement.
+ */
+function batchingRegressions(base, now, tolerance) {
+  if (!base || !now || !base.all_turns) return [];
+  const out = [];
+  const ctxLimit = (base.ctx_re_read_tokens || 0) * (1 + tolerance);
+  if (base.ctx_re_read_tokens && now.ctx_re_read_tokens > ctxLimit) {
+    out.push({
+      label: 'BATCHING', metric: 'ctx_re_read_tokens',
+      before: base.ctx_re_read_tokens, after: now.ctx_re_read_tokens,
+      limit: Math.round(ctxLimit),
+      overBy: `${Math.round(((now.ctx_re_read_tokens / base.ctx_re_read_tokens) - 1) * 100)}%`,
+    });
+  }
+  const callsFloor = (base.calls_per_turn || 0) * (1 - tolerance);
+  if (base.calls_per_turn && now.calls_per_turn < callsFloor) {
+    out.push({
+      label: 'BATCHING', metric: 'calls_per_turn',
+      before: base.calls_per_turn, after: now.calls_per_turn,
+      limit: Number(callsFloor.toFixed(3)),
+      reason: 'agents stopped batching independent tool calls — every turn re-reads the '
+        + 'whole context, so this drives the cache-read bill and the wall clock together',
+    });
+  }
+  return out;
 }
 
 /** One line per phase, for the route's own console output. */
@@ -276,6 +342,13 @@ function formatBill(routeId, bill) {
   lines.push(`  ${'TOTAL'.padEnd(22)}${''.padStart(3)}      `
     + `${(bill.totals.output_tokens + bill.totals.subagent_output_tokens).toLocaleString().padStart(10)} out tok  `
     + `$${bill.totals.cost_usd.toFixed(2).padStart(8)}`);
+  const b = bill.batching;
+  if (b && b.all_turns) {
+    lines.push(`  ${'turns'.padEnd(22)}${String(b.all_turns).padStart(3)}      `
+      + `${b.tool_calls.toLocaleString().padStart(10)} calls   `
+      + `${b.calls_per_turn.toFixed(2)}/turn  ${b.single_call_pct}% single-call  `
+      + `${(b.ctx_re_read_tokens / 1e6).toFixed(1)}M re-read`);
+  }
   if (bill.coverage.mainLoopOnly) {
     lines.push('  NOTE: no subagent transcripts pooled — figures are MAIN-LOOP ONLY and undercount.');
   }

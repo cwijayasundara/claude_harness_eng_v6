@@ -219,3 +219,71 @@ test('the bill carries cache accounting, since output is a small share of spend'
   }
   assert.ok(Array.isArray(bill.cache.idle_gaps_sec));
 });
+
+// ── Batching: the efficiency ratchet, which moves opposite to cost ──────────
+//
+// The largest cost driver measured on this harness is the turn count, not what
+// a turn does: 695 of 833 turns in the sprint-1 baseline issued exactly ONE
+// tool call at ~116K resident context each. A cost ratchet alone would see a
+// batching regression only as an unexplained price rise.
+
+const BASE_BATCHING = {
+  all_turns: 800, tool_calls: 2000, calls_per_turn: 2.5,
+  single_call_turns: 200, single_call_pct: 25, ctx_re_read_tokens: 50_000_000,
+};
+
+function billWithBatching(batching) {
+  const dir = tmpDir();
+  return { ...billRoute(sprintTranscript(dir, 'sess-1')), batching };
+}
+
+test('the bill reports turn density, not only cost', () => {
+  const dir = tmpDir();
+  const bill = billRoute(sprintTranscript(dir, 'sess-1'));
+  for (const key of ['all_turns', 'tool_calls', 'calls_per_turn', 'single_call_pct', 'ctx_re_read_tokens']) {
+    assert.ok(key in bill.batching, `bill.batching must report ${key}`);
+  }
+});
+
+test('a FALL in calls-per-turn is a regression — agents stopped batching', () => {
+  const bill = billWithBatching({ ...BASE_BATCHING, calls_per_turn: 1.2, single_call_pct: 83 });
+  const verdict = checkBudget('batching', bill, { baseline: { phases: {}, total: {}, batching: BASE_BATCHING } });
+  const hit = verdict.regressions.find((r) => r.metric === 'calls_per_turn');
+  assert.ok(hit, `expected a calls_per_turn regression, got ${JSON.stringify(verdict.regressions)}`);
+  assert.match(hit.reason, /stopped batching/);
+  assert.strictEqual(verdict.status, 'regressed');
+});
+
+test('a RISE in context re-read is a regression — that is the cache-read bill', () => {
+  const bill = billWithBatching({ ...BASE_BATCHING, ctx_re_read_tokens: 90_000_000 });
+  const verdict = checkBudget('batching', bill, { baseline: { phases: {}, total: {}, batching: BASE_BATCHING } });
+  assert.ok(verdict.regressions.some((r) => r.metric === 'ctx_re_read_tokens'));
+});
+
+test('an IMPROVEMENT in batching is never a regression', () => {
+  const bill = billWithBatching({
+    ...BASE_BATCHING, calls_per_turn: 3.4, all_turns: 400, ctx_re_read_tokens: 20_000_000,
+  });
+  const verdict = checkBudget('batching', bill, { baseline: { phases: {}, total: {}, batching: BASE_BATCHING } });
+  assert.deepStrictEqual(verdict.regressions, [], 'fewer turns and denser calls is the goal, not a failure');
+});
+
+test('small moves stay inside the tolerance band', () => {
+  const bill = billWithBatching({ ...BASE_BATCHING, calls_per_turn: 2.3, ctx_re_read_tokens: 55_000_000 });
+  const verdict = checkBudget('batching', bill, { baseline: { phases: {}, total: {}, batching: BASE_BATCHING } });
+  assert.deepStrictEqual(verdict.regressions, [], 'turn-level variance must not flake the ratchet');
+});
+
+test('a baseline recorded before batching was measured is skipped, not failed', () => {
+  const bill = billWithBatching({ ...BASE_BATCHING, calls_per_turn: 0.1 });
+  const verdict = checkBudget('batching', bill, { baseline: { phases: {}, total: {} } });
+  assert.deepStrictEqual(verdict.regressions, []);
+});
+
+test('batching survives the baseline round-trip through disk', () => {
+  const dir = tmpDir();
+  const bill = billWithBatching(BASE_BATCHING);
+  writeBaseline('roundtrip', bill, dir, { expectPhases: ['sprint', 'auto'] });
+  assert.deepStrictEqual(readBaseline('roundtrip', dir).batching, BASE_BATCHING,
+    'a ratchet metric that does not survive the baseline file can never fire');
+});
