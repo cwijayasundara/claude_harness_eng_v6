@@ -154,6 +154,24 @@
       "summary": "Impact-scoped regression (G16): deterministic TIA over code-graph.json selects only the affected prior group's e2e/contract checks. LANE-ONLY — the fast per-iteration complement to regression-suite-full, which /gate runs unabridged. Reached via --only local-regression from /change and /vibe.",
       "remediation": "An earlier story's behaviour regressed. Fix the regression — do not narrow the scope. Run the full sweep (regression-suite-full) before merge.",
       "lane_only": true
+    },
+    {
+      "id": "dead-path",
+      "pack": "maintainability",
+      "script": "dead-path-gate.js",
+      "when": "changed:*.{js,jsx,mjs,cjs,ts,tsx,py}",
+      "blocking": true,
+      "summary": "Blocks a change that removed a symbol’s last production caller while leaving its definition in the tree.",
+      "remediation": "Delete the orphaned function — and its tests and config lines — in this commit. If it is deliberately callerless (a CLI entry point, a public export), mark it: // harness:keep-dead <why>."
+    },
+    {
+      "id": "spec-mutation",
+      "pack": "verification",
+      "script": "spec-mutation-gate.js",
+      "when": "changed:sprint-contracts/*.json",
+      "blocking": true,
+      "summary": "Corrupts one expected value in the sprint contract and requires the verification to fail; a survivor is a criterion that verifies nothing.",
+      "remediation": "Wire the surviving check to a real assertion, or delete it. Unprovisioned until quality.spec_mutation.verify_command is set in project-manifest.json."
     }
   ]
 }

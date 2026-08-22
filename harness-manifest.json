@@ -493,6 +493,14 @@
       "wired_at": ".claude/scripts/validate-prd.js",
       "net_add_justification": "The PRD is the root of the grounding chain and the only artifact a human authors, and nothing has ever checked one — while --autonomous and --auto both refuse to run without it. R2 raised the stakes: brd-adopt.js now carries PRD text verbatim into the spine, so there is no longer a rewriting step that might incidentally fix a malformed requirement. Owns one invariant nothing else covers: every functional requirement has an OBSERVABLE POSTCONDITION. trace-check proves ids link and brd-taxonomy-floor proves the ten slots are addressed; neither notices that a requirement gives the evaluator nothing to check, and a check with no oracle passes by default. Measured on a real PRD: 27 of 38 functional requirements had none.",
       "description": "Blocks a malformed PRD before it becomes the grounding baseline: missing/empty Out of Scope (or Non-goals), no functional requirements, duplicate ids, placeholder text, an acceptance entry naming an unknown requirement, and any FR with no acceptance postcondition. Warns on an NFR with no number or named standard and a milestone with no observable Done-when. Accepts the layouts real PRDs use (bullet, heading-per-requirement, bold pseudo-heading; acceptance in its own section or as an inline AC: line) — ids and postconditions are what is load-bearing, not heading text."
+    },
+    {
+      "id": "agent-write-contract",
+      "axis": "behaviour",
+      "kind": "feedforward",
+      "wired_at": ".claude/agents/code-reviewer.contract.json",
+      "net_add_justification": "Every agent prompt declared its ownership in prose (\"report-only\", \"never implements\", \"does not rewrite frozen sprint contracts\") while the tools: grant contradicted it — code-reviewer holds Write and Bash. Nothing in the harness could read, check or enforce that prose. This makes the declaration data: an allow-list for the enumerable review surface, a deny-list for builders. Adopted from SwarmForge (unclebob/swarm-forge, squad branch), which pairs every role prompt with a machine-readable contract.",
+      "description": "Per-agent write-scope contract at .claude/agents/<name>.contract.json: artifact_roots (allow-list, deny-by-default), forbidden_artifact_roots (deny-list), may_spawn, and a required one-line why. An allow-list means the agent writes there and nowhere else; an empty allow-list is read-only; omitting it means anywhere except the deny-list. Two prohibitions it makes real: a reviewer cannot edit the code it judges, and a builder cannot write the verdict that judges it."
     }
   ],
   "sensors": [
@@ -1901,6 +1909,54 @@
       "signal": "a lane that owns planning gates ended a session with a phase whose artifacts exist but whose review recorded no approving receipt",
       "net_add_justification": "R7 asked for the planning gates to be enforced by a hook or deleted. Enforcement is not available: hooks fire on tool calls and there is no phase-transition event to gate, and plan-approval#phaseRan tests directory EXISTENCE rather than authorship — so in any repo that has run /build once, specs/brd|stories|design stay populated and a hook keyed on them would block every later /feature, /change, /vibe and /refactor, lanes that reach /auto writing no BRD at all. What was actually missing on the audited run was not enforcement but VISIBILITY: two of three gates left no receipt and nobody could tell. plan-approval detects a bad receipt when something asks it; this detects that nothing asked. Distinct signal, and the only one that fires when the gate is skipped rather than failed.",
       "description": "Stop-cadence sensor, reports and never blocks. For lanes that own planning gates (the lanes record-run writes: gated/auto/autonomous/lite* -> brd,spec,design,test; sprint -> brd,spec,design; finalize is not applicable) it reports any phase whose artifacts exist but whose receipt is absent or still changes-requested. A waiver is NOT a finding — a deliberately headless run and a gate nobody ran are different facts. A phase that never ran is not a finding either; it was not reached. Rides the existing review-on-stop Stop hook rather than adding one, so it needs no settings.json change."
+    },
+    {
+      "id": "agent-write-scope",
+      "axis": "behaviour",
+      "type": "computational",
+      "cadence": "session",
+      "status": "partial",
+      "scope": "universal",
+      "wired_at": ".claude/hooks/agent-write-scope.js",
+      "signal": "a subagent Write/Edit outside its contract",
+      "net_add_justification": "The runtime half of agent-write-contract. trust-boundary.js already states in a comment that evaluator-side tampering is the dominant spontaneous integrity failure documented for coding agents, and stops an agent editing the GATES; nothing stopped a reviewer editing the CODE it was judging, or a builder writing the verdict that judged it. Decides from agent_type, the field a real subagent payload carries (captured 2026-08-22).",
+      "description": "PreToolUse gate on Write/Edit/MultiEdit/NotebookEdit. Resolves the acting agent from agent_type, loads that agent contract from the PROJECT (so a scaffolded repo governs its own agents), and blocks a write outside the contract with a message naming where the agent MAY write. Fails open on every uncertainty: no agent_id (the main loop, where a human is driving), an ungoverned agent type, a path outside the project, malformed input. Session escape HARNESS_AGENT_SCOPE=off. Status partial: the decision logic and contracts are proven and canary-LIVE, but settings.json registration is a human inter-session step (prompt-cache prefix file) — run .claude/scripts/wire-agent-write-scope.js, which test/agent-write-scope-wiring.test.js asserts until done."
+    },
+    {
+      "id": "agent-contract-drift",
+      "axis": "behaviour",
+      "type": "computational",
+      "cadence": "commit",
+      "status": "active",
+      "scope": "repo",
+      "wired_at": ".claude/scripts/validate-agent-contracts.js",
+      "signal": "a contract that disagrees with the agent tools: grant",
+      "net_add_justification": "The static half of agent-write-contract, and the half that keeps it honest: a contract claiming read-only beside a grant carrying Write means the runtime gate enforces a scope nobody believes in, and the drift is invisible because both files look reasonable alone. Also catches an agent shipped with no contract at all — the silent way the control set stops covering the fleet.",
+      "description": "Cross-checks every .claude/agents/<name>.md against its contract: missing contract, contract for a deleted agent, agent-name mismatch, may_spawn:false beside the Agent tool, read-only beside Write/Edit, a root that is absolute or lacks a trailing slash, an allow/deny overlap that would make the decision ambiguous, and a missing why. Runs in npm test via test/agent-contract.test.js."
+    },
+    {
+      "id": "dead-path",
+      "axis": "maintainability",
+      "type": "computational",
+      "cadence": "commit",
+      "status": "active",
+      "scope": "repo",
+      "wired_at": ".claude/scripts/dead-path-gate.js",
+      "signal": "a definition whose last production caller this change removed",
+      "net_add_justification": "control-budget ratchets the count of CONTROLS; nothing ratcheted orphaned CODE, and the record says that is the live failure mode — 132 controls, a cut-to-half proposal overwhelmed by accretion in five weeks, a rewrite abandoned for accreting 6x faster. Adopted from SwarmForge squad redo plan: when a path dies, its functions, config and tests die in the same commit. Distinct from the drift report dead-code trend, which is report-only and cannot say which commit orphaned what.",
+      "description": "Commit gate. Candidates are symbols that lost their CALL SITES in the staged diff (not merely their textual presence — the call goes and the require line stays behind is the common shape). A candidate blocks when it had production callers at HEAD, has none in the staged tree, and its definition is still there. Export listings, imports and the definition itself never count as calls. Pre-existing dead code is out of scope by design. Escape marker // harness:keep-dead <why>, matching the harness:secret-ok convention. Bounded by --max-symbols, and the cap is always reported, never silent."
+    },
+    {
+      "id": "spec-mutation",
+      "axis": "behaviour",
+      "type": "computational",
+      "cadence": "commit",
+      "status": "active",
+      "scope": "artifacts",
+      "wired_at": ".claude/scripts/spec-mutation-gate.js",
+      "signal": "a sprint-contract expectation that can be corrupted with verification still passing",
+      "net_add_justification": "mutation-smoke and deep-mutation mutate CODE and ask whether the suite notices; nothing mutated the CONTRACT. The harness recurring defect is not a wrong implementation but a check wired to nothing while everything is green — a gate shipped reading a FLAT contract while real sprint contracts nest under a contract key, so it found zero checks and failed nothing. verification-matrix-gate proves a criterion has evidence assigned and prd-shape-gate proves it has a postcondition; neither can tell that the assertion does not discriminate. Adopted from the SwarmForge hardener role gherkin-mutator step.",
+      "description": "Corrupts one expected value in a sprint contract, re-runs the project verification command, and requires it to FAIL. A survivor means that criterion verifies nothing. The mutant is written OVER the real contract (a copy at a path nothing reads would reproduce the very defect being hunted) and restored in a finally, with a .spec-mutation-backup the next run replays after a crash. readChecks refuses the flat contract shape and an empty contract loudly rather than returning an empty list. A runner that could not execute is inconclusive, never a kill. Status active but unprovisioned until quality.spec_mutation.verify_command is set; canary-LIVE regardless. Playwright and design checks are not mutated — prose expectations a mechanical perturbation cannot corrupt meaningfully."
     }
   ],
   "drift_sensors_planned": {

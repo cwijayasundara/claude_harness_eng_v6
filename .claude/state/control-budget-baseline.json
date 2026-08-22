@@ -1,5 +1,5 @@
 {
-  "count": 170,
+  "count": 175,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -7,6 +7,9 @@
     "adversarial-code-review",
     "adversarial-security-certification",
     "advisor",
+    "agent-contract-drift",
+    "agent-write-contract",
+    "agent-write-scope",
     "amendment-provenance-check",
     "api-contract-drift",
     "api-schema-validation",
@@ -45,6 +48,7 @@
     "custom-sensor-runner",
     "cycle-detection",
     "cyclic-dependency-prepass",
+    "dead-path",
     "deep-mutation",
     "dep-audit",
     "deploy-gate-verify",
@@ -143,6 +147,7 @@
     "sensor-value-meter",
     "sensor-waiver-validation",
     "spec-decisions-gate",
+    "spec-mutation",
     "sprint-contract",
     "sprout-diff-one-symbol",
     "story-bundle",
