@@ -25,7 +25,7 @@ function scaffoldCore() {
     frameworkPacks: [],
     lsp: [],
   }));
-  applyScaffold({
+  applyScaffold({ installDeps: false,
     profile: profilePath,
     pluginSource: PLUGIN,
     target,

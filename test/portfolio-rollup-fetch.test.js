@@ -146,7 +146,7 @@ test('8b: scaffold round-trip stamps harness_version + ships the rollup script/s
     stack: { backend: null, frontend: null, database: null },
     projectType: 'D', verificationMode: 'C', modelTier: 'balanced', tracker: 'A', frameworkPacks: [], lsp: [],
   }));
-  applyScaffold({ profile: profilePath, pluginSource: path.join(REPO_ROOT, '.claude'), target, scaffoldProfile: 'full' });
+  applyScaffold({ installDeps: false, profile: profilePath, pluginSource: path.join(REPO_ROOT, '.claude'), target, scaffoldProfile: 'full' });
   const manifest = JSON.parse(fs.readFileSync(path.join(target, 'project-manifest.json'), 'utf8'));
   const harnessPkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
   assert.strictEqual(manifest.harness_version, harnessPkg.version);
@@ -172,16 +172,16 @@ test('9: generate-attestation prefers project-manifest.json#harness_version over
 
 // ============================ 10. manifest + budget ==========================
 
-test('10: manifest valid; portfolio-compliance-rollup registered; control budget holds at 173', () => {
+test('10: manifest valid; portfolio-compliance-rollup registered; control budget holds at 174', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'harness-manifest.json'), 'utf8'));
   const { errors, counts } = validate(manifest);
   assert.deepStrictEqual(errors, [], errors.join('\n'));
-  assert.strictEqual(counts.guides + counts.sensors, 173);
+  assert.strictEqual(counts.guides + counts.sensors, 174);
   const ids = controlIds(manifest);
   assert.ok(ids.includes('portfolio-compliance-rollup'));
   // phase-context-handoff: the /clear handoff turned from advice into a block.
   assert.ok(ids.includes('phase-context-handoff'));
   const baseline = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, '.claude', 'state', 'control-budget-baseline.json'), 'utf8'));
-  assert.strictEqual(baseline.count, 173);
+  assert.strictEqual(baseline.count, 174);
   assert.strictEqual(budgetDecision(ids, baseline, justifiedIds(manifest)).blocked, false);
 });

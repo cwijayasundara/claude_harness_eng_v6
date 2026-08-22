@@ -1,5 +1,5 @@
 {
-  "count": 173,
+  "count": 174,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -50,6 +50,7 @@
     "dep-audit",
     "deploy-gate-verify",
     "design-decisions-gate",
+    "deterministic-bootstrap",
     "diff-review",
     "dispatch-integrity",
     "drift-architecture",

@@ -26,7 +26,7 @@ function scaffold(profile, opts = {}) {
   const target = path.join(workDir, 'project');
   const profilePath = path.join(workDir, 'profile.json');
   fs.writeFileSync(profilePath, JSON.stringify(profile));
-  const result = applyScaffold({ profile: profilePath, pluginSource: PLUGIN_SOURCE, target, ...opts });
+  const result = applyScaffold({ installDeps: false, profile: profilePath, pluginSource: PLUGIN_SOURCE, target, ...opts });
   return { workDir, target, result };
 }
 

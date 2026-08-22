@@ -33,7 +33,7 @@ function scaffold() {
   const target = path.join(workDir, 'project');
   const profilePath = path.join(workDir, 'profile.json');
   fs.writeFileSync(profilePath, JSON.stringify(BASE_PROFILE));
-  applyScaffold({ profile: profilePath, pluginSource: path.join(ROOT, '.claude'), target, scaffoldProfile: 'core' });
+  applyScaffold({ installDeps: false, profile: profilePath, pluginSource: path.join(ROOT, '.claude'), target, scaffoldProfile: 'core' });
   return { workDir, target };
 }
 

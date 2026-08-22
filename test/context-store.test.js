@@ -91,7 +91,7 @@ test('brownfield scaffold copies the context compression scripts', () => {
       verificationMode: 'C',
       stack: { backend: null, frontend: null, database: null },
     }));
-    applyScaffold({ profile, pluginSource: PLUGIN_SOURCE, target: path.join(dir, 'project'), scaffoldProfile: 'brownfield' });
+    applyScaffold({ installDeps: false, profile, pluginSource: PLUGIN_SOURCE, target: path.join(dir, 'project'), scaffoldProfile: 'brownfield' });
 
     for (const script of ['context-store.js', 'context-retrieve.js', 'run-compact.js', 'search-compact.js']) {
       assert.ok(fs.existsSync(path.join(dir, 'project', '.claude', 'scripts', script)), script);

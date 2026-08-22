@@ -101,7 +101,7 @@ test('brownfield scaffold copies the tool-output-pack script', () => {
       verificationMode: 'C',
       stack: { backend: null, frontend: null, database: null },
     }));
-    applyScaffold({ profile, pluginSource: PLUGIN_SOURCE, target: path.join(dir, 'project'), scaffoldProfile: 'brownfield' });
+    applyScaffold({ installDeps: false, profile, pluginSource: PLUGIN_SOURCE, target: path.join(dir, 'project'), scaffoldProfile: 'brownfield' });
 
     assert.ok(fs.existsSync(path.join(dir, 'project', '.claude', 'scripts', 'tool-output-pack.js')));
   } finally {
