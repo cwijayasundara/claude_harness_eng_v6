@@ -21,7 +21,7 @@ const fs = require('fs');
 const path = require('path');
 
 const {
-  costByPhase, aggregate, transcriptsFor, subagentTranscriptsFor,
+  costByPhase, aggregate, transcriptsFor, subagentTranscriptsFor, cacheProfile,
 } = require('../../../.claude/hooks/lib/phase-cost-core.js');
 
 const E2E_DIR = path.join(__dirname, '..');
@@ -50,17 +50,20 @@ function billRoute(target, opts = {}) {
     .filter((p) => !wanted || wanted.has(path.basename(p, '.jsonl')));
 
   const rows = [];
+  const cacheRows = [];
   let subagentFiles = 0;
   for (const transcript of transcripts) {
     const extras = subagentTranscriptsFor(transcript);
     subagentFiles += extras.length;
     rows.push(...costByPhase(transcript, { extraTranscripts: extras }));
+    cacheRows.push(...cacheProfile(transcript, { extraTranscripts: extras }));
   }
 
   // aggregate() returns a Set for models; a receipt has to serialise.
   const phases = aggregate(rows).map((r) => ({ ...r, models: [...r.models].sort() }));
   return {
     phases,
+    cache: cacheTotals(cacheRows),
     totals: totalsOf(phases),
     coverage: {
       sessions: transcripts.length,
@@ -71,6 +74,28 @@ function billRoute(target, opts = {}) {
       mainLoopOnly: subagentFiles === 0,
       requestedSessions: wanted ? wanted.size : null,
     },
+  };
+}
+
+/**
+ * Cache accounting for the route: how much of the bill was context re-reads,
+ * and how much was a whole context re-written after a cache expiry.
+ *
+ * Measured on the run this ratchet was built around, output was $2.70 of
+ * $47.97 — so a token budget that watches only output tokens is watching 6% of
+ * the spend. `wasted_usd` is the part that is avoidable rather than inherent.
+ */
+function cacheTotals(cacheRows) {
+  const sum = (key) => cacheRows.reduce((acc, r) => acc + (r[key] || 0), 0);
+  return {
+    cache_read_tokens: sum('cache_read_tokens'),
+    cache_write_tokens: sum('cache_write_tokens'),
+    ttl_5m_tokens: sum('ttl_5m_tokens'),
+    ttl_1h_tokens: sum('ttl_1h_tokens'),
+    full_misses: sum('full_misses'),
+    full_miss_tokens: sum('full_miss_tokens'),
+    wasted_usd: Number(sum('wasted_usd').toFixed(4)),
+    idle_gaps_sec: cacheRows.flatMap((r) => r.idle_gaps_sec || []).sort((a, b) => a - b),
   };
 }
 
@@ -125,7 +150,33 @@ function baselineFrom(bill) {
   };
 }
 
-function writeBaseline(routeId, bill, dir = BASELINE_DIR) {
+/**
+ * Record a baseline, refusing one that covers less than the route ran.
+ *
+ * How the committed sprint-1 baseline came to be wrong: it was recorded from a
+ * RESUMED run, where an already-settled phase returned early without recording
+ * its session id, so the bill narrowed to whatever that last process executed.
+ * The result claimed $43.88 across four phases when the run really cost $47.97
+ * across seven — /scaffold and /brd were absent entirely and (freeform) was
+ * recorded at $0.00 across six runs. A baseline that silently omits phases does
+ * not merely understate: the ratchet then stops watching those phases forever,
+ * which is strictly worse than having no baseline at all.
+ *
+ * `expectPhases` is the guard. A phase billed at exactly zero is treated as
+ * absent too — six runs costing $0.00 is not a measurement.
+ */
+function writeBaseline(routeId, bill, dir = BASELINE_DIR, opts = {}) {
+  const expect = opts.expectPhases || [];
+  const billed = new Set(bill.phases.filter((p) => p.cost_usd > 0).map((p) => p.command));
+  const missing = expect.filter((name) => !billed.has(name));
+  if (missing.length) {
+    throw new Error(
+      `phase-budget: refusing to record a "${routeId}" baseline missing ${missing.map((m) => `/${m}`).join(', ')}. `
+      + `Billed: ${[...billed].map((b) => `/${b}`).join(', ') || '(nothing)'}. `
+      + 'A baseline recorded from a partial run makes the ratchet permanently blind to the phases it omits. '
+      + 'If this was a resumed run, the skipped phases never recorded their session ids.',
+    );
+  }
   fs.mkdirSync(dir, { recursive: true });
   const file = baselinePath(routeId, dir);
   fs.writeFileSync(file, `${JSON.stringify(baselineFrom(bill), null, 2)}\n`);
@@ -167,6 +218,22 @@ function checkBudget(routeId, bill, opts = {}) {
 
   const regressions = [];
   const unratcheted = [];
+
+  // A phase the baseline knows about that produced no bill at all is not
+  // "under budget" — it is a phase that did not run, or whose sessions were
+  // lost. The loop below skips any phase absent from either side, so without
+  // this check a route that crashed after /brd would pass its budget check
+  // green. Reported as a `missing` regression so it fails loudly.
+  for (const name of Object.keys((baseline && baseline.phases) || {})) {
+    if (!(current.phases || {})[name]) {
+      regressions.push({
+        label: `/${name}`, metric: 'coverage', before: baseline.phases[name].cost_usd, after: 0,
+        reason: 'phase present in the baseline produced no bill in this run — it did not run, '
+          + 'or its session id was not recorded. An absent phase is not an under-budget phase.',
+      });
+    }
+  }
+
   const entries = [
     ...Object.keys(baseline.phases || {}).map((k) => [`/${k}`, baseline.phases[k], (current.phases || {})[k]]),
     ['TOTAL', baseline.total, current.total],

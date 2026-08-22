@@ -14,7 +14,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { usageFromTranscripts, loadTurns } = require('./transcript-usage.js');
+const { usageFromTranscripts, loadTurns, priceOf } = require('./transcript-usage.js');
 
 const COMMAND_TAG = /<command-name>\s*([^<]+?)\s*<\/command-name>/;
 const LEADING_SLASH = /^\/([A-Za-z0-9_:-]+)/;
@@ -253,8 +253,96 @@ function aggregate(rows) {
   return [...byCommand.values()].sort((a, b) => b.cost_usd - a.cost_usd);
 }
 
+/**
+ * Why a phase cost what it did, in cache terms.
+ *
+ * On this harness the bill is not generation. Measured over the 2026-08-21
+ * sprint-1 baseline: output was $2.70 of $47.97, cache READ $27.88 (58%) and
+ * cache WRITE $17.38 (36%). Two levers hide behind those numbers and neither is
+ * visible in a cost table:
+ *
+ *  - RESIDENT CONTEXT x TURNS drives the read half. turnProfile covers that.
+ *  - CACHE MISSES drive an avoidable slice of the write half. Every cache block
+ *    a subagent writes carries the 5-minute TTL (`ephemeral_1h` was 0.00M
+ *    across every agent-*.jsonl in that run, while main-loop sessions did get
+ *    1h on their static prefix). A subagent that idles past 5 minutes — a
+ *    `uv sync`, an install, a test suite — re-writes its WHOLE context at
+ *    1.25x base. 18 such turns rewrote 1.98M tokens, $7.42 of the run, and the
+ *    idle gap before every one of them exceeded the TTL (shortest 8.2 min).
+ *
+ * A session's FIRST turn also reads nothing, but that is a legitimate cold
+ * start, not waste — hence the per-source grouping. Counting it would report
+ * every run as having one unavoidable "miss" per agent and make the real signal
+ * unreadable.
+ *
+ * `wasted_usd` is the DIFFERENCE between what the rewrite cost and what a hit
+ * would have cost, not the gross write — the context had to be paid for once
+ * either way.
+ */
+function cacheProfile(transcriptPath, opts = {}) {
+  const extras = (opts.extraTranscripts || []).map((p) => ({ path: p, subagent: true }));
+  const sources = [transcriptPath, ...extras];
+  const segments = segmentsFromTranscript(transcriptPath);
+  const { turns } = loadTurns(sources);
+
+  // A rewrite below this is an ordinary incremental append, not an expiry.
+  const MISS_FLOOR = opts.missFloor || 20000;
+
+  const seen = new Set();
+  const unique = turns.filter((t) => (t.id && seen.has(t.id) ? false : (t.id && seen.add(t.id), true)));
+  const firstOf = new Map();
+  for (const t of [...unique].sort((a, b) => (a.ts || 0) - (b.ts || 0))) {
+    if (t.source && !firstOf.has(t.source)) firstOf.set(t.source, t.id);
+  }
+
+  return segments.map((seg, i) => {
+    const isLast = i === segments.length - 1;
+    const mine = unique
+      .filter((t) => t.ts != null && t.ts >= seg.start && (isLast || t.ts < seg.end))
+      .sort((a, b) => a.ts - b.ts);
+
+    const prevTs = new Map();
+    let cacheRead = 0; let cacheWrite = 0; let ttl5 = 0; let ttl1h = 0;
+    let missCount = 0; let missTokens = 0; let wasted = 0;
+    const gapsSec = [];
+
+    for (const t of mine) {
+      const u = t.usage;
+      const cr = u.cache_read_input_tokens || u.cache_read_tokens || 0;
+      const cw = u.cache_creation_input_tokens || u.cache_creation_tokens || 0;
+      cacheRead += cr; cacheWrite += cw;
+      const cc = u.cache_creation || {};
+      ttl5 += cc.ephemeral_5m_input_tokens || 0;
+      ttl1h += cc.ephemeral_1h_input_tokens || 0;
+
+      const coldStart = firstOf.get(t.source) === t.id;
+      if (!coldStart && cr === 0 && cw >= MISS_FLOOR) {
+        missCount += 1;
+        missTokens += cw;
+        wasted += priceOf({ cache_creation_tokens: cw, cache_read_tokens: 0 }, t.model)
+          - priceOf({ cache_read_tokens: cw }, t.model);
+        const before = prevTs.get(t.source);
+        if (before != null) gapsSec.push(Math.round((t.ts - before) / 1000));
+      }
+      if (t.ts != null) prevTs.set(t.source, t.ts);
+    }
+
+    return {
+      command: seg.command,
+      cache_read_tokens: cacheRead,
+      cache_write_tokens: cacheWrite,
+      ttl_5m_tokens: ttl5,
+      ttl_1h_tokens: ttl1h,
+      full_misses: missCount,
+      full_miss_tokens: missTokens,
+      wasted_usd: Number(wasted.toFixed(4)),
+      idle_gaps_sec: gapsSec.sort((a, b) => a - b),
+    };
+  });
+}
+
 module.exports = {
-  turnProfile,
+  turnProfile, cacheProfile,
   segmentsFromTranscript, costByPhase, commandOf, aggregate,
   subagentTranscriptsFor, transcriptsFor,
   // Shared vocabulary: the core emits this command name for turns before any

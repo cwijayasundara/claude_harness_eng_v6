@@ -164,7 +164,10 @@ function turnsFromSource(source) {
   const forced = typeof source === 'string' ? false : source.subagent === true;
   const turns = readTurns(file);
   if (!turns) return { turns: [], read: false };
-  return { turns: forced ? turns.map((t) => ({ ...t, sidechain: true })) : turns, read: true };
+  // `source` is carried so a caller can tell a session's legitimate COLD START
+  // (first turn, nothing to read) from a mid-session cache expiry. Pooled
+  // across files those look identical, and only the second one is waste.
+  return { turns: turns.map((t) => ({ ...t, source: file, sidechain: forced ? true : t.sidechain })), read: true };
 }
 
 /**

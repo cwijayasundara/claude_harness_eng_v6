@@ -135,6 +135,31 @@ const PHASE_LOG = [];
 const SESSIONS = [];
 let RESUME = false;
 
+// Sessions are persisted so a RESUMED run can still bill the phases it skipped.
+// Without this the bill narrows to whatever the LAST process ran: the committed
+// sprint-1 baseline was recorded from a resumed run and therefore omitted
+// /scaffold and /brd entirely and recorded (freeform) at $0.00, so the ratchet
+// was 9% light AND permanently blind to three phases. A baseline that silently
+// covers less than the route ran is worse than no baseline.
+const SESSION_LOG = path.join(BUILD_DIR, '.claude', 'state', 'e2e-sessions.json');
+
+function rememberSession(sessionId) {
+  if (!sessionId || SESSIONS.includes(sessionId)) return;
+  SESSIONS.push(sessionId);
+  try {
+    fs.mkdirSync(path.dirname(SESSION_LOG), { recursive: true });
+    fs.writeFileSync(SESSION_LOG, `${JSON.stringify(SESSIONS, null, 2)}\n`);
+  } catch (_) { /* the bill degrades to this process's sessions; never fail the run */ }
+}
+
+function loadRememberedSessions() {
+  try {
+    for (const id of JSON.parse(fs.readFileSync(SESSION_LOG, 'utf8'))) {
+      if (typeof id === 'string' && !SESSIONS.includes(id)) SESSIONS.push(id);
+    }
+  } catch (_) { /* first run, or an unreadable log */ }
+}
+
 // `/spec` and `/design` are SHAPING phases: they present their load-bearing
 // decisions and wait to be answered. That stop is a real control — the decisions
 // validator refuses to unlock the renderer unless every load-bearing decision
@@ -186,6 +211,7 @@ function phase(label, prompt, budgetUsd, timeoutMs, opts = {}) {
   });
   const seconds = Math.round((Date.now() - started) / 1000);
   PHASE_LOG.push({ label, sessionId, exitCode: res.exitCode, seconds });
+  rememberSession(sessionId);
   process.stdout.write(`${label}: exit=${res.exitCode} ${seconds}s\n`);
   if (res.sessionLimited) throw new Error(`${label}: ${res.limitMessage}`);
   return sessionId;
@@ -222,7 +248,6 @@ function step(opts) {
   }
 
   const sessionId = phase(label, prompt, budgetUsd, timeoutMs);
-  SESSIONS.push(sessionId);
 
   let failure = check();
   // A shaping phase stops to be answered rather than failing. Answer it in its
@@ -418,7 +443,7 @@ function liveBuild() {
   // ── Phase 5: /auto ─────────────────────────────────────────────────────
   // No `expects` gate: the build is judged by the project's own suite, not by a
   // file existing, so this phase is never skipped on resume.
-  SESSIONS.push(phase('auto', '/auto\n\nImplement every open group until the project\'s own test '
+  (phase('auto', '/auto\n\nImplement every open group until the project\'s own test '
     + 'suite passes. Do not replan.', '60.00', 5400000));
 
   let suite = runManifestSuite(BUILD_DIR, 1200000);
@@ -426,7 +451,7 @@ function liveBuild() {
     + `${suite.skipped && suite.skipped.length ? ` skipped=${suite.skipped.join(',')}` : ''}\n`);
   if (suite.status !== 0) {
     process.stdout.write('not green — one bounded resume\n');
-    SESSIONS.push(phase('auto-resume', '/auto\n\nContinue the open groups until the project\'s own '
+    (phase('auto-resume', '/auto\n\nContinue the open groups until the project\'s own '
       + 'test suite passes. Do not replan.', '40.00', 3600000));
     suite = runManifestSuite(BUILD_DIR, 1200000);
     process.stdout.write(`suite after resume: status=${suite.status}\n`);
@@ -435,7 +460,11 @@ function liveBuild() {
   const bill = billRoute(BUILD_DIR, { sessionIds: SESSIONS });
   process.stdout.write(`\n${formatBill('sprint1-baseline', bill)}\n`);
   process.stdout.write(`\nphases:\n${PHASE_LOG.map((p) => `  ${p.label}: exit=${p.exitCode} ${p.seconds}s`).join('\n')}\n`);
-  writeBaseline('sprint1-baseline', bill);
+  // Every phase the route runs must appear in the bill, or the baseline is
+  // recorded blind to the rest — see writeBaseline.
+  writeBaseline('sprint1-baseline', bill, undefined, {
+    expectPhases: ['scaffold', 'brd', 'spec', 'design', 'test', 'auto'],
+  });
 
   if (suite.status !== 0) {
     throw new Error(
@@ -449,6 +478,9 @@ function liveBuild() {
 function main(argv) {
   const opts = parseArgs(argv);
   RESUME = opts.resume;
+  // Restore the sessions earlier processes created, so a resumed run bills the
+  // phases it skips instead of quietly dropping them from the baseline.
+  loadRememberedSessions();
   const source = opts.from ? path.resolve(opts.from)
     : (opts.snapshotOnly ? BUILD_DIR : liveBuild());
   snapshot(source);

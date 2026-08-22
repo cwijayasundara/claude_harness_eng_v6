@@ -150,3 +150,72 @@ function readBack(bill) {
   writeBaseline('sprint-delta', bill, store);
   return readBaseline('sprint-delta', store);
 }
+
+// ── Coverage: the ways a ratchet can pass over a run it never measured ───────
+//
+// Both holes below were live. The committed sprint-1 baseline was recorded from
+// a RESUMED run, where a phase whose artifacts already existed returned early
+// without recording its session id — so the bill narrowed to whatever the last
+// process ran. It claimed $43.88 across four phases against a real $47.97
+// across seven, with /scaffold and /brd absent and (freeform) at $0.00.
+
+test('refuses to record a baseline that is missing a phase the route runs', () => {
+  const dir = tmpDir();
+  const bill = billRoute(sprintTranscript(dir, 'sess-1'));
+  assert.throws(
+    () => writeBaseline('partial', bill, tmpDir(), { expectPhases: ['sprint', 'auto', 'design'] }),
+    /missing \/design/,
+    'a baseline recorded from a partial run makes the ratchet permanently blind to the rest',
+  );
+});
+
+test('a phase billed at exactly zero counts as missing, not as measured', () => {
+  const dir = tmpDir();
+  const file = writeTranscript(dir, 'sess-zero', [
+    userTurn('2026-08-21T07:00:00.000Z', '/sprint prd.md'),
+    assistantTurn('2026-08-21T07:10:00.000Z', 'a1', 'claude-sonnet-5', 4000),
+    userTurn('2026-08-21T08:00:00.000Z', '/auto'),
+    assistantTurn('2026-08-21T08:30:00.000Z', 'a2', 'claude-sonnet-5', 0),
+  ]);
+  assert.throws(
+    () => writeBaseline('zeroed', billRoute(file), tmpDir(), { expectPhases: ['sprint', 'auto'] }),
+    /missing \/auto/,
+    'a phase recorded at $0.00 is an absent measurement, not a cheap one',
+  );
+});
+
+test('records a baseline when every expected phase is billed', () => {
+  const dir = tmpDir();
+  const bill = billRoute(sprintTranscript(dir, 'sess-1'));
+  const out = writeBaseline('complete', bill, tmpDir(), { expectPhases: ['sprint', 'auto'] });
+  assert.ok(fs.existsSync(out));
+});
+
+test('a phase that vanishes from the run fails the budget, never passes it', () => {
+  const dir = tmpDir();
+  const bill = billRoute(sprintTranscript(dir, 'sess-1'));
+  // The baseline knows a /design phase this run produced no bill for at all.
+  const baseline = {
+    phases: {
+      sprint: { runs: 1, output_total: 4000, cost_usd: 1.0 },
+      auto: { runs: 1, output_total: 9000, cost_usd: 2.0 },
+      design: { runs: 1, output_total: 40000, cost_usd: 4.0 },
+    },
+    total: { output_total: 53000, cost_usd: 7.0 },
+  };
+  const verdict = checkBudget('vanished', bill, { baseline });
+  assert.strictEqual(verdict.status, 'regressed',
+    'a phase that did not run is not an under-budget phase');
+  const missing = verdict.regressions.find((r) => r.metric === 'coverage');
+  assert.ok(missing, `expected a coverage regression, got ${JSON.stringify(verdict.regressions)}`);
+  assert.strictEqual(missing.label, '/design');
+});
+
+test('the bill carries cache accounting, since output is a small share of spend', () => {
+  const dir = tmpDir();
+  const bill = billRoute(sprintTranscript(dir, 'sess-1'));
+  for (const key of ['cache_read_tokens', 'cache_write_tokens', 'full_misses', 'wasted_usd']) {
+    assert.ok(key in bill.cache, `bill.cache must report ${key}`);
+  }
+  assert.ok(Array.isArray(bill.cache.idle_gaps_sec));
+});

@@ -19,7 +19,7 @@ const fs = require('fs');
 const path = require('path');
 const {
   segmentsFromTranscript, costByPhase, commandOf, aggregate,
-  subagentTranscriptsFor, transcriptsFor, FREEFORM,
+  subagentTranscriptsFor, transcriptsFor, cacheProfile, FREEFORM,
 } = require('../hooks/lib/phase-cost-core.js');
 
 function pad(value, width, left = false) {
@@ -75,16 +75,61 @@ function render(rows, coverage) {
 }
 
 function parseCli(argv) {
-  const opts = { json: false, write: false, step: null, target: null };
+  const opts = { json: false, write: false, step: null, target: null, why: false };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === '--json') opts.json = true;
     else if (a === '--write') opts.write = true;
     else if (a === '--step') opts.step = argv[++i] || null;
+    else if (a === '--why') opts.why = true;
     else if (!a.startsWith('--') && !opts.target) opts.target = a;
   }
   opts.target = opts.target || process.cwd();
   return opts;
+}
+
+// The cost table says WHAT a phase cost. On this harness the answer to WHY is
+// almost always cache: measured over the 2026-08-21 sprint-1 baseline, output
+// was $2.70 of $47.97 and the rest was context re-reads plus cache writes.
+// A phase that idles past the 5-minute TTL rewrites its whole context at 1.25x
+// base, and neither the miss nor the idle gap that caused it appears in a bill.
+function renderWhy(profiles) {
+  const byCommand = new Map();
+  for (const p of profiles) {
+    const cur = byCommand.get(p.command) || {
+      command: p.command, cache_read_tokens: 0, cache_write_tokens: 0,
+      ttl_5m_tokens: 0, ttl_1h_tokens: 0, full_misses: 0, full_miss_tokens: 0,
+      wasted_usd: 0, idle_gaps_sec: [],
+    };
+    for (const k of ['cache_read_tokens', 'cache_write_tokens', 'ttl_5m_tokens', 'ttl_1h_tokens',
+      'full_misses', 'full_miss_tokens', 'wasted_usd']) cur[k] += p[k];
+    cur.idle_gaps_sec.push(...p.idle_gaps_sec);
+    byCommand.set(p.command, cur);
+  }
+  const rows = [...byCommand.values()].sort((a, b) => b.wasted_usd - a.wasted_usd);
+  const M = (n) => `${(n / 1e6).toFixed(2)}M`;
+  const w = Math.max(14, ...rows.map((r) => r.command.length + 2));
+  const out = ['', 'WHY — cache accounting', '-'.repeat(w + 52),
+    `${pad('phase', w)}${pad('cache rd', 10, true)}${pad('cache wr', 10, true)}`
+    + `${pad('misses', 8, true)}${pad('rewrote', 10, true)}${pad('wasted', 10, true)}`];
+  let wasted = 0; let misses = 0;
+  const gaps = [];
+  for (const r of rows) {
+    wasted += r.wasted_usd; misses += r.full_misses; gaps.push(...r.idle_gaps_sec);
+    out.push(pad(r.command === FREEFORM ? r.command : `/${r.command}`, w)
+      + pad(M(r.cache_read_tokens), 10, true) + pad(M(r.cache_write_tokens), 10, true)
+      + pad(r.full_misses, 8, true) + pad(M(r.full_miss_tokens), 10, true)
+      + pad(`$${r.wasted_usd.toFixed(2)}`, 10, true));
+  }
+  out.push('-'.repeat(w + 52));
+  out.push(`${misses} mid-session cache expiry/expiries rewrote whole contexts — $${wasted.toFixed(2)} avoidable.`);
+  if (gaps.length) {
+    out.push(`Idle seconds before each: ${gaps.sort((a, b) => a - b).join(', ')}`);
+    out.push('Every gap above 300s outlived the 5-minute cache TTL. Subagent contexts are');
+    out.push('written at that TTL only, so a long install or test run inside an agent');
+    out.push('re-bills its entire context at 1.25x base on the next turn.');
+  }
+  return `${out.join('\n')}\n`;
 }
 
 function main(argv) {
@@ -124,10 +169,13 @@ function main(argv) {
     process.stderr.write('phase-cost: transcripts found, but no slash-command phases in them\n');
     process.exit(1);
   }
+  const profiles = opts.why
+    ? files.flatMap((file) => cacheProfile(file, { extraTranscripts: subagentTranscriptsFor(file) }))
+    : null;
   const replacer = (_key, value) => (value instanceof Set ? [...value] : value);
   process.stdout.write(asJson
-    ? JSON.stringify({ rows, totals: aggregate(rows), coverage }, replacer, 2) + '\n'
-    : render(rows, coverage));
+    ? JSON.stringify({ rows, totals: aggregate(rows), coverage, ...(profiles ? { cache: profiles } : {}) }, replacer, 2) + '\n'
+    : render(rows, coverage) + (profiles ? renderWhy(profiles) : ''));
 }
 
 
