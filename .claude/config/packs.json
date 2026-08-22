@@ -213,6 +213,7 @@
         "analysis-seed",
         "canvas",
         "canvas-sync",
+        "context-ceiling",
         "contract-schema",
         "decision-record",
         "decision-verdict",
@@ -233,6 +234,7 @@
       ],
       "hook": [
         "concurrency-gate",
+        "context-ceiling",
         "dispatch-gate"
       ]
     },

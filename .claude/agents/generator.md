@@ -151,6 +151,12 @@ Execute teammates in phases from the micro-DAG. Every teammate is spawned via th
 - Writes all additions to the shared file in a single commit
 - No other teammate writes to shared files
 
+**A teammate that returns a hand-off** — a teammate whose context reached the ceiling returns having written `.claude/state/handoff/<story-id>.md` instead of finishing. That is the protocol working, not a failure: an implementer cannot `/clear` itself, and the audited E1-S1 teammate ran 208 turns from 18K to 324K and cost $16.87 alone, because every late turn re-read a context mostly made of work already committed.
+
+Re-dispatch a **fresh** implementer for the same story with the handoff note plus the file ownership — never continue the old one, and never absorb its remaining work into your own context. The successor starts near 18K. Log the hand-off to `.claude/state/iteration-log.md`.
+
+If the same story hands off more than twice, stop re-dispatching: the story is too large for one worker. Report it to `/auto` as `needs_breakdown` with what the two attempts completed. Three hand-offs is a decomposition problem, and re-dispatching cannot fix it.
+
 **Teammate prompt must include:**
 - Story acceptance criteria
 - File ownership (which files this teammate may edit)

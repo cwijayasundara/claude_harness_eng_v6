@@ -54,6 +54,19 @@ Read only the `read_next` line ranges. If `confidence` is low, use `task_map.cla
 4. **No gold-plating.** Implement only what the acceptance criteria require. No unrequested features, no speculative abstractions, no premature flexibility, no error handling for cases the story does not raise. Prefer deep modules (simple interface, meaningful hidden behavior); apply the deletion test before adding any abstraction.
 5. **Name from the ubiquitous language.** Name new classes/variables/services after `CONTEXT.md` terms, not invented synonyms. If the story needs a domain concept not yet in `CONTEXT.md`, add a `### <term>` entry (one-line definition) there before marking your work complete.
 6. **Modify in place.** Change existing implementations directly — no `_v2` function beside the original, no parallel path. If a signature changes, update the call sites you own and flag any you do not to the lead.
+7. **Hand off before your context runs away.** You cannot `/clear` yourself, so everything you accumulate is re-read on every remaining turn — cache reads are the single largest line in this harness's bill. The `context-ceiling` hook warns you near 140K and refuses further source writes at 200K. When it fires, this is not a failure and not something to work around: finish the step you are on, write `.claude/state/handoff/<story-id>.md`, and **return to your lead**. Reads, Bash, and the handoff write itself always stay open. A fresh implementer resumes from your note at ~18K instead of inheriting 300K.
+
+### The handoff note
+
+Write it for a successor who has your files but none of your conversation:
+
+- **Done** — files created/modified, and which acceptance criteria they satisfy.
+- **Verified** — tests written and their current state (name the command, and say red or green; never imply green you have not seen).
+- **Decisions** — calls you made that the code does not explain, and what they rule out.
+- **Next** — the exact next step, concretely enough to start on: file, function, and the criterion it serves.
+- **Blocked/needed** — anything you were going to ask the lead for.
+
+Leave nothing load-bearing only in your context. The successor reads this note, not your transcript.
 
 ## Workflow
 
