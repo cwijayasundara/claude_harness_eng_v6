@@ -14,7 +14,10 @@
 // corrupted and the verification still passed, so that criterion is decorative.
 
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 const { test } = require('node:test');
+const contractSchema = require('../.claude/hooks/lib/contract-schema.js');
 
 const {
   applyMutation,
@@ -27,6 +30,7 @@ const {
 const CONTRACT = {
   group: 'A',
   stories: ['E1-S1'],
+  features: ['F1'],
   contract: {
     api_checks: [
       { id: 'E1-S1-AC1', method: 'POST', path: '/auth/sign-in', expected_status: 200 },
@@ -135,4 +139,68 @@ test('a verification that errored is not counted as a kill', () => {
   assert.equal(verdict.killed, 0);
   assert.equal(verdict.inconclusive, 1);
   assert.equal(verdict.clean, false, 'an inconclusive run must not read as a pass');
+});
+
+// ── C2/I4: the fixtures must be legal by the REAL schema ────────────────────
+//
+// The fixture in this file was missing `features`, which contract-schema.json
+// requires. That is not cosmetic: it is why C2 shipped. No test ever built a
+// schema-legal contract in a shape other than the one readChecks assumed, so
+// nobody noticed that a UI-only group — playwright_checks, no api/performance —
+// is perfectly valid and drove the blocking gate to exit 2 for the whole run.
+//
+// Note the validator's signature is validate(schema, value, at, errors): call
+// it with one argument and the document is read as the SCHEMA, every check
+// passes, and the round-trip proves nothing. That mistake is easy to make and
+// looks exactly like a passing test.
+const SCHEMA = JSON.parse(fs.readFileSync(
+  path.join(__dirname, '..', '.claude', 'skills', 'evaluate', 'references', 'contract-schema.json'), 'utf8'));
+
+function schemaErrors(doc) {
+  const errors = [];
+  contractSchema.validate(SCHEMA, doc, '$', errors, 0);
+  return errors;
+}
+
+const UI_ONLY = {
+  group: 'B',
+  stories: ['E1-S2'],
+  features: ['F2'],
+  contract: {
+    playwright_checks: [{
+      id: 'E1-S2-AC1',
+      description: 'login renders',
+      steps: [{ action: 'navigate', value: '/login' }, { action: 'assert', selector: '#login', assertion: 'visible' }],
+    }],
+  },
+};
+
+test('the validator is being called correctly — an empty doc must NOT pass', () => {
+  // Pins the signature. If this ever returns [] the assertions below are vacuous.
+  assert.ok(schemaErrors({}).length >= 4, 'validate(schema, value) — not validate(value)');
+});
+
+test('the fixture this file tests against is legal by the real schema', () => {
+  assert.deepEqual(schemaErrors(CONTRACT), [],
+    'a hand-built fixture the real validator rejects proves nothing about real contracts');
+});
+
+test('a UI-only group is VALID and has nothing to mutate — that is not an error', () => {
+  assert.deepEqual(schemaErrors(UI_ONLY), [], 'a UI-only group is a legal sprint contract');
+  // The lib deliberately does not mutate playwright/design checks, so the
+  // honest answer is an empty list, not a throw: "nothing to do" is not
+  // "malformed". Throwing stalls /gate for every other group in the run.
+  assert.deepEqual(readChecks(UI_ONLY), []);
+});
+
+test('a flat contract still fails loud — that IS malformed', () => {
+  // The flat shape is the real defect the throw was written for: a gate that
+  // read a flat contract while real ones nest under `contract` stayed green
+  // while being inert.
+  assert.throws(() => readChecks({ group: 'C', stories: [], features: [], api_checks: [] }),
+    /flat shape|nests them under/);
+});
+
+test('a document that is not a sprint contract at all still fails loud', () => {
+  assert.throws(() => readChecks({ group: 'D', stories: [], features: [] }), /no `contract` key/);
 });

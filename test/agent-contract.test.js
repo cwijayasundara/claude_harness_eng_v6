@@ -190,3 +190,66 @@ test('the generator and implementer cannot rewrite a frozen sprint contract', ()
       'a builder must still be able to build');
   }
 });
+
+// ── C1: the contracts must permit the writes the pipeline mandates ──────────
+//
+// The first version of these contracts encoded the post-freeze rule as
+// unconditional, and five writes the skills explicitly instruct were refused:
+// generator/evaluator/implementer -> sprint-contracts/, planner/evaluator ->
+// features.json. Wiring the hook would have stalled /auto on the generator's
+// first Write — the "dispatch gate that refused every teammate" pattern, again.
+//
+// generator.md:32 states the real rule, and it is CONDITIONAL: "When
+// specs/reviews/contract-freeze.json exists, treat sprint-contracts/*.json as
+// read-only". contract-freeze.js --check only DETECTS drift after the fact, so
+// the preventive half is worth keeping — it just has to carry the condition.
+
+const REAL = loadContracts(path.join(__dirname, '..', '.claude', 'agents'));
+const frozen = { exists: (p) => p === 'specs/reviews/contract-freeze.json' };
+const unfrozen = { exists: () => false };
+
+test('the sprint-contract authors may write it BEFORE the freeze', () => {
+  // .claude/skills/auto/references/section-3-3-...-steps-2-3.md:21 and :27
+  for (const agent of ['generator', 'evaluator', 'implementer']) {
+    const d = writeDecision(REAL.get(agent), 'sprint-contracts/group-A.json', unfrozen);
+    assert.equal(d.allow, true,
+      `${agent} is instructed to write the sprint contract during negotiation: ${d.reason || ''}`);
+  }
+});
+
+test('and may NOT once the freeze receipt exists', () => {
+  for (const agent of ['generator', 'evaluator', 'implementer']) {
+    const d = writeDecision(REAL.get(agent), 'sprint-contracts/group-A.json', frozen);
+    assert.equal(d.allow, false, `${agent} must not edit a FROZEN sprint contract`);
+    assert.match(d.reason, /frozen|freeze/i, 'the refusal must say why it is closed now and was not before');
+  }
+});
+
+test('planner and evaluator may write the root features.json', () => {
+  // planner.md:108 "Produce root features.json"; evaluate/SKILL.md:297 and
+  // gate/SKILL.md:55 both have the evaluator update it after every run.
+  for (const agent of ['planner', 'evaluator']) {
+    const d = writeDecision(REAL.get(agent), 'features.json', unfrozen);
+    assert.equal(d.allow, true, `${agent} is instructed to write features.json: ${d.reason || ''}`);
+  }
+});
+
+test('features.json is an exact allowance, not a prefix that opens the root', () => {
+  const d = writeDecision(REAL.get('planner'), 'features.json.bak', unfrozen);
+  assert.equal(d.allow, false, 'an exact-file allowance must not match by prefix');
+  assert.equal(writeDecision(REAL.get('planner'), 'backend/app/auth.py', unfrozen).allow, false,
+    'the planner still writes no source');
+});
+
+test('the reviewer surfaces are unchanged by the C1 fix', () => {
+  assert.equal(writeDecision(REAL.get('evaluator'), 'specs/reviews/audit-A.json', frozen).allow, true);
+  assert.equal(writeDecision(REAL.get('generator'), 'specs/reviews/audit-A.json', unfrozen).allow, false);
+  assert.equal(writeDecision(REAL.get('code-reviewer'), 'backend/app/auth.py', unfrozen).allow, false);
+  assert.equal(writeDecision(REAL.get('generator'), 'backend/app/auth.py', unfrozen).allow, true);
+});
+
+test('a missing exists probe defaults to FROZEN — absent evidence must not open a deny', () => {
+  const d = writeDecision(REAL.get('generator'), 'sprint-contracts/group-A.json');
+  assert.equal(d.allow, false,
+    'with no way to check the receipt the safe answer is closed, not open');
+});

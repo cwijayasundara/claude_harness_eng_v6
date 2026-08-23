@@ -85,10 +85,25 @@ function rootShapeErrors(name, label, roots) {
 function rootListErrors(name, contract) {
   const allow = contract.artifact_roots || [];
   const deny = contract.forbidden_artifact_roots || [];
+  const once = contract.forbidden_once || [];
+  const files = contract.artifact_files || [];
   const errors = [
     ...rootShapeErrors(name, 'artifact_roots', allow),
     ...rootShapeErrors(name, 'forbidden_artifact_roots', deny),
+    ...rootShapeErrors(name, 'forbidden_once', once.map((r) => (r && r.root) || '')),
   ];
+  // A conditional deny is only a control if its condition is checkable: a rule
+  // with no `when_exists` would silently read as "always closed" at runtime.
+  for (const rule of once) {
+    if (!rule || typeof rule.when_exists !== 'string' || rule.when_exists.trim() === '') {
+      errors.push(`${name}: forbidden_once needs a "when_exists" path — a condition nobody can check is not a condition`);
+    }
+  }
+  for (const f of files) {
+    if (typeof f !== 'string' || f === '' || f.endsWith('/') || path.isAbsolute(f)) {
+      errors.push(`${name}: artifact_files "${f}" must be a repo-relative FILE path (no trailing /)`);
+    }
+  }
   for (const root of allow) {
     if (deny.includes(root)) {
       errors.push(`${name}: "${root}" is in BOTH lists — the write decision would be ambiguous (overlap)`);
@@ -138,8 +153,10 @@ function contractErrors(dir, name) {
   if (contract.agent !== name) {
     errors.push(`${name}: contract names agent "${contract.agent}" — must match the file it sits beside`);
   }
-  if (!isPlainList(contract.artifact_roots) || !isPlainList(contract.forbidden_artifact_roots)) {
-    errors.push(`${name}: artifact_roots and forbidden_artifact_roots must be arrays when present`);
+  if (!isPlainList(contract.artifact_roots) || !isPlainList(contract.forbidden_artifact_roots)
+      || !isPlainList(contract.artifact_files)
+      || (contract.forbidden_once !== undefined && !Array.isArray(contract.forbidden_once))) {
+    errors.push(`${name}: artifact_roots, forbidden_artifact_roots, artifact_files and forbidden_once must be arrays when present`);
     return errors;
   }
   if (typeof contract.why !== 'string' || contract.why.trim() === '') {
@@ -201,13 +218,37 @@ function denialReason(contract, rel) {
  * own) is not this harness's to scope, and over-blocking stalls the build loop.
  * @returns {{allow: boolean, reason?: string}}
  */
-function writeDecision(contract, relPath) {
+/**
+ * @param {object|null} contract the agent's contract, or null when ungoverned
+ * @param {string} relPath project-relative write target
+ * @param {{exists?: (rel: string) => boolean}} [opts] probe for conditional
+ *   denials. WITHOUT it a `forbidden_once` root reads as closed: the condition
+ *   is "is this artifact frozen yet", and a caller that cannot answer must not
+ *   get the permissive branch by default.
+ */
+function writeDecision(contract, relPath, opts = {}) {
   if (!contract) return { allow: true };
 
   const agent = contract.agent || 'agent';
   const rel = normalizeRelative(relPath);
   if (rel === null) {
     return { allow: false, reason: `${agent}: write path escapes the project (${relPath})` };
+  }
+
+  // Conditional denials. The pipeline INSTRUCTS the generator and evaluator to
+  // write sprint-contracts/ during negotiation and forbids it only afterwards
+  // (generator.md:32). Encoding that as an unconditional deny refused five
+  // mandated writes and would have stalled /auto on the first one.
+  const probe = typeof opts.exists === 'function' ? opts.exists : () => true;
+  for (const rule of contract.forbidden_once || []) {
+    if (underRoot(rel, rule.root) && probe(rule.when_exists)) {
+      return {
+        allow: false,
+        reason: `${agent} may not write ${rel}: "${rule.root}" is frozen once `
+          + `${rule.when_exists} exists (.claude/agents/${agent}.contract.json). `
+          + 'Re-open it deliberately rather than editing a frozen contract.',
+      };
+    }
   }
 
   for (const root of contract.forbidden_artifact_roots || []) {
@@ -219,6 +260,10 @@ function writeDecision(contract, relPath) {
       };
     }
   }
+
+  // Exact-path allowances. features.json is a single file at the repo root, so
+  // it cannot be expressed as a directory prefix without opening the root.
+  if ((contract.artifact_files || []).includes(rel)) return { allow: true };
 
   if (!Array.isArray(contract.artifact_roots)) return { allow: true };
   if (contract.artifact_roots.some((root) => underRoot(rel, root))) return { allow: true };

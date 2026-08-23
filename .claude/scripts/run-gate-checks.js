@@ -32,10 +32,19 @@ function loadRegistry(projectDir) {
   return raw.checks;
 }
 
-// Minimal glob: `*` matches within a path segment, `**` across segments.
+// Minimal glob: `*` matches within a path segment, `**` across segments, and
+// `{a,b}` alternates. Braces used to be escaped as literals, so a registry
+// entry like `changed:*.{js,ts}` compiled to a pattern no path could match and
+// its check never ran — while the registry reported it as active.
 function globMatch(pattern, filePath) {
+  const escape = (t) => t.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+  const segment = (s) => s.split('*').map(escape).join('[^/]*');
   const rx = pattern
-    .split('**').map((s) => s.split('*').map((t) => t.replace(/[.+^${}()|[\]\\]/g, '\\$&')).join('[^/]*'))
+    .split('**').map((s) => s.split(/(\{[^}]*\})/).map((part) => (
+      part.startsWith('{') && part.endsWith('}')
+        ? `(?:${part.slice(1, -1).split(',').map((alt) => segment(alt.trim())).join('|')})`
+        : segment(part)
+    )).join(''))
     .join('.*');
   return new RegExp(`(^|/)${rx}$`).test(filePath);
 }

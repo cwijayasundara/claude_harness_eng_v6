@@ -4,5 +4,8 @@
   "artifact_roots": [
     "specs/"
   ],
-  "why": "Planning artifacts only — the BRD, story graph and design are its output; source code is not"
+  "why": "Planning artifacts only — the BRD, story graph, design and root features.json; source code is not",
+  "artifact_files": [
+    "features.json"
+  ]
 }

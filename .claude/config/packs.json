@@ -16,6 +16,7 @@
       "security-reviewer"
     ],
     "hook": [
+      "agent-write-scope",
       "check-git-hooks",
       "pre-bash-gate",
       "pre-write-gate",

@@ -84,11 +84,35 @@ test('an agent with no contract passes — over-blocking stalls the build loop',
   assert.equal(run(subagentWrite('Explore', path.join(REPO, 'src/x.ts'))).code, 0);
 });
 
-test('the generator may build, but not rewrite the contract it is judged against', () => {
+// A project whose .claude/agents are the real contracts, so the hook decides
+// from shipped data — with the freeze receipt present or absent as asked.
+function governedProject({ frozen }) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'write-scope-'));
+  fs.cpSync(path.join(REPO, '.claude', 'agents'), path.join(dir, '.claude', 'agents'), { recursive: true });
+  if (frozen) {
+    fs.mkdirSync(path.join(dir, 'specs', 'reviews'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'specs', 'reviews', 'contract-freeze.json'), '{"groups":["A"]}');
+  }
+  return dir;
+}
+
+test('the generator may build, and may author the contract UNTIL it is frozen', () => {
+  // This assertion used to demand a block unconditionally, which is the defect
+  // it now guards: /auto Step 2 spawns the generator with "Write the contract
+  // to sprint-contracts/{group}.json", so an unconditional deny stalls the loop
+  // on its first write.
   assert.equal(run(subagentWrite('generator', path.join(REPO, 'backend/app/auth.py'))).code, 0);
-  const blocked = run(subagentWrite('generator', path.join(REPO, 'sprint-contracts/A.json')));
-  assert.equal(blocked.code, 2);
+
+  const open = governedProject({ frozen: false });
+  assert.equal(
+    run(subagentWrite('generator', path.join(open, 'sprint-contracts/A.json')), { CLAUDE_PROJECT_DIR: open }).code,
+    0, 'before the freeze receipt exists, authoring the contract is the generator\'s job');
+
+  const shut = governedProject({ frozen: true });
+  const blocked = run(subagentWrite('generator', path.join(shut, 'sprint-contracts/A.json')), { CLAUDE_PROJECT_DIR: shut });
+  assert.equal(blocked.code, 2, 'once frozen, the contract is closed to the agent it judges');
   assert.match(blocked.stderr, /sprint-contracts\//);
+  assert.match(blocked.stderr, /frozen|freeze/i);
 });
 
 test('a builder cannot write the review verdict that judges it', () => {

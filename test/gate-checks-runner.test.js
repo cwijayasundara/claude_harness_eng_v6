@@ -10,7 +10,9 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { selectChecks, runChecks, summarize } = require('../.claude/scripts/run-gate-checks.js');
+const {
+  selectChecks, runChecks, summarize, globMatch, triggerFires, loadRegistry,
+} = require('../.claude/scripts/run-gate-checks.js');
 
 const CHECKS = [
   { id: 'always-one', pack: 'verification', script: 'a.js', when: 'always', blocking: true },
@@ -44,7 +46,6 @@ test('selectChecks includes a code-graph check when the graph exists', () => {
 });
 
 test('selectChecks drops GATE_TIERS-strict checks on standard', () => {
-  const { loadRegistry } = require('../.claude/scripts/run-gate-checks.js');
   const checks = loadRegistry(path.join(__dirname, '..'));
   const sel = selectChecks(checks, {
     hasCodeGraph: true, changedFiles: [], tier: 'standard',
@@ -156,4 +157,53 @@ test('every script named in the shipped registry exists on disk today', () => {
       `${c.id} points at a missing script: ${c.script}`
     );
   }
+});
+
+// ── C3: every registered trigger must be able to fire ───────────────────────
+//
+// `dead-path` shipped registered blocking:true with
+// `changed:*.{js,jsx,mjs,cjs,ts,tsx,py}` — and globMatch had no brace
+// expansion, so it escaped the braces as literals and the gate never ran once.
+// The same never-firing pattern is already on main in `contract-drift`, which
+// is where it was copied from: a registry entry nobody can observe failing is
+// indistinguishable from a passing one.
+
+test('globMatch expands brace alternatives', () => {
+  for (const f of ['src/a.js', 'src/x/y.ts', 'a.py', 'lib/deep/mod.mjs']) {
+    assert.equal(globMatch('*.{js,jsx,mjs,cjs,ts,tsx,py}', f), true, `${f} must match`);
+  }
+  for (const f of ['README.md', 'a.json', 'x/y.jsonc']) {
+    assert.equal(globMatch('*.{js,jsx,mjs,cjs,ts,tsx,py}', f), false, `${f} must NOT match`);
+  }
+  // A brace must not become a wildcard: only the listed alternatives match.
+  assert.equal(globMatch('*.{js,ts}', 'a.jsx'), false);
+  assert.equal(globMatch('src/{a,b}/*.js', 'src/a/x.js'), true);
+  assert.equal(globMatch('src/{a,b}/*.js', 'src/c/x.js'), false);
+});
+
+test('EVERY registered check has a trigger that some input can fire', () => {
+  // The registry is the thing under test, not a fixture: a `when` nobody can
+  // satisfy is a control that does not exist, however it is declared.
+  const checks = loadRegistry(path.join(__dirname, '..'));
+  const unfireable = [];
+  for (const c of checks) {
+    const when = c.when || 'always';
+    let fires = false;
+    if (when === 'always' || when === 'code-graph') {
+      fires = true;
+    } else if (when.startsWith('changed:')) {
+      const pat = when.slice('changed:'.length);
+      // Build a path the pattern should match, resolving braces and globs.
+      const probe = pat
+        .replace(/\{([^}]*)\}/g, (_, alts) => alts.split(',')[0])
+        .replace(/\*\*\//g, 'a/b/')
+        .replace(/\*/g, 'x');
+      fires = triggerFires(when, { changedFiles: [probe] });
+    } else {
+      fires = true; // exists:/lane: triggers are environment-dependent
+    }
+    if (!fires) unfireable.push(`${c.id} (when: ${when})`);
+  }
+  assert.deepEqual(unfireable, [],
+    'these registry triggers can never match any input — the checks never run');
 });

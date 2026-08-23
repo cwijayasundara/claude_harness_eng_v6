@@ -18,7 +18,11 @@
 const fs = require('fs');
 const path = require('path');
 
-const MATCHER = 'Write|Edit|MultiEdit';
+// Must cover every tool in the hook's WRITE_TOOLS set. It listed three while
+// the hook handled four (and the manifest claimed four): a matcher narrower
+// than the gate it installs is the same silent hole as a matcher that names
+// the wrong tool — the write simply is not offered to the gate.
+const MATCHER = 'Write|Edit|MultiEdit|NotebookEdit';
 const COMMAND = 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/agent-write-scope.js"';
 
 function prefixEditAllowed() {

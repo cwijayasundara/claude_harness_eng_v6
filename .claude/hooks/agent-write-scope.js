@@ -61,7 +61,13 @@ function decide(input, projectDir) {
   const rel = projectRelative(projectDir, filePath);
   if (rel === null) return null;
 
-  const decision = writeDecision(contract, rel);
+  // The freeze probe. A conditional deny asks "is this artifact frozen yet",
+  // and only the hook knows the project root to answer it.
+  const decision = writeDecision(contract, rel, {
+    exists: (p) => {
+      try { return fs.existsSync(path.join(projectDir, p)); } catch (_) { return true; }
+    },
+  });
   return decision.allow ? null : decision.reason;
 }
 

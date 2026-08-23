@@ -166,3 +166,31 @@ test('core profile ships the migration-roundtrip shell runner', () => {
     'legacy-discipline skill checking-migration-safety invokes the .sh; a .js-only copy list would drop it',
   );
 });
+
+test('every hook on disk is declared by some pack', () => {
+  // agent-write-scope.js shipped as the only undeclared hook in the repo: the
+  // partition declared its wiring script, its validator and its lib, but not
+  // the hook they install. An operator running the documented wiring step in a
+  // scaffolded project would have got a settings.json entry pointing at a file
+  // that was never copied — a MODULE_NOT_FOUND on every Write/Edit.
+  //
+  // undeclaredUnits() checks accounted directories generally; this is the
+  // hook-specific case stated plainly, because a hook nobody ships is the one
+  // omission that turns an install into a broken install rather than a thin one.
+  const declared = new Set();
+  const collect = (node) => {
+    if (Array.isArray(node)) return node.forEach(collect);
+    if (!node || typeof node !== 'object') return;
+    for (const [key, value] of Object.entries(node)) {
+      if (key === 'hook' && Array.isArray(value)) value.forEach((h) => declared.add(h));
+      else collect(value);
+    }
+  };
+  collect(JSON.parse(fs.readFileSync(path.join(ROOT, '.claude', 'config', 'packs.json'), 'utf8')));
+
+  const onDisk = fs.readdirSync(path.join(ROOT, '.claude', 'hooks'))
+    .filter((f) => f.endsWith('.js'))
+    .map((f) => f.replace(/\.js$/, ''));
+
+  assert.deepStrictEqual(onDisk.filter((h) => !declared.has(h)), []);
+});

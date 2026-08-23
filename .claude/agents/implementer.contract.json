@@ -2,8 +2,13 @@
   "agent": "implementer",
   "may_spawn": false,
   "forbidden_artifact_roots": [
-    "sprint-contracts/",
     "specs/reviews/"
   ],
-  "why": "Story worker — it may write product code, but never the frozen sprint contract it is judged against nor the verdicts that judge it"
+  "why": "Builder — it may write product code and author the sprint contract during negotiation, but never the contract once frozen, nor the verdicts that judge it",
+  "forbidden_once": [
+    {
+      "root": "sprint-contracts/",
+      "when_exists": "specs/reviews/contract-freeze.json"
+    }
+  ]
 }

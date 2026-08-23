@@ -23,6 +23,7 @@ const GATE = path.join(__dirname, '..', '.claude', 'scripts', 'spec-mutation-gat
 const CONTRACT = {
   group: 'A',
   stories: ['E1-S1'],
+  features: ['F1'],
   contract: {
     api_checks: [
       { id: 'E1-S1-AC1', method: 'GET', path: '/healthz', expected_status: 200 },
@@ -134,4 +135,25 @@ test('the mutant cap is reported, never silently applied', () => {
   const dir = project({ blind: false });
   const r = runGate(dir, ['--max-mutants', '1']);
   assert.match(r.out, /not run/, 'a bounded run must say what it did not cover');
+});
+
+// The fixture above drives the whole CLI suite, so if it is not a legal sprint
+// contract these tests prove nothing about real ones. It was missing
+// `features` — a required property — which is how a valid UI-only contract
+// came to exit-2 a blocking gate with no test noticing.
+//
+// validate's signature is (schema, value, at, errors): called with one
+// argument the document is read as the SCHEMA and everything passes, which
+// looks exactly like a green test.
+test('the fixture the CLI suite runs on is legal by the real schema', () => {
+  const schema = JSON.parse(fs.readFileSync(
+    path.join(__dirname, '..', '.claude', 'skills', 'evaluate', 'references', 'contract-schema.json'), 'utf8'));
+  const { validate } = require('../.claude/hooks/lib/contract-schema.js');
+  const errs = [];
+  validate(schema, CONTRACT, '$', errs, 0);
+  assert.deepEqual(errs, []);
+
+  const control = [];
+  validate(schema, {}, '$', control, 0);
+  assert.ok(control.length >= 4, 'pins the signature — an empty doc must NOT validate clean');
 });

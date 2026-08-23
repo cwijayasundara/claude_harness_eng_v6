@@ -50,6 +50,12 @@ function scalarPaths(value, prefix) {
   return out;
 }
 
+// Every check kind a sprint contract can carry. Only api/performance are
+// mutable here; the rest still count as "this contract has content".
+const KNOWN_CHECK_KEYS = [
+  'api_checks', 'performance_checks', 'playwright_checks', 'design_checks', 'architecture_checks',
+];
+
 function checksOfKind(block, key, kind) {
   const list = Array.isArray(block[key]) ? block[key] : [];
   return list.map((check, index) => ({ kind, index, listKey: key, id: check.id || `${kind}-${index}`, check }));
@@ -79,7 +85,17 @@ function readChecks(contract) {
     ...checksOfKind(block, 'api_checks', 'api'),
     ...checksOfKind(block, 'performance_checks', 'performance'),
   ];
-  if (checks.length === 0) {
+  // "Nothing to mutate" and "nothing at all" are different answers.
+  //
+  // A UI-only group carrying playwright_checks is entirely legal by
+  // contract-schema.json, and this lib deliberately does not mutate playwright
+  // or design checks — so an empty list is the honest result. Throwing there
+  // exit-2'd a BLOCKING gate for every other group in the run because of one
+  // valid contract.
+  //
+  // A contract block with no checks of ANY recognised kind is still the
+  // vacuous-input case the loud failure was written for, and stays loud.
+  if (checks.length === 0 && !KNOWN_CHECK_KEYS.some((k) => Array.isArray(block[k]) && block[k].length > 0)) {
     throw new Error('spec-mutation: no checks in the contract — nothing to mutate (fail loud, not vacuous)');
   }
   return checks;

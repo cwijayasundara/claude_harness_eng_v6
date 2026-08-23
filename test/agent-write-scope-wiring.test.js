@@ -43,7 +43,9 @@ test('the write-scope gate is wired on PreToolUse', () => {
 test('its matcher actually selects the tools that write', () => {
   const entries = entriesRunning(HOOK);
   if (entries.length === 0) return; // the test above owns that failure
-  for (const tool of ['Write', 'Edit']) {
+  // Every tool the hook itself handles, not just the two it was written with:
+  // the wiring script once installed a three-tool matcher for a four-tool gate.
+  for (const tool of ['Write', 'Edit', 'MultiEdit', 'NotebookEdit']) {
     assert.ok(entries.some((e) => matcherSelects(e.matcher, tool)),
       `no wired matcher selects ${tool} — a matcher that cannot match is the "Task" bug again`);
   }
