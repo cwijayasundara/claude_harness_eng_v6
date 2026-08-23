@@ -119,6 +119,16 @@
             "timeout": 10000
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/agent-write-scope.js\"",
+            "timeout": 5000
+          }
+        ]
       }
     ],
     "PostToolUse": [
