@@ -1,0 +1,739 @@
+[
+  {
+    "id": "F001",
+    "category": "security",
+    "story": "E1-S1",
+    "group": "A",
+    "cluster": "C1",
+    "acceptance_criterion": "E1-S1-AC1",
+    "description": "the response sets an HTTP-only session cookie and a subsequent authenticated request succeeds",
+    "steps": [
+      "Given a registered email and correct password",
+      "When signing in",
+      "Assert the response sets an HTTP-only session cookie",
+      "Assert a subsequent authenticated request succeeds"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F002",
+    "category": "security",
+    "story": "E1-S1",
+    "group": "A",
+    "cluster": "C1",
+    "acceptance_criterion": "E1-S1-AC2",
+    "description": "it begins with `$argon2id$`",
+    "steps": [
+      "Given a member registering with a new email and password",
+      "When the stored credential is read back",
+      "Assert it begins with `$argon2id$`"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F003",
+    "category": "security",
+    "story": "E1-S1",
+    "group": "A",
+    "cluster": "C1",
+    "acceptance_criterion": "E1-S1-AC3",
+    "description": "it contains neither the plaintext password nor the stored hash",
+    "steps": [
+      "Given a member registering and then signing in",
+      "When the application's full log output for those two requests is scanned",
+      "Assert it contains neither the plaintext password nor the stored hash"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F004",
+    "category": "security",
+    "story": "E1-S1",
+    "group": "A",
+    "cluster": "C1",
+    "acceptance_criterion": "E1-S1-AC4",
+    "description": "the response is 401 and no session cookie is set",
+    "steps": [
+      "Given an unregistered email or a wrong password",
+      "When signing in",
+      "Assert the response is 401",
+      "Assert no session cookie is set"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F005",
+    "category": "security",
+    "story": "E1-S2",
+    "group": "B",
+    "cluster": "C2",
+    "acceptance_criterion": "E1-S2-AC1",
+    "description": "a subsequent authenticated request returns 401",
+    "steps": [
+      "Given a signed-in member",
+      "When signing out",
+      "Assert a subsequent authenticated request returns 401"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F006",
+    "category": "security",
+    "story": "E1-S2",
+    "group": "B",
+    "cluster": "C2",
+    "acceptance_criterion": "E1-S2-AC2",
+    "description": "the request is rejected with 401 rather than succeeding, because the session was invalidated server-side and not merely cleared client-side",
+    "steps": [
+      "Given a signed-in member who has just signed out",
+      "When the same session cookie from before sign-out is replayed",
+      "Assert the request is rejected with 401 rather than succeeding, because the session was invalidated server-side",
+      "Assert not merely cleared client-side"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F007",
+    "category": "security",
+    "story": "E1-S2",
+    "group": "B",
+    "cluster": "C2",
+    "acceptance_criterion": "E1-S2-AC3",
+    "description": "the response is 401 and no server state changes",
+    "steps": [
+      "Given a request with no active session",
+      "When calling sign-out",
+      "Assert the response is 401",
+      "Assert no server state changes"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F008",
+    "category": "functional",
+    "story": "E2-S1",
+    "group": "B",
+    "cluster": "C1",
+    "acceptance_criterion": "E2-S1-AC1",
+    "description": "the response is 201 with a code of at least 7 characters",
+    "steps": [
+      "Given a signed-in member and `https://example.com/a/long/path`",
+      "When creating a link",
+      "Assert the response is 201 with a code of at least 7 characters"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F009",
+    "category": "security",
+    "story": "E2-S1",
+    "group": "B",
+    "cluster": "C1",
+    "acceptance_criterion": "E2-S1-AC2",
+    "description": "the response is 422; the same holds for a host matching PUBLIC_BASE_URL and for each of `http://192.168.1.1/`, `http://10.0.0.1/`, `http://127.0.0.1/`, `http://[::1]/`, `http://169.254.169.254/` and `http://localhost/`",
+    "steps": [
+      "Given a target of `ftp://example.com`",
+      "When creating a link",
+      "Assert the response is 422; the same holds for a host matching PUBLIC_BASE_URL",
+      "Assert for each of `http://192.168.1.1/`, `http://10.0.0.1/`, `http://127.0.0.1/`, `http://[::1]/`, `http://169.254.169.254/`",
+      "Assert `http://localhost/`"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F010",
+    "category": "functional",
+    "story": "E2-S1",
+    "group": "B",
+    "cluster": "C1",
+    "acceptance_criterion": "E2-S1-AC3",
+    "description": "only literal scheme/host/IP-range checks run — no DNS lookup and no outbound network fetch occurs",
+    "steps": [
+      "Given the host-validation code path",
+      "When a target URL is inspected during creation",
+      "Assert only literal scheme/host/IP-range checks run — no DNS lookup",
+      "Assert no outbound network fetch occurs"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F011",
+    "category": "functional",
+    "story": "E2-S1",
+    "group": "B",
+    "cluster": "C1",
+    "acceptance_criterion": "E2-S1-AC4",
+    "description": "every code is at least 7 characters drawn from a 62-character alphanumeric alphabet (>= 41.7 bits), no two are equal, and the bytes come from `secrets`/`os.urandom` rather than the `random` module",
+    "steps": [
+      "Given 10,000 codes generated in one run",
+      "When they are inspected",
+      "Assert every code is at least 7 characters drawn from a 62-character alphanumeric alphabet (>= 41.7 bits), no two are equal,",
+      "Assert the bytes come from `secrets`/`os.urandom` rather than the `random` module"
+    ],
+    "verification": "characterization",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F012",
+    "category": "security",
+    "story": "E2-S1",
+    "group": "B",
+    "cluster": "C1",
+    "acceptance_criterion": "E2-S1-AC5",
+    "description": "the response is 401 and no link row is created",
+    "steps": [
+      "Given a request with no valid session",
+      "When creating a link",
+      "Assert the response is 401",
+      "Assert no link row is created"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F013",
+    "category": "functional",
+    "story": "E3-S1",
+    "group": "C",
+    "cluster": "C3",
+    "acceptance_criterion": "E3-S1-AC1",
+    "description": "the response is 302 with `Location` set to the target URL",
+    "steps": [
+      "Given an existing code",
+      "When requesting `/{code}`",
+      "Assert the response is 302 with `Location` set to the target URL"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F014",
+    "category": "functional",
+    "story": "E3-S1",
+    "group": "C",
+    "cluster": "C3",
+    "acceptance_criterion": "E3-S1-AC2",
+    "description": "the response is 404",
+    "steps": [
+      "Given a code that was never issued",
+      "When requesting `/{code}`",
+      "Assert the response is 404"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F015",
+    "category": "functional",
+    "story": "E3-S1",
+    "group": "C",
+    "cluster": "C3",
+    "acceptance_criterion": "E3-S1-AC3",
+    "description": "it returns the Location header to the caller without itself following or fetching the target URL",
+    "steps": [
+      "Given the redirect handler",
+      "When it resolves a code to a target URL",
+      "Assert it returns the Location header to the caller without itself following or fetching the target URL"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F016",
+    "category": "functional",
+    "story": "E4-S1",
+    "group": "C",
+    "cluster": "C1",
+    "acceptance_criterion": "E4-S1-AC1",
+    "description": "exactly 20 links are returned, newest first, and none belongs to another user",
+    "steps": [
+      "Given a member owning 25 links",
+      "When listing page 1",
+      "Assert exactly 20 links are returned, newest first,",
+      "Assert none belongs to another user"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F017",
+    "category": "functional",
+    "story": "E4-S1",
+    "group": "C",
+    "cluster": "C1",
+    "acceptance_criterion": "E4-S1-AC2",
+    "description": "the remaining 5 links are returned, newest-first order preserved across the page boundary",
+    "steps": [
+      "Given a member owning 25 links",
+      "When listing page 2",
+      "Assert the remaining 5 links are returned, newest-first order preserved across the page boundary"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F018",
+    "category": "functional",
+    "story": "E4-S1",
+    "group": "C",
+    "cluster": "C1",
+    "acceptance_criterion": "E4-S1-AC3",
+    "description": "the page renders an empty state with no links and no error",
+    "steps": [
+      "Given a member with zero links",
+      "When opening the console list page",
+      "Assert the page renders an empty state with no links",
+      "Assert no error"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F019",
+    "category": "functional",
+    "story": "E4-S1",
+    "group": "C",
+    "cluster": "C1",
+    "acceptance_criterion": "E4-S1-AC4",
+    "description": "only the second member's own links appear — never the first member's",
+    "steps": [
+      "Given two members who each own links",
+      "When the second member requests the list endpoint",
+      "Assert only the second member's own links appear — never the first member's"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F020",
+    "category": "performance",
+    "story": "E4-S2",
+    "group": "D",
+    "cluster": "C1",
+    "acceptance_criterion": "E4-S2-AC1",
+    "description": "the p95 response time across the sample is under 300 ms",
+    "steps": [
+      "Given an account holding 100 links",
+      "When calling the create-link endpoint repeatedly",
+      "Assert the p95 response time across the sample is under 300 ms"
+    ],
+    "verification": "characterization",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F021",
+    "category": "performance",
+    "story": "E4-S2",
+    "group": "D",
+    "cluster": "C1",
+    "acceptance_criterion": "E4-S2-AC2",
+    "description": "the p95 response time across the sample is under 300 ms",
+    "steps": [
+      "Given an account holding 100 links",
+      "When calling the list endpoint for page 1 repeatedly",
+      "Assert the p95 response time across the sample is under 300 ms"
+    ],
+    "verification": "characterization",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F022",
+    "category": "performance",
+    "story": "E4-S2",
+    "group": "D",
+    "cluster": "C1",
+    "acceptance_criterion": "E4-S2-AC3",
+    "description": "it writes a single machine-readable report recording both p95 figures for the evaluator to check",
+    "steps": [
+      "Given the load-test harness",
+      "When it seeds 100 links and samples both endpoints in one run",
+      "Assert it writes a single machine-readable report recording both p95 figures for the evaluator to check"
+    ],
+    "verification": "characterization",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F023",
+    "category": "functional",
+    "story": "E4-S3",
+    "group": "D",
+    "cluster": "C4",
+    "acceptance_criterion": "E4-S3-AC1",
+    "description": "zero level-A or level-AA violations are reported",
+    "steps": [
+      "Given the rendered console list page",
+      "When it is scanned with an automated WCAG 2.2 AA checker (e.g. axe)",
+      "Assert zero level-A or level-AA violations are reported"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F024",
+    "category": "functional",
+    "story": "E4-S3",
+    "group": "D",
+    "cluster": "C4",
+    "acceptance_criterion": "E4-S3-AC2",
+    "description": "every interactive element (pagination, delete action) is reachable and operable in a visible focus order",
+    "steps": [
+      "Given the console list page",
+      "When operated with keyboard only, no mouse",
+      "Assert every interactive element (pagination, delete action) is reachable",
+      "Assert operable in a visible focus order"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F025",
+    "category": "functional",
+    "story": "E4-S3",
+    "group": "D",
+    "cluster": "C4",
+    "acceptance_criterion": "E4-S3-AC3",
+    "description": "every element meets the WCAG 2.2 AA minimum contrast ratio",
+    "steps": [
+      "Given the console list page",
+      "When its text and interactive elements are measured for contrast",
+      "Assert every element meets the WCAG 2.2 AA minimum contrast ratio"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F026",
+    "category": "functional",
+    "story": "E5-S1",
+    "group": "C",
+    "cluster": "C1",
+    "acceptance_criterion": "E5-S1-AC1",
+    "description": "the response is 204",
+    "steps": [
+      "Given a member's own link",
+      "When deleting it",
+      "Assert the response is 204"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F027",
+    "category": "functional",
+    "story": "E5-S1",
+    "group": "C",
+    "cluster": "C1",
+    "acceptance_criterion": "E5-S1-AC2",
+    "description": "the response is 404",
+    "steps": [
+      "Given a member's own link that was just deleted",
+      "When requesting that code again",
+      "Assert the response is 404"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F028",
+    "category": "functional",
+    "story": "E5-S1",
+    "group": "C",
+    "cluster": "C1",
+    "acceptance_criterion": "E5-S1-AC3",
+    "description": "the deleted code is never reissued to the new link",
+    "steps": [
+      "Given a deleted code",
+      "When a new link is created",
+      "Assert the deleted code is never reissued to the new link"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F029",
+    "category": "functional",
+    "story": "E5-S1",
+    "group": "C",
+    "cluster": "C1",
+    "acceptance_criterion": "E5-S1-AC4",
+    "description": "the response is 404, not 204, and the other member's link is unaffected",
+    "steps": [
+      "Given a link owned by another member",
+      "When the signed-in member attempts to delete it",
+      "Assert the response is 404, not 204,",
+      "Assert the other member's link is unaffected"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F030",
+    "category": "functional",
+    "story": "E6-S1",
+    "group": "A",
+    "cluster": "C5",
+    "acceptance_criterion": "E6-S1-AC1",
+    "description": "the response is 200",
+    "steps": [
+      "Given a reachable database",
+      "When fetching `/healthz`",
+      "Assert the response is 200"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F031",
+    "category": "functional",
+    "story": "E6-S1",
+    "group": "A",
+    "cluster": "C5",
+    "acceptance_criterion": "E6-S1-AC2",
+    "description": "the response is 503",
+    "steps": [
+      "Given the database is stopped",
+      "When fetching `/healthz`",
+      "Assert the response is 503"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F032",
+    "category": "security",
+    "story": "E6-S1",
+    "group": "A",
+    "cluster": "C5",
+    "acceptance_criterion": "E6-S1-AC3",
+    "description": "no authentication was required and the body is JSON describing database status",
+    "steps": [
+      "Given `/healthz` is called",
+      "When the response body is inspected",
+      "Assert no authentication was required",
+      "Assert the body is JSON describing database status"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F033",
+    "category": "functional",
+    "story": "E6-S2",
+    "group": "B",
+    "cluster": "C5",
+    "acceptance_criterion": "E6-S2-AC1",
+    "description": "the response is 503 with a JSON body carrying an `error` field",
+    "steps": [
+      "Given the Postgres container is stopped",
+      "When any API endpoint other than `/healthz` is called",
+      "Assert the response is 503 with a JSON body carrying an `error` field"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F034",
+    "category": "functional",
+    "story": "E6-S2",
+    "group": "B",
+    "cluster": "C5",
+    "acceptance_criterion": "E6-S2-AC2",
+    "description": "it contains no stack trace, exception class name, or filesystem path",
+    "steps": [
+      "Given the same 503 response",
+      "When the body is inspected",
+      "Assert it contains no stack trace, exception class name, or filesystem path"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F035",
+    "category": "functional",
+    "story": "E6-S2",
+    "group": "B",
+    "cluster": "C5",
+    "acceptance_criterion": "E6-S2-AC3",
+    "description": "the response returns to its normal, non-503 status",
+    "steps": [
+      "Given the database becomes reachable again",
+      "When the same endpoint is called",
+      "Assert the response returns to its normal, non-503 status"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F036",
+    "category": "functional",
+    "story": "E7-S1",
+    "group": "A",
+    "cluster": "C6",
+    "acceptance_criterion": "E7-S1-AC1",
+    "description": "the stack reaches healthy with exactly one Postgres 16 container",
+    "steps": [
+      "Given a clean checkout with no project images cached",
+      "When `docker compose up` is run once",
+      "Assert the stack reaches healthy with exactly one Postgres 16 container"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F037",
+    "category": "functional",
+    "story": "E7-S1",
+    "group": "A",
+    "cluster": "C6",
+    "acceptance_criterion": "E7-S1-AC2",
+    "description": "no service makes a request to a host outside the compose network",
+    "steps": [
+      "Given the stack is running",
+      "When build and runtime network traffic is inspected",
+      "Assert no service makes a request to a host outside the compose network"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F038",
+    "category": "functional",
+    "story": "E7-S1",
+    "group": "A",
+    "cluster": "C6",
+    "acceptance_criterion": "E7-S1-AC3",
+    "description": "it defines exactly one Postgres 16 service and no other third-party managed service",
+    "steps": [
+      "Given the compose file",
+      "When it is reviewed",
+      "Assert it defines exactly one Postgres 16 service",
+      "Assert no other third-party managed service"
+    ],
+    "verification": "default",
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  }
+]

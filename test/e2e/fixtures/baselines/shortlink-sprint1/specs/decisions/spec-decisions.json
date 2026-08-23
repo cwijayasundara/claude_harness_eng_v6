@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "phase": "spec",
+  "source": "specs/brd/brd.md",
+  "confirmed_at": "2026-08-21T00:00:00Z",
+  "milestone": {
+    "name": "M1 + M2 — full PRD, single pass",
+    "epics": ["E1", "E2", "E3", "E4", "E5", "E6", "E7"],
+    "deferred_epics": [],
+    "requirements_in_scope": [
+      "FR-1", "FR-2", "FR-3", "FR-4", "FR-5", "FR-6", "FR-7", "FR-8",
+      "NFR-1", "NFR-2", "NFR-3", "NFR-4", "NFR-5", "NFR-6"
+    ]
+  },
+  "decisions": [
+    {
+      "id": "D1",
+      "question": "Does this /spec pass shape only M1 (\"Redirect works\": FR-1,2,3,6,7, NFR-2,3,5), or both PRD milestones in one pass?",
+      "options": [
+        "M1 only — defer M2 (FR-4,5,8, NFR-1,4,6) to a second /spec pass after M1 ships",
+        "M1 + M2 together — shape the full 14-requirement PRD now, preserving M1-before-M2 as build order rather than a scoping split"
+      ],
+      "proposed_default": "M1 + M2 together — shape the full 14-requirement PRD now, preserving M1-before-M2 as build order rather than a scoping split",
+      "chosen": "M1 + M2 together — shape the full 14-requirement PRD now, preserving M1-before-M2 as build order rather than a scoping split",
+      "rationale": "This run's explicit scope instruction is the entire PRD (M1 and M2, FR-1..FR-8, NFR-1..NFR-6) in one pass, not deferred. The PRD's own M1/M2 split is kept as epic build order (D5) rather than as a spec-scope cut, since a real dependency chain (auth → create → {redirect, list, delete}) already forces M1's epics to finish before M2's console epics can be verified end to end. Operator reviewed and confirmed this default on 2026-08-21.",
+      "basis": "human",
+      "load_bearing": true
+    },
+    {
+      "id": "D2",
+      "question": "How do the 14 requirements split into epics — vertical slices vs a layered Types→Config→Repository→Service→API→UI ladder?",
+      "options": [
+        "7 vertical-slice epics, one per user-observable capability: E1 Auth (FR-1,7,NFR-3), E2 Link Creation (FR-2,6,NFR-2), E3 Redirect (FR-3), E4 Console List (FR-4,NFR-1,NFR-4), E5 Delete (FR-5), E6 Health & Errors (FR-8,NFR-6), E7 Deploy & Environment (NFR-5)",
+        "Fewer, coarser epics (e.g. merge Auth+Creation, or merge Redirect+Delete since both act on an existing code)",
+        "A layered ladder (one epic per architectural layer, e.g. \"Repository layer\", \"Service layer\")"
+      ],
+      "proposed_default": "7 vertical-slice epics, one per user-observable capability: E1 Auth (FR-1,7,NFR-3), E2 Link Creation (FR-2,6,NFR-2), E3 Redirect (FR-3), E4 Console List (FR-4,NFR-1,NFR-4), E5 Delete (FR-5), E6 Health & Errors (FR-8,NFR-6), E7 Deploy & Environment (NFR-5)",
+      "chosen": "7 vertical-slice epics, one per user-observable capability: E1 Auth (FR-1,7,NFR-3), E2 Link Creation (FR-2,6,NFR-2), E3 Redirect (FR-3), E4 Console List (FR-4,NFR-1,NFR-4), E5 Delete (FR-5), E6 Health & Errors (FR-8,NFR-6), E7 Deploy & Environment (NFR-5)",
+      "rationale": "Each epic ships an independently demoable slice (tracer bullet), matching the shape guidance to avoid a layered ladder. FR-6 (SSRF/URL guard) stays inside E2 rather than becoming its own epic because the PRD enforces it only at creation time, literally on the host string (SG-10 forbids DNS/outbound resolution) — it is not a cross-cutting concern touched by other epics. Redirect (E3) and Delete (E5) stay separate epics rather than merging: they are independent user actions on an existing code with different observable outcomes (302 vs 204/404) and no shared code path beyond the link lookup. Operator reviewed and confirmed this default on 2026-08-21.",
+      "basis": "human",
+      "load_bearing": true
+    },
+    {
+      "id": "D3",
+      "question": "Which epic-to-epic dependencies are real (block story start) vs defensive (nice-to-sequence but not required)?",
+      "options": [
+        "Real: E2→E1 (create requires a signed-in session), E3→E2 (redirect needs an existing link row), E4→{E1,E2} (list requires auth + existing links to list), E5→{E1,E2} (delete requires auth + an existing link). Defensive/none: E6 (health) and E7 (deploy) have no upstream epic dependency and can start immediately.",
+        "Treat all 7 epics as mutually independent and let story-level file ownership resolve conflicts at implement time"
+      ],
+      "proposed_default": "Real: E2→E1 (create requires a signed-in session), E3→E2 (redirect needs an existing link row), E4→{E1,E2} (list requires auth + existing links to list), E5→{E1,E2} (delete requires auth + an existing link). Defensive/none: E6 (health) and E7 (deploy) have no upstream epic dependency and can start immediately.",
+      "chosen": "Real: E2→E1 (create requires a signed-in session), E3→E2 (redirect needs an existing link row), E4→{E1,E2} (list requires auth + existing links to list), E5→{E1,E2} (delete requires auth + an existing link). Defensive/none: E6 (health) and E7 (deploy) have no upstream epic dependency and can start immediately.",
+      "rationale": "FR-2 is explicitly gated on being signed in; FR-3/4/5 all act on link rows that only exist after FR-2. Treating everything as independent would let the renderer schedule e.g. Delete stories before any link can exist, producing untestable acceptance criteria. Operator reviewed and confirmed this default on 2026-08-21.",
+      "basis": "human",
+      "load_bearing": true
+    },
+    {
+      "id": "D4",
+      "question": "Are any of the 7 epics or 14 requirements deferred out of this /spec pass (needs_breakdown) rather than rendered now?",
+      "options": [
+        "No deferrals — render all 7 epics / 14 requirements this pass",
+        "Defer E4/E5/E6 (M2's console epics) to a later /spec pass"
+      ],
+      "proposed_default": "No deferrals — render all 7 epics / 14 requirements this pass",
+      "chosen": "No deferrals — render all 7 epics / 14 requirements this pass",
+      "rationale": "The run's explicit scope instruction says not to defer M2 to a later pass. All 14 requirements already have a clear epic home (D2) and a resolved dependency position (D3), so nothing here needs further breakdown before rendering. Operator reviewed and confirmed this default on 2026-08-21.",
+      "basis": "human",
+      "load_bearing": true
+    },
+    {
+      "id": "D5",
+      "question": "What build order do the 7 epics render in — does the PRD's M1-then-M2 sequencing carry through as epic order?",
+      "options": [
+        "E7 (deploy/env scaffold) and E1 (auth) first and in parallel → E2 (creation) → E3, E4, E5 in parallel once E2 lands → E6 (health) any time after E7. This keeps M1's epics (E1,E2,E3,E7 plus NFR-2,3,5) ahead of M2's (E4,E5,E6 plus NFR-1,4,6) without a hard phase gate between them.",
+        "Strict two-phase gate: finish and fully verify every M1 epic before starting any M2 epic"
+      ],
+      "proposed_default": "E7 (deploy/env scaffold) and E1 (auth) first and in parallel → E2 (creation) → E3, E4, E5 in parallel once E2 lands → E6 (health) any time after E7. This keeps M1's epics (E1,E2,E3,E7 plus NFR-2,3,5) ahead of M2's (E4,E5,E6 plus NFR-1,4,6) without a hard phase gate between them.",
+      "chosen": "E7 (deploy/env scaffold) and E1 (auth) first and in parallel → E2 (creation) → E3, E4, E5 in parallel once E2 lands → E6 (health) any time after E7. This keeps M1's epics (E1,E2,E3,E7 plus NFR-2,3,5) ahead of M2's (E4,E5,E6 plus NFR-1,4,6) without a hard phase gate between them.",
+      "rationale": "The PRD's own milestone order (M1 done_when precedes M2 done_when) is honored as a build-order preference, not a scope gate — a hard gate would block E6 (health, independent of everything but E7) from starting early for no reason the dependency graph (D3) supports. Operator reviewed and confirmed this default on 2026-08-21.",
+      "basis": "human",
+      "load_bearing": true
+    },
+    {
+      "id": "D6",
+      "question": "NFR-1 (\"create and list responses are p95 under 300ms at 100 links\") spans two epics (E2 create, E4 list) — which epic owns it?",
+      "options": [
+        "E4 (Console List) owns NFR-1, since verifying it needs both the create and list endpoints to exist, and E4 is built after E2 (D5)",
+        "Split NFR-1 into two separate per-epic performance requirements, one attached to E2 and one to E4"
+      ],
+      "proposed_default": "E4 (Console List) owns NFR-1, since verifying it needs both the create and list endpoints to exist, and E4 is built after E2 (D5)",
+      "chosen": "E4 (Console List) owns NFR-1, since verifying it needs both the create and list endpoints to exist, and E4 is built after E2 (D5)",
+      "rationale": "Splitting the requirement text would fork one acceptance criterion into two, which the BRD does not do (FRD-9 is a single requirement). Keeping single ownership on the later-built epic lets its acceptance test seed 100 links (via the already-built create endpoint) and then assert both endpoints' p95 in one place.",
+      "basis": "default-accepted",
+      "load_bearing": false
+    }
+  ]
+}

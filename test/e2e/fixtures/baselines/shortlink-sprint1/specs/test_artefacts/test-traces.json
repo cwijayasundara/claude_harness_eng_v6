@@ -1,0 +1,414 @@
+[
+  {
+    "id": "VM-001",
+    "text": "the response sets an HTTP-only session cookie and a subsequent authenticated request succeeds",
+    "traces": [
+      "E1-S1-AC1",
+      "FRD-26",
+      "OBL-RegisterRequest.email-format",
+      "OBL-RegisterRequest.email-required",
+      "OBL-RegisterRequest.password-minLength",
+      "OBL-RegisterRequest.password-required",
+      "OBL-Session.expires_at-format",
+      "OBL-Session.id-format",
+      "OBL-Session.id-required",
+      "OBL-Session.revoked_at-format",
+      "OBL-Session.revoked_at-required",
+      "OBL-SignInRequest.email-format",
+      "OBL-SignInRequest.email-required",
+      "OBL-SignInRequest.password-minLength",
+      "OBL-SignInRequest.password-required"
+    ],
+    "matrix_id": "VM-001"
+  },
+  {
+    "id": "VM-002",
+    "text": "it begins with `$argon2id$`",
+    "traces": [
+      "E1-S1-AC2",
+      "FRD-35",
+      "OBL-Member.email-format",
+      "OBL-Member.email-required",
+      "OBL-Member.id-format",
+      "OBL-Member.id-required",
+      "OBL-Member.password_hash-pattern",
+      "OBL-Member.password_hash-required",
+      "OBL-MemberView.email-format",
+      "OBL-MemberView.email-required",
+      "OBL-MemberView.id-format",
+      "OBL-MemberView.id-required"
+    ],
+    "matrix_id": "VM-002"
+  },
+  {
+    "id": "VM-003",
+    "text": "it contains neither the plaintext password nor the stored hash",
+    "traces": [
+      "E1-S1-AC3",
+      "FRD-35"
+    ],
+    "matrix_id": "VM-003"
+  },
+  {
+    "id": "VM-004",
+    "text": "the response is 401 and no session cookie is set",
+    "traces": [
+      "E1-S1-AC4",
+      "FRD-26"
+    ],
+    "matrix_id": "VM-004"
+  },
+  {
+    "id": "VM-005",
+    "text": "a subsequent authenticated request returns 401",
+    "traces": [
+      "E1-S2-AC1",
+      "FRD-32",
+      "OBL-Session.member_id-format",
+      "OBL-Session.member_id-required"
+    ],
+    "matrix_id": "VM-005"
+  },
+  {
+    "id": "VM-006",
+    "text": "the request is rejected with 401 rather than succeeding, because the session was invalidated server-side and not merely cleared client-side",
+    "traces": [
+      "E1-S2-AC2",
+      "FRD-32"
+    ],
+    "matrix_id": "VM-006"
+  },
+  {
+    "id": "VM-007",
+    "text": "the response is 401 and no server state changes",
+    "traces": [
+      "E1-S2-AC3",
+      "FRD-32"
+    ],
+    "matrix_id": "VM-007"
+  },
+  {
+    "id": "VM-008",
+    "text": "the response is 201 with a code of at least 7 characters",
+    "traces": [
+      "E2-S1-AC1",
+      "FRD-27",
+      "OBL-Link.code-minLength",
+      "OBL-Link.code-pattern",
+      "OBL-Link.code-required",
+      "OBL-Link.id-format",
+      "OBL-Link.id-required",
+      "OBL-Link.owner_id-format",
+      "OBL-Link.owner_id-required",
+      "OBL-LinkPage.items-required",
+      "OBL-LinkPage.page-minimum",
+      "OBL-LinkPage.page-required",
+      "OBL-LinkPage.pageSize-enum",
+      "OBL-LinkPage.pageSize-required",
+      "OBL-LinkPage.total-minimum",
+      "OBL-LinkPage.total-required",
+      "OBL-LinkView.code-minLength",
+      "OBL-LinkView.code-required"
+    ],
+    "matrix_id": "VM-008"
+  },
+  {
+    "id": "VM-009",
+    "text": "the response is 422; the same holds for a host matching PUBLIC_BASE_URL and for each of `http://192.168.1.1/`, `http://10.0.0.1/`, `http://127.0.0.1/`, `http://[::1]/`, `http://169.254.169.254/` and `http://localhost/`",
+    "traces": [
+      "E2-S1-AC2",
+      "FRD-31",
+      "OBL-CreateLinkRequest.targetUrl-format",
+      "OBL-CreateLinkRequest.targetUrl-required",
+      "OBL-Link.target_url-format",
+      "OBL-Link.target_url-required",
+      "OBL-LinkView.targetUrl-format",
+      "OBL-LinkView.targetUrl-required"
+    ],
+    "matrix_id": "VM-009"
+  },
+  {
+    "id": "VM-010",
+    "text": "only literal scheme/host/IP-range checks run — no DNS lookup and no outbound network fetch occurs",
+    "traces": [
+      "E2-S1-AC3",
+      "FRD-31"
+    ],
+    "matrix_id": "VM-010"
+  },
+  {
+    "id": "VM-011",
+    "text": "every code is at least 7 characters drawn from a 62-character alphanumeric alphabet (>= 41.7 bits), no two are equal, and the bytes come from `secrets`/`os.urandom` rather than the `random` module",
+    "traces": [
+      "E2-S1-AC4",
+      "FRD-34"
+    ],
+    "matrix_id": "VM-011"
+  },
+  {
+    "id": "VM-012",
+    "text": "the response is 401 and no link row is created",
+    "traces": [
+      "E2-S1-AC5",
+      "FRD-27",
+      "OBL-Link.created_at-format",
+      "OBL-Link.created_at-required",
+      "OBL-LinkView.createdAt-format",
+      "OBL-LinkView.createdAt-required",
+      "OBL-Session.created_at-format",
+      "OBL-Session.created_at-required"
+    ],
+    "matrix_id": "VM-012"
+  },
+  {
+    "id": "VM-013",
+    "text": "the response is 302 with `Location` set to the target URL",
+    "traces": [
+      "E3-S1-AC1",
+      "FRD-28"
+    ],
+    "matrix_id": "VM-013"
+  },
+  {
+    "id": "VM-014",
+    "text": "the response is 404",
+    "traces": [
+      "E3-S1-AC2",
+      "FRD-28"
+    ],
+    "matrix_id": "VM-014"
+  },
+  {
+    "id": "VM-015",
+    "text": "it returns the Location header to the caller without itself following or fetching the target URL",
+    "traces": [
+      "E3-S1-AC3",
+      "FRD-28"
+    ],
+    "matrix_id": "VM-015"
+  },
+  {
+    "id": "VM-016",
+    "text": "exactly 20 links are returned, newest first, and none belongs to another user",
+    "traces": [
+      "E4-S1-AC1",
+      "FRD-29"
+    ],
+    "matrix_id": "VM-016"
+  },
+  {
+    "id": "VM-017",
+    "text": "the remaining 5 links are returned, newest-first order preserved across the page boundary",
+    "traces": [
+      "E4-S1-AC2",
+      "FRD-29"
+    ],
+    "matrix_id": "VM-017"
+  },
+  {
+    "id": "VM-018",
+    "text": "the page renders an empty state with no links and no error",
+    "traces": [
+      "E4-S1-AC3",
+      "FRD-29",
+      "OBL-ErrorBody.error-required"
+    ],
+    "matrix_id": "VM-018"
+  },
+  {
+    "id": "VM-019",
+    "text": "only the second member's own links appear — never the first member's",
+    "traces": [
+      "E4-S1-AC4",
+      "FRD-29"
+    ],
+    "matrix_id": "VM-019"
+  },
+  {
+    "id": "VM-020",
+    "text": "the p95 response time across the sample is under 300 ms",
+    "traces": [
+      "E4-S2-AC1",
+      "FRD-9",
+      "FRD-38"
+    ],
+    "matrix_id": "VM-020"
+  },
+  {
+    "id": "VM-021",
+    "text": "the p95 response time across the sample is under 300 ms",
+    "traces": [
+      "E4-S2-AC2",
+      "FRD-9",
+      "FRD-38"
+    ],
+    "matrix_id": "VM-021"
+  },
+  {
+    "id": "VM-022",
+    "text": "it writes a single machine-readable report recording both p95 figures for the evaluator to check",
+    "traces": [
+      "E4-S2-AC3",
+      "FRD-9",
+      "FRD-38"
+    ],
+    "matrix_id": "VM-022"
+  },
+  {
+    "id": "VM-023",
+    "text": "zero level-A or level-AA violations are reported",
+    "traces": [
+      "E4-S3-AC1",
+      "FRD-12",
+      "FRD-39"
+    ],
+    "matrix_id": "VM-023"
+  },
+  {
+    "id": "VM-024",
+    "text": "every interactive element (pagination, delete action) is reachable and operable in a visible focus order",
+    "traces": [
+      "E4-S3-AC2",
+      "FRD-12",
+      "FRD-39"
+    ],
+    "matrix_id": "VM-024"
+  },
+  {
+    "id": "VM-025",
+    "text": "every element meets the WCAG 2.2 AA minimum contrast ratio",
+    "traces": [
+      "E4-S3-AC3",
+      "FRD-12",
+      "FRD-39"
+    ],
+    "matrix_id": "VM-025"
+  },
+  {
+    "id": "VM-026",
+    "text": "the response is 204",
+    "traces": [
+      "E5-S1-AC1",
+      "FRD-30"
+    ],
+    "matrix_id": "VM-026"
+  },
+  {
+    "id": "VM-027",
+    "text": "the response is 404",
+    "traces": [
+      "E5-S1-AC2",
+      "FRD-30",
+      "OBL-Link.deleted_at-format",
+      "OBL-Link.deleted_at-required"
+    ],
+    "matrix_id": "VM-027"
+  },
+  {
+    "id": "VM-028",
+    "text": "the deleted code is never reissued to the new link",
+    "traces": [
+      "E5-S1-AC3",
+      "FRD-30",
+      "OBL-Member.created_at-format",
+      "OBL-Member.created_at-required",
+      "OBL-MemberView.createdAt-format",
+      "OBL-MemberView.createdAt-required"
+    ],
+    "matrix_id": "VM-028"
+  },
+  {
+    "id": "VM-029",
+    "text": "the response is 404, not 204, and the other member's link is unaffected",
+    "traces": [
+      "E5-S1-AC4",
+      "FRD-30"
+    ],
+    "matrix_id": "VM-029"
+  },
+  {
+    "id": "VM-030",
+    "text": "the response is 200",
+    "traces": [
+      "E6-S1-AC1",
+      "FRD-33",
+      "OBL-HealthBody.database-enum",
+      "OBL-HealthBody.database-required"
+    ],
+    "matrix_id": "VM-030"
+  },
+  {
+    "id": "VM-031",
+    "text": "the response is 503",
+    "traces": [
+      "E6-S1-AC2",
+      "FRD-33"
+    ],
+    "matrix_id": "VM-031"
+  },
+  {
+    "id": "VM-032",
+    "text": "no authentication was required and the body is JSON describing database status",
+    "traces": [
+      "E6-S1-AC3",
+      "FRD-33",
+      "OBL-HealthBody.status-enum",
+      "OBL-HealthBody.status-required"
+    ],
+    "matrix_id": "VM-032"
+  },
+  {
+    "id": "VM-033",
+    "text": "the response is 503 with a JSON body carrying an `error` field",
+    "traces": [
+      "E6-S2-AC1",
+      "FRD-37"
+    ],
+    "matrix_id": "VM-033"
+  },
+  {
+    "id": "VM-034",
+    "text": "it contains no stack trace, exception class name, or filesystem path",
+    "traces": [
+      "E6-S2-AC2",
+      "FRD-37"
+    ],
+    "matrix_id": "VM-034"
+  },
+  {
+    "id": "VM-035",
+    "text": "the response returns to its normal, non-503 status",
+    "traces": [
+      "E6-S2-AC3",
+      "FRD-37"
+    ],
+    "matrix_id": "VM-035"
+  },
+  {
+    "id": "VM-036",
+    "text": "the stack reaches healthy with exactly one Postgres 16 container",
+    "traces": [
+      "E7-S1-AC1",
+      "FRD-36"
+    ],
+    "matrix_id": "VM-036"
+  },
+  {
+    "id": "VM-037",
+    "text": "no service makes a request to a host outside the compose network",
+    "traces": [
+      "E7-S1-AC2",
+      "FRD-36"
+    ],
+    "matrix_id": "VM-037"
+  },
+  {
+    "id": "VM-038",
+    "text": "it defines exactly one Postgres 16 service and no other third-party managed service",
+    "traces": [
+      "E7-S1-AC3",
+      "FRD-36"
+    ],
+    "matrix_id": "VM-038"
+  }
+]

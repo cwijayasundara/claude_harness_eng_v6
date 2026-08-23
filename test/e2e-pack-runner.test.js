@@ -13,6 +13,7 @@ test('e2e pack exposes the expected profiles', () => {
   assert.deepStrictEqual(runner.PROFILES.fast.map((l) => l.id), ['fast-contracts']);
   assert.ok(runner.PROFILES.live.some((l) => l.id === 'plan'));
   assert.ok(runner.PROFILES.live.some((l) => l.id === 'semi'));
+  assert.ok(runner.PROFILES.live.some((l) => l.id === 'front-half'));
   assert.ok(runner.PROFILES.live.some((l) => l.id === 'auto'));
   assert.ok(runner.PROFILES.live.some((l) => l.id === 'full-auto'));
   assert.ok(runner.PROFILES.live.some((l) => l.id === 'gated'));
@@ -26,7 +27,7 @@ test('e2e pack supports --only and --skip selection', () => {
   assert.deepStrictEqual(only.map((l) => l.id), ['plan', 'auto']);
 
   const skip = runner.selectedLayers(runner.parseArgs(['live', '--skip=semi,smoke']));
-  assert.deepStrictEqual(skip.map((l) => l.id), ['install-browser', 'plan', 'auto', 'full-auto', 'gated', 'feature', 'vibe', 'brownfield-run']);
+  assert.deepStrictEqual(skip.map((l) => l.id), ['install-browser', 'plan', 'front-half', 'auto', 'full-auto', 'gated', 'feature', 'sprint', 'vibe', 'brownfield-run']);
 });
 
 test('e2e pack preserves dependency layers for targeted runs', () => {

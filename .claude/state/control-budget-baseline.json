@@ -1,5 +1,5 @@
 {
-  "count": 175,
+  "count": 180,
   "ids": [
     "acceptance-tests-first",
     "accessibility",
@@ -37,6 +37,7 @@
     "compliance-attestation",
     "comprehension-debt",
     "constraints-extract",
+    "context-ceiling",
     "context-pack",
     "control-budget",
     "cost-report",
@@ -53,7 +54,9 @@
     "dep-audit",
     "deploy-gate-verify",
     "design-decisions-gate",
+    "deterministic-bootstrap",
     "diff-review",
+    "dispatch-integrity",
     "drift-architecture",
     "drift-dead-code",
     "drift-deps",
@@ -170,11 +173,13 @@
     "trace-check",
     "trajectory-contract",
     "trust-boundary",
+    "turn-batching",
     "type-check",
     "unattended-preflight",
     "unit-tests",
     "verification-matrix-gate",
     "vocabulary-check",
+    "work-claim-guard",
     "write-scope"
   ]
 }

@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "story_id": "E5-S1",
+  "sprint": 1,
+  "title": "Delete a member's own link",
+  "readiness": "ready",
+  "requirements": {
+    "ac_ids": [
+      "E5-S1-AC1",
+      "E5-S1-AC2",
+      "E5-S1-AC3",
+      "E5-S1-AC4"
+    ],
+    "brd_ids": [
+      "FRD-5"
+    ],
+    "br_acceptance_ids": [
+      "FRD-30"
+    ],
+    "scope_out": [
+      "Editing instead of delete-and-recreate (SG-2)"
+    ]
+  },
+  "entities": [
+    {
+      "name": "Delete a member's own link",
+      "status": "unknown"
+    }
+  ],
+  "approach": {
+    "program_design": "specs/design/program-design.md",
+    "canvas": "specs/design/reasons-canvas.md",
+    "amendment": null
+  },
+  "structure": {
+    "owned_files": [
+      "backend/src/services/link_service.py",
+      "backend/CLAUDE.md",
+      "backend/src/repository/link_repository.py",
+      "backend/src/api/links.py",
+      "POST/GET /links",
+      "DELETE /links/{code}"
+    ],
+    "layer": "backend"
+  },
+  "operations": {
+    "pending": false,
+    "files": [
+      "backend/src/repository/link_repository.py",
+      "backend/src/services/link_service.py",
+      " for missing/deleted/not-owned.\n3. Extend ",
+      "DELETE /links/{code}",
+      "204/404.",
+      "frontend/src/app/api/links/[code]/route.ts",
+      "backend/tests/integration/test_links_api.py::test_delete*"
+    ],
+    "text": "1. Extend `backend/src/repository/link_repository.py` — add `soft_delete(owner_id, code)` setting `deleted_at`; scoped to owner.\n2. Extend `backend/src/services/link_service.py` — add `delete_link(owner_id, code)`, raises `LinkNotFound` for missing/deleted/not-owned.\n3. Extend `backend/src/api/links.py` — add `DELETE /links/{code}` returning 204/404.\n4. Create `frontend/src/app/api/links/[code]/route.ts` — `DELETE` proxy.\n5. Add `backend/tests/integration/test_links_api.py::test_delete*` covering AC1–AC4."
+  },
+  "safeguards": {
+    "ids": [
+      "SG-2"
+    ],
+    "none": false
+  },
+  "tests": {
+    "matrix_ids": [
+      "VM-026",
+      "VM-027",
+      "VM-028",
+      "VM-029"
+    ],
+    "case_ids": [
+      "VM-026",
+      "VM-027",
+      "VM-028",
+      "VM-029"
+    ],
+    "layers": [
+      "api",
+      "security"
+    ]
+  },
+  "provenance": {
+    "story_path": "specs/stories/E5-S1.md",
+    "parents": [
+      "E1-S1",
+      "E2-S1"
+    ],
+    "tracker_key": null
+  }
+}

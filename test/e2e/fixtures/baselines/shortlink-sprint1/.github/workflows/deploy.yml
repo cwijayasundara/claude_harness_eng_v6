@@ -1,0 +1,23 @@
+name: Deploy
+
+# Environment-gated deploy skeleton (Increment 3). The GitHub Environment named
+# below is the deploy-approval gate: with required reviewers configured on it,
+# this job pauses for approval before it runs. Manual-dispatch only — it never
+# auto-deploys — and the deploy step is an inert placeholder that FAILS until a
+# team wires in the real deploy, so there is never a green run that deployed
+# nothing. No client-specific literals: the environment name comes from
+# project-manifest.json#github.environments and is stamped in at scaffold time.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Deploy (placeholder)
+        run: |
+          echo "::error::ACTION REQUIRED: replace this placeholder with the real deploy for this project."
+          exit 1

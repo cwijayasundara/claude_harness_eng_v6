@@ -1,0 +1,598 @@
+{
+  "generated_from": [
+    "specs/design/data-models.schema.json",
+    "specs/design/api-contracts.schema.json"
+  ],
+  "obligations": [
+    {
+      "id": "OBL-CreateLinkRequest.targetUrl-format",
+      "field": "CreateLinkRequest.targetUrl",
+      "rule": "format",
+      "value": "uri",
+      "suggested_cases": [
+        "a malformed uri value — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-CreateLinkRequest.targetUrl-required",
+      "field": "CreateLinkRequest.targetUrl",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-ErrorBody.error-required",
+      "field": "ErrorBody.error",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-HealthBody.database-enum",
+      "field": "HealthBody.database",
+      "rule": "enum",
+      "value": [
+        "reachable",
+        "unreachable"
+      ],
+      "suggested_cases": [
+        "a value outside the allowed set — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-HealthBody.database-required",
+      "field": "HealthBody.database",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-HealthBody.status-enum",
+      "field": "HealthBody.status",
+      "rule": "enum",
+      "value": [
+        "ok",
+        "unavailable"
+      ],
+      "suggested_cases": [
+        "a value outside the allowed set — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-HealthBody.status-required",
+      "field": "HealthBody.status",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Link.code-minLength",
+      "field": "Link.code",
+      "rule": "minLength",
+      "value": 7,
+      "suggested_cases": [
+        "length below 7 — expect rejection",
+        "length exactly 7 — expect acceptance"
+      ]
+    },
+    {
+      "id": "OBL-Link.code-pattern",
+      "field": "Link.code",
+      "rule": "pattern",
+      "value": "^[A-Za-z0-9]{7,}$",
+      "suggested_cases": [
+        "a string not matching /^[A-Za-z0-9]{7,}$/ — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Link.code-required",
+      "field": "Link.code",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Link.created_at-format",
+      "field": "Link.created_at",
+      "rule": "format",
+      "value": "date-time",
+      "suggested_cases": [
+        "a malformed date-time value — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Link.created_at-required",
+      "field": "Link.created_at",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Link.deleted_at-format",
+      "field": "Link.deleted_at",
+      "rule": "format",
+      "value": "date-time",
+      "suggested_cases": [
+        "a malformed date-time value — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Link.deleted_at-required",
+      "field": "Link.deleted_at",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Link.id-format",
+      "field": "Link.id",
+      "rule": "format",
+      "value": "uuid",
+      "suggested_cases": [
+        "a malformed uuid value — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Link.id-required",
+      "field": "Link.id",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Link.owner_id-format",
+      "field": "Link.owner_id",
+      "rule": "format",
+      "value": "uuid",
+      "suggested_cases": [
+        "a malformed uuid value — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Link.owner_id-required",
+      "field": "Link.owner_id",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Link.target_url-format",
+      "field": "Link.target_url",
+      "rule": "format",
+      "value": "uri",
+      "suggested_cases": [
+        "a malformed uri value — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Link.target_url-required",
+      "field": "Link.target_url",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-LinkPage.items-required",
+      "field": "LinkPage.items",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-LinkPage.page-minimum",
+      "field": "LinkPage.page",
+      "rule": "minimum",
+      "value": 1,
+      "suggested_cases": [
+        "value below 1 — expect rejection",
+        "value exactly 1 — expect acceptance"
+      ]
+    },
+    {
+      "id": "OBL-LinkPage.page-required",
+      "field": "LinkPage.page",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-LinkPage.pageSize-enum",
+      "field": "LinkPage.pageSize",
+      "rule": "enum",
+      "value": [
+        20
+      ],
+      "suggested_cases": [
+        "a value outside the allowed set — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-LinkPage.pageSize-required",
+      "field": "LinkPage.pageSize",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-LinkPage.total-minimum",
+      "field": "LinkPage.total",
+      "rule": "minimum",
+      "value": 0,
+      "suggested_cases": [
+        "value below 0 — expect rejection",
+        "value exactly 0 — expect acceptance"
+      ]
+    },
+    {
+      "id": "OBL-LinkPage.total-required",
+      "field": "LinkPage.total",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-LinkView.code-minLength",
+      "field": "LinkView.code",
+      "rule": "minLength",
+      "value": 7,
+      "suggested_cases": [
+        "length below 7 — expect rejection",
+        "length exactly 7 — expect acceptance"
+      ]
+    },
+    {
+      "id": "OBL-LinkView.code-required",
+      "field": "LinkView.code",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-LinkView.createdAt-format",
+      "field": "LinkView.createdAt",
+      "rule": "format",
+      "value": "date-time",
+      "suggested_cases": [
+        "a malformed date-time value — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-LinkView.createdAt-required",
+      "field": "LinkView.createdAt",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-LinkView.targetUrl-format",
+      "field": "LinkView.targetUrl",
+      "rule": "format",
+      "value": "uri",
+      "suggested_cases": [
+        "a malformed uri value — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-LinkView.targetUrl-required",
+      "field": "LinkView.targetUrl",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Member.created_at-format",
+      "field": "Member.created_at",
+      "rule": "format",
+      "value": "date-time",
+      "suggested_cases": [
+        "a malformed date-time value — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Member.created_at-required",
+      "field": "Member.created_at",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Member.email-format",
+      "field": "Member.email",
+      "rule": "format",
+      "value": "email",
+      "suggested_cases": [
+        "a malformed email value — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Member.email-required",
+      "field": "Member.email",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Member.id-format",
+      "field": "Member.id",
+      "rule": "format",
+      "value": "uuid",
+      "suggested_cases": [
+        "a malformed uuid value — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Member.id-required",
+      "field": "Member.id",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Member.password_hash-pattern",
+      "field": "Member.password_hash",
+      "rule": "pattern",
+      "value": "^\\$argon2id\\$",
+      "suggested_cases": [
+        "a string not matching /^\\$argon2id\\$/ — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Member.password_hash-required",
+      "field": "Member.password_hash",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-MemberView.createdAt-format",
+      "field": "MemberView.createdAt",
+      "rule": "format",
+      "value": "date-time",
+      "suggested_cases": [
+        "a malformed date-time value — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-MemberView.createdAt-required",
+      "field": "MemberView.createdAt",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-MemberView.email-format",
+      "field": "MemberView.email",
+      "rule": "format",
+      "value": "email",
+      "suggested_cases": [
+        "a malformed email value — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-MemberView.email-required",
+      "field": "MemberView.email",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-MemberView.id-format",
+      "field": "MemberView.id",
+      "rule": "format",
+      "value": "uuid",
+      "suggested_cases": [
+        "a malformed uuid value — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-MemberView.id-required",
+      "field": "MemberView.id",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-RegisterRequest.email-format",
+      "field": "RegisterRequest.email",
+      "rule": "format",
+      "value": "email",
+      "suggested_cases": [
+        "a malformed email value — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-RegisterRequest.email-required",
+      "field": "RegisterRequest.email",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-RegisterRequest.password-minLength",
+      "field": "RegisterRequest.password",
+      "rule": "minLength",
+      "value": 1,
+      "suggested_cases": [
+        "length below 1 — expect rejection",
+        "length exactly 1 — expect acceptance"
+      ]
+    },
+    {
+      "id": "OBL-RegisterRequest.password-required",
+      "field": "RegisterRequest.password",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Session.created_at-format",
+      "field": "Session.created_at",
+      "rule": "format",
+      "value": "date-time",
+      "suggested_cases": [
+        "a malformed date-time value — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Session.created_at-required",
+      "field": "Session.created_at",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Session.expires_at-format",
+      "field": "Session.expires_at",
+      "rule": "format",
+      "value": "date-time",
+      "suggested_cases": [
+        "a malformed date-time value — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Session.id-format",
+      "field": "Session.id",
+      "rule": "format",
+      "value": "uuid",
+      "suggested_cases": [
+        "a malformed uuid value — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Session.id-required",
+      "field": "Session.id",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Session.member_id-format",
+      "field": "Session.member_id",
+      "rule": "format",
+      "value": "uuid",
+      "suggested_cases": [
+        "a malformed uuid value — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Session.member_id-required",
+      "field": "Session.member_id",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Session.revoked_at-format",
+      "field": "Session.revoked_at",
+      "rule": "format",
+      "value": "date-time",
+      "suggested_cases": [
+        "a malformed date-time value — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-Session.revoked_at-required",
+      "field": "Session.revoked_at",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-SignInRequest.email-format",
+      "field": "SignInRequest.email",
+      "rule": "format",
+      "value": "email",
+      "suggested_cases": [
+        "a malformed email value — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-SignInRequest.email-required",
+      "field": "SignInRequest.email",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    },
+    {
+      "id": "OBL-SignInRequest.password-minLength",
+      "field": "SignInRequest.password",
+      "rule": "minLength",
+      "value": 1,
+      "suggested_cases": [
+        "length below 1 — expect rejection",
+        "length exactly 1 — expect acceptance"
+      ]
+    },
+    {
+      "id": "OBL-SignInRequest.password-required",
+      "field": "SignInRequest.password",
+      "rule": "required",
+      "value": true,
+      "suggested_cases": [
+        "omit the field — expect rejection"
+      ]
+    }
+  ]
+}

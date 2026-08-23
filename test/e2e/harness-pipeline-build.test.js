@@ -6,13 +6,14 @@ const path = require('path');
 const { describe, test, before, after } = require('node:test');
 
 const { runClaude, HARNESS_ROOT } = require('./helpers/claude-runner');
+const { e2eWorkdir } = require('./helpers/e2e-workdir');
 const { assertMetricExists, isPrometheusUp, pollMetric } = require('./helpers/prometheus-checker');
 const { isGrafanaUp, getDashboard, listDashboards } = require('./helpers/grafana-checker');
 
 // ── Paths ──────────────────────────────────────────────────────────────────────
 
 const RESULTS_DIR = path.join(__dirname, 'results');
-const OUTPUT_DIR = path.join(__dirname, 'output');
+const OUTPUT_DIR = e2eWorkdir('output');
 
 let PROJECT_DIR;
 

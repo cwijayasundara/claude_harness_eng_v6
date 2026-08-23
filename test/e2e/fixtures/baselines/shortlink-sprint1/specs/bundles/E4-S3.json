@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "story_id": "E4-S3",
+  "sprint": 1,
+  "title": "Console list page meets WCAG 2.2 AA",
+  "readiness": "ready",
+  "requirements": {
+    "ac_ids": [
+      "E4-S3-AC1",
+      "E4-S3-AC2",
+      "E4-S3-AC3"
+    ],
+    "brd_ids": [
+      "FRD-12"
+    ],
+    "br_acceptance_ids": [
+      "FRD-39"
+    ],
+    "scope_out": [
+      "Accessibility of pages outside the console list (sign-in/register forms are covered only if reused by this page)"
+    ]
+  },
+  "entities": [
+    {
+      "name": "Console list page meets WCAG 2.2 AA",
+      "status": "unknown"
+    }
+  ],
+  "approach": {
+    "program_design": "specs/design/program-design.md",
+    "canvas": "specs/design/reasons-canvas.md",
+    "amendment": null
+  },
+  "structure": {
+    "owned_files": [
+      "GET /links",
+      "frontend/src/components/LinkList.tsx",
+      "frontend/src/components/Pagination.tsx"
+    ],
+    "layer": "frontend"
+  },
+  "operations": {
+    "pending": false,
+    "files": [
+      "frontend/tests/console/a11y.spec.ts",
+      "frontend/src/app/console/page.tsx",
+      "level-A/AA",
+      "frontend/src/components/LinkList.tsx",
+      "frontend/src/components/Pagination.tsx"
+    ],
+    "text": "1. Create `frontend/tests/console/a11y.spec.ts` — Playwright + axe scan of `frontend/src/app/console/page.tsx`; asserts zero level-A/AA violations, keyboard operability, and contrast.\n2. Patch `frontend/src/components/LinkList.tsx` and `frontend/src/components/Pagination.tsx` for focus order, ARIA labels, and contrast where the scan finds violations."
+  },
+  "safeguards": {
+    "ids": [
+      "SG-1",
+      "SG-2",
+      "SG-3",
+      "SG-4",
+      "SG-5",
+      "SG-6",
+      "SG-7",
+      "SG-8",
+      "SG-9",
+      "SG-10",
+      "SG-11"
+    ],
+    "none": false
+  },
+  "tests": {
+    "matrix_ids": [
+      "VM-023",
+      "VM-024",
+      "VM-025"
+    ],
+    "case_ids": [
+      "VM-023",
+      "VM-024",
+      "VM-025"
+    ],
+    "layers": [
+      "e2e",
+      "accessibility"
+    ]
+  },
+  "provenance": {
+    "story_path": "specs/stories/E4-S3.md",
+    "parents": [
+      "E4-S1"
+    ],
+    "tracker_key": null
+  }
+}

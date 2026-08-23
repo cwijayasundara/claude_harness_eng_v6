@@ -13,6 +13,7 @@ const http = require('http');
 const path = require('path');
 const { test } = require('node:test');
 const { runHook, makeProject } = require('./helpers/record-run-fixture');
+const { SUBAGENT_TOOL_NAMES, matcherCoversSubagentDispatch } = require('../.claude/hooks/lib/subagent-tool.js');
 
 // Passive collector: counts every request so an unexpected tool-time push is
 // detected (withGateway resolves on the first request and would mask it).
@@ -76,7 +77,13 @@ test('record-run is wired for mutating tools so harness_tool_events_total publis
   const recordRunMatchers = (settings.hooks.PostToolUse || [])
     .filter((m) => (m.hooks || []).some((h) => (h.command || '').includes('record-run.js')))
     .map((m) => m.matcher);
-  assert.ok(recordRunMatchers.includes('Task'), 'Task matcher must stay (subagent metrics)');
+  // Asserting the literal string 'Task' here pinned a live defect: a real dispatch
+  // arrives as tool_name "Agent", which the "Task" matcher does not select, so the
+  // subagent metrics this test claims to protect were never emitted. Check that the
+  // matcher SELECTS a real dispatch instead of how it is spelled.
+  assert.ok(recordRunMatchers.some((m) => matcherCoversSubagentDispatch(m)),
+    `a record-run matcher must cover ${JSON.stringify(SUBAGENT_TOOL_NAMES)} (subagent metrics); `
+    + `saw ${JSON.stringify(recordRunMatchers)}`);
   assert.ok(
     recordRunMatchers.some((m) => /Bash/.test(m) && /Write/.test(m) && /Edit/.test(m)),
     'record-run must cover Write|Edit|MultiEdit|Bash for tool-event telemetry'

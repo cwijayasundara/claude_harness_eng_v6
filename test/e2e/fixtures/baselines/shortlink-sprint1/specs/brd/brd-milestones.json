@@ -1,0 +1,32 @@
+[
+  {
+    "id": "M1",
+    "name": "M1 — Redirect works.",
+    "requirements": [
+      "FR-1",
+      "FR-2",
+      "FR-3",
+      "FR-6",
+      "FR-7",
+      "NFR-2",
+      "NFR-3",
+      "NFR-5"
+    ],
+    "done_when": "a signed-in member can create a link, be redirected by it, and sign out. (FR-1, FR-2, FR-3, FR-6, FR-7, NFR-2, NFR-3, NFR-5)",
+    "observable": true
+  },
+  {
+    "id": "M2",
+    "name": "M2 — Console works.",
+    "requirements": [
+      "FR-4",
+      "FR-5",
+      "FR-8",
+      "NFR-1",
+      "NFR-4",
+      "NFR-6"
+    ],
+    "done_when": "the list page shows only the member's links, delete returns 404 on that code, and `/healthz` reports the database. (FR-4, FR-5, FR-8, NFR-1, NFR-4, NFR-6)",
+    "observable": true
+  }
+]

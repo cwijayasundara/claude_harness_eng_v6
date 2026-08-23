@@ -1,0 +1,62 @@
+[
+  {
+    "id": "app-bootstrap",
+    "text": "App wiring, config, DB engine/session factory, shared domain types, logging config (main.py, config/settings.py, repository/db.py, types/models.py, logging_config.py)",
+    "traces": ["E1-S1"]
+  },
+  {
+    "id": "auth-service",
+    "text": "Registration, sign-in, sign-out, and current-member session dependency (services/auth_service.py, api/auth.py, api/deps.py, repository/member_repository.py, repository/session_repository.py)",
+    "traces": ["E1-S1", "E1-S2"]
+  },
+  {
+    "id": "frontend-auth-proxy",
+    "text": "Next.js Route Handlers proxying register/sign-in/sign-out to FastAPI per D-1",
+    "traces": ["E1-S1", "E1-S2"]
+  },
+  {
+    "id": "link-service",
+    "text": "Create/list/delete link business rules, SSRF-safe target validation, code generation, link repository, links router (services/link_service.py, services/target_validation.py, services/code_generator.py, repository/link_repository.py, api/links.py)",
+    "traces": ["E2-S1", "E4-S1", "E5-S1"]
+  },
+  {
+    "id": "frontend-links-proxy",
+    "text": "Next.js Route Handlers proxying create/list/delete link calls to FastAPI per D-1",
+    "traces": ["E2-S1", "E4-S1", "E5-S1"]
+  },
+  {
+    "id": "redirect-service",
+    "text": "Public GET /{code} redirect, proxied through the Next.js origin per D-1 (api/redirect.py, app/[code]/route.ts)",
+    "traces": ["E3-S1"]
+  },
+  {
+    "id": "console-ui",
+    "text": "Console page listing the signed-in member's own links, pagination, empty state, per-row actions (app/console/page.tsx, components/LinkList.tsx, LinkRow.tsx, Pagination.tsx, EmptyState.tsx, api/linksClient.ts, types/link.ts, types/member.ts)",
+    "traces": ["E4-S1", "E4-S3"]
+  },
+  {
+    "id": "perf-tests",
+    "text": "Latency measurement harness proving create/list p95 < 300ms at 100 links (backend/tests/perf/test_latency.py)",
+    "traces": ["E4-S2"]
+  },
+  {
+    "id": "a11y-tests",
+    "text": "Automated WCAG 2.2 AA scan and keyboard/contrast suite for the console page (frontend/tests/console/a11y.spec.ts)",
+    "traces": ["E4-S3"]
+  },
+  {
+    "id": "health-service",
+    "text": "Database-reachability probe and /healthz endpoint (api/health.py, repository/db.py#check_db_reachable)",
+    "traces": ["E6-S1"]
+  },
+  {
+    "id": "error-handling",
+    "text": "Global 503 JSON envelope on DB failure, shared ErrorBody type (api/error_handlers.py, types/models.py#ErrorBody)",
+    "traces": ["E6-S2"]
+  },
+  {
+    "id": "deployment",
+    "text": "One-command docker compose stack, backend/frontend Dockerfiles, env template (docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, .env.example)",
+    "traces": ["E7-S1"]
+  }
+]

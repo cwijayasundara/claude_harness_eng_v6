@@ -56,6 +56,8 @@ const { copyScaffoldTree, pruneSettings, resolveScaffoldProfile, copyFrameworkPa
 const { refreshNavigation } = require('./navigation-refresh');
 const secBaseline = require('./scaffold-security-baseline');
 const { writeProjectFiles } = require('./scaffold-project-files');
+const { bootstrap: bootstrapProject, render: renderBootstrap } = require('./scaffold-bootstrap');
+const { telemetryEnabled, enableTelemetry } = require('./scaffold-telemetry');
 
 const OUTPUT_DIRS = [
   'specs/brd', 'specs/stories', 'specs/design/mockups', 'specs/design/amendments',
@@ -79,39 +81,12 @@ function parseArgs(argv) {
     else if (key === '--telemetry') opts.telemetry = true;
     else if (key === '--no-telemetry') opts.telemetry = false;
     else if (key === '--drift-workflow') opts.driftWorkflow = true;
+    // Manifests are always written; this only skips the install that warms the
+    // toolchain. Useful offline, and in tests that must not touch the network.
+    else if (key === '--no-install-deps') opts.installDeps = false;
     else fail(`unknown argument: ${key}`);
   }
   return opts;
-}
-
-function telemetryEnabled(profile, opts = {}) {
-  if (typeof opts.telemetry === 'boolean') return opts.telemetry;
-  return profile.telemetry === true;
-}
-
-// Telemetry env is opt-in. When enabled, these keys are injected into the copied
-// settings, not the source. HARNESS_USER stays unset on purpose — record-run
-// derives it from git user.name / the OS user.
-const TELEMETRY_ENV = {
-  CLAUDE_CODE_ENABLE_TELEMETRY: '1',
-  OTEL_METRICS_EXPORTER: 'otlp',
-  OTEL_LOGS_EXPORTER: 'otlp',
-  OTEL_EXPORTER_OTLP_PROTOCOL: 'grpc',
-  OTEL_EXPORTER_OTLP_ENDPOINT: 'http://localhost:4317',
-  OTEL_LOG_TOOL_DETAILS: '1',
-  HARNESS_PUSHGATEWAY_URL: 'http://localhost:9091',
-};
-
-// Merge TELEMETRY_ENV into the copied settings files (interactive + headless).
-// Existing env keys are preserved.
-function enableTelemetry(target) {
-  for (const file of ['settings.json', 'settings.auto.json']) {
-    const p = path.join(target, '.claude', file);
-    if (!fs.existsSync(p)) continue;
-    const settings = JSON.parse(fs.readFileSync(p, 'utf8'));
-    settings.env = { ...(settings.env || {}), ...TELEMETRY_ENV };
-    fs.writeFileSync(p, `${JSON.stringify(settings, null, 2)}\n`);
-  }
 }
 
 function requireTemplate(src, rel) {
@@ -265,10 +240,20 @@ function applyScaffold(rawOpts) {
   makeDirs(target);
   writeStateFiles(target, profile);
   written.push(...writeProjectFiles(target, pluginSource, profile));
+  // Dependency manifests + tool config, so the FIRST story does not own project
+  // bootstrap. In the audited run it did, and that story ran 208 turns for
+  // $16.87. Installing here also keeps `uv sync` / `npm install` out of an
+  // implementer's turn, where a multi-minute wait expires its 5-minute cache.
+  const bootstrap = bootstrapProject(target, { install: rawOpts.installDeps !== false });
+  // bootstrap.written is repo-relative; every other entry in `written` is
+  // absolute, and report() runs path.relative(target, ...) over the list.
+  written.push(...bootstrap.written.map((rel) => path.join(target, rel)));
   const navigation = refreshNavigation({ projectDir: target, mode: 'scaffold' });
   const cal = writeCalibration(target, profile);
   if (cal) written.push(cal);
-  return { target, written, profileName: profile.name || 'untitled-project', scaffoldProfile, navigation };
+  return {
+    target, written, bootstrap, profileName: profile.name || 'untitled-project', scaffoldProfile, navigation,
+  };
 }
 
 function run() {
@@ -279,6 +264,7 @@ function run() {
 function report(result) {
   process.stdout.write(`scaffold applied for "${result.profileName}" into ${result.target}\n`);
   process.stdout.write(`  .claude/ tree copied (${result.scaffoldProfile} profile)\n`);
+  if (result.bootstrap) process.stdout.write(renderBootstrap(result.bootstrap));
   for (const f of result.written) process.stdout.write(`  wrote ${path.relative(result.target, f)}\n`);
   process.stdout.write(`  created output dirs: ${OUTPUT_DIRS.join(', ')}\n`);
   process.stdout.write('  wrote .mcp.json, .gitignore, .claude/claude-security-guidance.md, .claude/security-patterns.yaml, specs/design/constitution.md\n');

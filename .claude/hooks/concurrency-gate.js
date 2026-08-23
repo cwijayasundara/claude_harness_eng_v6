@@ -9,10 +9,11 @@
 const fs = require('fs');
 const path = require('path');
 
-// The real subagent-dispatch tool's tool_name is "Agent" in this environment (confirmed
-// by direct hook-payload capture); "Task" is the name this gate originally shipped
-// against and is kept for forward/backward compatibility across Claude Code versions.
-const SUBAGENT_TOOL_NAMES = new Set(['Task', 'Agent']);
+// One owner for the dispatch tool names: lib/subagent-tool.js, which the wiring
+// contract also derives from. A private copy here was what let settings.json
+// match "Task" while this file already handled "Agent" — the gate agreed with
+// itself and never ran.
+const SUBAGENT_TOOL_NAMES = new Set(require('./lib/subagent-tool.js').SUBAGENT_TOOL_NAMES);
 
 const TTL_MS = 30 * 60 * 1000;
 // DEFAULT_CAP = 18: the documented /auto peak is 3 group-orchestrators + 3×5 teammates = 18

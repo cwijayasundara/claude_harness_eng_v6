@@ -8,12 +8,17 @@ const path = require('path');
 const HARNESS_ROOT = path.join(__dirname, '..', '..');
 const E2E_SETTINGS = path.join(__dirname, '..', 'fixtures', 'e2e-settings.json');
 
-function buildClaudeArgs(model, budgetUsd, continueSession, pluginDir, sessionId, outputFormat) {
+function buildClaudeArgs(model, budgetUsd, continueSession, pluginDir, sessionId, outputFormat, permissionMode) {
   const args = [
     '-p',
     '--model', model,
     '--max-budget-usd', budgetUsd,
     '--settings', E2E_SETTINGS,
+    // The allow-list in E2E_SETTINGS covers the core tools, but a live route
+    // runs whatever the harness reaches for; anything outside the list stalls a
+    // run that has no human to answer it. Auto mode is the same posture the
+    // developer shell uses for this repo.
+    '--permission-mode', permissionMode,
     '--exclude-dynamic-system-prompt-sections',
     // Isolate from the host's global MCP config. Without this, the nested
     // `claude` inherits the developer's global MCP servers (playwright-mcp,
@@ -60,9 +65,12 @@ function runClaude(prompt, options = {}) {
     pluginDir = null,
     sessionId = null,
     outputFormat = null,
+    permissionMode = 'auto',
   } = options;
 
-  const args = buildClaudeArgs(model, budgetUsd, continueSession, pluginDir, sessionId, outputFormat);
+  const args = buildClaudeArgs(
+    model, budgetUsd, continueSession, pluginDir, sessionId, outputFormat, permissionMode,
+  );
   const { result, stdout, stderr } = spawnCapturedGroup('claude', args, {
     input: prompt, cwd, timeoutMs, env: buildClaudeEnv(),
   });
@@ -118,4 +126,4 @@ function spawnCapturedGroup(command, args, { input, cwd, timeoutMs, env }) {
   return { result, stdout, stderr };
 }
 
-module.exports = { runClaude, spawnCapturedGroup, HARNESS_ROOT };
+module.exports = { runClaude, buildClaudeArgs, spawnCapturedGroup, HARNESS_ROOT };

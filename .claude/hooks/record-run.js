@@ -9,11 +9,13 @@ const { execFileSync } = require('child_process');
 const { readHookInputAsync, reportFailure, optionalRequire } = require('./lib/common');
 // telemetry + planning packs. Recording must never break a session: absent = skip.
 const telemetry = optionalRequire(path.join(__dirname, '..', 'scripts', 'telemetry-memory.js'));
-const buildLane = optionalRequire(path.join(__dirname, '..', 'scripts', 'build-lane.js'));
 const phaseCostPersist = optionalRequire(path.join(__dirname, 'lib', 'phase-cost-persist.js'));
 const { inferSkills } = require('./lib/record-skills');
 const { resolveAgentModel, extractUsageFields } = require('./lib/agent-model');
 const { contextFields } = require('./lib/run-context');
+const {
+  stableLabelValue, inferCommand, inferLane, shouldSkipCommandTelemetry,
+} = require('./lib/run-command.js');
 
 // The real subagent-dispatch tool's tool_name is "Agent" in this environment (confirmed
 // by direct hook-payload capture); "Task" is the name this harness originally shipped
@@ -87,28 +89,6 @@ async function persistAndPush(receiptPath, stateDir, projectDir, record) {
   if (telemetry) await telemetry.pushSnapshot({ projectDir, stateDir });
 }
 
-function stableLabelValue(value, fallback) {
-  return value === null || value === undefined || value === '' ? fallback : value;
-}
-
-function inferCommand(prompt) {
-  const text = String(prompt || '').trim();
-  const match = text.match(/^\/([A-Za-z0-9_-]+)/);
-  return match ? match[1].toLowerCase() : null;
-}
-
-function inferLane(prompt, command) {
-  if (command !== 'build') return command || null;
-  // Without the planning pack there is no /build lane to resolve — the command name
-  // is the honest answer, not a crash.
-  const parsed = buildLane ? buildLane.parseBuildInvocation(prompt) : null;
-  if (!parsed || parsed.valid === false) return command;
-  return parsed.lane;
-}
-
-function shouldSkipCommandTelemetry(command) {
-  return command === 'scaffold';
-}
 
 (async () => {
   try {
@@ -139,6 +119,7 @@ function shouldSkipCommandTelemetry(command) {
       if (shouldSkipCommandTelemetry(command)) process.exit(0);
       const inferredLane = inferLane(input.prompt, command);
       if (inferredLane) writeMarker(stateDir, 'current-lane', inferredLane);
+      if (command) writeMarker(stateDir, 'current-command', command);
       const skills = inferSkills({ input, command, lane: inferredLane || lane, catalog: skillInventory });
       const promptRecord = {
         ...lifecycle,

@@ -6,8 +6,10 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const { run, output, shouldBlock, skipped } = require('./toolchain');
-const { failBlock, noteSkip, inAutoBuild, FLOOR, requireScript } = require('./pre-commit-util');
+const { failBlock, noteSkip, inAutoBuild, FLOOR, requireScript, GIT_MAX_BUFFER } = require('./pre-commit-util');
+const { fileLimitFor, newlyOverFileLimit } = require('./length');
 
 function checkTypescript(ctx) {
   const { projectDir, stagedTs } = ctx;
@@ -25,6 +27,53 @@ function checkTypescript(ctx) {
   } else if (skipped(res)) {
     noteSkip('TypeScript typecheck (tsc --noEmit)', 'tsc unavailable or unprovisioned');
   }
+}
+
+// Commit-time half of `length-caps`.
+//
+// pre-write-gate enforces the same ratchet before a Write/Edit reaches disk,
+// but that is a PreToolUse hook: anything written by another route — a Bash
+// heredoc, `python3 - <<PY`, an editor, a patch — never passes it. Six files
+// crossed their cap on this branch by exactly that route, so the pre-disk cap
+// was a cap on one tool rather than on the repository. Commit is the choke
+// point every route shares.
+//
+// Ratchet, not a cap: `newlyOverFileLimit` grandfathers a file that was already
+// over and only blocks one that newly crosses or grows while over. Pre-existing
+// debt stays committable; new debt does not.
+function checkLengthCaps(ctx) {
+  const { projectDir, stagedSource } = ctx;
+  if (!stagedSource || stagedSource.length === 0) return;
+  // stdio 'pipe' on stderr too: on the very first commit there is no HEAD, and
+  // git's "invalid object name" would otherwise print over the gate's output.
+  const lines = (ref) => {
+    try {
+      return execFileSync('git', ['show', ref], {
+        cwd: projectDir, encoding: 'utf8', maxBuffer: GIT_MAX_BUFFER, stdio: ['ignore', 'pipe', 'ignore'],
+      }).split('\n').length;
+    } catch (_) { return null; }
+  };
+
+  const offenders = [];
+  for (const rel of stagedSource) {
+    const after = lines(`:${rel}`);
+    if (after === null) continue; // deleted, unreadable, or not in the index
+    const before = lines(`HEAD:${rel}`) || 0; // a new file has no HEAD side
+    const limit = fileLimitFor(rel);
+    if (newlyOverFileLimit(before, after, limit)) offenders.push({ rel, before, after, limit });
+  }
+  if (offenders.length === 0) return;
+
+  failBlock({
+    id: 'length-caps',
+    title: `${offenders.length} staged file(s) newly over the length cap`,
+    detail: `${offenders
+      .map((o) => `  ${o.rel}: ${o.before || 'new'} -> ${o.after} lines (cap ${o.limit})`)
+      .join('\n')}\n`,
+    fix: 'split the file along a real seam before committing. This is the same cap '
+      + 'pre-write-gate applies; reaching disk by another route does not exempt it.',
+    minTier: 'minimal',
+  });
 }
 
 function readBaseline(projectDir, key) {
@@ -146,6 +195,7 @@ function checkCoverageJs(ctx) {
 }
 
 module.exports = {
+  checkLengthCaps,
   checkTypescript,
   checkCoverage,
   checkCoverageJs,

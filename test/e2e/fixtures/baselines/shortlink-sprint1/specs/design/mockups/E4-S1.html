@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>shortlink — Console (E4-S1 mockup)</title>
+
+<!--
+  Mockup for E4-S1 "List the signed-in member's own links" (console page)
+  and audited by E4-S3 (WCAG 2.2 AA). Aesthetic direction:
+  specs/design/mockups/aesthetic-direction.md. Field names below mirror
+  api-contracts.schema.json's LinkPage/LinkView exactly (code, targetUrl,
+  createdAt, page, pageSize, total). No schema gaps: every displayed field
+  exists in the contract. Data is hardcoded and realistic — no live API call.
+
+  Design-time artifact only, per .claude/skills/design/references/ui-mockups.md
+  (CDN React/Tailwind, no build step). Not a template for production code:
+  the real Next.js Console (frontend/src/app/console/page.tsx) is a build-time
+  app with pinned, integrity-checked dependencies via package.json/npm — it
+  does not load React from a CDN.
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css?family=Fraunces:500,600|Space+Grotesk:400,500,700|JetBrains+Mono:400,500&display=swap" rel="stylesheet" />
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js" crossorigin></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          paper: '#F6F1E7',
+          ink: '#1B1A17',
+          inkmuted: '#6B6558',
+          accent: '#D65A1F',
+          accentink: '#FFFFFF',
+          danger: '#B3261E',
+          line: '#E4DCC9',
+        },
+        fontFamily: {
+          display: ['Fraunces', 'serif'],
+          ui: ['"Space Grotesk"', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'monospace'],
+        },
+      },
+    },
+  };
+</script>
+
+<style>
+  body { background: #F6F1E7; }
+  :focus-visible { outline: 3px solid #D65A1F; outline-offset: 2px; }
+</style>
+</head>
+<body class="font-ui text-ink">
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useMemo } = React;
+
+// Realistic seed data — 25 links owned by one member, matching LinkView
+// { code, targetUrl, createdAt } exactly. Newest first.
+function seedLinks() {
+  const targets = [
+    "https://www.notion.so/eng/rfc/session-cookie-scoping",
+    "https://github.com/acme/shortlink/pull/482",
+    "https://calendar.google.com/event?eid=9f2a1c",
+    "https://docs.google.com/spreadsheets/d/1x9F/edit",
+    "https://www.figma.com/file/8kQ2/console-redesign",
+    "https://acme-eng.slack.com/archives/C0912/p173",
+    "https://arxiv.org/abs/2508.01923",
+    "https://www.youtube.com/watch?v=2p_0f5Kq",
+    "https://news.ycombinator.com/item?id=41882031",
+    "https://www.amazon.com/dp/B0DPXQ2K1L",
+    "https://www.linkedin.com/in/ada-lovelace-eng",
+    "https://en.wikipedia.org/wiki/Argon2",
+    "https://blog.cloudflare.com/ssrf-defense-in-depth/",
+    "https://www.postgresql.org/docs/16/index.html",
+    "https://nextjs.org/docs/app/building-your-application/routing",
+    "https://fastapi.tiangolo.com/tutorial/security/",
+    "https://owasp.org/www-community/attacks/Server_Side_Request_Forgery",
+    "https://www.terraform.io/docs",
+    "https://reactjs.org/docs/hooks-intro.html",
+    "https://www.w3.org/WAI/WCAG22/quickref/",
+    "https://stripe.com/docs/api",
+    "https://www.notion.so/eng/postmortems/2026-08-14-outage",
+    "https://www.google.com/maps/place/Acme+HQ",
+    "https://trello.com/b/9kQ2f1/sprint-1",
+    "https://www.reddit.com/r/webdev/comments/1abcxy",
+  ];
+  const codes = [
+    "k7Qm2Xz","aZ3kQ9x","Pn8rT4w","xY2vB6q","Lm9Fj3k",
+    "Qw4Rt7z","Zx8Cv2n","Bn5Km9q","Hj3Lp8w","Rt6Yu2v",
+    "Cx9Zm4q","Vb2Nk7w","Sd5Fg8j","Wq3Er6t","Mn7Bv2x",
+    "Ty8Uh4k","Gf6Dj9p","Kl2Mn8q","Op5Rt3w","Az9Xc6v",
+    "Bn4Vm7k","Cx6Zl2q","Df8Gh3w","Jk9Lm5t","Nb3Vc7x",
+  ];
+  const now = new Date("2026-08-21T16:31:00Z").getTime();
+  return targets.map((targetUrl, i) => ({
+    code: codes[i],
+    targetUrl,
+    createdAt: new Date(now - i * 3 * 60 * 60 * 1000).toISOString(),
+  }));
+}
+
+const ALL_LINKS = seedLinks(); // 25 total — exercises pagination (20 + 5)
+const PAGE_SIZE = 20;
+
+function formatDate(iso) {
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: "numeric", month: "short", day: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+function EmptyState() {
+  return (
+    <div role="status" className="border border-line rounded-md py-16 px-6 text-center">
+      <p className="font-display text-2xl mb-2">No links yet</p>
+      <p className="text-inkmuted max-w-sm mx-auto">
+        Links you create will show up here, newest first. Mint your first one
+        from the create form to see it appear.
+      </p>
+    </div>
+  );
+}
+
+function Pagination({ page, pageCount, onChange }) {
+  return (
+    <nav aria-label="Links pagination" className="flex items-center justify-between mt-6">
+      <button
+        type="button"
+        className="font-ui px-4 py-2 rounded-md border border-line disabled:opacity-40 disabled:cursor-not-allowed hover:border-accent transition-colors"
+        onClick={() => onChange(page - 1)}
+        disabled={page <= 1}
+      >
+        &larr; Previous
+      </button>
+      <p className="font-mono text-sm text-inkmuted" aria-live="polite">
+        Page {page} of {pageCount}
+      </p>
+      <button
+        type="button"
+        className="font-ui px-4 py-2 rounded-md border border-line disabled:opacity-40 disabled:cursor-not-allowed hover:border-accent transition-colors"
+        onClick={() => onChange(page + 1)}
+        disabled={page >= pageCount}
+      >
+        Next &rarr;
+      </button>
+    </nav>
+  );
+}
+
+function LinkRow({ link, onDelete }) {
+  const shortUrl = "https://short.lnk/" + link.code;
+  return (
+    <tr className="border-b border-line last:border-b-0">
+      <td className="py-3 pr-4 align-top">
+        <a
+          href={"#" + link.code}
+          className="font-mono text-accent underline decoration-2 underline-offset-2 hover:no-underline"
+        >
+          {shortUrl}
+        </a>
+      </td>
+      <td className="py-3 pr-4 align-top max-w-md">
+        <span className="font-mono text-sm text-ink break-all">{link.targetUrl}</span>
+      </td>
+      <td className="py-3 pr-4 align-top whitespace-nowrap">
+        <time className="font-mono text-sm text-inkmuted" dateTime={link.createdAt}>
+          {formatDate(link.createdAt)}
+        </time>
+      </td>
+      <td className="py-3 align-top text-right">
+        <button
+          type="button"
+          onClick={() => onDelete(link.code)}
+          className="font-ui text-sm px-3 py-1.5 rounded-md border border-danger text-danger hover:bg-danger hover:text-white transition-colors"
+          aria-label={"Delete link " + shortUrl}
+        >
+          Delete
+        </button>
+      </td>
+    </tr>
+  );
+}
+
+function LinkList({ items, onDelete }) {
+  return (
+    <table className="w-full text-left border-collapse">
+      <caption className="sr-only">Your shortened links, newest first</caption>
+      <thead>
+        <tr className="border-b-2 border-ink">
+          <th scope="col" className="py-2 pr-4 font-ui text-sm uppercase tracking-wide text-inkmuted">Short link</th>
+          <th scope="col" className="py-2 pr-4 font-ui text-sm uppercase tracking-wide text-inkmuted">Target</th>
+          <th scope="col" className="py-2 pr-4 font-ui text-sm uppercase tracking-wide text-inkmuted">Created</th>
+          <th scope="col" className="py-2 font-ui text-sm uppercase tracking-wide text-inkmuted text-right">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((link) => (
+          <LinkRow key={link.code} link={link} onDelete={onDelete} />
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function Console() {
+  const [links, setLinks] = useState(ALL_LINKS);
+  const [page, setPage] = useState(1);
+  const [toast, setToast] = useState(null);
+
+  const total = links.length;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const pageItems = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return links.slice(start, start + PAGE_SIZE);
+  }, [links, page]);
+
+  function handleDelete(code) {
+    setLinks((prev) => prev.filter((l) => l.code !== code));
+    setToast("Deleted " + code + ". It will never be reissued.");
+    window.setTimeout(() => setToast(null), 3000);
+  }
+
+  function handlePageChange(next) {
+    setPage(Math.min(Math.max(1, next), pageCount));
+  }
+
+  return (
+    <div className="min-h-screen bg-paper">
+      <header className="border-b border-line">
+        <div className="max-w-3xl mx-auto px-6 py-8 flex items-baseline justify-between">
+          <h1 className="font-display text-4xl">shortlink</h1>
+          <p className="font-mono text-sm text-inkmuted">ada@example.com</p>
+        </div>
+      </header>
+
+      <main className="max-w-3xl mx-auto px-6 py-10">
+        <div className="flex items-baseline justify-between mb-6">
+          <h2 className="font-display text-2xl">Your links</h2>
+          <p className="font-mono text-sm text-inkmuted">{total} total</p>
+        </div>
+
+        {total === 0 ? (
+          <EmptyState />
+        ) : (
+          <React.Fragment>
+            <LinkList items={pageItems} onDelete={handleDelete} />
+            <Pagination page={page} pageCount={pageCount} onChange={handlePageChange} />
+          </React.Fragment>
+        )}
+
+        <div aria-live="polite" className="sr-only">{toast}</div>
+        {toast && (
+          <div className="fixed bottom-6 right-6 bg-ink text-paper font-ui text-sm px-4 py-3 rounded-md shadow-lg">
+            {toast}
+          </div>
+        )}
+
+        <div className="mt-10 pt-6 border-t border-line">
+          <button
+            type="button"
+            className="font-ui text-sm underline text-inkmuted hover:text-ink"
+            onClick={() => setLinks([])}
+          >
+            (mockup only) show empty state
+          </button>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Console />);
+</script>
+</body>
+</html>

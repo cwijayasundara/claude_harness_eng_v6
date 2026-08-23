@@ -16,6 +16,9 @@ const GATE_TIERS = Object.freeze({
   'live-externals': new Set(['standard', 'strict']),
   'registry-names': new Set(['standard', 'strict']),
   'stub-smell-gate': new Set(['standard', 'strict']),
+  // Cheap and structural, and its pre-disk half (pre-write-gate) runs at every
+  // tier — a cap enforced on one write route but not on commit is not a cap.
+  'length-caps': new Set(VALID_TIERS),
   'refactor-purity': new Set(VALID_TIERS),
   'layer-imports': new Set(VALID_TIERS),
   'bounded-context-rules': new Set(VALID_TIERS),

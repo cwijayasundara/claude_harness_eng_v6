@@ -42,19 +42,44 @@ function checkDecisions(decisions) {
   return errors;
 }
 
-// The human requirement — the only part a headless lane may waive.
-function checkHumanShaping(decisions) {
+/**
+ * Who settled the load-bearing calls.
+ *
+ * A recorded headless lane relaxes WHICH basis counts, not WHETHER one is
+ * required. It used to skip these rules entirely, which meant an unattended run
+ * passed with every decision left at "default-accepted" — the model's own
+ * default, settled by nobody — or with nothing marked load-bearing at all. That
+ * is the same silence the gate exists to break, just on a different lane.
+ *
+ * So an unattended run must say so, per decision: "headless-default" records
+ * that the lane settled the call. The distinction is the point —
+ * "headless-default" is a decision made without a human, "default-accepted" is
+ * no decision — and it keeps an unattended run legible in the record instead of
+ * indistinguishable from one a person actually reviewed.
+ *
+ * @param {object[]} decisions
+ * @param {object} [opts] {lane} — the recorded headless lane, if any
+ */
+function checkHumanShaping(decisions, opts = {}) {
+  const lane = opts.lane || null;
+  const allowed = lane ? ['human', 'headless-default'] : ['human'];
   const errors = [];
+
   const loadBearing = decisions.filter((d) => d && d.load_bearing === true);
   if (loadBearing.length === 0) {
     errors.push('no decision is marked load_bearing: true — mark the calls that shape the outcome');
   }
   for (const entry of loadBearing) {
-    if (entry.basis !== 'human') {
-      errors.push(`load-bearing decision ${entry.id} has basis "${entry.basis}"; it must be "human"`);
+    if (!allowed.includes(entry.basis)) {
+      errors.push(lane
+        ? `load-bearing decision ${entry.id} has basis "${entry.basis}"; on a recorded ${lane} lane `
+          + 'it must be "human" or "headless-default"'
+        : `load-bearing decision ${entry.id} has basis "${entry.basis}"; it must be "human"`);
     }
   }
-  if (!decisions.some((d) => d && d.basis === 'human')) {
+  // A lane with no human in it is the whole point of the lane; only a gated run
+  // owes a human decision.
+  if (!lane && !decisions.some((d) => d && d.basis === 'human')) {
     errors.push('no decision has basis "human" — a decisions file the human never shaped cannot unlock the renderer');
   }
   return errors;

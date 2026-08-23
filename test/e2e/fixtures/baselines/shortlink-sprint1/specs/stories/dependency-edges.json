@@ -1,0 +1,79 @@
+[
+  {
+    "from": "E1-S2",
+    "to": "E1-S1",
+    "kind": "behavior",
+    "artifact": "session",
+    "reason": "sign-out invalidates the session E1-S1 creates at sign-in"
+  },
+  {
+    "from": "E2-S1",
+    "to": "E1-S1",
+    "kind": "behavior",
+    "artifact": "session",
+    "reason": "create requires a signed-in session established by E1-S1"
+  },
+  {
+    "from": "E3-S1",
+    "to": "E2-S1",
+    "kind": "data",
+    "artifact": "link row",
+    "reason": "redirect needs an existing link row created by E2-S1"
+  },
+  {
+    "from": "E4-S1",
+    "to": "E1-S1",
+    "kind": "behavior",
+    "artifact": "session",
+    "reason": "list requires a signed-in session established by E1-S1"
+  },
+  {
+    "from": "E4-S1",
+    "to": "E2-S1",
+    "kind": "data",
+    "artifact": "link row",
+    "reason": "list requires existing links created by E2-S1"
+  },
+  {
+    "from": "E4-S2",
+    "to": "E4-S1",
+    "kind": "behavior",
+    "artifact": "GET /links",
+    "reason": "measures the list endpoint E4-S1 implements"
+  },
+  {
+    "from": "E4-S2",
+    "to": "E2-S1",
+    "kind": "behavior",
+    "artifact": "POST /links",
+    "reason": "seeds the 100 links and measures the create endpoint E2-S1 implements"
+  },
+  {
+    "from": "E4-S3",
+    "to": "E4-S1",
+    "kind": "behavior",
+    "artifact": "console list page",
+    "reason": "scans and audits the page E4-S1 renders"
+  },
+  {
+    "from": "E5-S1",
+    "to": "E1-S1",
+    "kind": "behavior",
+    "artifact": "session",
+    "reason": "delete requires a signed-in session established by E1-S1"
+  },
+  {
+    "from": "E5-S1",
+    "to": "E2-S1",
+    "kind": "data",
+    "artifact": "link row",
+    "reason": "delete requires an existing link row created by E2-S1"
+  },
+  {
+    "from": "E6-S2",
+    "to": "E6-S1",
+    "kind": "behavior",
+    "artifact": "db_health_check",
+    "reason": "reuses the database-reachability check E6-S1 implements for /healthz"
+  }
+]

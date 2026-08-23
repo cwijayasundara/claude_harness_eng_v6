@@ -1,0 +1,51 @@
+{
+  "phases": {
+    "auto": {
+      "runs": 1,
+      "output_total": 91686,
+      "cost_usd": 36.6143
+    },
+    "design": {
+      "runs": 2,
+      "output_total": 42006,
+      "cost_usd": 4.1592
+    },
+    "spec": {
+      "runs": 4,
+      "output_total": 38583,
+      "cost_usd": 3.1148
+    },
+    "(freeform)": {
+      "runs": 15,
+      "output_total": 12348,
+      "cost_usd": 1.2559
+    },
+    "test": {
+      "runs": 1,
+      "output_total": 21894,
+      "cost_usd": 1.2073
+    },
+    "scaffold": {
+      "runs": 2,
+      "output_total": 11871,
+      "cost_usd": 0.9648
+    },
+    "brd": {
+      "runs": 2,
+      "output_total": 5195,
+      "cost_usd": 0.6533
+    }
+  },
+  "total": {
+    "output_total": 223583,
+    "cost_usd": 47.9697
+  },
+  "batching": {
+    "all_turns": 833,
+    "tool_calls": 1029,
+    "calls_per_turn": 1.235,
+    "single_call_turns": 695,
+    "single_call_pct": 83,
+    "ctx_re_read_tokens": 96616627
+  }
+}

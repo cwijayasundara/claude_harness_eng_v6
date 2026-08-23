@@ -1,0 +1,186 @@
+{
+  "cluster_count": 6,
+  "max_points_per_cluster": 21,
+  "min_points_per_cluster": 5,
+  "clusters": [
+    {
+      "id": "C1",
+      "stories": [
+        "E1-S1",
+        "E2-S1",
+        "E4-S1",
+        "E4-S2",
+        "E5-S1"
+      ],
+      "story_points": 29,
+      "layers": [
+        "backend",
+        "fullstack"
+      ],
+      "epics": [
+        "E1",
+        "E2",
+        "E4",
+        "E5"
+      ],
+      "waves": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "internal_edges": 7,
+      "external_edges": 3,
+      "coordination_cost": 0.38,
+      "independently_startable": true,
+      "oversized": true
+    },
+    {
+      "id": "C2",
+      "stories": [
+        "E1-S2"
+      ],
+      "story_points": 3,
+      "layers": [
+        "backend"
+      ],
+      "epics": [
+        "E1"
+      ],
+      "waves": [
+        "B"
+      ],
+      "internal_edges": 0,
+      "external_edges": 1,
+      "coordination_cost": 1,
+      "independently_startable": false,
+      "oversized": false
+    },
+    {
+      "id": "C3",
+      "stories": [
+        "E3-S1"
+      ],
+      "story_points": 3,
+      "layers": [
+        "backend"
+      ],
+      "epics": [
+        "E3"
+      ],
+      "waves": [
+        "C"
+      ],
+      "internal_edges": 0,
+      "external_edges": 1,
+      "coordination_cost": 1,
+      "independently_startable": false,
+      "oversized": false
+    },
+    {
+      "id": "C4",
+      "stories": [
+        "E4-S3"
+      ],
+      "story_points": 5,
+      "layers": [
+        "frontend"
+      ],
+      "epics": [
+        "E4"
+      ],
+      "waves": [
+        "D"
+      ],
+      "internal_edges": 0,
+      "external_edges": 1,
+      "coordination_cost": 1,
+      "independently_startable": false,
+      "oversized": false
+    },
+    {
+      "id": "C5",
+      "stories": [
+        "E6-S1",
+        "E6-S2"
+      ],
+      "story_points": 5,
+      "layers": [
+        "backend"
+      ],
+      "epics": [
+        "E6"
+      ],
+      "waves": [
+        "A",
+        "B"
+      ],
+      "internal_edges": 1,
+      "external_edges": 0,
+      "coordination_cost": 0,
+      "independently_startable": true,
+      "oversized": false
+    },
+    {
+      "id": "C6",
+      "stories": [
+        "E7-S1"
+      ],
+      "story_points": 5,
+      "layers": [
+        "infra"
+      ],
+      "epics": [
+        "E7"
+      ],
+      "waves": [
+        "A"
+      ],
+      "internal_edges": 0,
+      "external_edges": 0,
+      "coordination_cost": 0,
+      "independently_startable": true,
+      "oversized": false
+    }
+  ],
+  "interface_contracts": [],
+  "unresolved_contracts": [],
+  "blocking_dependencies": [
+    {
+      "id": "BD-1",
+      "kind": "behavior",
+      "producer_cluster": "C1",
+      "blocked_cluster": "C2",
+      "edge": {
+        "from": "E1-S2",
+        "to": "E1-S1"
+      },
+      "reason": "sign-out invalidates the session E1-S1 creates at sign-in"
+    },
+    {
+      "id": "BD-2",
+      "kind": "data",
+      "producer_cluster": "C1",
+      "blocked_cluster": "C3",
+      "edge": {
+        "from": "E3-S1",
+        "to": "E2-S1"
+      },
+      "reason": "redirect needs an existing link row created by E2-S1"
+    },
+    {
+      "id": "BD-3",
+      "kind": "behavior",
+      "producer_cluster": "C1",
+      "blocked_cluster": "C4",
+      "edge": {
+        "from": "E4-S3",
+        "to": "E4-S1"
+      },
+      "reason": "scans and audits the page E4-S1 renders"
+    }
+  ],
+  "warnings": [
+    "cluster C1 is oversized (29 points > 21 cap) and has no bridge to split on — it is tightly coupled. Decompose the epic or give it one owner."
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "story_id": "E1-S2",
+  "sprint": 1,
+  "title": "Sign out invalidates the session server-side",
+  "readiness": "ready",
+  "requirements": {
+    "ac_ids": [
+      "E1-S2-AC1",
+      "E1-S2-AC2",
+      "E1-S2-AC3"
+    ],
+    "brd_ids": [
+      "FRD-7"
+    ],
+    "br_acceptance_ids": [
+      "FRD-32"
+    ],
+    "scope_out": [
+      "Signing back in (covered by E1-S1)"
+    ]
+  },
+  "entities": [
+    {
+      "name": "Sign out invalidates the session server-side",
+      "status": "unknown"
+    }
+  ],
+  "approach": {
+    "program_design": "specs/design/program-design.md",
+    "canvas": "specs/design/reasons-canvas.md",
+    "amendment": null
+  },
+  "structure": {
+    "owned_files": [
+      "backend/src/services/auth_service.py",
+      "backend/src/api/auth.py",
+      "POST /auth/register",
+      "POST /auth/sign-in",
+      "backend/src/main.py"
+    ],
+    "layer": "backend"
+  },
+  "operations": {
+    "pending": false,
+    "files": [
+      "backend/src/services/auth_service.py",
+      " that revokes (deletes/marks ",
+      "backend/src/api/auth.py",
+      "POST /auth/sign-out",
+      "frontend/src/app/api/auth/sign-out/route.ts",
+      "backend/tests/integration/test_auth_api.py::test_sign_out*"
+    ],
+    "text": "1. Extend `backend/src/services/auth_service.py` — add `sign_out(session_id)` that revokes (deletes/marks `revoked_at`) the session row.\n2. Extend `backend/src/api/auth.py` — add `POST /auth/sign-out`; clears the cookie and calls `sign_out`.\n3. Create `frontend/src/app/api/auth/sign-out/route.ts` — same-origin proxy to backend sign-out.\n4. Add `backend/tests/integration/test_auth_api.py::test_sign_out*` covering AC1–AC3."
+  },
+  "safeguards": {
+    "ids": [
+      "SG-1",
+      "SG-2",
+      "SG-3",
+      "SG-4",
+      "SG-5",
+      "SG-6",
+      "SG-7",
+      "SG-8",
+      "SG-9",
+      "SG-10",
+      "SG-11"
+    ],
+    "none": false
+  },
+  "tests": {
+    "matrix_ids": [
+      "VM-005",
+      "VM-006",
+      "VM-007"
+    ],
+    "case_ids": [
+      "VM-005",
+      "VM-006",
+      "VM-007"
+    ],
+    "layers": [
+      "api"
+    ]
+  },
+  "provenance": {
+    "story_path": "specs/stories/E1-S2.md",
+    "parents": [
+      "E1-S1"
+    ],
+    "tracker_key": null
+  }
+}

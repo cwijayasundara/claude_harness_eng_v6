@@ -1,0 +1,276 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "shortlink API",
+    "version": "1.0.0",
+    "description": "FastAPI backend contract. Called only server-side by the Next.js Route Handlers (D-1) — never directly by the browser."
+  },
+  "servers": [
+    { "url": "http://backend:8000", "description": "internal compose network only" }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "operationId": "registerMember",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/RegisterRequest" } }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Member created",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MemberView" } } }
+          },
+          "409": {
+            "description": "Email already registered",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorBody" } } }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorBody" } } }
+          }
+        }
+      }
+    },
+    "/auth/sign-in": {
+      "post": {
+        "operationId": "signIn",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/SignInRequest" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signed in; Set-Cookie: session_id (HttpOnly; Secure; SameSite=Lax)",
+            "headers": {
+              "Set-Cookie": { "schema": { "type": "string" } }
+            },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MemberView" } } }
+          },
+          "401": {
+            "description": "Invalid credentials — no cookie set",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorBody" } } }
+          }
+        }
+      }
+    },
+    "/auth/sign-out": {
+      "post": {
+        "operationId": "signOut",
+        "security": [{ "sessionCookie": [] }],
+        "responses": {
+          "204": { "description": "Session revoked server-side" },
+          "401": {
+            "description": "No active session; no server state changes",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorBody" } } }
+          }
+        }
+      }
+    },
+    "/links": {
+      "post": {
+        "operationId": "createLink",
+        "security": [{ "sessionCookie": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateLinkRequest" } }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Link created",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LinkView" } } }
+          },
+          "401": {
+            "description": "No valid session; no link row created",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorBody" } } }
+          },
+          "422": {
+            "description": "Unsafe target (scheme/host rejected by literal inspection)",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorBody" } } }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listLinks",
+        "security": [{ "sessionCookie": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "minimum": 1, "default": 1 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The caller's own links, newest first, 20 per page",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LinkPage" } } }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorBody" } } }
+          }
+        }
+      }
+    },
+    "/links/{code}": {
+      "delete": {
+        "operationId": "deleteLink",
+        "security": [{ "sessionCookie": [] }],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "minLength": 7 }
+          }
+        ],
+        "responses": {
+          "204": { "description": "Link soft-deleted; its code is never reissued" },
+          "401": {
+            "description": "No valid session",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorBody" } } }
+          },
+          "404": {
+            "description": "Not found, already deleted, or owned by another member",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorBody" } } }
+          }
+        }
+      }
+    },
+    "/{code}": {
+      "get": {
+        "operationId": "redirectCode",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "minLength": 7 }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to the stored target URL; not followed or fetched by this handler",
+            "headers": {
+              "Location": { "schema": { "type": "string", "format": "uri" } }
+            }
+          },
+          "404": {
+            "description": "Code was never issued, or is soft-deleted",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorBody" } } }
+          }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "operationId": "healthCheck",
+        "responses": {
+          "200": {
+            "description": "Database reachable",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HealthBody" } } }
+          },
+          "503": {
+            "description": "Database unreachable",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HealthBody" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "session_id"
+      }
+    },
+    "schemas": {
+      "RegisterRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      },
+      "SignInRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      },
+      "MemberView": {
+        "type": "object",
+        "required": ["id", "email", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "email": { "type": "string", "format": "email" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        },
+        "additionalProperties": false
+      },
+      "CreateLinkRequest": {
+        "type": "object",
+        "required": ["targetUrl"],
+        "properties": {
+          "targetUrl": { "type": "string", "format": "uri" }
+        },
+        "additionalProperties": false
+      },
+      "LinkView": {
+        "type": "object",
+        "required": ["code", "targetUrl", "createdAt"],
+        "properties": {
+          "code": { "type": "string", "minLength": 7 },
+          "targetUrl": { "type": "string", "format": "uri" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        },
+        "additionalProperties": false
+      },
+      "LinkPage": {
+        "type": "object",
+        "required": ["items", "page", "pageSize", "total"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/LinkView" }
+          },
+          "page": { "type": "integer", "minimum": 1 },
+          "pageSize": { "type": "integer", "enum": [20] },
+          "total": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
+      },
+      "HealthBody": {
+        "type": "object",
+        "required": ["status", "database"],
+        "properties": {
+          "status": { "type": "string", "enum": ["ok", "unavailable"] },
+          "database": { "type": "string", "enum": ["reachable", "unreachable"] }
+        },
+        "additionalProperties": false
+      },
+      "ErrorBody": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

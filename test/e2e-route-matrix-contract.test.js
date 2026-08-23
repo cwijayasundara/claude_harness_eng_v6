@@ -13,7 +13,7 @@ test('live e2e route matrix covers scaffold plus build and feature routes', () =
   const runner = require('./e2e/run-pack.js');
   const ids = runner.LIVE_LAYERS.map((l) => l.id);
 
-  for (const id of ['plan', 'semi', 'auto', 'full-auto', 'gated', 'feature', 'vibe', 'brownfield-run', 'smoke']) {
+  for (const id of ['plan', 'semi', 'auto', 'full-auto', 'gated', 'feature', 'sprint', 'vibe', 'brownfield-run', 'smoke']) {
     assert.ok(ids.includes(id), `missing live route layer: ${id}`);
   }
 });

@@ -1,0 +1,819 @@
+[
+  {
+    "id": "E1-S1",
+    "title": "Register and sign in with a hashed, non-logged credential",
+    "epic": "E1",
+    "layer": "backend",
+    "story_points": 8,
+    "estimation_confidence": "medium",
+    "readiness": "ready",
+    "business_value": "A member can create an account and prove identity on later visits, which every other capability (create, list, delete) requires as its entry gate.",
+    "user_story": "As a visitor, I want to register with an email and password and then sign in, so that I receive a session I can use to manage my links.",
+    "description": "POST /auth/register and POST /auth/sign-in issue an HTTP-only session cookie on success. Passwords are hashed with Argon2id before storage and never appear, plaintext or hashed, in any log line the app writes for these two requests.",
+    "scope_in": [
+      "Register with email + password",
+      "Sign in with email + password, receiving an HTTP-only session cookie",
+      "Argon2id password hashing at rest",
+      "Excluding password/hash bytes from all log output for register and sign-in requests"
+    ],
+    "scope_out": [
+      "Password reset by email, SSO, or multi-factor authentication (SG-7)",
+      "Sign-out (owned by E1-S2)"
+    ],
+    "depends_on": [],
+    "traces": [
+      "FRD-1",
+      "FRD-11"
+    ],
+    "safeguards": [
+      {
+        "id": "SG-7"
+      }
+    ],
+    "acceptance_criteria": [
+      {
+        "id": "E1-S1-AC1",
+        "given": "a registered email and correct password",
+        "when": "signing in",
+        "then": "the response sets an HTTP-only session cookie and a subsequent authenticated request succeeds",
+        "traces": [
+          "FRD-26"
+        ]
+      },
+      {
+        "id": "E1-S1-AC2",
+        "given": "a member registering with a new email and password",
+        "when": "the stored credential is read back",
+        "then": "it begins with `$argon2id$`",
+        "traces": [
+          "FRD-35"
+        ]
+      },
+      {
+        "id": "E1-S1-AC3",
+        "given": "a member registering and then signing in",
+        "when": "the application's full log output for those two requests is scanned",
+        "then": "it contains neither the plaintext password nor the stored hash",
+        "traces": [
+          "FRD-35"
+        ]
+      },
+      {
+        "id": "E1-S1-AC4",
+        "given": "an unregistered email or a wrong password",
+        "when": "signing in",
+        "then": "the response is 401 and no session cookie is set",
+        "traces": [
+          "FRD-26"
+        ]
+      }
+    ],
+    "group": "A",
+    "cluster": "C1",
+    "invest": {
+      "independent": true
+    }
+  },
+  {
+    "id": "E1-S2",
+    "title": "Sign out invalidates the session server-side",
+    "epic": "E1",
+    "layer": "backend",
+    "story_points": 3,
+    "estimation_confidence": "high",
+    "readiness": "ready",
+    "business_value": "A member can end their session on a shared or public machine with confidence the old cookie stops working, not just that the browser forgets it.",
+    "user_story": "As a signed-in member, I want to sign out, so that the session cookie I used can no longer authenticate requests.",
+    "description": "POST /auth/sign-out deletes the server-side session record so the previously issued cookie is rejected on the next authenticated request, distinct from a purely client-side cookie clear.",
+    "scope_in": [
+      "Server-side session invalidation on sign-out",
+      "401 on any authenticated request replaying the invalidated cookie"
+    ],
+    "scope_out": [
+      "Signing back in (covered by E1-S1)"
+    ],
+    "depends_on": [
+      {
+        "story": "E1-S1",
+        "kind": "behavior",
+        "artifact": "session",
+        "reason": "sign-out invalidates the session E1-S1 creates at sign-in"
+      }
+    ],
+    "traces": [
+      "FRD-7"
+    ],
+    "acceptance_criteria": [
+      {
+        "id": "E1-S2-AC1",
+        "given": "a signed-in member",
+        "when": "signing out",
+        "then": "a subsequent authenticated request returns 401",
+        "traces": [
+          "FRD-32"
+        ]
+      },
+      {
+        "id": "E1-S2-AC2",
+        "given": "a signed-in member who has just signed out",
+        "when": "the same session cookie from before sign-out is replayed",
+        "then": "the request is rejected with 401 rather than succeeding, because the session was invalidated server-side and not merely cleared client-side",
+        "traces": [
+          "FRD-32"
+        ]
+      },
+      {
+        "id": "E1-S2-AC3",
+        "given": "a request with no active session",
+        "when": "calling sign-out",
+        "then": "the response is 401 and no server state changes",
+        "traces": [
+          "FRD-32"
+        ]
+      }
+    ],
+    "group": "B",
+    "cluster": "C2",
+    "invest": {
+      "independent": false
+    }
+  },
+  {
+    "id": "E2-S1",
+    "title": "Create a short link with an SSRF-safe target and a cryptographically random code",
+    "epic": "E2",
+    "layer": "backend",
+    "story_points": 8,
+    "estimation_confidence": "medium",
+    "readiness": "ready",
+    "business_value": "A signed-in member can turn a long URL into a short, shareable code, while the service refuses targets that would let the redirect be weaponized against internal infrastructure.",
+    "user_story": "As a signed-in member, I want to submit a target URL and receive a short code, so that I can share a compact link that still points at a safe, public destination.",
+    "description": "POST /links validates the target's scheme and host literally (no DNS lookup, no outbound fetch), rejects unsafe targets with 422, and otherwise mints a code of at least 7 characters drawn from a CSPRNG with at least 40 bits of entropy.",
+    "scope_in": [
+      "POST /links for a signed-in member",
+      "Scheme allow-list: http, https only",
+      "Host deny-list: PUBLIC_BASE_URL, localhost, and private/loopback/link-local/unique-local/cloud-metadata IP literals",
+      "Literal string/IP-range host inspection only — no DNS resolution, no outbound fetch",
+      "Code generation via secrets/os.urandom, >=7 chars, >=40 bits entropy, collision-free"
+    ],
+    "scope_out": [
+      "Custom or vanity codes (SG-1)",
+      "Editing a link's target after creation (SG-2)",
+      "Following redirect chains or resolving hostnames to validate them (SG-10)"
+    ],
+    "depends_on": [
+      {
+        "story": "E1-S1",
+        "kind": "behavior",
+        "artifact": "session",
+        "reason": "create requires a signed-in session established by E1-S1"
+      }
+    ],
+    "traces": [
+      "FRD-2",
+      "FRD-6",
+      "FRD-10"
+    ],
+    "safeguards": [
+      {
+        "id": "SG-1"
+      },
+      {
+        "id": "SG-2"
+      },
+      {
+        "id": "SG-10"
+      }
+    ],
+    "acceptance_criteria": [
+      {
+        "id": "E2-S1-AC1",
+        "given": "a signed-in member and `https://example.com/a/long/path`",
+        "when": "creating a link",
+        "then": "the response is 201 with a code of at least 7 characters",
+        "traces": [
+          "FRD-27"
+        ]
+      },
+      {
+        "id": "E2-S1-AC2",
+        "given": "a target of `ftp://example.com`",
+        "when": "creating a link",
+        "then": "the response is 422; the same holds for a host matching PUBLIC_BASE_URL and for each of `http://192.168.1.1/`, `http://10.0.0.1/`, `http://127.0.0.1/`, `http://[::1]/`, `http://169.254.169.254/` and `http://localhost/`",
+        "traces": [
+          "FRD-31"
+        ]
+      },
+      {
+        "id": "E2-S1-AC3",
+        "given": "the host-validation code path",
+        "when": "a target URL is inspected during creation",
+        "then": "only literal scheme/host/IP-range checks run — no DNS lookup and no outbound network fetch occurs",
+        "traces": [
+          "FRD-31"
+        ]
+      },
+      {
+        "id": "E2-S1-AC4",
+        "given": "10,000 codes generated in one run",
+        "when": "they are inspected",
+        "then": "every code is at least 7 characters drawn from a 62-character alphanumeric alphabet (>= 41.7 bits), no two are equal, and the bytes come from `secrets`/`os.urandom` rather than the `random` module",
+        "traces": [
+          "FRD-34"
+        ]
+      },
+      {
+        "id": "E2-S1-AC5",
+        "given": "a request with no valid session",
+        "when": "creating a link",
+        "then": "the response is 401 and no link row is created",
+        "traces": [
+          "FRD-27"
+        ]
+      }
+    ],
+    "group": "B",
+    "cluster": "C1",
+    "invest": {
+      "independent": true
+    }
+  },
+  {
+    "id": "E3-S1",
+    "title": "Redirect a known code to its target",
+    "epic": "E3",
+    "layer": "backend",
+    "story_points": 3,
+    "estimation_confidence": "high",
+    "readiness": "ready",
+    "business_value": "The short code a member shares actually takes the recipient to the intended destination, which is the core value the whole product delivers.",
+    "user_story": "As anyone holding a short code, I want to open it and land on the target URL, so that the short link works like the long URL it replaced.",
+    "description": "GET /{code} looks up the code and, when it exists and is not deleted, returns HTTP 302 with Location set to the stored target. The handler never fetches the target itself.",
+    "scope_in": [
+      "GET /{code} for an existing, not-deleted code returns 302 with Location",
+      "GET /{code} for a code that was never issued returns 404"
+    ],
+    "scope_out": [
+      "Redirect for a deleted code (owned by E5-S1's delete acceptance)",
+      "Click counts or analytics on redirect (SG-4)"
+    ],
+    "depends_on": [
+      {
+        "story": "E2-S1",
+        "kind": "data",
+        "artifact": "link row",
+        "reason": "redirect needs an existing link row created by E2-S1"
+      }
+    ],
+    "traces": [
+      "FRD-3"
+    ],
+    "acceptance_criteria": [
+      {
+        "id": "E3-S1-AC1",
+        "given": "an existing code",
+        "when": "requesting `/{code}`",
+        "then": "the response is 302 with `Location` set to the target URL",
+        "traces": [
+          "FRD-28"
+        ]
+      },
+      {
+        "id": "E3-S1-AC2",
+        "given": "a code that was never issued",
+        "when": "requesting `/{code}`",
+        "then": "the response is 404",
+        "traces": [
+          "FRD-28"
+        ]
+      },
+      {
+        "id": "E3-S1-AC3",
+        "given": "the redirect handler",
+        "when": "it resolves a code to a target URL",
+        "then": "it returns the Location header to the caller without itself following or fetching the target URL",
+        "traces": [
+          "FRD-28"
+        ]
+      }
+    ],
+    "group": "C",
+    "cluster": "C3",
+    "invest": {
+      "independent": false
+    }
+  },
+  {
+    "id": "E4-S1",
+    "title": "List the signed-in member's own links",
+    "epic": "E4",
+    "layer": "fullstack",
+    "story_points": 5,
+    "estimation_confidence": "medium",
+    "readiness": "ready",
+    "business_value": "A member can see everything they have shortened in one place, newest first, without ever seeing another member's data.",
+    "user_story": "As a signed-in member, I want to see my own links on a console page, newest first and paginated, so that I can find and manage what I have created.",
+    "description": "GET /links returns the signed-in member's own links, newest first, 20 per page, and the console page renders that list. No other member's links are ever included.",
+    "scope_in": [
+      "GET /links with pagination (20 per page), newest first, scoped to the caller",
+      "Console list page rendering the returned links",
+      "Empty-state rendering when the member owns zero links"
+    ],
+    "scope_out": [
+      "Editing a link from the list (SG-2)",
+      "Any other member's links appearing (SG-5)",
+      "Click counts, analytics, or export from the list (SG-4, SG-9)"
+    ],
+    "depends_on": [
+      {
+        "story": "E1-S1",
+        "kind": "behavior",
+        "artifact": "session",
+        "reason": "list requires a signed-in session established by E1-S1"
+      },
+      {
+        "story": "E2-S1",
+        "kind": "data",
+        "artifact": "link row",
+        "reason": "list requires existing links created by E2-S1"
+      }
+    ],
+    "traces": [
+      "FRD-4"
+    ],
+    "safeguards": [
+      {
+        "id": "SG-4"
+      },
+      {
+        "id": "SG-5"
+      },
+      {
+        "id": "SG-9"
+      }
+    ],
+    "acceptance_criteria": [
+      {
+        "id": "E4-S1-AC1",
+        "given": "a member owning 25 links",
+        "when": "listing page 1",
+        "then": "exactly 20 links are returned, newest first, and none belongs to another user",
+        "traces": [
+          "FRD-29"
+        ]
+      },
+      {
+        "id": "E4-S1-AC2",
+        "given": "a member owning 25 links",
+        "when": "listing page 2",
+        "then": "the remaining 5 links are returned, newest-first order preserved across the page boundary",
+        "traces": [
+          "FRD-29"
+        ]
+      },
+      {
+        "id": "E4-S1-AC3",
+        "given": "a member with zero links",
+        "when": "opening the console list page",
+        "then": "the page renders an empty state with no links and no error",
+        "traces": [
+          "FRD-29"
+        ]
+      },
+      {
+        "id": "E4-S1-AC4",
+        "given": "two members who each own links",
+        "when": "the second member requests the list endpoint",
+        "then": "only the second member's own links appear — never the first member's",
+        "traces": [
+          "FRD-29"
+        ]
+      }
+    ],
+    "group": "C",
+    "cluster": "C1",
+    "invest": {
+      "independent": true
+    }
+  },
+  {
+    "id": "E4-S2",
+    "title": "Create and list responses stay under a 300ms p95 at 100 links",
+    "epic": "E4",
+    "layer": "backend",
+    "story_points": 5,
+    "estimation_confidence": "low",
+    "readiness": "ready",
+    "business_value": "The console and create flow stay responsive as a member accumulates links, instead of degrading as their list grows.",
+    "user_story": "As a signed-in member with many links, I want create and list to stay fast, so that managing a large set of links does not feel slow.",
+    "description": "A load-test harness seeds 100 links for one account via the create endpoint, then samples repeated create and list calls, asserting p95 latency under 300ms for each and emitting a machine-readable report for the evaluator.",
+    "scope_in": [
+      "Load-test harness seeding 100 links via POST /links",
+      "p95 latency measurement for POST /links and GET /links",
+      "Machine-readable timing report consumable by /evaluate"
+    ],
+    "scope_out": [
+      "General-purpose rate limiting (SG-8)",
+      "Optimizing endpoints other than create/list"
+    ],
+    "depends_on": [
+      {
+        "story": "E4-S1",
+        "kind": "behavior",
+        "artifact": "GET /links",
+        "reason": "measures the list endpoint E4-S1 implements"
+      },
+      {
+        "story": "E2-S1",
+        "kind": "behavior",
+        "artifact": "POST /links",
+        "reason": "seeds the 100 links and measures the create endpoint E2-S1 implements"
+      }
+    ],
+    "traces": [
+      "FRD-9"
+    ],
+    "acceptance_criteria": [
+      {
+        "id": "E4-S2-AC1",
+        "given": "an account holding 100 links",
+        "when": "calling the create-link endpoint repeatedly",
+        "then": "the p95 response time across the sample is under 300 ms",
+        "traces": [
+          "FRD-9"
+        ]
+      },
+      {
+        "id": "E4-S2-AC2",
+        "given": "an account holding 100 links",
+        "when": "calling the list endpoint for page 1 repeatedly",
+        "then": "the p95 response time across the sample is under 300 ms",
+        "traces": [
+          "FRD-9"
+        ]
+      },
+      {
+        "id": "E4-S2-AC3",
+        "given": "the load-test harness",
+        "when": "it seeds 100 links and samples both endpoints in one run",
+        "then": "it writes a single machine-readable report recording both p95 figures for the evaluator to check",
+        "traces": [
+          "FRD-9"
+        ]
+      }
+    ],
+    "group": "D",
+    "cluster": "C1",
+    "invest": {
+      "independent": true
+    }
+  },
+  {
+    "id": "E4-S3",
+    "title": "Console list page meets WCAG 2.2 AA",
+    "epic": "E4",
+    "layer": "frontend",
+    "story_points": 5,
+    "estimation_confidence": "medium",
+    "readiness": "ready",
+    "business_value": "Members using assistive technology can operate the console as fully as any other member.",
+    "user_story": "As a member using assistive technology, I want the console list page to be accessible, so that I can view and manage my links without a mouse or with a screen reader.",
+    "description": "The console list page (rendered by E4-S1) is scanned with an automated WCAG 2.2 AA checker, is fully keyboard-operable, and meets minimum color-contrast requirements.",
+    "scope_in": [
+      "Automated WCAG 2.2 AA scan of the console list page",
+      "Full keyboard operability of pagination and per-link actions",
+      "Minimum color-contrast compliance"
+    ],
+    "scope_out": [
+      "Accessibility of pages outside the console list (sign-in/register forms are covered only if reused by this page)"
+    ],
+    "depends_on": [
+      {
+        "story": "E4-S1",
+        "kind": "behavior",
+        "artifact": "console list page",
+        "reason": "scans and audits the page E4-S1 renders"
+      }
+    ],
+    "traces": [
+      "FRD-12"
+    ],
+    "acceptance_criteria": [
+      {
+        "id": "E4-S3-AC1",
+        "given": "the rendered console list page",
+        "when": "it is scanned with an automated WCAG 2.2 AA checker (e.g. axe)",
+        "then": "zero level-A or level-AA violations are reported",
+        "traces": [
+          "FRD-12"
+        ]
+      },
+      {
+        "id": "E4-S3-AC2",
+        "given": "the console list page",
+        "when": "operated with keyboard only, no mouse",
+        "then": "every interactive element (pagination, delete action) is reachable and operable in a visible focus order",
+        "traces": [
+          "FRD-12"
+        ]
+      },
+      {
+        "id": "E4-S3-AC3",
+        "given": "the console list page",
+        "when": "its text and interactive elements are measured for contrast",
+        "then": "every element meets the WCAG 2.2 AA minimum contrast ratio",
+        "traces": [
+          "FRD-12"
+        ]
+      }
+    ],
+    "group": "D",
+    "cluster": "C4",
+    "invest": {
+      "independent": false
+    }
+  },
+  {
+    "id": "E5-S1",
+    "title": "Delete a member's own link",
+    "epic": "E5",
+    "layer": "backend",
+    "story_points": 3,
+    "estimation_confidence": "high",
+    "readiness": "ready",
+    "business_value": "A member can revoke a link they no longer want live, and be certain nobody else can reuse the freed-up code.",
+    "user_story": "As a signed-in member, I want to delete one of my own links, so that its code stops working and I control what stays shareable.",
+    "description": "DELETE /links/{code} removes the member's own link, returns 204, makes later requests for that code 404, and never reissues the freed code to a new link.",
+    "scope_in": [
+      "DELETE /links/{code} for the owning member returns 204",
+      "Deleted code returns 404 on later redirect",
+      "Deleted code is never reissued to a new link",
+      "Deleting another member's link is rejected"
+    ],
+    "scope_out": [
+      "Editing instead of delete-and-recreate (SG-2)"
+    ],
+    "depends_on": [
+      {
+        "story": "E1-S1",
+        "kind": "behavior",
+        "artifact": "session",
+        "reason": "delete requires a signed-in session established by E1-S1"
+      },
+      {
+        "story": "E2-S1",
+        "kind": "data",
+        "artifact": "link row",
+        "reason": "delete requires an existing link row created by E2-S1"
+      }
+    ],
+    "traces": [
+      "FRD-5"
+    ],
+    "safeguards": [
+      {
+        "id": "SG-2"
+      }
+    ],
+    "acceptance_criteria": [
+      {
+        "id": "E5-S1-AC1",
+        "given": "a member's own link",
+        "when": "deleting it",
+        "then": "the response is 204",
+        "traces": [
+          "FRD-30"
+        ]
+      },
+      {
+        "id": "E5-S1-AC2",
+        "given": "a member's own link that was just deleted",
+        "when": "requesting that code again",
+        "then": "the response is 404",
+        "traces": [
+          "FRD-30"
+        ]
+      },
+      {
+        "id": "E5-S1-AC3",
+        "given": "a deleted code",
+        "when": "a new link is created",
+        "then": "the deleted code is never reissued to the new link",
+        "traces": [
+          "FRD-30"
+        ]
+      },
+      {
+        "id": "E5-S1-AC4",
+        "given": "a link owned by another member",
+        "when": "the signed-in member attempts to delete it",
+        "then": "the response is 404, not 204, and the other member's link is unaffected",
+        "traces": [
+          "FRD-30"
+        ]
+      }
+    ],
+    "group": "C",
+    "cluster": "C1",
+    "invest": {
+      "independent": true
+    }
+  },
+  {
+    "id": "E6-S1",
+    "title": "Expose /healthz reflecting database reachability",
+    "epic": "E6",
+    "layer": "backend",
+    "story_points": 2,
+    "estimation_confidence": "high",
+    "readiness": "ready",
+    "business_value": "Operators and orchestrators can tell whether the service is actually able to serve traffic, not just whether the process is running.",
+    "user_story": "As an operator, I want a health endpoint that reflects database reachability, so that I can detect and react to a database outage automatically.",
+    "description": "GET /healthz requires no authentication, checks database reachability, and returns 200 when reachable or 503 when not, with a small JSON body describing status.",
+    "scope_in": [
+      "GET /healthz, unauthenticated",
+      "200 when the database is reachable",
+      "503 when the database is unreachable"
+    ],
+    "scope_out": [
+      "Structured request logging as a deliverable (SG-11)",
+      "OpenAPI publication (SG-11)"
+    ],
+    "depends_on": [],
+    "traces": [
+      "FRD-8"
+    ],
+    "safeguards": [
+      {
+        "id": "SG-11"
+      }
+    ],
+    "acceptance_criteria": [
+      {
+        "id": "E6-S1-AC1",
+        "given": "a reachable database",
+        "when": "fetching `/healthz`",
+        "then": "the response is 200",
+        "traces": [
+          "FRD-33"
+        ]
+      },
+      {
+        "id": "E6-S1-AC2",
+        "given": "the database is stopped",
+        "when": "fetching `/healthz`",
+        "then": "the response is 503",
+        "traces": [
+          "FRD-33"
+        ]
+      },
+      {
+        "id": "E6-S1-AC3",
+        "given": "`/healthz` is called",
+        "when": "the response body is inspected",
+        "then": "no authentication was required and the body is JSON describing database status",
+        "traces": [
+          "FRD-33"
+        ]
+      }
+    ],
+    "group": "A",
+    "cluster": "C5",
+    "invest": {
+      "independent": true
+    }
+  },
+  {
+    "id": "E6-S2",
+    "title": "Return a safe 503 JSON envelope when the database is unreachable",
+    "epic": "E6",
+    "layer": "backend",
+    "story_points": 3,
+    "estimation_confidence": "medium",
+    "readiness": "ready",
+    "business_value": "When the database goes down, callers of any endpoint get a clean, predictable error instead of a leaking stack trace or a hang.",
+    "user_story": "As an API caller, I want a clean 503 JSON error when the database is unreachable, so that my client can handle the outage without seeing internal details.",
+    "description": "A shared database-reachability check (reused from E6-S1) backs a global error handler: when the database is unreachable, every endpoint other than /healthz returns 503 with a JSON body carrying an `error` field and no stack trace, exception class name, or filesystem path.",
+    "scope_in": [
+      "Global 503 JSON error envelope for DB-unreachable failures on all endpoints except /healthz",
+      "No stack trace, exception class name, or filesystem path in the response body",
+      "Recovery to normal status once the database is reachable again"
+    ],
+    "scope_out": [
+      "Structured request logging as a deliverable (SG-11)"
+    ],
+    "depends_on": [
+      {
+        "story": "E6-S1",
+        "kind": "behavior",
+        "artifact": "db_health_check",
+        "reason": "reuses the database-reachability check E6-S1 implements for /healthz"
+      }
+    ],
+    "traces": [
+      "FRD-14"
+    ],
+    "safeguards": [
+      {
+        "id": "SG-11"
+      }
+    ],
+    "acceptance_criteria": [
+      {
+        "id": "E6-S2-AC1",
+        "given": "the Postgres container is stopped",
+        "when": "any API endpoint other than `/healthz` is called",
+        "then": "the response is 503 with a JSON body carrying an `error` field",
+        "traces": [
+          "FRD-37"
+        ]
+      },
+      {
+        "id": "E6-S2-AC2",
+        "given": "the same 503 response",
+        "when": "the body is inspected",
+        "then": "it contains no stack trace, exception class name, or filesystem path",
+        "traces": [
+          "FRD-37"
+        ]
+      },
+      {
+        "id": "E6-S2-AC3",
+        "given": "the database becomes reachable again",
+        "when": "the same endpoint is called",
+        "then": "the response returns to its normal, non-503 status",
+        "traces": [
+          "FRD-37"
+        ]
+      }
+    ],
+    "group": "B",
+    "cluster": "C5",
+    "invest": {
+      "independent": true
+    }
+  },
+  {
+    "id": "E7-S1",
+    "title": "Run the whole stack from one docker compose up",
+    "epic": "E7",
+    "layer": "infra",
+    "story_points": 5,
+    "estimation_confidence": "low",
+    "readiness": "ready",
+    "business_value": "Anyone can stand up the entire system from a clean checkout with a single command and no external dependencies, which underpins every other story's ability to be demoed and evaluated.",
+    "user_story": "As a developer or evaluator, I want `docker compose up` to bring up the whole stack, so that I can run and test the service without any manual setup or third-party network calls.",
+    "description": "A docker-compose.yml brings up the API, web console, and a single Postgres 16 container, reaching healthy from a clean checkout with no image cache, and making no network call to any host outside the compose network at build or run time.",
+    "scope_in": [
+      "docker-compose.yml with API, web, and exactly one Postgres 16 service",
+      "Healthy stack from `docker compose up` on a clean checkout",
+      "No outbound network calls at build or run time"
+    ],
+    "scope_out": [
+      "OpenAPI publication, scheduled purge jobs, and structured request logs as required deliverables (SG-11)"
+    ],
+    "depends_on": [],
+    "traces": [
+      "FRD-13"
+    ],
+    "safeguards": [
+      {
+        "id": "SG-11"
+      }
+    ],
+    "acceptance_criteria": [
+      {
+        "id": "E7-S1-AC1",
+        "given": "a clean checkout with no project images cached",
+        "when": "`docker compose up` is run once",
+        "then": "the stack reaches healthy with exactly one Postgres 16 container",
+        "traces": [
+          "FRD-36"
+        ]
+      },
+      {
+        "id": "E7-S1-AC2",
+        "given": "the stack is running",
+        "when": "build and runtime network traffic is inspected",
+        "then": "no service makes a request to a host outside the compose network",
+        "traces": [
+          "FRD-36"
+        ]
+      },
+      {
+        "id": "E7-S1-AC3",
+        "given": "the compose file",
+        "when": "it is reviewed",
+        "then": "it defines exactly one Postgres 16 service and no other third-party managed service",
+        "traces": [
+          "FRD-36"
+        ]
+      }
+    ],
+    "group": "A",
+    "cluster": "C6",
+    "invest": {
+      "independent": true
+    }
+  }
+]

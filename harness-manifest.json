@@ -63,11 +63,13 @@
   ],
   "guides": [
     {
-      "id": "code-gen",
-      "axis": "maintainability",
+      "id": "acceptance-tests-first",
+      "axis": "behaviour",
       "kind": "feedforward",
-      "wired_at": ".claude/skills/code-gen/SKILL.md",
-      "description": "10 quality principles injected into every generator teammate: TDD, static typing, 30-line function cap, deep modules, explicit errors, latency budgets. Phase A also: no stub-to-green + paragraph-workaround rule (Bun)."
+      "wired_at": ".claude/skills/writing-acceptance-tests-first/SKILL.md",
+      "status": "active",
+      "gap_ref": "G20",
+      "description": "AT-first discipline (gap G20, Matteo Vaccari's 'Acceptance Tests for AI-Assisted Development'): before implementation on a story, writes a business-readable Given/When/Then acceptance test against a Ports-and-Adapters seam — reusing /seam-finder's observable/funnel/asymmetry scoring rather than inventing a new seam concept — with a test-double adapter standing in for I/O, confirms it fails for the right reason, then proceeds to implementation. Wired into /test (Step 4.6, part of the plan-phase deliverable) and /change Step S4. Additive to, not a replacement for, the existing Playwright E2E layer (/test Step 5), which remains the final full-stack confirmation layer — this closes the harness's structural instance of Vaccari's E2E-as-AT-implementation antipattern (E2E was previously the ONLY acceptance-criteria verification layer). As of gap G23, this discipline has real commit-time mechanical proof (at-first-gate.js + record-at-red.js, mirroring legacy-discipline-gate.js's G17 pattern): a story's new production files are blocked without both an AT file on disk and a receipt proving it ran red. Readability review remains prompt-level only (surfaced to code-reviewer at Step S6, not mechanically checked) — see HARNESS.md G20/G23 for the current, narrower disclosed scope."
     },
     {
       "id": "adversarial-code-review",
@@ -78,37 +80,59 @@
       "description": "Tiered dual adversarial code review (Bun Phase A): review-tier.js resolves standard vs adversarial. Standard mode is one code-reviewer with two parallel axes (Standards vs Spec; scores are not merged). Dual independent reviewers only when review-tier.js says so (size, security-boundary, sensor_tier=strict). Wired into /implement Step 7, /auto Gate 8, /change S6/I8. Defaults: review.adversarial=auto, min 8 files / 200 lines."
     },
     {
-      "id": "sealed-auto-pack",
-      "axis": "traceability",
+      "id": "advisor",
+      "axis": "architecture",
       "kind": "feedforward",
-      "wired_at": ".claude/skills/auto/references/section-2-2-context-recovery-step-1-of-every-iteration.md",
+      "wired_at": ".claude/agents/advisor.md",
       "status": "active",
-      "net_add_justification": "After the plan seal, /auto was still free to reload /brd and the full code-gen skill into the coding session — the plan/code split existed on disk but not in context. This guide names the sealed pack (plan-seal artifact list, features.json, program-design, component-map, test-plan seams, verification-matrix) and forbids reloading planning skills in full.",
-      "description": "Sealed context pack for /auto SECTION 2 after plan-seal.js check. Planning reads are the pack only; operational state (program.md, learned-rules, progress) stays. Draft PR is the coding-loop stop."
+      "description": "Frontier mid-run advisor (Opus, read-only): structural re-rank/unblock at fixed checkpoints (post_fail_2, mid_epic) or /advise. Not self-serve escalation. Cap via execution.advisor_max_per_run."
     },
     {
-      "id": "git-safety-parallel",
+      "id": "agent-write-contract",
       "axis": "behaviour",
       "kind": "feedforward",
-      "wired_at": ".claude/hooks/lib/git-safety.js",
-      "status": "active",
-      "description": "Multi-agent git safety (Bun Phase A): deny git stash / reset --hard / clean -fd / force-push while HARNESS_PARALLEL_AGENTS=1 or parallel-implement.lock exists. Pre-bash-gate enforces; SECTION 4 teammate prompts restate. Escape: HARNESS_GIT_SAFETY=off."
+      "wired_at": ".claude/agents/code-reviewer.contract.json",
+      "net_add_justification": "Every agent prompt declared its ownership in prose (\"report-only\", \"never implements\", \"does not rewrite frozen sprint contracts\") while the tools: grant contradicted it — code-reviewer holds Write and Bash. Nothing in the harness could read, check or enforce that prose. This makes the declaration data: an allow-list for the enumerable review surface, a deny-list for builders. Adopted from SwarmForge (unclebob/swarm-forge, squad branch), which pairs every role prompt with a machine-readable contract.",
+      "description": "Per-agent write-scope contract at .claude/agents/<name>.contract.json: artifact_roots (allow-list, deny-by-default), forbidden_artifact_roots (deny-list), may_spawn, and a required one-line why. An allow-list means the agent writes there and nowhere else; an empty allow-list is read-only; omitting it means anywhere except the deny-list. Two prohibitions it makes real: a reviewer cannot edit the code it judges, and a builder cannot write the verdict that judges it."
     },
     {
-      "id": "fix-from-diagnostics",
-      "axis": "behaviour",
+      "id": "architecture-constitution",
+      "axis": "architecture",
       "kind": "feedforward",
-      "wired_at": ".claude/skills/fix-from-diagnostics/SKILL.md",
+      "wired_at": ".claude/templates/constitution-template.md",
       "status": "active",
-      "description": "Bun Phase B diagnostics work queue: parse tsc/eslint/ruff/mypy → diagnostics-shard.js → fix per package shard without full monorepo suite mid-queue. Invoked from /implement Step 6 and /auto SECTION 6 when lint/type volume is high (≥~15 findings)."
+      "description": "Cross-sprint architecture invariants (sprint-delta lane): a human-owned, PR-reviewed file scaffolded into every project at specs/design/constitution.md. /design --delta's design-delta rubric treats every '## Invariants' line as a hard constraint on every future sprint's design amendment."
     },
     {
-      "id": "mechanical-migrate",
+      "id": "architecture-doc",
+      "axis": "architecture",
+      "kind": "feedforward",
+      "wired_at": ".claude/architecture.md",
+      "description": "Architecture reference copied into target projects."
+    },
+    {
+      "id": "author-prompt-surface",
+      "axis": "maintainability",
+      "kind": "feedforward",
+      "wired_at": ".claude/skills/author-prompt-surface/SKILL.md",
+      "status": "active",
+      "description": "Claude-only skill that loads docs/prompting-standards.md when creating or editing agents, skills, or commands (trigger conditions, model-agnostic bodies, no reasoning-as-text)."
+    },
+    {
+      "id": "boundary-test-doubles",
       "axis": "behaviour",
       "kind": "feedforward",
-      "wired_at": ".claude/skills/refactor/SKILL.md",
+      "wired_at": ".claude/templates/boundary-doubles/replay_transport.py",
       "status": "active",
-      "description": "Bun Phase B mechanical migrate via /refactor --mechanical and .claude/templates/migrate/ (MAPPING.md, CONSTRAINTS.tsv, CANARY.md). Mapping dual-review + mandatory 3-file canary before fan-out."
+      "gap_ref": "G34",
+      "description": "Shipped record/replay test-double kit (DB transactional-rollback fixture, HTTP ReplayTransport at the wrapper _call seam, deterministic FakeLLMClient with golden structured responses keyed by request hash) bound under HARNESS_TEST_REPLAY=1, plus a Ports-and-Adapters at-template.py. Converts the harness's live-integration test story into a deterministic one: the /test integration-generation step (Step 4.7) generates tests/integration/ against these doubles, the live-externals sensor (G36) blocks tests that reach real externals instead, and the regression gates (G15/G16) run --replay against them. v1 covers the Python/FastAPI backend; TS/React and other stacks are a later gap."
+    },
+    {
+      "id": "brd-spec-design",
+      "axis": "behaviour",
+      "kind": "feedforward",
+      "wired_at": ".claude/skills/design/SKILL.md",
+      "description": "BRD -> spec -> design artifacts + acceptance criteria + sprint contracts: the functional specification the agent builds against."
     },
     {
       "id": "canary-before-fanout",
@@ -121,20 +145,52 @@
       "description": "Prompt-level guide (gap G32): before applying one mechanical change across many files or stories, prove the pattern on a small trial batch (3 files, or the smallest representative sample; threshold ~10 files) and run tests/lint/typecheck on it first; a canary failure revises the pattern rather than forcing a post-fan-out bisect. Wired at /refactor Step 5, /upgrading-dependencies Step 6, /implement Step 0.5, and /feature (first ready story as epic canary). Prompt-only, no computational sensor: the file-count trigger is judgment the agent applies mid-task, and a canary failure is caught by the same test/lint/typecheck gates every step already runs."
     },
     {
-      "id": "semantic-divergence",
-      "axis": "behaviour",
+      "id": "clarify",
+      "axis": "maintainability",
       "kind": "feedforward",
-      "wired_at": ".claude/skills/code-gen/references/semantic-divergence.md",
-      "status": "active",
-      "description": "Bun Phase C: checklist for mechanical ports (assert side effects, rounding, bounds, Drop/defer, placeholders). code-reviewer applies when specs/migrate or /refactor --mechanical is in scope."
+      "wired_at": ".claude/skills/clarify/SKILL.md",
+      "description": "Bounded clarification gate — resolve ambiguity before code, consuming local context first."
     },
     {
-      "id": "review-commit-attribution",
+      "id": "code-gen",
+      "axis": "maintainability",
+      "kind": "feedforward",
+      "wired_at": ".claude/skills/code-gen/SKILL.md",
+      "description": "10 quality principles injected into every generator teammate: TDD, static typing, 30-line function cap, deep modules, explicit errors, latency budgets. Phase A also: no stub-to-green + paragraph-workaround rule (Bun)."
+    },
+    {
+      "id": "context-pack",
       "axis": "traceability",
       "kind": "feedforward",
-      "wired_at": ".claude/scripts/review-commit-msg.js",
+      "wired_at": ".claude/scripts/context-pack.js",
       "status": "active",
-      "description": "Bun Phase C: optional commit subject formatter that attributes dual-review fixes (review:…; policy=union). adversarial-review-audit.json remains the machine source of truth."
+      "description": "Bounded source-context retrieval (schema v2) over the living DeepWiki/code-map: lexical+wiki BM25-ish ranking, optional TF-IDF semantic index (.claude/state/nav-index), depth-2 graph neighbors, co-change expansion, optional --diff boost, impact-scoped tests_to_run, task_map + confidence, read_next citations, session receipt, and nav-telemetry.jsonl. Facade: nav-query.js; MCP: nav-mcp-server.js; change-family Iron Law requires pack before broad source reads."
+    },
+    {
+      "id": "cyclic-dependency-prepass",
+      "axis": "behaviour",
+      "kind": "feedforward",
+      "wired_at": ".claude/skills/fix-from-diagnostics/SKILL.md",
+      "status": "active",
+      "gap_ref": "G33",
+      "description": "Prompt-level guide (gap G33, same shape as G32's canary-first guide): before fix-from-diagnostics shards diagnostics by package, if ≥3 packages are affected and cycle data exists (specs/brownfield/modularity-pack.md, or code-graph.json's cycles field as a fallback), check whether the error-dense packages sit together on a known import cycle. If so, run a structural pass to break the cycle first (smallest cut, validated narrowly), then re-capture diagnostics and re-shard before resuming normal per-shard fixing — prevents cross-shard cyclic errors from burning the queue's 3-pass cap without converging. Wired into fix-from-diagnostics/SKILL.md Step 2 (locked by test/cyclic-prepass-wiring.test.js, same skill-text-assertion pattern test/canary-rollout-wiring.test.js uses). No computational sensor: the package-count and error-density thresholds are judgment applied mid-task, not a mechanically checkable commit-time property."
+    },
+    {
+      "id": "design-decisions-gate",
+      "axis": "architecture",
+      "kind": "feedforward",
+      "wired_at": ".claude/scripts/validate-design-decisions.js",
+      "net_add_justification": "Sibling of spec-decisions-gate for the /design split, sharing its spine via hooks/lib/decision-record.js rather than duplicating it. Carries one rule no other control has: a load-bearing architecture decision must name what it RULES OUT, with n/a|none|TBD rejected. Taken from what the audited design got right — its decision table is literally | Decision | What it rules out | and its alternatives-rejected section was the most useful content in 632 KB of output. Nothing else in the harness checks that a design decision forecloses anything; trace-check proves ID linkage and validate-canvas proves structure, and a design can satisfy both while every decision in it is a preference an implementer can quietly reverse.",
+      "description": "Hard block between /design shaping and design-render. Fails unless design-decisions.json is well-formed, names the committed stack, carries at least one basis:\"human\" decision, marks every load_bearing decision human-made, and gives every load_bearing decision a substantive rules_out. A recorded headless lane relaxes which basis satisfies a load-bearing decision (\"headless-default\" alongside \"human\") but never waives the requirement, and never rules_out or the stack; \"default-accepted\" is still blocked. The lane is recorded to specs/reviews/design-decisions-verdict.json. Re-run at design-render Step 0 so the block holds if /design is bypassed. design-render passes --rendering at its Step 0, which suppresses only the shaping-session checkpoint (never a block) and keeps the shaping-session stamp; same carry cost and same audit fields as spec-decisions-gate."
+    },
+    {
+      "id": "first-window-init",
+      "axis": "behaviour",
+      "kind": "feedforward",
+      "wired_at": ".claude/skills/auto/SKILL.md",
+      "status": "active",
+      "gap_ref": "G13",
+      "description": "First-context-window vs continuation split (gap G13): on the first /auto window (Session 0 only, no completed groups) the loop verifies the initializer's artifacts are coherent (populated features.json, executable init.sh, specs prerequisites) before building, instead of running identical recovery logic on window 1 and window N. Implements Anthropic's multi-context-window 'a different prompt for the very first context window' principle."
     },
     {
       "id": "fix-diagnostics-workflow",
@@ -145,18 +201,20 @@
       "description": "Bun Phase C dynamic workflow exemplar: multi-phase diagnostics work queue. Not a clone of /gate or /implement; skill fix-from-diagnostics remains the primary single-agent form. Teaches 'edit the workflow when agents misbehave'."
     },
     {
-      "id": "clarify",
-      "axis": "maintainability",
+      "id": "fix-from-diagnostics",
+      "axis": "behaviour",
       "kind": "feedforward",
-      "wired_at": ".claude/skills/clarify/SKILL.md",
-      "description": "Bounded clarification gate — resolve ambiguity before code, consuming local context first."
+      "wired_at": ".claude/skills/fix-from-diagnostics/SKILL.md",
+      "status": "active",
+      "description": "Bun Phase B diagnostics work queue: parse tsc/eslint/ruff/mypy → diagnostics-shard.js → fix per package shard without full monorepo suite mid-queue. Invoked from /implement Step 6 and /auto SECTION 6 when lint/type volume is high (≥~15 findings)."
     },
     {
-      "id": "architecture-doc",
-      "axis": "architecture",
+      "id": "git-safety-parallel",
+      "axis": "behaviour",
       "kind": "feedforward",
-      "wired_at": ".claude/architecture.md",
-      "description": "Architecture reference copied into target projects."
+      "wired_at": ".claude/hooks/lib/git-safety.js",
+      "status": "active",
+      "description": "Multi-agent git safety (Bun Phase A): deny git stash / reset --hard / clean -fd / force-push while HARNESS_PARALLEL_AGENTS=1 or parallel-implement.lock exists. Pre-bash-gate enforces; SECTION 4 teammate prompts restate. Escape: HARNESS_GIT_SAFETY=off."
     },
     {
       "id": "layer-config",
@@ -164,21 +222,6 @@
       "kind": "feedforward",
       "wired_at": ".claude/hooks/lib/layers.js",
       "description": "Default layer order + roots that the layer sensor enforces; overridden per target project via project-manifest.json#architecture (opt-out for non-layered shapes)."
-    },
-    {
-      "id": "brd-spec-design",
-      "axis": "behaviour",
-      "kind": "feedforward",
-      "wired_at": ".claude/skills/design/SKILL.md",
-      "description": "BRD -> spec -> design artifacts + acceptance criteria + sprint contracts: the functional specification the agent builds against."
-    },
-    {
-      "id": "reasons-canvas",
-      "axis": "behaviour",
-      "kind": "feedforward",
-      "wired_at": ".claude/skills/design/references/reasons-canvas-template.md",
-      "status": "active",
-      "description": "SPDD REASONS Canvas (gap G4): /design emits specs/design/reasons-canvas.md (Requirements/Entities/Approach/Structure/Operations/Norms/Safeguards + a machine-read Governs list). Living artifact — 'fix the prompt first' when behaviour changes; brownfield grounds entities existing-vs-new in the code-graph."
     },
     {
       "id": "lean-analysis-seed",
@@ -190,24 +233,6 @@
       "net_add_justification": "Lean adopt correctly stopped paraphrasing FRs, and in doing so dropped the only product-grain analysis context (domain existing-vs-new, open questions, risks). Nothing else on the default --prd path produces that seed; brd-analysis.json is --full only. This is a cheap script, not a new interview."
     },
     {
-      "id": "story-generation-contract",
-      "axis": "behaviour",
-      "kind": "feedforward",
-      "wired_at": ".claude/skills/spec-render/SKILL.md",
-      "status": "active",
-      "description": "Per-story generation contract (Requirements / Entities / Operations / Safeguards) inside each E*-S*.md. The story stays the ticket and scheduler; this section is the executable delta prompt /implement and /change fill and run against. Operations may be pending at spec-render and must name files before code.",
-      "net_add_justification": "The system REASONS Canvas is the constitution, not the per-change generation prompt. Implement plans were session-ephemeral (writing-plans in chat), so the SPDD 'fix the prompt first' rule had nothing at story grain to fix. This is a section on an existing story file, not a new markdown pile."
-    },
-    {
-      "id": "story-bundle",
-      "axis": "behaviour",
-      "kind": "feedforward",
-      "wired_at": ".claude/hooks/lib/story-bundle.js",
-      "status": "active",
-      "description": "Per-story execution contract joining story ACs, generation contract, component-map ownership, verification-matrix rows, and originating BRD acceptance ids into specs/bundles/{id}.json. The story stays the ticket; the bundle is what /implement and /auto may execute against.",
-      "net_add_justification": "Stories, design, and tests already exist as separate files, so /implement could load a story and improvise. SPDD's closed loop needs one join artifact at story grain — not a parallel prompt library. This is a deterministic join of existing artifacts, not a new planning phase."
-    },
-    {
       "id": "legacy-discipline",
       "axis": "behaviour",
       "kind": "feedforward",
@@ -215,74 +240,39 @@
       "description": "Behaviour-preservation skills (checking-coverage, pinning-down-behavior, sprouting, keeping-refactors-pure) that steer brownfield edits."
     },
     {
-      "id": "acceptance-tests-first",
+      "id": "local-ccr",
+      "axis": "traceability",
+      "kind": "feedforward",
+      "wired_at": ".claude/scripts/context-store.js",
+      "status": "active",
+      "description": "Local Compress-Cache-Retrieve layer: stores raw command/search context by hash, emits compact packs with retrieval commands, and supports query-filtered raw retrieval through context-retrieve.js, run-compact.js, and search-compact.js."
+    },
+    {
+      "id": "mechanical-migrate",
       "axis": "behaviour",
       "kind": "feedforward",
-      "wired_at": ".claude/skills/writing-acceptance-tests-first/SKILL.md",
+      "wired_at": ".claude/skills/refactor/SKILL.md",
       "status": "active",
-      "gap_ref": "G20",
-      "description": "AT-first discipline (gap G20, Matteo Vaccari's 'Acceptance Tests for AI-Assisted Development'): before implementation on a story, writes a business-readable Given/When/Then acceptance test against a Ports-and-Adapters seam — reusing /seam-finder's observable/funnel/asymmetry scoring rather than inventing a new seam concept — with a test-double adapter standing in for I/O, confirms it fails for the right reason, then proceeds to implementation. Wired into /test (Step 4.6, part of the plan-phase deliverable) and /change Step S4. Additive to, not a replacement for, the existing Playwright E2E layer (/test Step 5), which remains the final full-stack confirmation layer — this closes the harness's structural instance of Vaccari's E2E-as-AT-implementation antipattern (E2E was previously the ONLY acceptance-criteria verification layer). As of gap G23, this discipline has real commit-time mechanical proof (at-first-gate.js + record-at-red.js, mirroring legacy-discipline-gate.js's G17 pattern): a story's new production files are blocked without both an AT file on disk and a receipt proving it ran red. Readability review remains prompt-level only (surfaced to code-reviewer at Step S6, not mechanically checked) — see HARNESS.md G20/G23 for the current, narrower disclosed scope."
+      "description": "Bun Phase B mechanical migrate via /refactor --mechanical and .claude/templates/migrate/ (MAPPING.md, CONSTRAINTS.tsv, CANARY.md). Mapping dual-review + mandatory 3-file canary before fan-out."
     },
     {
-      "id": "observability-conventions",
-      "axis": "architecture",
-      "kind": "feedforward",
-      "wired_at": ".claude/skills/code-gen/references/observability-conventions.md",
-      "status": "active",
-      "gap_ref": "G9",
-      "description": "App-level observability baseline (gap G9, guide-half): the generator emits a RED-metrics + /metrics + trace-id-log-correlation baseline INTO generated server apps, steered by observability-conventions.md (stack-neutral) + observability-python-fastapi.md (concrete). Default-on for server shapes via project-manifest.json#observability (scaffold-render.js); deploy adds Prometheus scrape discovery; /metrics is a verifiable acceptance criterion. The runtime-SLO drift sensor that reads these signals is a separate follow-on."
-    },
-    {
-      "id": "topology-templates",
-      "axis": "architecture",
-      "kind": "feedforward",
-      "wired_at": ".claude/scripts/topologies.js",
-      "status": "active",
-      "gap_ref": "G10",
-      "description": "Per-topology harness templates (gap G10): /scaffold resolves a detected topology (web-app / api-service / cli-or-library) and presets a coherent bundle of existing manifest knobs (architecture, observability, verification, ceremony, model_tier) via the TOPOLOGIES registry, instead of a uniform default. Ashby's-Law variety reduction; drop-in extensible; the manifest stays per-project overridable."
-    },
-    {
-      "id": "token-governor",
-      "axis": "traceability",
-      "kind": "feedforward",
-      "wired_at": ".claude/scripts/navigation-refresh.js",
-      "status": "active",
-      "description": "Default-on advisory token governor: /scaffold creates placeholder living navigation for empty greenfield repos or a lean initial DeepWiki/code-map for source-bearing repos; agents are steered to wiki/symbol-map/context queries before broad source reads. Configured by project-manifest.json#token_governor."
-    },
-    {
-      "id": "architecture-constitution",
-      "axis": "architecture",
-      "kind": "feedforward",
-      "wired_at": ".claude/templates/constitution-template.md",
-      "status": "active",
-      "description": "Cross-sprint architecture invariants (sprint-delta lane): a human-owned, PR-reviewed file scaffolded into every project at specs/design/constitution.md. /design --delta's design-delta rubric treats every '## Invariants' line as a hard constraint on every future sprint's design amendment."
-    },
-    {
-      "id": "context-pack",
-      "axis": "traceability",
-      "kind": "feedforward",
-      "wired_at": ".claude/scripts/context-pack.js",
-      "status": "active",
-      "description": "Bounded source-context retrieval (schema v2) over the living DeepWiki/code-map: lexical+wiki BM25-ish ranking, optional TF-IDF semantic index (.claude/state/nav-index), depth-2 graph neighbors, co-change expansion, optional --diff boost, impact-scoped tests_to_run, task_map + confidence, read_next citations, session receipt, and nav-telemetry.jsonl. Facade: nav-query.js; MCP: nav-mcp-server.js; change-family Iron Law requires pack before broad source reads."
-    },
-    {
-      "id": "nav-query-facade",
-      "axis": "traceability",
-      "kind": "feedforward",
-      "wired_at": ".claude/scripts/nav-query.js",
-      "status": "active",
-      "description": "Single CLI facade for pack/symbol/callers/impact/cochange/semantic/refresh over code-graph + secondary nav artifacts. MCP twin: nav-mcp-server.js."
-    },
-    {
-      "id": "nav-index-semantic",
+      "id": "nav-bench",
       "axis": "traceability",
       "type": "computational",
       "cadence": "session",
       "status": "active",
       "scope": "repo",
-      "wired_at": ".claude/scripts/nav-index.js",
-      "signal": "stale or missing TF-IDF nav index after graph refresh",
-      "description": "Offline TF-IDF semantic index over symbols+wiki; rebuilt by graph-refresh / nav-query refresh; fail-open when missing. Feeds context-pack scoring."
+      "wired_at": ".claude/scripts/nav-bench.js",
+      "signal": "golden-query recall_rate and pack vs naive token estimates",
+      "description": "Golden navigation benchmark (test/fixtures/nav-bench/golden-queries.json); measures pack recall and estimated token savings."
+    },
+    {
+      "id": "nav-brownfield-maps",
+      "axis": "traceability",
+      "kind": "feedforward",
+      "wired_at": ".claude/scripts/nav-brownfield-maps.js",
+      "status": "active",
+      "description": "Deterministic lean brownfield essays (codebase/architecture/test/risk/change-strategy) from code-graph — default /brownfield path skips LLM essays; --full for narrative enrichment."
     },
     {
       "id": "nav-cochange",
@@ -307,14 +297,6 @@
       "description": "Hash-cached deterministic concept pages under specs/brownfield/wiki/concepts/, steered by .harness/wiki.json."
     },
     {
-      "id": "nav-brownfield-maps",
-      "axis": "traceability",
-      "kind": "feedforward",
-      "wired_at": ".claude/scripts/nav-brownfield-maps.js",
-      "status": "active",
-      "description": "Deterministic lean brownfield essays (codebase/architecture/test/risk/change-strategy) from code-graph — default /brownfield path skips LLM essays; --full for narrative enrichment."
-    },
-    {
       "id": "nav-graph-index",
       "axis": "traceability",
       "type": "computational",
@@ -326,40 +308,40 @@
       "description": "Pure-JSON inverted index for O(1) symbol/caller lookup without re-walking the full graph; rebuilt on graph-refresh."
     },
     {
-      "id": "nav-bench",
+      "id": "nav-index-semantic",
       "axis": "traceability",
       "type": "computational",
       "cadence": "session",
       "status": "active",
       "scope": "repo",
-      "wired_at": ".claude/scripts/nav-bench.js",
-      "signal": "golden-query recall_rate and pack vs naive token estimates",
-      "description": "Golden navigation benchmark (test/fixtures/nav-bench/golden-queries.json); measures pack recall and estimated token savings."
+      "wired_at": ".claude/scripts/nav-index.js",
+      "signal": "stale or missing TF-IDF nav index after graph refresh",
+      "description": "Offline TF-IDF semantic index over symbols+wiki; rebuilt by graph-refresh / nav-query refresh; fail-open when missing. Feeds context-pack scoring."
     },
     {
-      "id": "tool-output-pack",
+      "id": "nav-query-facade",
       "axis": "traceability",
       "kind": "feedforward",
-      "wired_at": ".claude/scripts/tool-output-pack.js",
+      "wired_at": ".claude/scripts/nav-query.js",
       "status": "active",
-      "description": "Standalone tool-output compactor: preserves raw logs on disk, extracts failures/paths/lines, and emits raw/packed/saved token estimates. Hook integration remains future work."
+      "description": "Single CLI facade for pack/symbol/callers/impact/cochange/semantic/refresh over code-graph + secondary nav artifacts. MCP twin: nav-mcp-server.js."
     },
     {
-      "id": "local-ccr",
+      "id": "observability-conventions",
+      "axis": "architecture",
+      "kind": "feedforward",
+      "wired_at": ".claude/skills/code-gen/references/observability-conventions.md",
+      "status": "active",
+      "gap_ref": "G9",
+      "description": "App-level observability baseline (gap G9, guide-half): the generator emits a RED-metrics + /metrics + trace-id-log-correlation baseline INTO generated server apps, steered by observability-conventions.md (stack-neutral) + observability-python-fastapi.md (concrete). Default-on for server shapes via project-manifest.json#observability (scaffold-render.js); deploy adds Prometheus scrape discovery; /metrics is a verifiable acceptance criterion. The runtime-SLO drift sensor that reads these signals is a separate follow-on."
+    },
+    {
+      "id": "plan-review-loop",
       "axis": "traceability",
       "kind": "feedforward",
-      "wired_at": ".claude/scripts/context-store.js",
-      "status": "active",
-      "description": "Local Compress-Cache-Retrieve layer: stores raw command/search context by hash, emits compact packs with retrieval commands, and supports query-filtered raw retrieval through context-retrieve.js, run-compact.js, and search-compact.js."
-    },
-    {
-      "id": "first-window-init",
-      "axis": "behaviour",
-      "kind": "feedforward",
-      "wired_at": ".claude/skills/auto/SKILL.md",
-      "status": "active",
-      "gap_ref": "G13",
-      "description": "First-context-window vs continuation split (gap G13): on the first /auto window (Session 0 only, no completed groups) the loop verifies the initializer's artifacts are coherent (populated features.json, executable init.sh, specs prerequisites) before building, instead of running identical recovery logic on window 1 and window N. Implements Anthropic's multi-context-window 'a different prompt for the very first context window' principle."
+      "wired_at": ".claude/skills/plan-review-loop/SKILL.md",
+      "net_add_justification": "The three planning gates already stopped for a human, but asked a closed approve/reject question over a wall of artifacts — the cheapest correct answer is always yes, so the stop bought nothing. This is the shared dialogue discipline (review brief leading with the load-bearing decisions and where the planner would push back, one question at a time in /clarify format, 2-3 alternatives at each fork, revise-and-re-present as a changelog including declined feedback, round cap 5). Registered once as a sub-skill rather than triplicated into /spec, /design, /test, which would have been three copies free to drift.",
+      "description": "Human review of a planning artifact run as a brainstorming dialogue instead of an approve/reject prompt. Invoked at /spec Step 8, /design gate, and /test Step 4.8; supplies the round shape, the question budget (reused from /clarify), and the per-phase challenge sources. Records rounds via plan-approval.js."
     },
     {
       "id": "pr-respond",
@@ -370,64 +352,28 @@
       "description": "Bounded post-PR response loop: /pr-respond polls a harness-opened PR's CI checks and review comments, classifies failures via the /auto self-healing table, fixes/pushes/replies with evidence, and stops on clean/max-cycles/watch-window/budget. Opt-in from /build and /feature via --respond (default off); never merges or force-pushes — merge stays human-owned. The deterministic half (poll/diff/handled-state) lives in .claude/scripts/pr-poll.js."
     },
     {
-      "id": "sensor-arbitration-policy",
+      "id": "prd-shape-gate",
       "axis": "traceability",
       "kind": "feedforward",
-      "wired_at": "docs/sensor-arbitration.md",
-      "status": "active",
-      "description": "Guide for resolving conflicts between sensors and recording reviewed waivers with explicit expiry, so a larger harness stays coherent instead of accumulating contradictory gates."
+      "wired_at": ".claude/scripts/validate-prd.js",
+      "net_add_justification": "The PRD is the root of the grounding chain and the only artifact a human authors, and nothing has ever checked one — while --autonomous and --auto both refuse to run without it. R2 raised the stakes: brd-adopt.js now carries PRD text verbatim into the spine, so there is no longer a rewriting step that might incidentally fix a malformed requirement. Owns one invariant nothing else covers: every functional requirement has an OBSERVABLE POSTCONDITION. trace-check proves ids link and brd-taxonomy-floor proves the ten slots are addressed; neither notices that a requirement gives the evaluator nothing to check, and a check with no oracle passes by default. Measured on a real PRD: 27 of 38 functional requirements had none.",
+      "description": "Blocks a malformed PRD before it becomes the grounding baseline: missing/empty Out of Scope (or Non-goals), no functional requirements, duplicate ids, placeholder text, an acceptance entry naming an unknown requirement, and any FR with no acceptance postcondition. Warns on an NFR with no number or named standard and a milestone with no observable Done-when. Accepts the layouts real PRDs use (bullet, heading-per-requirement, bold pseudo-heading; acceptance in its own section or as an inline AC: line) — ids and postconditions are what is load-bearing, not heading text."
     },
     {
-      "id": "boundary-test-doubles",
+      "id": "promote-eligibility-gate",
+      "axis": "traceability",
+      "kind": "feedforward",
+      "wired_at": ".claude/scripts/promote-recommendation.js",
+      "status": "active",
+      "description": "Agentic-flywheel Phase B (§4.3, docs/agentic-flywheel-design.md): the /promote skill's deterministic, non-negotiable guardrail — a recommendation whose class is gate-loosen or security is PERMANENTLY ineligible for automated promotion regardless of status/confidence/any other field, enforced in code (checkPromotionEligible), not left to skill-prompt discipline. Also refuses an already-promoted or not-yet-approved recommendation. /promote is on-demand only, never auto-invoked; merge always stays human. The harness eval-suite gate for a promotion-PR (§4.4) is the existing full npm test suite + harness-manifest honesty invariant, not a new golden-task framework — deliberately scoped down from the original design sketch, see §9 in the design doc."
+    },
+    {
+      "id": "reasons-canvas",
       "axis": "behaviour",
       "kind": "feedforward",
-      "wired_at": ".claude/templates/boundary-doubles/replay_transport.py",
+      "wired_at": ".claude/skills/design/references/reasons-canvas-template.md",
       "status": "active",
-      "gap_ref": "G34",
-      "description": "Shipped record/replay test-double kit (DB transactional-rollback fixture, HTTP ReplayTransport at the wrapper _call seam, deterministic FakeLLMClient with golden structured responses keyed by request hash) bound under HARNESS_TEST_REPLAY=1, plus a Ports-and-Adapters at-template.py. Converts the harness's live-integration test story into a deterministic one: the /test integration-generation step (Step 4.7) generates tests/integration/ against these doubles, the live-externals sensor (G36) blocks tests that reach real externals instead, and the regression gates (G15/G16) run --replay against them. v1 covers the Python/FastAPI backend; TS/React and other stacks are a later gap."
-    },
-    {
-      "id": "cyclic-dependency-prepass",
-      "axis": "behaviour",
-      "kind": "feedforward",
-      "wired_at": ".claude/skills/fix-from-diagnostics/SKILL.md",
-      "status": "active",
-      "gap_ref": "G33",
-      "description": "Prompt-level guide (gap G33, same shape as G32's canary-first guide): before fix-from-diagnostics shards diagnostics by package, if ≥3 packages are affected and cycle data exists (specs/brownfield/modularity-pack.md, or code-graph.json's cycles field as a fallback), check whether the error-dense packages sit together on a known import cycle. If so, run a structural pass to break the cycle first (smallest cut, validated narrowly), then re-capture diagnostics and re-shard before resuming normal per-shard fixing — prevents cross-shard cyclic errors from burning the queue's 3-pass cap without converging. Wired into fix-from-diagnostics/SKILL.md Step 2 (locked by test/cyclic-prepass-wiring.test.js, same skill-text-assertion pattern test/canary-rollout-wiring.test.js uses). No computational sensor: the package-count and error-density thresholds are judgment applied mid-task, not a mechanically checkable commit-time property."
-    },
-    {
-      "id": "team-policy",
-      "axis": "architecture",
-      "kind": "feedforward",
-      "wired_at": ".claude/scripts/team-policy.js",
-      "status": "active",
-      "description": "Solo-vs-team policy for multi-story groups: solo | solo_sequential | team based on ownership span and cross-story deps. Reduces multi-agent boundary tax on tiny independent stories. Consumed by generator Rule 2."
-    },
-    {
-      "id": "advisor",
-      "axis": "architecture",
-      "kind": "feedforward",
-      "wired_at": ".claude/agents/advisor.md",
-      "status": "active",
-      "description": "Frontier mid-run advisor (Opus, read-only): structural re-rank/unblock at fixed checkpoints (post_fail_2, mid_epic) or /advise. Not self-serve escalation. Cap via execution.advisor_max_per_run."
-    },
-    {
-      "id": "reuse-scout",
-      "axis": "architecture",
-      "kind": "feedforward",
-      "wired_at": ".claude/scripts/reuse-scout.js",
-      "status": "active",
-      "net_add_justification": "Ranks the existing seam a new story could extend against the design/component-map seam metadata and cross-sprint constitution invariants; feeds the reuse-or-justify intake dialogue at /change Step S2 with a signal no existing guide (seam-confidence scores a chosen seam post-hoc; reuse-scout ranks candidates pre-hoc) or sensor covers.",
-      "description": "Ranks the existing seam a new story could extend; feeds the reuse-or-justify intake dialogue."
-    },
-    {
-      "id": "reuse-or-justify",
-      "axis": "architecture",
-      "kind": "feedforward",
-      "wired_at": ".claude/skills/reuse-or-justify/SKILL.md",
-      "status": "active",
-      "net_add_justification": "The confidence-gated dialogue that turns reuse-scout's ranked candidates into a binding intake decision (extend vs. new) plus a recorded performance budget, wired into /change, /feature, and /sprint intake before the failing test — no existing guide runs this decision step; reuse-scout only ranks candidates, it does not force or record the choice.",
-      "description": "Confidence-gated reuse-vs-new dialogue run at intake (band >= medium, a touched constitution invariant, or a same-release clone cluster); resolves whether a change extends an existing seam or justifies a new structure before code, and records the decision + performance budget via record-reuse-decision.js."
+      "description": "SPDD REASONS Canvas (gap G4): /design emits specs/design/reasons-canvas.md (Requirements/Entities/Approach/Structure/Operations/Norms/Safeguards + a machine-read Governs list). Living artifact — 'fix the prompt first' when behaviour changes; brownfield grounds entities existing-vs-new in the code-graph."
     },
     {
       "id": "record-reuse-decision",
@@ -439,14 +385,6 @@
       "description": "Immutable decision recorder for the reuse-or-justify dialogue: appends each reuse-vs-new decision (with band, chosen seam or new-structure justification, and performance budget) to reuse-decisions.jsonl for downstream seam-conformance and budget checks."
     },
     {
-      "id": "author-prompt-surface",
-      "axis": "maintainability",
-      "kind": "feedforward",
-      "wired_at": ".claude/skills/author-prompt-surface/SKILL.md",
-      "status": "active",
-      "description": "Claude-only skill that loads docs/prompting-standards.md when creating or editing agents, skills, or commands (trigger conditions, model-agnostic bodies, no reasoning-as-text)."
-    },
-    {
       "id": "retro-auto-invoke",
       "axis": "traceability",
       "kind": "feedforward",
@@ -455,20 +393,55 @@
       "description": "Agentic-flywheel §4.2/§9 decision (docs/agentic-flywheel-design.md): /auto invokes /retro once at its two genuine session-terminal stopping-criteria branches (Hard stop, Success) — never at the per-story Escalate or coverage-revert branches, which continue the session, and never on a --once intermediate link (exits via the separate SECTION 10.1 path before reaching SECTION 11). Suppressible with --no-retro. /retro (.claude/skills/retro/SKILL.md) stays silent when it drafts zero new recommendations, so a quiet run adds no interactive interruption."
     },
     {
-      "id": "promote-eligibility-gate",
-      "axis": "traceability",
+      "id": "reuse-or-justify",
+      "axis": "architecture",
       "kind": "feedforward",
-      "wired_at": ".claude/scripts/promote-recommendation.js",
+      "wired_at": ".claude/skills/reuse-or-justify/SKILL.md",
       "status": "active",
-      "description": "Agentic-flywheel Phase B (§4.3, docs/agentic-flywheel-design.md): the /promote skill's deterministic, non-negotiable guardrail — a recommendation whose class is gate-loosen or security is PERMANENTLY ineligible for automated promotion regardless of status/confidence/any other field, enforced in code (checkPromotionEligible), not left to skill-prompt discipline. Also refuses an already-promoted or not-yet-approved recommendation. /promote is on-demand only, never auto-invoked; merge always stays human. The harness eval-suite gate for a promotion-PR (§4.4) is the existing full npm test suite + harness-manifest honesty invariant, not a new golden-task framework — deliberately scoped down from the original design sketch, see §9 in the design doc."
+      "net_add_justification": "The confidence-gated dialogue that turns reuse-scout's ranked candidates into a binding intake decision (extend vs. new) plus a recorded performance budget, wired into /change, /feature, and /sprint intake before the failing test — no existing guide runs this decision step; reuse-scout only ranks candidates, it does not force or record the choice.",
+      "description": "Confidence-gated reuse-vs-new dialogue run at intake (band >= medium, a touched constitution invariant, or a same-release clone cluster); resolves whether a change extends an existing seam or justifies a new structure before code, and records the decision + performance budget via record-reuse-decision.js."
     },
     {
-      "id": "plan-review-loop",
+      "id": "reuse-scout",
+      "axis": "architecture",
+      "kind": "feedforward",
+      "wired_at": ".claude/scripts/reuse-scout.js",
+      "status": "active",
+      "net_add_justification": "Ranks the existing seam a new story could extend against the design/component-map seam metadata and cross-sprint constitution invariants; feeds the reuse-or-justify intake dialogue at /change Step S2 with a signal no existing guide (seam-confidence scores a chosen seam post-hoc; reuse-scout ranks candidates pre-hoc) or sensor covers.",
+      "description": "Ranks the existing seam a new story could extend; feeds the reuse-or-justify intake dialogue."
+    },
+    {
+      "id": "review-commit-attribution",
       "axis": "traceability",
       "kind": "feedforward",
-      "wired_at": ".claude/skills/plan-review-loop/SKILL.md",
-      "net_add_justification": "The three planning gates already stopped for a human, but asked a closed approve/reject question over a wall of artifacts — the cheapest correct answer is always yes, so the stop bought nothing. This is the shared dialogue discipline (review brief leading with the load-bearing decisions and where the planner would push back, one question at a time in /clarify format, 2-3 alternatives at each fork, revise-and-re-present as a changelog including declined feedback, round cap 5). Registered once as a sub-skill rather than triplicated into /spec, /design, /test, which would have been three copies free to drift.",
-      "description": "Human review of a planning artifact run as a brainstorming dialogue instead of an approve/reject prompt. Invoked at /spec Step 8, /design gate, and /test Step 4.8; supplies the round shape, the question budget (reused from /clarify), and the per-phase challenge sources. Records rounds via plan-approval.js."
+      "wired_at": ".claude/scripts/review-commit-msg.js",
+      "status": "active",
+      "description": "Bun Phase C: optional commit subject formatter that attributes dual-review fixes (review:…; policy=union). adversarial-review-audit.json remains the machine source of truth."
+    },
+    {
+      "id": "sealed-auto-pack",
+      "axis": "traceability",
+      "kind": "feedforward",
+      "wired_at": ".claude/skills/auto/references/section-2-2-context-recovery-step-1-of-every-iteration.md",
+      "status": "active",
+      "net_add_justification": "After the plan seal, /auto was still free to reload /brd and the full code-gen skill into the coding session — the plan/code split existed on disk but not in context. This guide names the sealed pack (plan-seal artifact list, features.json, program-design, component-map, test-plan seams, verification-matrix) and forbids reloading planning skills in full.",
+      "description": "Sealed context pack for /auto SECTION 2 after plan-seal.js check. Planning reads are the pack only; operational state (program.md, learned-rules, progress) stays. Draft PR is the coding-loop stop."
+    },
+    {
+      "id": "semantic-divergence",
+      "axis": "behaviour",
+      "kind": "feedforward",
+      "wired_at": ".claude/skills/code-gen/references/semantic-divergence.md",
+      "status": "active",
+      "description": "Bun Phase C: checklist for mechanical ports (assert side effects, rounding, bounds, Drop/defer, placeholders). code-reviewer applies when specs/migrate or /refactor --mechanical is in scope."
+    },
+    {
+      "id": "sensor-arbitration-policy",
+      "axis": "traceability",
+      "kind": "feedforward",
+      "wired_at": "docs/sensor-arbitration.md",
+      "status": "active",
+      "description": "Guide for resolving conflicts between sensors and recording reviewed waivers with explicit expiry, so a larger harness stays coherent instead of accumulating contradictory gates."
     },
     {
       "id": "spec-decisions-gate",
@@ -476,31 +449,58 @@
       "kind": "feedforward",
       "wired_at": ".claude/scripts/validate-spec-decisions.js",
       "net_add_justification": "The /spec phase was split into a main-session shaping half and a forked sidekick renderer so decisions are made before 1.83 MB of artifacts exist rather than after. That split is only real if the renderer cannot run against a decisions file the human never shaped — the audited failure was six clarifications whose every basis ended \"Original planner reasoning\", i.e. the planner authoring both sides. No existing control checks who made a planning decision: plan-approval.js records that a review happened, not that the scope was chosen by a human before generation. Registered as one gate invoked from both halves rather than duplicated prose in each.",
-      "description": "Hard block between /spec shaping and spec-render. Fails unless specs/decisions/spec-decisions.json is well-formed, names at least one milestone epic, carries at least one decision with basis \"human\", and marks every load_bearing decision as human-made. Headless lanes (--auto/--autonomous) waive only the human requirement, never the structural checks, and the waiver is reported. Re-run at spec-render Step 0 so the block holds if /spec is bypassed; the renderer passes --rendering, which suppresses only the shaping-session checkpoint (never a block) and keeps the shaping-session stamp on the verdict. Cost of that carry, stated: the render block cannot fire for a post-clear session that re-shapes and then passes --rendering, since the gate cannot distinguish a digest changed by the main session from one changed by this one. The verdict records carried/revalidated_by/stamped_against so it is auditable after the fact (nothing reads them yet); the call-site tests are the actual guard."
+      "description": "Hard block between /spec shaping and spec-render. Fails unless specs/decisions/spec-decisions.json is well-formed, names at least one milestone epic, carries at least one decision with basis \"human\", and marks every load_bearing decision as human-made. A recorded headless lane (--auto/--autonomous) relaxes WHICH basis satisfies a load-bearing decision — \"headless-default\" counts alongside \"human\" — but never waives the requirement itself: \"default-accepted\" (the model's own default, settled by nobody) and a file marking nothing load_bearing are still blocked, and the lane is recorded on the verdict so an unattended run stays legible instead of reading as human review. Structural checks are never waived. Re-run at spec-render Step 0 so the block holds if /spec is bypassed; the renderer passes --rendering, which suppresses only the shaping-session checkpoint (never a block) and keeps the shaping-session stamp on the verdict. Cost of that carry, stated: the render block cannot fire for a post-clear session that re-shapes and then passes --rendering, since the gate cannot distinguish a digest changed by the main session from one changed by this one. The verdict records carried/revalidated_by/stamped_against so it is auditable after the fact (nothing reads them yet); the call-site tests are the actual guard."
     },
     {
-      "id": "design-decisions-gate",
-      "axis": "architecture",
-      "kind": "feedforward",
-      "wired_at": ".claude/scripts/validate-design-decisions.js",
-      "net_add_justification": "Sibling of spec-decisions-gate for the /design split, sharing its spine via hooks/lib/decision-record.js rather than duplicating it. Carries one rule no other control has: a load-bearing architecture decision must name what it RULES OUT, with n/a|none|TBD rejected. Taken from what the audited design got right — its decision table is literally | Decision | What it rules out | and its alternatives-rejected section was the most useful content in 632 KB of output. Nothing else in the harness checks that a design decision forecloses anything; trace-check proves ID linkage and validate-canvas proves structure, and a design can satisfy both while every decision in it is a preference an implementer can quietly reverse.",
-      "description": "Hard block between /design shaping and design-render. Fails unless design-decisions.json is well-formed, names the committed stack, carries at least one basis:\"human\" decision, marks every load_bearing decision human-made, and gives every load_bearing decision a substantive rules_out. Headless lanes waive only the human requirement — never rules_out or the stack — and the waiver is recorded to specs/reviews/design-decisions-verdict.json. Re-run at design-render Step 0 so the block holds if /design is bypassed. design-render passes --rendering at its Step 0, which suppresses only the shaping-session checkpoint (never a block) and keeps the shaping-session stamp; same carry cost and same audit fields as spec-decisions-gate."
-    },
-    {
-      "id": "prd-shape-gate",
-      "axis": "traceability",
-      "kind": "feedforward",
-      "wired_at": ".claude/scripts/validate-prd.js",
-      "net_add_justification": "The PRD is the root of the grounding chain and the only artifact a human authors, and nothing has ever checked one — while --autonomous and --auto both refuse to run without it. R2 raised the stakes: brd-adopt.js now carries PRD text verbatim into the spine, so there is no longer a rewriting step that might incidentally fix a malformed requirement. Owns one invariant nothing else covers: every functional requirement has an OBSERVABLE POSTCONDITION. trace-check proves ids link and brd-taxonomy-floor proves the ten slots are addressed; neither notices that a requirement gives the evaluator nothing to check, and a check with no oracle passes by default. Measured on a real PRD: 27 of 38 functional requirements had none.",
-      "description": "Blocks a malformed PRD before it becomes the grounding baseline: missing/empty Out of Scope (or Non-goals), no functional requirements, duplicate ids, placeholder text, an acceptance entry naming an unknown requirement, and any FR with no acceptance postcondition. Warns on an NFR with no number or named standard and a milestone with no observable Done-when. Accepts the layouts real PRDs use (bullet, heading-per-requirement, bold pseudo-heading; acceptance in its own section or as an inline AC: line) — ids and postconditions are what is load-bearing, not heading text."
-    },
-    {
-      "id": "agent-write-contract",
+      "id": "story-bundle",
       "axis": "behaviour",
       "kind": "feedforward",
-      "wired_at": ".claude/agents/code-reviewer.contract.json",
-      "net_add_justification": "Every agent prompt declared its ownership in prose (\"report-only\", \"never implements\", \"does not rewrite frozen sprint contracts\") while the tools: grant contradicted it — code-reviewer holds Write and Bash. Nothing in the harness could read, check or enforce that prose. This makes the declaration data: an allow-list for the enumerable review surface, a deny-list for builders. Adopted from SwarmForge (unclebob/swarm-forge, squad branch), which pairs every role prompt with a machine-readable contract.",
-      "description": "Per-agent write-scope contract at .claude/agents/<name>.contract.json: artifact_roots (allow-list, deny-by-default), forbidden_artifact_roots (deny-list), may_spawn, and a required one-line why. An allow-list means the agent writes there and nowhere else; an empty allow-list is read-only; omitting it means anywhere except the deny-list. Two prohibitions it makes real: a reviewer cannot edit the code it judges, and a builder cannot write the verdict that judges it."
+      "wired_at": ".claude/hooks/lib/story-bundle.js",
+      "status": "active",
+      "description": "Per-story execution contract joining story ACs, generation contract, component-map ownership, verification-matrix rows, and originating BRD acceptance ids into specs/bundles/{id}.json. The story stays the ticket; the bundle is what /implement and /auto may execute against.",
+      "net_add_justification": "Stories, design, and tests already exist as separate files, so /implement could load a story and improvise. SPDD's closed loop needs one join artifact at story grain — not a parallel prompt library. This is a deterministic join of existing artifacts, not a new planning phase."
+    },
+    {
+      "id": "story-generation-contract",
+      "axis": "behaviour",
+      "kind": "feedforward",
+      "wired_at": ".claude/skills/spec-render/SKILL.md",
+      "status": "active",
+      "description": "Per-story generation contract (Requirements / Entities / Operations / Safeguards) inside each E*-S*.md. The story stays the ticket and scheduler; this section is the executable delta prompt /implement and /change fill and run against. Operations may be pending at spec-render and must name files before code.",
+      "net_add_justification": "The system REASONS Canvas is the constitution, not the per-change generation prompt. Implement plans were session-ephemeral (writing-plans in chat), so the SPDD 'fix the prompt first' rule had nothing at story grain to fix. This is a section on an existing story file, not a new markdown pile."
+    },
+    {
+      "id": "team-policy",
+      "axis": "architecture",
+      "kind": "feedforward",
+      "wired_at": ".claude/scripts/team-policy.js",
+      "status": "active",
+      "description": "Solo-vs-team policy for multi-story groups: solo | solo_sequential | team based on ownership span and cross-story deps. Reduces multi-agent boundary tax on tiny independent stories. Consumed by generator Rule 2."
+    },
+    {
+      "id": "token-governor",
+      "axis": "traceability",
+      "kind": "feedforward",
+      "wired_at": ".claude/scripts/navigation-refresh.js",
+      "status": "active",
+      "description": "Default-on advisory token governor: /scaffold creates placeholder living navigation for empty greenfield repos or a lean initial DeepWiki/code-map for source-bearing repos; agents are steered to wiki/symbol-map/context queries before broad source reads. Configured by project-manifest.json#token_governor."
+    },
+    {
+      "id": "tool-output-pack",
+      "axis": "traceability",
+      "kind": "feedforward",
+      "wired_at": ".claude/scripts/tool-output-pack.js",
+      "status": "active",
+      "description": "Standalone tool-output compactor: preserves raw logs on disk, extracts failures/paths/lines, and emits raw/packed/saved token estimates. Hook integration remains future work."
+    },
+    {
+      "id": "topology-templates",
+      "axis": "architecture",
+      "kind": "feedforward",
+      "wired_at": ".claude/scripts/topologies.js",
+      "status": "active",
+      "gap_ref": "G10",
+      "description": "Per-topology harness templates (gap G10): /scaffold resolves a detected topology (web-app / api-service / cli-or-library) and presets a coherent bundle of existing manifest knobs (architecture, observability, verification, ceremony, model_tier) via the TOPOLOGIES registry, instead of a uniform default. Ashby's-Law variety reduction; drop-in extensible; the manifest stays per-project overridable."
     }
   ],
   "sensors": [
@@ -515,6 +515,54 @@
       "gap_ref": "G12",
       "signal": "axe/WCAG violations",
       "description": "axe-core gate (gap G12): default-on for UI stories. contract-accessibility-default.js injects a default accessibility_checks block into any contract with playwright_checks (opt out via project-manifest accessibility.enabled:false; explicit blocks respected); the evaluator then runs axe and FAILs serious/critical impacts in Full mode (failure_layer:accessibility), WARN in Lean. Gate logic lives in evaluate/SKILL.md."
+    },
+    {
+      "id": "adopted-spine-integrity",
+      "axis": "traceability",
+      "type": "computational",
+      "cadence": "planning",
+      "status": "active",
+      "scope": "artifacts",
+      "wired_at": ".claude/scripts/brd-adopt.js",
+      "signal": "a BRD requirement whose id, text or PRD label differs from what brd-adopt.js produced from the immutable source",
+      "net_add_justification": "The one property of adoption that no existing gate can check. brd-render is told in plain words to fill `taxonomy` and leave `id`/`text` alone, and its own SKILL admits the consequence if it does not: an adopted spine passes the grounding gate as an IDENTITY, and a re-keyed or re-worded spine that still carries `traces` passes it as COVERAGE — the verdicts are indistinguishable. trace-check owns 'every id links'; this owns 'the ids are still the source's ids'. A live run re-keyed all 24 requirements from FRD-n to FR-n with nothing noticing, leaving two runs of the same pipeline emitting brd-requirements.json in two different id spaces and stranding the milestone-scoped grounding gate downstream.",
+      "description": "`brd-adopt.js --verify` re-derives the requirement spine from specs/brd/frd-requirements.json and compares id, text and PRD label against the on-disk brd-requirements.json. The adopter itself is the oracle, so the check cannot drift from what adoption produces. taxonomy and acceptance are deliberately not compared — filling them is the renderer's job and the ten-slot floor gates them separately. Exit 1 = the baseline was modified (dropped, invented, re-keyed or re-worded); exit 2 = nothing to verify against, which is a setup problem and never a pass. Hard block at /brd Step 4.2, --prd/--frd mode only; delta mode passes the same --out-dir it adopted with. The `label` field it checks is what closed the two-id-space join: milestones and acceptance key on the PRD identifier, requirements key on the spine id, and before this the identifier existed only inside free-text `section`."
+    },
+    {
+      "id": "adversarial-security-certification",
+      "axis": "behaviour",
+      "type": "computational",
+      "cadence": "integration",
+      "status": "active",
+      "scope": "runtime",
+      "wired_at": ".claude/scripts/security-certification.js",
+      "signal": "a deterministic attack succeeds, certification is missing, expired, or corrupt, policy or enforcement subjects drift, or the requested unattended profile mismatches",
+      "net_add_justification": "Existing isolated tests did not provide a composed negative certification boundary. One profile runner reuses existing enforcement primitives without adding an agent or grader and closes indirect shell, unapproved egress, broker bypass, and dependency-install paths.",
+      "description": "Runs 14 deterministic attacks. The result binds the exact policy and enforcement-source hashes, expires after 24 hours, includes corruption detection, and is live-reprobed during verification. Unattended preflight requires it and the runtime mounts the result read-only."
+    },
+    {
+      "id": "agent-contract-drift",
+      "axis": "behaviour",
+      "type": "computational",
+      "cadence": "commit",
+      "status": "active",
+      "scope": "repo",
+      "wired_at": ".claude/scripts/validate-agent-contracts.js",
+      "signal": "a contract that disagrees with the agent tools: grant",
+      "net_add_justification": "The static half of agent-write-contract, and the half that keeps it honest: a contract claiming read-only beside a grant carrying Write means the runtime gate enforces a scope nobody believes in, and the drift is invisible because both files look reasonable alone. Also catches an agent shipped with no contract at all — the silent way the control set stops covering the fleet.",
+      "description": "Cross-checks every .claude/agents/<name>.md against its contract: missing contract, contract for a deleted agent, agent-name mismatch, may_spawn:false beside the Agent tool, read-only beside Write/Edit, a root that is absolute or lacks a trailing slash, an allow/deny overlap that would make the decision ambiguous, and a missing why. Runs in npm test via test/agent-contract.test.js."
+    },
+    {
+      "id": "agent-write-scope",
+      "axis": "behaviour",
+      "type": "computational",
+      "cadence": "session",
+      "status": "partial",
+      "scope": "universal",
+      "wired_at": ".claude/hooks/agent-write-scope.js",
+      "signal": "a subagent Write/Edit outside its contract",
+      "net_add_justification": "The runtime half of agent-write-contract. trust-boundary.js already states in a comment that evaluator-side tampering is the dominant spontaneous integrity failure documented for coding agents, and stops an agent editing the GATES; nothing stopped a reviewer editing the CODE it was judging, or a builder writing the verdict that judged it. Decides from agent_type, the field a real subagent payload carries (captured 2026-08-22).",
+      "description": "PreToolUse gate on Write/Edit/MultiEdit/NotebookEdit. Resolves the acting agent from agent_type, loads that agent contract from the PROJECT (so a scaffolded repo governs its own agents), and blocks a write outside the contract with a message naming where the agent MAY write. Fails open on every uncertainty: no agent_id (the main loop, where a human is driving), an ungoverned agent type, a path outside the project, malformed input. Session escape HARNESS_AGENT_SCOPE=off. Status partial: the decision logic and contracts are proven and canary-LIVE, but settings.json registration is a human inter-session step (prompt-cache prefix file) — run .claude/scripts/wire-agent-write-scope.js, which test/agent-write-scope-wiring.test.js asserts until done."
     },
     {
       "id": "amendment-provenance-check",
@@ -592,6 +640,18 @@
       ]
     },
     {
+      "id": "authority-capability-broker",
+      "axis": "behaviour",
+      "type": "computational",
+      "cadence": "session",
+      "status": "active",
+      "scope": "runtime",
+      "wired_at": ".claude/hooks/lib/authority-receipt.js",
+      "signal": "a merge, deploy, branch-protection change, or production operation has no valid task-bound, short-lived, single-use capability backed by the required number of distinct signed human approvals",
+      "net_add_justification": "The task envelope's SHA-256 detected local mutation but could not distinguish agent-authored authority from independently granted authority. This adds the missing zero-trust boundary once: Ed25519 verification against a protected public-key registry, reused by pre-Bash privileged-action checks and task completion approval checks. Private signing keys remain outside the workspace; the bundled issuer CLI is a protocol adapter, not a source of authority.",
+      "description": "External authority receipt protocol and command-time capability broker. Human approvals and capabilities are Ed25519-signed, bind the exact task-envelope hash, carry issuer/key identity, nonce, issue/expiry times, and distinct approver identities. Sensitive Bash actions fail closed without a matching capability; accepted capabilities are atomically consumed before execution to prevent replay. R4 execute_production_change remains non-delegable and requires an externally signed human-execution receipt. NARROWED 2026-08: `merge` is privileged only when .claude/trust/issuers.json exists. Without an approval service no capability can be issued, so gating merge had no path to yes — it blocked every merge including owner-authorized ones, and the only way past was to disable the control, which is strictly worse than not gating it. deploy, modify_branch_protection and execute_production_change are unchanged and stay gated with or without an issuer; production remains non-delegable and is refused before the envelope check."
+    },
+    {
       "id": "biting-meta",
       "axis": "maintainability",
       "type": "computational",
@@ -661,30 +721,6 @@
       "description": "Deterministic structure gate (gap G4) run in /design Step 1.9: the Canvas must carry all seven REASONS sections and a non-empty Governs list. Hard block. Safeguard coverage (D9): when specs/brd/brd-safeguards.json exists, also proves every SG-n invariant/prohibition/limit/norm the BRD recorded is cited in the Canvas Safeguards or Norms section. Structure alone cannot catch a Safeguards section that is present, well-formed, and silently missing a business invariant — which is exactly how a BRD constraint fails to reach the design contract, since those sections were previously authored from the architecture with nothing tying them back. UNCOVERED (a required constraint the design does not carry) and UNKNOWN (an SG-n cited but absent from the spine — a typo or an invented constraint) both BLOCK; a misplaced citation (a norm filed under Safeguards or vice versa) is a warning only, because the constraint did reach the design and only the filing is off. Skipped loudly when the spine file is absent; an EMPTY spine reports empty_spine and FAILS, so creating an empty file cannot be used to silence the gate."
     },
     {
-      "id": "generation-contract",
-      "axis": "behaviour",
-      "type": "computational",
-      "cadence": "commit",
-      "status": "active",
-      "scope": "artifacts",
-      "wired_at": ".claude/hooks/lib/gates-ssdd.js",
-      "signal": "a ready story is missing a Generation Contract, has pending Operations at implement time, or cites an unknown SG-n",
-      "description": "Structure gate for the per-story generation contract. --mode skeleton (spec-render) allows Operations: pending. --mode implementable (/implement, /auto, /change) requires at least one repo-relative file path. In GATE_CATALOG (order 71) so skipping /auto SECTION 5 still BLOCKs at run-gate-checks / pre-commit when production source is staged. CLI remains validate-generation-contract.js.",
-      "net_add_justification": "Prompt-level 'write a plan then implement' is the class of discipline G17/G23 taught not to trust. This is the mechanical presence check for the story-generation-contract guide, at the grain code is actually generated."
-    },
-    {
-      "id": "story-bundle-check",
-      "axis": "traceability",
-      "type": "computational",
-      "cadence": "commit",
-      "status": "active",
-      "scope": "artifacts",
-      "wired_at": ".claude/hooks/lib/gates-ssdd.js",
-      "signal": "a ready story has no bundle, no matrix rows, no owned files, or a test case that cites a story AC without the originating brd-acceptance id",
-      "description": "Hard gate for the story-bundle join. --mode skeleton allows pending Operations. --mode implementable (/implement, /auto) requires a bundle per ready story, verification-matrix rows, owned or Operations files, and (when brd-acceptance.json exists) original-requirement ids on the bundle and on each test-trace that cites a story AC. Dormant when there are no ready stories.",
-      "net_add_justification": "generation-contract checks one story section. verification-matrix-gate checks the matrix. Neither proves the generator is holding story + design + original req at once. Without this join gate the bundle file is documentation."
-    },
-    {
       "id": "canvas-sync-check",
       "axis": "traceability",
       "type": "computational",
@@ -694,6 +730,18 @@
       "wired_at": ".claude/scripts/canvas-sync-check.js",
       "signal": "changed files are missing from the REASONS Canvas Governs or Operations sections",
       "description": "Living-design sync sensor: compares changed files with specs/design/reasons-canvas.md so design-governed changes update the Canvas first instead of letting SPDD artifacts silently rot. Beyond DETECTING divergence, it deterministically PROPOSES the fix (canvas-sync.js proposeCanvasSync/applyCanvasProposal, no LLM): the report lists the exact Governs bullets + Operations stubs to add, and canvas-sync-check.js --write applies them in place (default stays report-only / human-gated). Idempotent — an already-governed path is never duplicated. This is the generative/path half of code->prompt sync; the semantic half (judging whether the Canvas prose still holds) is the companion canvas-semantic-check sensor. Runnable as npm run canvas-sync (add -- --write to apply)."
+    },
+    {
+      "id": "checkpoint-recovery",
+      "axis": "traceability",
+      "type": "computational",
+      "cadence": "session",
+      "status": "active",
+      "scope": "runtime",
+      "wired_at": ".claude/scripts/checkpoint-state.js",
+      "signal": "resume state is corrupt, diverged from the committed checkpoint, partially written, bound to an inactive task, or ambiguous about its next action",
+      "net_add_justification": "claude-progress.txt was prose-only recovery state and session commits were described as checkpoints without a machine-verifiable snapshot. This adds one atomic, hash-chained recovery authority over existing progress/features/git/task/budget state and classifies recovery deterministically instead of creating a second orchestrator.",
+      "description": "Atomic checkpoint and deterministic resume state machine. Each iteration-boundary checkpoint binds git HEAD/status, task/lifecycle/budget and progress artifact hashes, group, and exact next action into an immutable hash chain. Resume returns fresh_start, resume_exact, repair_partial_iteration, diverged_after_checkpoint, or fail-closed blocked states. Temp-write plus atomic rename prevents a killed write from replacing the last good current checkpoint."
     },
     {
       "id": "clean-code-review",
@@ -740,6 +788,18 @@
       "wired_at": ".claude/scripts/constraints-extract.js",
       "signal": "schema obligations without a negative test",
       "description": "Mines minLength/required/enum from design schemas into test obligations."
+    },
+    {
+      "id": "context-ceiling",
+      "axis": "maintainability",
+      "type": "computational",
+      "cadence": "commit",
+      "status": "active",
+      "scope": "runtime",
+      "wired_at": ".claude/hooks/context-ceiling.js",
+      "signal": "a subagent’s resident context passed the hand-off ceiling and it is still writing source",
+      "net_add_justification": "Cache reads are the largest single line in this harness bill -- $27.88 of the $47.97 sprint-1 baseline, against $2.70 of output -- and they are the integral of resident context over turns, so a context that only grows is charged for that growth on every remaining turn. Nothing measured or bounded it. token-advisor.js governs how much a single Read pulls in, which is the size of one increment, not the accumulated total; phase-context-handoff blocks at MAIN-LOOP phase boundaries, where a human and /clear exist. A subagent has neither: the audited E1-S1 implementer ran 208 turns from 18K to 324K and cost $16.87 by itself, while its conversation held only about 111K tokens of real content (76K tool results, 32K tool-use inputs, 3K text) -- the rest was re-reading work already written and committed. The lever is not a smaller context but a shorter-lived one, which is the subagent counterpart of the clear-at-artifact-boundaries doctrine the main loop already follows.",
+      "description": "PreToolUse(Write|Edit|MultiEdit) ceiling on a subagent own resident context, read from the newest usage block in its transcript tail (256KB, so a megabyte transcript costs nothing to check). Soft 140K: warn and ask for a hand-off. Hard 200K: refuse further SOURCE writes, naming the note to write and telling the agent to return to its lead. Deliberately scoped to writes -- Read and Bash stay open at every level so an agent told to hand off can still gather what the note needs, and .claude/, specs/ and docs/ are exempt at any size. Review caught the first version refusing EVERY write past the ceiling: an evaluator subagent past it could not write the specs/reviews/*.json verdict a downstream gate then reads as missing evidence. The hand-off note is exempt for the same reason -- refusing it would strand the very work the hand-off exists to carry. The main loop is exempt entirely. The generator re-dispatches a FRESH implementer from the note plus the files on disk, starting near 18K; a story that hands off more than twice is reported needs_breakdown rather than re-dispatched, since three hand-offs is a decomposition problem re-dispatching cannot fix. Ambiguity resolves toward ALLOW throughout: an unreadable transcript or a missing usage block yields no verdict. Subagent detection is `agent_id` on the hook payload, captured from three live subagent writes; a subagent tool call reports the PARENT session transcript_path, so the original /subagents/ path test was always false and this hook was INERT -- the same defect class as matching Task when the live tool name is Agent. The agent OWN transcript is derived as <dir>/<session_id>/subagents/agent-<agent_id>.jsonl."
     },
     {
       "id": "control-budget",
@@ -847,6 +907,18 @@
       "description": "Import-cycle ratchet (gap G8): cycle-gate.js compares the code-graph cycle count to a monotonic baseline (.claude/state/cycle-baseline.txt). A new cycle BLOCKS (/auto Gate 4, /gate, npm run cycles); removing cycles ratchets the baseline down. Detection still also feeds coupling-report.md + the drift monitor."
     },
     {
+      "id": "dead-path",
+      "axis": "maintainability",
+      "type": "computational",
+      "cadence": "commit",
+      "status": "active",
+      "scope": "repo",
+      "wired_at": ".claude/scripts/dead-path-gate.js",
+      "signal": "a definition whose last production caller this change removed",
+      "net_add_justification": "control-budget ratchets the count of CONTROLS; nothing ratcheted orphaned CODE, and the record says that is the live failure mode — 132 controls, a cut-to-half proposal overwhelmed by accretion in five weeks, a rewrite abandoned for accreting 6x faster. Adopted from SwarmForge squad redo plan: when a path dies, its functions, config and tests die in the same commit. Distinct from the drift report dead-code trend, which is report-only and cannot say which commit orphaned what.",
+      "description": "Commit gate. Candidates are symbols that lost their CALL SITES in the staged diff (not merely their textual presence — the call goes and the require line stays behind is the common shape). A candidate blocks when it had production callers at HEAD, has none in the staged tree, and its definition is still there. Export listings, imports and the definition itself never count as calls. Pre-existing dead code is out of scope by design. Escape marker // harness:keep-dead <why>, matching the harness:secret-ok convention. Bounded by --max-symbols, and the cap is always reported, never silent."
+    },
+    {
       "id": "deep-mutation",
       "axis": "maintainability",
       "type": "computational",
@@ -882,6 +954,18 @@
       "description": "Deployment-approval drift sensor: provision-environments.js --verify reads back each configured live GitHub Environment (per repo), diffs it against the config-driven desired spec plus the approval-gate FLOOR (>=1 required reviewer AND protected_branches), writes specs/reviews/deploy-gate-verify.json, and exits non-zero on drift so CI or an org-admin can gate on it. Environments are repo-scoped (--repo/--fleet). All identifiers come from project-manifest.json#github.environments; reviewers default to [] (no client literals). gh runs through an injected runner with literal argv and result-object error handling (exit 2 on gh absent/auth or malformed reviewer entries in verify)."
     },
     {
+      "id": "deterministic-bootstrap",
+      "axis": "maintainability",
+      "type": "computational",
+      "cadence": "planning",
+      "status": "active",
+      "scope": "repo",
+      "wired_at": ".claude/scripts/scaffold-bootstrap.js",
+      "signal": "a greenfield project reached /auto without its dependency manifests and a warm toolchain",
+      "net_add_justification": "In a greenfield repo the FIRST story inevitably absorbs project bootstrap, because nothing else does it. In the 2026-08-21 sprint-1 baseline that was E1-S1 -- a clean four-criterion story marked small, whose spawn prompt nevertheless read \"you are bootstrapping both projects skeletons as part of this story\" with backend/pyproject.toml in its file ownership. It ran 208 turns, grew 18K to 324K of context, and cost $16.87 alone. Bootstrap is the most templatable work in the whole build: framework choice plus ruff/mypy/pytest/tsconfig/eslint/vitest configuration, re-derived by an LLM at conversational prices one turn at a time. Nothing else covers it -- scaffold-project-files.js writes CLAUDE.md, CODEBASE_MAP.md and mutation config but never the dependency manifests, and /deploy generates init.sh AFTER /auto has already run. The install half is a second, separate saving: subagent contexts are cached at the 5-minute TTL only, and the run showed 8-to-25-minute idle gaps before whole-context rewrites -- the shape of a uv sync or npm install inside an implementer turn. Running it in the main loop at scaffold time removes that class. Measured: both stacks bootstrap and install in ~18 seconds.",
+      "description": "Emits the dependency manifests and tool config for the profile stack (python/fastapi, typescript/react, typescript/next) and installs them once, at /scaffold time. Two safety properties, both tested: it NEVER overwrites an existing manifest, so a re-scaffold cannot discard a dependency a story added; and an unrecognised stack emits NOTHING rather than guessing a framework, since a wrong pyproject.toml is worse than none -- a story would then have to detect and undo it. Domain dependencies stay with the stories: the floor is framework plus tooling only, pinned by a test that argon2/asyncpg/sqlalchemy are absent. A failed or unavailable install is reported as SKIPPED with its reason and the note that the cost moves into an agent rather than vanishing -- never as success. The emitted frontend tree satisfies its own tsconfig include via the framework standard ambient-types file; without it tsc fails TS18003 and the scaffolded project errors on its own typecheck script before any product code exists, which is how that defect was found. --no-install-deps skips only the install, never the manifests."
+    },
+    {
       "id": "diff-review",
       "axis": "behaviour",
       "type": "inferential",
@@ -891,6 +975,18 @@
       "wired_at": ".claude/agents/code-reviewer.md",
       "signal": "logic errors, missing edge cases, contract breaks",
       "description": "Fresh-context correctness review (reads only the diff, never the builder's conversation; correctness lens of the merged code-reviewer agent)."
+    },
+    {
+      "id": "dispatch-integrity",
+      "axis": "behaviour",
+      "type": "computational",
+      "cadence": "commit",
+      "status": "active",
+      "scope": "runtime",
+      "wired_at": ".claude/hooks/dispatch-gate.js",
+      "signal": "a subagent spawned a generator, or a dispatch targeted a story a different session is already implementing",
+      "net_add_justification": "The enforcement half of work-claim-guard, plus one invariant nothing owned. work-claim.js is invoked in PROSE by the /auto skill, so it binds only an agent that follows instructions -- and the failure it guards against IS an agent going off-script. In the 2026-08-21 sprint-1 baseline a generator dispatched to PROPOSE a Group B sprint contract implemented Group A instead, spawning a second generator, which spawned a second E1-S1 implementer; both ran 2h13m against the same files and finished in the same second ($8.73 of a $47.97 run). work-claim.js had been written that same evening and never entered the picture, because nothing called it. Separately, the PreToolUse hooks that would have capped the fan-out were wired to matcher \"Task\" while a real dispatch arrives as tool_name \"Agent\", so concurrency-gate and record-run had both been inert -- and the wiring test asserted matcher === Task, pinning the defect rather than catching it. Generator nesting is a new invariant: generator.md carries the Agent tool and no rule against spawning its own role, and no other control expresses agent-role composition.",
+      "description": "PreToolUse(Task|Agent) gate over subagent dispatch. Rule 1, NESTING (owned here): a dispatcher whose own transcript is a subagent transcript may not spawn a generator -- only the /auto main loop dispatches generators. Rule 2, IDENTITY: READ-ONLY. work-claim.js owns the claim lifecycle; this gate only refuses a dispatch onto a story a DIFFERENT session already holds. An earlier version claimed at dispatch time and review found three Criticals in it, all reproduced: /auto documented team flow already claims story:{id} before spawning and work-claim refuses a live key regardless of session, so the gate blocked EVERY teammate dispatch and team mode could not run; SubagentStop carries no story, so releasing the oldest claim released a different live teammate story under normal parallel fan-out, re-creating the duplicate the gate exists to stop; and a dispatch naming N stories claimed N and released 1, leaking the rest for the full TTL and blocking the self-heal retry. A lifecycle needs a correlation key between dispatch and stop and the stop event has none, so the gate stopped writing. Same-session dispatch always passes, an unknown session on either side passes, and a claim past the TTL passes (holders() does not prune, so the gate applies the TTL itself or a crashed run would block its story forever). Over-blocking stalls the build loop; over-allowing only costs money. KNOWN GAP, stated rather than papered over: the audited incident was two generators inside ONE /auto session, and this check allows same-session dispatch. work-claim is session-blind and would refuse the second lead, but only if the PROSE path calls it -- precisely the path that did not fire. Rule 2 therefore does not cover the same-session case; Rule 1 (nesting) is what catches the audited failure, because the second lead arrived by a subagent spawning a generator. Closing the same-session gap needs a correlation key the dispatch payload does not carry. Subagent detection is `agent_id` on the hook payload, captured from three live subagent writes; a subagent tool call reports the PARENT session transcript_path, so the original /subagents/ path test was always false and this hook was INERT -- the same defect class as matching Task when the live tool name is Agent. The agent OWN transcript is derived as <dir>/<session_id>/subagents/agent-<agent_id>.jsonl."
     },
     {
       "id": "drift-architecture",
@@ -993,6 +1089,31 @@
       "description": "Evaluator Layer 2: Playwright browser interaction with semantic selectors."
     },
     {
+      "id": "evidence-driven-autonomy",
+      "axis": "behaviour",
+      "type": "computational",
+      "cadence": "session",
+      "status": "active",
+      "scope": "runtime",
+      "wired_at": ".claude/scripts/autonomy-policy.js",
+      "signal": "an execution mode exceeds its risk ceiling, autonomy is promoted without exact signed authority and sufficient live-recomputed outcome evidence, policy/evidence drifts, or unattended security certification regresses",
+      "net_add_justification": "A–C establish authority, security certification, and productivity evidence but do not turn them into a controlled autonomy decision. This single state machine composes those controls, prevents self-promotion, and automatically moves toward safer modes on drift instead of adding separate mode-specific gates.",
+      "description": "Integrity-chained attended/supervised/unattended policy by risk tier. Promotion advances one level only, requires sufficient complete matched-pair evidence live-recomputed from run receipts, respects hard risk ceilings, and consumes a task-bound capability scoped to the exact tier and target mode. Evidence, configuration, or unattended certification drift automatically regresses one level; R4 is permanently attended."
+    },
+    {
+      "id": "evidence-integrity",
+      "axis": "behaviour",
+      "type": "computational",
+      "cadence": "integration",
+      "status": "active",
+      "scope": "runtime",
+      "gap_ref": "G39",
+      "wired_at": ".claude/scripts/evidence-integrity-gate.js",
+      "signal": "a browser check recorded PASS in the evaluator's evidence ledger that is not backed by real user-path interaction against a pre-committed sprint-contract check — a functional assertion satisfied via browser_evaluate, a pass with no interaction at all, a contracted check with no evidence entry, an evidence entry for a check the contract never declared, or a missing/mismatched ledger",
+      "description": "Evidence-integrity gate (gap G39). The evaluator is granted browser_evaluate because it needs it to inject axe-core, so it can satisfy a UI assertion by reading state or firing a handler in JavaScript instead of driving the app — the \"JavaScript cheating\" failure mode Cognition documents for Devin's own computer-use testing (cognition.com/blog/testing-development). That silently voids the evaluator's own black-box premise (\"the running app produces the evidence; you never read source to decide it looks right\"), and no existing control observed it: browser_evaluate appeared in the evaluator's tool list and in the axe-core instructions, and nowhere else. The evaluator now emits specs/reviews/evaluator-evidence.json — one entry per browser check with the contract's check id, layer (playwright/accessibility), verdict (pass/fail/untested), the interaction tools actually used, matrix_ids and artifact paths — and hooks/lib/evidence-integrity.js cross-checks that ledger against the read-only sprint contract. Five findings, all BLOCK: js-bypass, no-interaction-pass, missing-evidence, undeclared-check, unbacked-axe (plus missing-ledger / group-mismatch / missing-contract as fail-loud input errors). Registered in .claude/config/gate-checks.json (pack: verification, trigger exists:sprint-contracts, blocking) so /gate runs it, folded into /evaluate as failure_layer \"evidence\", and read by quality-card.js. Recording an unexecutable check as \"untested\" rather than omitting it is what lets the gate distinguish not-attempted from verified; the untested list is reported, never a finding, because \"never report a layer as passed that you could not execute\" is already the evaluator's own rule (one owner per invariant). KNOWN LIMITATION (disclosed, not hidden — the same precedent G23 sets): three findings (missing-evidence, undeclared-check, no-interaction-pass) are arithmetic against the pre-committed contract and hold regardless of how honestly the evaluator describes its own method, but js-bypass and unbacked-axe read a self-declared interaction list. That is deliberate parity with Cognition's own control (annotate the expectation before acting, which makes rationalising an unexpected result as a pass harder) — it catches the rationalising evaluator, not a determined one. Tamper-proof enforcement needs a PostToolUse tap on the Playwright MCP browser_evaluate tool, which requires a .claude/settings.json matcher and is therefore inter-session work behind HARNESS_PREFIX_EDIT; the snippet is recorded in HARNESS.md G39.",
+      "net_add_justification": "Owns one invariant no existing control covers: that a claimed runtime PASS was earned through the user path. The harness's verification breadth is already ahead of published practice on obligation COVERAGE (verification matrix, constraint obligations, AT-first, record/replay boundary doubles, deterministic grounding gates), so the residual risk has moved to evidence INTEGRITY — whether a green verdict was earned at all. That is the same defect class CLAUDE.md principle 5 was written from (a gate reading a flat contract while real contracts nest under `contract` kept every test green while the feature was inert), and the one place the evaluator's black-box premise could be voided without any sensor noticing. Paid for at the /gate cadence with no new agent, no new hook, and no new prompt stage: one pure lib, one CLI, one registry row."
+    },
+    {
       "id": "flake-detection",
       "axis": "behaviour",
       "type": "computational",
@@ -1028,6 +1149,18 @@
       "description": "Fleet-retrofit runner: fleet-retrofit.js audits (read-only, default) or --applies the branch-protection ruleset + deploy-approval environment across every repo in fleet.json in one command, invoking provision-protection/provision-environments per repo (--repo owner/repo) with a shared injected gh runner and classifying each from the provisioners' real apply/verify exit codes. A gate the operator never configured (no github section, or empty github.environments) is recorded 'not-configured', NEVER 'gated' — the provisioners return exit 0 for 'nothing to provision', so configured-ness is decided from the manifest up front to prevent a vacuous green. Per-repo failures are isolated (a repo's gh 404/no-admin becomes a 'failed' row, never aborts the rest); the aggregate specs/reviews/fleet-retrofit.json records each repo as gated/drifted/not-gating/not-configured/failed with a fail-safe fleet_gated (true only when the fleet is non-empty AND every repo is gated). Exit 0 iff fleet_gated, 1 if any repo is not gated, 2 on unreadable/malformed fleet. Specs come from project-manifest.json#github, identity from fleet.json; no client literals."
     },
     {
+      "id": "generation-contract",
+      "axis": "behaviour",
+      "type": "computational",
+      "cadence": "commit",
+      "status": "active",
+      "scope": "artifacts",
+      "wired_at": ".claude/hooks/lib/gates-ssdd.js",
+      "signal": "a ready story is missing a Generation Contract, has pending Operations at implement time, or cites an unknown SG-n",
+      "description": "Structure gate for the per-story generation contract. --mode skeleton (spec-render) allows Operations: pending. --mode implementable (/implement, /auto, /change) requires at least one repo-relative file path. In GATE_CATALOG (order 71) so skipping /auto SECTION 5 still BLOCKs at run-gate-checks / pre-commit when production source is staged. CLI remains validate-generation-contract.js.",
+      "net_add_justification": "Prompt-level 'write a plan then implement' is the class of discipline G17/G23 taught not to trust. This is the mechanical presence check for the story-generation-contract guide, at the grain code is actually generated."
+    },
+    {
       "id": "git-safety-session",
       "axis": "behaviour",
       "type": "computational",
@@ -1059,153 +1192,6 @@
       "wired_at": ".claude/scripts/impact-classifier.js",
       "signal": "a /feature story touches >3 files, a risk category (auth/payments/persistence/public-API), or introduces a new module",
       "description": "Sprint-delta lane routing sensor: classifies a single /feature story as architecturally invisible (-> /change, no design amendment) or design-touching (-> /design --delta, amendment + GATE 2), so small stories don't pay full design-gate overhead and design-relevant ones don't skip it. Advisory — always exits 0, it routes work rather than blocking it."
-    },
-    {
-      "id": "risk-envelope",
-      "axis": "traceability",
-      "type": "computational",
-      "cadence": "planning",
-      "status": "active",
-      "scope": "artifacts",
-      "wired_at": ".claude/scripts/risk-envelope.js",
-      "signal": "task text, expected paths, impact breadth, and security/data/production boundary signals determine a monotonic R0-R4 risk floor",
-      "net_add_justification": "Consolidates scattered route and reviewer risk decisions into one machine-readable artifact consumed by /feature and /change. It reuses impact-classifier rather than creating a second impact model, and is the future single source for required evidence, approvals, and prohibited actions.",
-      "description": "Deterministic task risk classifier. Writes .claude/state/risk-envelope.json plus current task/tier markers; R0 documentation through R4 production/irreversible work. Agents may raise but never lower the floor. R3/R4 preserve human authority even in autonomous lanes; R4 forbids the agent from executing the production change."
-    },
-    {
-      "id": "outcome-lifecycle",
-      "axis": "traceability",
-      "type": "computational",
-      "cadence": "integration",
-      "status": "active",
-      "scope": "runtime",
-      "wired_at": ".claude/scripts/record-outcome.js",
-      "signal": "intent, gate, PR, merge, deploy, acceptance, rework, revert, and incident events tied to one run/task/risk identity",
-      "net_add_justification": "Existing telemetry measures agent/tool activity but cannot distinguish busy machinery from accepted engineering outcomes. This extends the existing .claude/runs JSONL stream and record-run context instead of adding a parallel ledger.",
-      "description": "Canonical lifecycle vocabulary and outcome recorder. record-run.js now attaches schema_version, run_id, task_id, parent_run_id, and risk_tier to ordinary events; record-outcome.js appends outcome milestones to the same daily receipts. outcome-report.js derives accepted outcomes, production survival, attention productivity, and cost per accepted outcome without treating successful tool calls as engineering success."
-    },
-    {
-      "id": "matched-productivity-evidence",
-      "axis": "traceability",
-      "type": "computational",
-      "cadence": "drift",
-      "status": "active",
-      "scope": "artifacts",
-      "wired_at": ".claude/scripts/productivity-study.js",
-      "signal": "a productivity multiplier is claimed without enough matched baseline/agentic pairs, comparable risk/work/size, accepted production-surviving outcomes, passing gates, positive attention and cycle time, or evidence hashes",
-      "net_add_justification": "Outcome telemetry prevents tool activity from masquerading as delivery, but it cannot establish causality or validate an 8x claim. This adds one analysis control over the existing run ledger, using matched pairs and deterministic bootstrap confidence rather than another telemetry stream or model grader.",
-      "description": "Conservative productivity-study analyzer. Matches exactly one baseline and one agentic observation by comparison id and risk/work/size, validates project-local evidence hashes, and reports incomplete outcomes rather than counting them as wins. A multiplier claim requires no excluded study observations, at least ten eligible pairs, and a 95% lower confidence bound meeting the configured threshold."
-    },
-    {
-      "id": "evidence-driven-autonomy",
-      "axis": "behaviour",
-      "type": "computational",
-      "cadence": "session",
-      "status": "active",
-      "scope": "runtime",
-      "wired_at": ".claude/scripts/autonomy-policy.js",
-      "signal": "an execution mode exceeds its risk ceiling, autonomy is promoted without exact signed authority and sufficient live-recomputed outcome evidence, policy/evidence drifts, or unattended security certification regresses",
-      "net_add_justification": "A–C establish authority, security certification, and productivity evidence but do not turn them into a controlled autonomy decision. This single state machine composes those controls, prevents self-promotion, and automatically moves toward safer modes on drift instead of adding separate mode-specific gates.",
-      "description": "Integrity-chained attended/supervised/unattended policy by risk tier. Promotion advances one level only, requires sufficient complete matched-pair evidence live-recomputed from run receipts, respects hard risk ceilings, and consumes a task-bound capability scoped to the exact tier and target mode. Evidence, configuration, or unattended certification drift automatically regresses one level; R4 is permanently attended."
-    },
-    {
-      "id": "task-envelope",
-      "axis": "traceability",
-      "type": "computational",
-      "cadence": "session",
-      "status": "active",
-      "scope": "runtime",
-      "wired_at": ".claude/hooks/lib/task-envelope.js",
-      "records_as": [
-        "task-envelope-scope"
-      ],
-      "signal": "a write or Bash action exceeds approved paths/actions, the envelope was tampered with, or the task budget is exhausted",
-      "net_add_justification": "Operationalizes the risk-envelope decision through existing pre-write, pre-Bash, and budget enforcement surfaces. No existing control binds task intent/risk to path scope, prohibited semantic actions, and per-task budgets; this is one shared contract rather than three new gates.",
-      "description": "Integrity-hashed execution contract created by task-envelope.js. Existing pre-write/pre-Bash hooks load it: absent remains compatible with ordinary attended writes, present-invalid fails closed, and present-valid restricts writes to allowed_paths and marks privileged semantic actions as externally authorized only. budget-state.js prefers its dimensions. /feature, /change, and /auto create/verify it before implementation."
-    },
-    {
-      "id": "authority-capability-broker",
-      "axis": "behaviour",
-      "type": "computational",
-      "cadence": "session",
-      "status": "active",
-      "scope": "runtime",
-      "wired_at": ".claude/hooks/lib/authority-receipt.js",
-      "signal": "a merge, deploy, branch-protection change, or production operation has no valid task-bound, short-lived, single-use capability backed by the required number of distinct signed human approvals",
-      "net_add_justification": "The task envelope's SHA-256 detected local mutation but could not distinguish agent-authored authority from independently granted authority. This adds the missing zero-trust boundary once: Ed25519 verification against a protected public-key registry, reused by pre-Bash privileged-action checks and task completion approval checks. Private signing keys remain outside the workspace; the bundled issuer CLI is a protocol adapter, not a source of authority.",
-      "description": "External authority receipt protocol and command-time capability broker. Human approvals and capabilities are Ed25519-signed, bind the exact task-envelope hash, carry issuer/key identity, nonce, issue/expiry times, and distinct approver identities. Sensitive Bash actions fail closed without a matching capability; accepted capabilities are atomically consumed before execution to prevent replay. R4 execute_production_change remains non-delegable and requires an externally signed human-execution receipt. NARROWED 2026-08: `merge` is privileged only when .claude/trust/issuers.json exists. Without an approval service no capability can be issued, so gating merge had no path to yes — it blocked every merge including owner-authorized ones, and the only way past was to disable the control, which is strictly worse than not gating it. deploy, modify_branch_protection and execute_production_change are unchanged and stay gated with or without an issuer; production remains non-delegable and is refused before the envelope check."
-    },
-    {
-      "id": "task-evidence-finalizer",
-      "axis": "traceability",
-      "type": "computational",
-      "cadence": "integration",
-      "status": "active",
-      "scope": "artifacts",
-      "wired_at": ".claude/scripts/finalize-task-evidence.js",
-      "signal": "task completion lacks a green gate receipt, fresh passing required evidence, enough distinct trusted approvals, human-execution proof where required, or exact task/run/hash binding",
-      "net_add_justification": "Existing gates emitted strong but independent artifacts, while required_evidence in the task envelope was declarative. This finalizer does not add new graders: it closes the loop by freshness-checking and hashing existing outputs, verifying signed approvals, and emitting one task/run-bound completion receipt that downstream PR and outcome automation can trust.",
-      "description": "Central completion gate invoked by /gate after quality-card. Resolves each risk-required evidence class to existing gate artifacts, requires those artifacts to post-date the task contract and carry passing verdicts, verifies the envelope's distinct signed-approval threshold and R4 human-execution receipt, and writes an integrity-stamped task-completion-receipt.json bound to the task-envelope hash and canonical run id."
-    },
-    {
-      "id": "unattended-preflight",
-      "axis": "behaviour",
-      "type": "computational",
-      "cadence": "planning",
-      "status": "active",
-      "scope": "runtime",
-      "wired_at": ".claude/scripts/unattended-preflight.js",
-      "signal": "headless execution lacks a valid task contract, fail-closed sandbox, scrubbed subprocess environment, deny-by-default egress policy, verified isolation, credential separation, or required scanners",
-      "net_add_justification": "settings.auto.json previously carried only a warning to use a safe VM/container; nothing verified the compensating controls before unattended delegation. This turns that procedural boundary into one fail-closed preflight while leaving environment provisioning outside core.",
-      "description": "Required /auto preflight when HARNESS_UNATTENDED=1. Verifies task envelope, sandbox.enabled+failIfUnavailable, CLAUDE_CODE_SUBPROCESS_ENV_SCRUB, deny-by-default unattended-policy.json, Docker/CI or explicit isolation evidence, absence of sensitive environment variables and mounted host credential stores, configured scanners, and external evidence that policy/authority paths are mounted read-only. Writes a diagnostic receipt and exits non-zero on any missing condition."
-    },
-    {
-      "id": "runtime-containment",
-      "axis": "behaviour",
-      "type": "computational",
-      "cadence": "session",
-      "status": "active",
-      "scope": "runtime",
-      "wired_at": ".claude/scripts/runtime-policy.js",
-      "signal": "the external runtime cannot prove the exact network/read-only/credential policy, or an unattended agent attempts a broker-only command directly",
-      "net_add_justification": "Unattended preflight previously consumed self-asserted isolation flags; hooks alone cannot contain an arbitrary shell. This control moves the claim across the trust boundary: a role-scoped Ed25519 runtime attestation binds the exact policy hash and read-only mounts, while credential-request.js emits secret-free, single-use-authorized work for an out-of-process broker. It replaces local secret injection rather than adding another credential path.",
-      "description": "External runtime enforcement contract. The existing unattended-policy.json now also declares immutable control paths, broker-only commands, and credential-to-command scopes alongside deny-by-default egress. runtime-policy.js accepts only a trusted, task-bound, unexpired runtime attestation matching the exact policy hash. In unattended mode pre-Bash blocks broker-only commands; credential-request.js consumes a credential-scoped capability and queues a secret-free request for an external executor, so credentials never enter the agent process."
-    },
-    {
-      "id": "adversarial-security-certification",
-      "axis": "behaviour",
-      "type": "computational",
-      "cadence": "integration",
-      "status": "active",
-      "scope": "runtime",
-      "wired_at": ".claude/scripts/security-certification.js",
-      "signal": "a deterministic attack succeeds, certification is missing, expired, or corrupt, policy or enforcement subjects drift, or the requested unattended profile mismatches",
-      "net_add_justification": "Existing isolated tests did not provide a composed negative certification boundary. One profile runner reuses existing enforcement primitives without adding an agent or grader and closes indirect shell, unapproved egress, broker bypass, and dependency-install paths.",
-      "description": "Runs 14 deterministic attacks. The result binds the exact policy and enforcement-source hashes, expires after 24 hours, includes corruption detection, and is live-reprobed during verification. Unattended preflight requires it and the runtime mounts the result read-only."
-    },
-    {
-      "id": "task-lifecycle",
-      "axis": "traceability",
-      "type": "computational",
-      "cadence": "session",
-      "status": "active",
-      "scope": "runtime",
-      "wired_at": ".claude/hooks/lib/task-lifecycle.js",
-      "signal": "execution occurs before activation, after expiry/completion/abort, against a stale envelope version, through an invalid transition, or after lifecycle-chain tampering",
-      "net_add_justification": "The task envelope constrained execution but had no temporal semantics: it could remain reusable forever, be silently replaced between tasks, or continue after completion. This one hash-chained state machine supplies expiry, terminal states, rotation safety, and authorized amendment history to both existing pre-tool gates.",
-      "description": "Hash-chained task lifecycle with created, active, amended, completed, and aborted states. Version-2 envelopes expire, preserve previous-envelope hashes, and record signed amendments. Writes and Bash require an active, unexpired lifecycle binding; completion requires the matching task-evidence receipt, terminal tasks cannot execute, and rotation archives the prior envelope."
-    },
-    {
-      "id": "checkpoint-recovery",
-      "axis": "traceability",
-      "type": "computational",
-      "cadence": "session",
-      "status": "active",
-      "scope": "runtime",
-      "wired_at": ".claude/scripts/checkpoint-state.js",
-      "signal": "resume state is corrupt, diverged from the committed checkpoint, partially written, bound to an inactive task, or ambiguous about its next action",
-      "net_add_justification": "claude-progress.txt was prose-only recovery state and session commits were described as checkpoints without a machine-verifiable snapshot. This adds one atomic, hash-chained recovery authority over existing progress/features/git/task/budget state and classifies recovery deterministically instead of creating a second orchestrator.",
-      "description": "Atomic checkpoint and deterministic resume state machine. Each iteration-boundary checkpoint binds git HEAD/status, task/lifecycle/budget and progress artifact hashes, group, and exact next action into an immutable hash chain. Resume returns fresh_start, resume_exact, repair_partial_iteration, diverged_after_checkpoint, or fail-closed blocked states. Temp-write plus atomic rename prevents a killed write from replacing the last good current checkpoint."
     },
     {
       "id": "impact-scoped-regression",
@@ -1251,7 +1237,7 @@
       "scope": "universal",
       "wired_at": ".claude/hooks/lib/length.js",
       "signal": "30-line function / 300-line file violations",
-      "description": "Pre-disk caps enforced by pre-write-gate. Per-path file cap: 300 lines for source, 500 for test files (isTestPath: exact directory segments test/tests/__tests__/e2e/spec, or filename shapes *.test.*, *.spec.*, test_*.py, *_test.py, *_test.go — segment-exact so src/testing/ and src/latest/ are NOT exempt). Rationale: the source cap exists because a long source file concentrates change, which is weaker for a test read one case at a time. It is a higher cap, not an exemption — the newlyOverFileLimit ratchet still applies to test files, and FUNC_HARD_LIMIT stays 30 everywhere since a 30-line test case is still a smell."
+      "description": "Per-path file cap: 300 lines for source, 500 for test files (isTestPath: exact directory segments test/tests/__tests__/e2e/spec, or filename shapes *.test.*, *.spec.*, test_*.py, *_test.py, *_test.go — segment-exact so src/testing/ and src/latest/ are NOT exempt). Enforced twice: pre-write-gate refuses before disk, and the pre-commit gate refuses at commit. The commit half exists because PreToolUse only sees Write/Edit — six files crossed their cap on one branch by being written through a Bash heredoc, so a pre-disk cap was a cap on one tool rather than on the repository. Rationale for the split limits: the source cap exists because a long source file concentrates change, which is weaker for a test read one case at a time. It is a higher cap, not an exemption — the newlyOverFileLimit ratchet still applies to test files, and FUNC_HARD_LIMIT stays 30 everywhere since a 30-line test case is still a smell."
     },
     {
       "id": "live-externals",
@@ -1275,6 +1261,18 @@
       "wired_at": ".claude/hooks/graph-refresh.js",
       "signal": "stale or missing DeepWiki/code-map navigation after source edits",
       "description": "Stop/SubagentStop refresh patches code-graph.json, re-renders symbol-map.md, and re-renders the deterministic DeepWiki. Placeholder greenfield graphs are upgraded to real graphs on the first source write; /status surfaces freshness and estimated token savings."
+    },
+    {
+      "id": "matched-productivity-evidence",
+      "axis": "traceability",
+      "type": "computational",
+      "cadence": "drift",
+      "status": "active",
+      "scope": "artifacts",
+      "wired_at": ".claude/scripts/productivity-study.js",
+      "signal": "a productivity multiplier is claimed without enough matched baseline/agentic pairs, comparable risk/work/size, accepted production-surviving outcomes, passing gates, positive attention and cycle time, or evidence hashes",
+      "net_add_justification": "Outcome telemetry prevents tool activity from masquerading as delivery, but it cannot establish causality or validate an 8x claim. This adds one analysis control over the existing run ledger, using matched pairs and deterministic bootstrap confidence rather than another telemetry stream or model grader.",
+      "description": "Conservative productivity-study analyzer. Matches exactly one baseline and one agentic observation by comparison id and risk/work/size, validates project-local evidence hashes, and reports incomplete outcomes rather than counting them as wins. A multiplier claim requires no excluded study observations, at least ten eligible pairs, and a 95% lower confidence bound meeting the configured threshold."
     },
     {
       "id": "modularity-pack",
@@ -1347,6 +1345,18 @@
       ]
     },
     {
+      "id": "outcome-lifecycle",
+      "axis": "traceability",
+      "type": "computational",
+      "cadence": "integration",
+      "status": "active",
+      "scope": "runtime",
+      "wired_at": ".claude/scripts/record-outcome.js",
+      "signal": "intent, gate, PR, merge, deploy, acceptance, rework, revert, and incident events tied to one run/task/risk identity",
+      "net_add_justification": "Existing telemetry measures agent/tool activity but cannot distinguish busy machinery from accepted engineering outcomes. This extends the existing .claude/runs JSONL stream and record-run context instead of adding a parallel ledger.",
+      "description": "Canonical lifecycle vocabulary and outcome recorder. record-run.js now attaches schema_version, run_id, task_id, parent_run_id, and risk_tier to ordinary events; record-outcome.js appends outcome milestones to the same daily receipts. outcome-report.js derives accepted outcomes, production survival, attention productivity, and cost per accepted outcome without treating successful tool calls as engineering success."
+    },
+    {
       "id": "ownership-check",
       "axis": "traceability",
       "type": "computational",
@@ -1383,6 +1393,30 @@
       ]
     },
     {
+      "id": "phase-context-handoff",
+      "axis": "traceability",
+      "type": "computational",
+      "cadence": "planning",
+      "status": "active",
+      "scope": "artifacts",
+      "wired_at": ".claude/scripts/handoff-check.js",
+      "signal": "a planning phase starting inside the same session that approved its predecessor, or a render stretch starting inside the session that shaped its decisions",
+      "net_add_justification": "The /clear handoff existed but was advisory, and advisory lost: on a metered run it printed at /brd approval and /spec continued in the same session anyway, running 47 turns at a 273K average context against ~110K for a fresh one. No existing control covers this. plan-approval owns whether a human approved and whether the plan still matches — it says nothing about which conversation the successor starts in, and cannot: the approving session id was not recorded until now. Distinct invariant, deterministic signal, and it fires only at the three phase boundaries rather than after every task.",
+      "description": "Two checkpoints, one engine. (1) --stage boundary: hard block at Step 0 of /spec, /design and /test, refusing to start when the predecessor's approval receipt names the live session; plan-approval.js record stamps session_id into the receipt. (2) --stage render: hard block at /design Step 0.9 §3 when the design decisions verdict names the live session — /design still re-enters via --render-only. /spec is exempt (`same_session_render`): it dispatches spec-render in the same invocation so the command is not finished with an empty specs/stories/. --render-only remains the re-expand path after spec-unresolved.json. The stamp still records who SHAPED the decisions, carried forward by a sha256 of the decisions file. The live id comes from the run receipts record-run.js already writes. Every uncertain case passes — no record, no session id, a record written before stamping existed. Two exemptions ride on the record: in_session (/build) and waived_by (a headless lane)."
+    },
+    {
+      "id": "plan-approval",
+      "axis": "traceability",
+      "type": "computational",
+      "cadence": "planning",
+      "status": "active",
+      "scope": "artifacts",
+      "wired_at": ".claude/scripts/plan-approval.js",
+      "signal": "a planning phase entered with no recorded human review, a review still in changes-requested, or an approval whose artifacts have changed since it was given",
+      "net_add_justification": "The human planning gates were prose-only and therefore unobservable: nothing downstream could tell whether /spec, /design or /test ever stopped for a human, what was said, or whether the plan still matches what was approved — the feedforward-only failure the sensor-value-meter cannot detect because no outcome was ever written. This is the feedback half. It owns one invariant no existing sensor covers (human review happened and still applies), distinct from trace-check.js, which owns machine ID-linkage between artifacts and says nothing about human sign-off. The digest check is the load-bearing part: without it an agent can rewrite the stories after approval and inherit a receipt for a plan the human never saw.",
+      "description": "Receipt + hard gate for the plan-review-loop at /spec, /design, /test. record/waive/check verbs write specs/reviews/<phase>-approval.json (rounds, verbatim feedback, changes, declined items, artifact sha256 digests). Rejects placeholder feedback and an approval that leaves earlier feedback unaccounted for; voids an approval whose artifacts changed. /design blocks on spec, /test on design, /auto on all three (check --phase all). Headless lanes record a waiver naming the lane; --require-human refuses waivers. Flags low_engagement (zero feedback, zero answered questions) as a rubber-stamp trend signal for /retro without blocking."
+    },
+    {
       "id": "plan-confidence",
       "axis": "traceability",
       "type": "hybrid",
@@ -1392,6 +1426,18 @@
       "wired_at": ".claude/scripts/plan-confidence.js",
       "signal": "low-confidence plan band",
       "description": "Confidence-gated planning before execution. After /design+/test plan-only, plan-confidence.js writes specs/plan-confidence.json; --gate exits 2 when band is low so /build --auto must /clarify once or stop (never builds blind). Lite --auto escalates to full --auto on exit 2."
+    },
+    {
+      "id": "planning-gate-receipts",
+      "axis": "traceability",
+      "type": "computational",
+      "cadence": "session",
+      "status": "active",
+      "scope": "artifacts",
+      "wired_at": ".claude/hooks/lib/gate-receipt-sensor.js",
+      "signal": "a lane that owns planning gates ended a session with a phase whose artifacts exist but whose review recorded no approving receipt",
+      "net_add_justification": "R7 asked for the planning gates to be enforced by a hook or deleted. Enforcement is not available: hooks fire on tool calls and there is no phase-transition event to gate, and plan-approval#phaseRan tests directory EXISTENCE rather than authorship — so in any repo that has run /build once, specs/brd|stories|design stay populated and a hook keyed on them would block every later /feature, /change, /vibe and /refactor, lanes that reach /auto writing no BRD at all. What was actually missing on the audited run was not enforcement but VISIBILITY: two of three gates left no receipt and nobody could tell. plan-approval detects a bad receipt when something asks it; this detects that nothing asked. Distinct signal, and the only one that fires when the gate is skipped rather than failed.",
+      "description": "Stop-cadence sensor, reports and never blocks. For lanes that own planning gates (the lanes record-run writes: gated/auto/autonomous/lite* -> brd,spec,design,test; sprint -> brd,spec,design; finalize is not applicable) it reports any phase whose artifacts exist but whose receipt is absent or still changes-requested. A waiver is NOT a finding — a deliberately headless run and a gate nobody ran are different facts. A phase that never ran is not a finding either; it was not reached. Rides the existing review-on-stop Stop hook rather than adding one, so it needs no settings.json change."
     },
     {
       "id": "portfolio-compliance-rollup",
@@ -1465,6 +1511,19 @@
       "description": "Weekly/ops digest (P3) over agent-readiness pillars + quality-card age + human-codebase presence. Report-only; npm run readiness-digest; writes specs/reviews/readiness-digest.{md,json}."
     },
     {
+      "id": "red-phase-record",
+      "axis": "behaviour",
+      "type": "computational",
+      "cadence": "session",
+      "status": "active",
+      "scope": "artifacts",
+      "gap_ref": "G41",
+      "wired_at": ".claude/hooks/red-phase-record.js",
+      "signal": "a Bash test run observed at PostToolUse: which runner, pass or fail, which test files, and the sha256 of each test file as it ran",
+      "net_add_justification": "The harness proved test EXISTENCE (tdd-test-first in pre-write-gate.js) but never test ORDERING — that gate's own comment says \"pair with tdd-guard for red-green ordering\", and no such pair existed. A test written to match code already written passed every control we had, so tautological tests were undetected. test-deletion-guard (G31) catches a test DELETED or newly SKIPPED; nothing caught the cheaper move — rewriting an assertion mid-loop so a failing test passes while the production code stays broken. ImpossibleBench measures that behaviour at 50-55% for frontier models on impossible tests, and read-only test paths was the strongest single mitigation reported. This control is the EVIDENCE half and has no substitute in the existing set: G42 and G43 are both arithmetic over its ledger, so without it neither can exist. It is observation-only and never blocks, so a misclassification costs a spurious ledger row rather than a wedged session. It also lands the PostToolUse tap HARNESS.md flags as the real tamper-proofing route for G39.",
+      "description": "PostToolUse(Bash) recorder. lib/red-phase.js classifies the command (pytest/vitest/jest/node --test/go test/npm test, with env assignments and delegates like `uv run --frozen`, `npx`, `poetry run` stripped) and the response as pass | fail | no-tests | env-broken, reusing toolchain.js MISSING_SIGNATURES rather than a second copy. node --test carries BOTH reporter shapes: Node >=22 defaults to `spec` (`ℹ fail 1`), not TAP (`# fail 1`) — matching TAP alone made every real run of this repo's own suite classify env-broken, so nothing was ever recorded. That dead control was invisible to hand-written fixtures and is now guarded by test/red-phase-real-runner.test.js, which drives the REAL runner and asserts on what it actually prints. env-broken is the other load-bearing distinction: pytest exiting non-zero because pytest is absent is NOT a red phase. FILTERED runs (-k / --test-name-pattern / --grep) are dropped entirely rather than parsed: the agent chooses which tests execute, so a filtered green must never close a cycle and a filtered red must never arm one — and no count check can catch it, because node reports `pass 1` even for a pattern matching nothing and for a file containing no tests (it counts the file itself). An unfiltered green sweep that names no files is attributed to the files currently failing (openRedFiles), or a cycle opened by a named red run could never be closed by a bare `pytest` and the file would stay locked forever. lib/red-phase-ledger.js appends a hash-chained event to .claude/state/red-phase.jsonl carrying test_files, a sha256 per file, head_sha and task_id; appendRun REFUSES an env-broken verdict, a run naming no files, or a run missing any file hash. The ledger path is registered as protected machinery (trust-boundary.js) alongside its peer task-lifecycle.jsonl. KNOWN LIMITATIONS (disclosed): only files the command or output NAMES are recorded for a red run; `rm <path>` is not recognised as a write by bash-targets.js, so the ledger can still be deleted via the shell — a PRE-EXISTING kernel gap that task-lifecycle.jsonl and the coverage baselines share. PROVENANCE, and its disclosed ceiling: the recorder fires at PostToolUse, AFTER the command, so hashing the file then captures the text as it stands when the HOOK runs, not as the RUNNER read it. pre-bash-gate (already PreToolUse(Bash), so no settings.json change) now snapshots the pre-run hashes; the recorder prefers those and DROPS any file whose text moved during the command, since which version produced the verdict is then unknowable. That closes the case where the file is left changed. It does NOT close write-run-restore-to-identical (`python -c \"...write(WEAK)\" ; pytest t.py ; git checkout t.py`), because pre == post and no before/after tap can see inside a single command. What IS visible is the co-tenancy, so provenanceUnverifiable() refuses to record a test run sharing its command line with inline interpreter code (python/node/perl/ruby -c/-e/-i) or a git restore/checkout/stash. Narrow on purpose: those combinations are vanishingly rare in honest use and a false positive costs one unrecorded run. A determined adversary with arbitrary shell can still defeat this; the control targets the rationalising agent, not the determined one — the same disclosed stance as G39."
+    },
+    {
       "id": "refactor-purity",
       "axis": "maintainability",
       "type": "computational",
@@ -1512,6 +1571,30 @@
       "gap_ref": "G14",
       "signal": "app fails to boot / health-check on a fresh-process resume",
       "description": "Startup smoke check (gap G14): the first time /auto enters SECTION 2 in a fresh process with prior committed work, it boots the app (project-manifest.json#verification.mode) and runs the evaluator Health-Check Retry loop BEFORE selecting work, catching a tree a killed prior window left broken that the append-only progress log never recorded. Failure routes to SECTION 6 self-healing as failure_layer:infrastructure. Implements Anthropic's 'run a basic test on the dev server at session start' principle."
+    },
+    {
+      "id": "risk-envelope",
+      "axis": "traceability",
+      "type": "computational",
+      "cadence": "planning",
+      "status": "active",
+      "scope": "artifacts",
+      "wired_at": ".claude/scripts/risk-envelope.js",
+      "signal": "task text, expected paths, impact breadth, and security/data/production boundary signals determine a monotonic R0-R4 risk floor",
+      "net_add_justification": "Consolidates scattered route and reviewer risk decisions into one machine-readable artifact consumed by /feature and /change. It reuses impact-classifier rather than creating a second impact model, and is the future single source for required evidence, approvals, and prohibited actions.",
+      "description": "Deterministic task risk classifier. Writes .claude/state/risk-envelope.json plus current task/tier markers; R0 documentation through R4 production/irreversible work. Agents may raise but never lower the floor. R3/R4 preserve human authority even in autonomous lanes; R4 forbids the agent from executing the production change."
+    },
+    {
+      "id": "runtime-containment",
+      "axis": "behaviour",
+      "type": "computational",
+      "cadence": "session",
+      "status": "active",
+      "scope": "runtime",
+      "wired_at": ".claude/scripts/runtime-policy.js",
+      "signal": "the external runtime cannot prove the exact network/read-only/credential policy, or an unattended agent attempts a broker-only command directly",
+      "net_add_justification": "Unattended preflight previously consumed self-asserted isolation flags; hooks alone cannot contain an arbitrary shell. This control moves the claim across the trust boundary: a role-scoped Ed25519 runtime attestation binds the exact policy hash and read-only mounts, while credential-request.js emits secret-free, single-use-authorized work for an out-of-process broker. It replaces local secret injection rather than adding another credential path.",
+      "description": "External runtime enforcement contract. The existing unattended-policy.json now also declares immutable control paths, broker-only commands, and credential-to-command scopes alongside deny-by-default egress. runtime-policy.js accepts only a trusted, task-bound, unexpired runtime attestation matching the exact policy hash. In unattended mode pre-Bash blocks broker-only commands; credential-request.js consumes a credential-scoped capability and queues a secret-free request for an external executor, so credentials never enter the agent process."
     },
     {
       "id": "runtime-slo",
@@ -1632,6 +1715,18 @@
       "description": "Validates specs/reviews/sensor-waivers.json so threshold bumps and suppressions are reviewed, complete, and expire."
     },
     {
+      "id": "spec-mutation",
+      "axis": "behaviour",
+      "type": "computational",
+      "cadence": "commit",
+      "status": "active",
+      "scope": "artifacts",
+      "wired_at": ".claude/scripts/spec-mutation-gate.js",
+      "signal": "a sprint-contract expectation that can be corrupted with verification still passing",
+      "net_add_justification": "mutation-smoke and deep-mutation mutate CODE and ask whether the suite notices; nothing mutated the CONTRACT. The harness recurring defect is not a wrong implementation but a check wired to nothing while everything is green — a gate shipped reading a FLAT contract while real sprint contracts nest under a contract key, so it found zero checks and failed nothing. verification-matrix-gate proves a criterion has evidence assigned and prd-shape-gate proves it has a postcondition; neither can tell that the assertion does not discriminate. Adopted from the SwarmForge hardener role gherkin-mutator step.",
+      "description": "Corrupts one expected value in a sprint contract, re-runs the project verification command, and requires it to FAIL. A survivor means that criterion verifies nothing. The mutant is written OVER the real contract (a copy at a path nothing reads would reproduce the very defect being hunted) and restored in a finally, with a .spec-mutation-backup the next run replays after a crash. readChecks refuses the flat contract shape and an empty contract loudly rather than returning an empty list. A runner that could not execute is inconclusive, never a kill. Status active but unprovisioned until quality.spec_mutation.verify_command is set; canary-LIVE regardless. Playwright and design checks are not mutated — prose expectations a mechanical perturbation cannot corrupt meaningfully."
+    },
+    {
       "id": "sprint-contract",
       "axis": "traceability",
       "type": "computational",
@@ -1659,6 +1754,18 @@
       ]
     },
     {
+      "id": "story-bundle-check",
+      "axis": "traceability",
+      "type": "computational",
+      "cadence": "commit",
+      "status": "active",
+      "scope": "artifacts",
+      "wired_at": ".claude/hooks/lib/gates-ssdd.js",
+      "signal": "a ready story has no bundle, no matrix rows, no owned files, or a test case that cites a story AC without the originating brd-acceptance id",
+      "description": "Hard gate for the story-bundle join. --mode skeleton allows pending Operations. --mode implementable (/implement, /auto) requires a bundle per ready story, verification-matrix rows, owned or Operations files, and (when brd-acceptance.json exists) original-requirement ids on the bundle and on each test-trace that cites a story AC. Dormant when there are no ready stories.",
+      "net_add_justification": "generation-contract checks one story section. verification-matrix-gate checks the matrix. Neither proves the generator is holding story + design + original req at once. Without this join gate the bundle file is documentation."
+    },
+    {
       "id": "story-ownership-clusters",
       "axis": "traceability",
       "type": "computational",
@@ -1683,6 +1790,45 @@
       "description": "Bun Phase A anti stub-to-green computational sensor. hooks/lib/stub-smell.js classifies production (non-test) staged content; scripts/stub-smell-gate.js --staged; pre-commit via gates-early.checkStubSmellGate on standard+ tiers. Allow annotation: harness:stub-ok story=E#-S# on the same line. Complements code-reviewer Iron Laws."
     },
     {
+      "id": "task-envelope",
+      "axis": "traceability",
+      "type": "computational",
+      "cadence": "session",
+      "status": "active",
+      "scope": "runtime",
+      "wired_at": ".claude/hooks/lib/task-envelope.js",
+      "records_as": [
+        "task-envelope-scope"
+      ],
+      "signal": "a write or Bash action exceeds approved paths/actions, the envelope was tampered with, or the task budget is exhausted",
+      "net_add_justification": "Operationalizes the risk-envelope decision through existing pre-write, pre-Bash, and budget enforcement surfaces. No existing control binds task intent/risk to path scope, prohibited semantic actions, and per-task budgets; this is one shared contract rather than three new gates.",
+      "description": "Integrity-hashed execution contract created by task-envelope.js. Existing pre-write/pre-Bash hooks load it: absent remains compatible with ordinary attended writes, present-invalid fails closed, and present-valid restricts writes to allowed_paths and marks privileged semantic actions as externally authorized only. budget-state.js prefers its dimensions. /feature, /change, and /auto create/verify it before implementation."
+    },
+    {
+      "id": "task-evidence-finalizer",
+      "axis": "traceability",
+      "type": "computational",
+      "cadence": "integration",
+      "status": "active",
+      "scope": "artifacts",
+      "wired_at": ".claude/scripts/finalize-task-evidence.js",
+      "signal": "task completion lacks a green gate receipt, fresh passing required evidence, enough distinct trusted approvals, human-execution proof where required, or exact task/run/hash binding",
+      "net_add_justification": "Existing gates emitted strong but independent artifacts, while required_evidence in the task envelope was declarative. This finalizer does not add new graders: it closes the loop by freshness-checking and hashing existing outputs, verifying signed approvals, and emitting one task/run-bound completion receipt that downstream PR and outcome automation can trust.",
+      "description": "Central completion gate invoked by /gate after quality-card. Resolves each risk-required evidence class to existing gate artifacts, requires those artifacts to post-date the task contract and carry passing verdicts, verifies the envelope's distinct signed-approval threshold and R4 human-execution receipt, and writes an integrity-stamped task-completion-receipt.json bound to the task-envelope hash and canonical run id."
+    },
+    {
+      "id": "task-lifecycle",
+      "axis": "traceability",
+      "type": "computational",
+      "cadence": "session",
+      "status": "active",
+      "scope": "runtime",
+      "wired_at": ".claude/hooks/lib/task-lifecycle.js",
+      "signal": "execution occurs before activation, after expiry/completion/abort, against a stale envelope version, through an invalid transition, or after lifecycle-chain tampering",
+      "net_add_justification": "The task envelope constrained execution but had no temporal semantics: it could remain reusable forever, be silently replaced between tasks, or continue after completion. This one hash-chained state machine supplies expiry, terminal states, rotation safety, and authorized amendment history to both existing pre-tool gates.",
+      "description": "Hash-chained task lifecycle with created, active, amended, completed, and aborted states. Version-2 envelopes expire, preserve previous-envelope hashes, and record signed amendments. Writes and Bash require an active, unexpired lifecycle binding; completion requires the matching task-evidence receipt, terminal tasks cannot execute, and rotation archives the prior envelope."
+    },
+    {
       "id": "tdd-test-first",
       "axis": "behaviour",
       "type": "computational",
@@ -1705,6 +1851,32 @@
       "wired_at": ".claude/scripts/test-deletion-gate.js",
       "signal": "a staged commit deletes a test-shaped file that had live test cases, decreases a test-shaped file's live test-case count, or adds a new skip/todo marker without decreasing the count",
       "description": "G7 (mutation-gate), G17 (legacy-discipline), and G30 (sprout-diff) all prove a change didn't silently regress PRODUCTION code; none of them catch the adjacent failure mode a refactor or dependency bump under pressure can reach for instead: making the suite pass by deleting, or newly skipping, the test that would have caught the regression, rather than fixing the code. hooks/lib/test-deletion-gate.js's classifyTestFileChange compares each staged test-shaped file's (hooks/lib/tdd.js isTestFile) old (git show HEAD:<file>) and new (git show :<file>, the staged index content) bodies with heuristic regex counts (same tier as secrets.js's baseline scan and tdd.js's own isTestFile — not an AST parse): a live-test-marker count (it(/test(/it.each(/test.each(/def test_...) that drops, or a deletion of a file that had live markers, is a hard finding; a same-or-higher test count but a newly added skip/todo marker (.skip(/.todo(/xit(/xdescribe(/xtest(/@pytest.mark.skip/@unittest.skip) is a second, independent finding kind. scripts/test-deletion-gate.js does the git plumbing (collectStagedChanges, same --diff-filter=M/D DI-exec pattern legacy-discipline-gate.js and sprout-diff-gate.js use) and exposes both a --staged CLI (npm run test-deletion-gate) and a checkStaged(exec) entry point the pre-commit hook calls directly. Wired into .claude/git-hooks/pre-commit as checkTestDeletionGate, deliberately called BEFORE the docs-only early exit (stagedFiles() filters --diff-filter=ACMR, which excludes pure deletions, so a commit that ONLY deletes a test file would otherwise never reach a check gated behind that filter) — the same reason checkSecrets and checkAmendmentProvenance already run there. Default-on hard block (HARNESS_TEST_DELETION_GATE=off acknowledges a local skip, mirroring HARNESS_LEGACY_DISCIPLINE_GATE=off's shape); a real exception (a test for removed functionality, a flaky test being quarantined) belongs in specs/reviews/sensor-waivers.json (sensor_id: test-deletion-guard) per docs/sensor-arbitration.md. Degrades loudly, never silently, when the sensor script is missing/unloadable (noteSkip, same convention as every other lazy-required pre-commit gate). KNOWN LIMITATIONS (disclosed, not hidden): heuristic regex counting, not an AST parse, so unusual formatting or dynamically generated test cases (a loop emitting it(...) calls) can mis-count; a test rewritten to cover different/broader behavior at the same or higher count is invisible to this gate (it proves the COUNT and SKIP STATE didn't regress, not that behavioral coverage is equivalent — that judgment stays with code-reviewer / the human); composes with, does not duplicate, regression-suite-full (G15) and impact-scoped-regression (G16), which prove a still-PRESENT test's outcome didn't regress, not that the test itself wasn't quietly removed or skipped."
+    },
+    {
+      "id": "test-integrity",
+      "axis": "behaviour",
+      "type": "computational",
+      "cadence": "commit",
+      "status": "active",
+      "scope": "artifacts",
+      "gap_ref": "G43",
+      "wired_at": ".claude/scripts/test-integrity-gate.js",
+      "signal": "a test file whose sha256 differs between the run that made it FAIL and the run that made it PASS",
+      "net_add_justification": "The harness proved test EXISTENCE but never test ORDERING (see red-phase-record). test-write-lock (G42) is a turn-level gate, and turn-level gates are steppable — hooks can be disabled, the agent can work outside Claude Code, --no-verify exists. The source names this exact failure mode (#6: a turn gate needs a merge-level backstop with no in-session override). This control is that backstop, and it is arithmetic over a hash-chained ledger rather than a judgement, so it holds in CI where no session state exists.",
+      "description": "Pure logic in lib/test-integrity.js; git/fs plumbing in scripts/test-integrity-gate.js; registered in gate-registry.js at order 155 with runsWithoutSource:true and exposed as gates-verification.js#checkTestIntegrity in the verification pack. ONE invariant: a test file must not change between the run that made it RED and the run that made it GREEN. The PAIR carries the proof — no single anchor can, because a tamperer edits and re-runs, after which every single-anchor rule agrees with itself. The anchor is the FIRST red of each cycle, not the last: anchoring on the last red let a weakened test launder itself (strip assertions but stay red, re-run to re-anchor at the weakened text, then fix the one survivor). A consequence, intended: correcting a test you believe is genuinely wrong now SURFACES rather than passing silently, because from the outside correcting and weakening are indistinguishable. NOT scoped by task_id — scoping by it made the gate a self-service unlock. Silent on still-red files (no pair yet), green-first pin-downs, and edits after the pair closed. Emits specs/reviews/test-integrity.json because the ledger is gitignored and a hash chain would conflict across branches. A ledger failing its own integrity check BLOCKS. VACUITY IS EXPLICIT: with no ledger there is nothing to check, so the verdict carries vacuous:true and prints a WARNING rather than a green; --strict turns that into a failure. CI runs NON-STRICT until the PostToolUse recorder is wired in settings.json, because until then there is no ledger to find. Bypass HARNESS_TEST_INTEGRITY_GATE=off. ADDITIONALLY reports a NEVER-RED finding (advisory, non-blocking): a test file newly added by the commit that the ledger never observed failing. Everything else in this control proves 'if a test was red it was not weakened to go green'; nothing proves 'every test was red first', so a tautological test — written to match code that already works and green on its first run — leaves no record and every cycle check is silent. That is failure mode #11 in its most common form, and neither independent review round raised it. mutation-smoke (G7) covers it from the other direction but early-returns on inAutoBuild, so /change, /vibe, /feature and ordinary work have nothing. It is ADVISORY on purpose rather than out of caution: at the ledger level a characterization pin-down is INDISTINGUISHABLE from a tautological test (both are green-only by design — pinning-down-behavior Step 3 runs pins green against unmodified code), so blocking would fail the legacy lane for following its own skill. Surfacing 'this test was never observed failing' is the honest ceiling without a signal that separates intent."
+    },
+    {
+      "id": "test-write-lock",
+      "axis": "behaviour",
+      "type": "computational",
+      "cadence": "session",
+      "status": "active",
+      "scope": "artifacts",
+      "gap_ref": "G42",
+      "wired_at": ".claude/hooks/pre-write-gate.js",
+      "signal": "a Write/Edit/MultiEdit or a shell write (sed -i/tee/patch) targets a test file whose latest observed run is still failing",
+      "net_add_justification": "The harness proved test EXISTENCE but never test ORDERING (see red-phase-record). This is the in-loop BLOCK, and it is the control the source ranks highest by value-to-effort: read-only test paths outperformed strict prompting by ~8 points on realistic reward-hacking benchmarks while preserving legitimate task performance. It is not reducible to test-deletion-guard (G31), which fires at commit and only on deleted/skipped cases, nor to tdd-test-first, which only asks whether a test file exists. It costs zero when no test is red.",
+      "description": "Decision logic in lib/test-write-lock.js (pure), wired into BOTH pre-write-gate.js (Edit/Write/MultiEdit) and pre-bash-gate.js via bash-targets.js extractWriteTargets (sed/tee/patch) — a lock covering only the native edit tools is theatre when the agent has a shell. Both hooks relativise the target against realResolve(projectDir): relativising a /private/var path against a /var projectDir yields ../../.., which never matches a test-file pattern, and the lock then passes silently on an equivalent path form. That bug shipped in the first version on each side in turn and is now covered by a round-trip asserting both forms block through both hooks. KEYED ON (file, CONTENT HASH), deliberately not on task_id or the path alone — independent review showed both of those were agent-controlled unlocks: declaring a different task (or none) emptied the ledger and released every lock, and running a file once before adding the failing test marked it green-first forever. Content is the one part of the key an agent cannot restate without actually changing the test. The two narrowings that make the lock usable both survive under content-keying: green-first never arms (a pin-down runs green at text P and Step 4 flips PRODUCTION code, so it is still text P — no lane exemption needed), and the lock closes when the file legitimately goes green (locking for a whole task would block adding test 2 to a file whose test 1 passes). A tampered ledger BLOCKS rather than failing open, and the pre-bash call is guarded so a throw cannot unwind and skip the remaining scope/trust-boundary checks. Bypass HARNESS_TEST_LOCK=off."
     },
     {
       "id": "token-advisor",
@@ -1755,6 +1927,18 @@
       "net_add_justification": "Pre-existing control, previously UNREGISTERED. It has been running on every write/commit; registering it corrects the inventory rather than adding machinery. The budget rises because the old count understated what governs this repo."
     },
     {
+      "id": "turn-batching",
+      "axis": "maintainability",
+      "type": "computational",
+      "cadence": "integration",
+      "status": "active",
+      "scope": "runtime",
+      "wired_at": "test/e2e/helpers/phase-budget.js",
+      "signal": "agents stopped issuing independent tool calls together, so the same work costs more turns and more context re-reads",
+      "net_add_justification": "The largest single cost driver measured on this harness, and nothing watched it. Over the 2026-08-21 sprint-1 baseline: 695 of 833 turns (83%) issued exactly ONE tool call, at ~116K resident context each -- 96.6M tokens re-read for 1029 calls, which IS the $27.88 cache-read line against $2.70 of output. 369 of those turns (44%) were removable by merging consecutive same-tool runs alone, 309 of them Bash: environment probes (which/--version/ls/docker ps) and toolchain setup issued one command per turn, each paying a full context re-read. The existing cost ratchet cannot own this: it watches dollars, so a prompt change that quietly stops agents batching arrives as an unexplained price rise two phases downstream. context-ceiling bounds how BIG a context gets; this bounds how many times it is re-read. It was invisible until the turnProfile block-line bug was fixed -- the meter had been reporting /auto as 5 turns, 100% toolless, for a phase that ran 574 turns at 1.32 calls each.",
+      "description": "Route-level efficiency ratchet over the live e2e bill. Records all_turns, tool_calls, calls_per_turn, single_call_pct and ctx_re_read_tokens per route, and fails a run on either of two directions the cost ratchet reads backwards: a RISE in ctx_re_read_tokens (the direct driver of the cache-read bill) or a FALL in calls_per_turn (the lever that produces it), each against the committed baseline with the same 30% tolerance band. An IMPROVEMENT is never a regression, and a baseline recorded before batching was measured is skipped rather than failed. Paired with the batching rules in implementer.md (Invariant 7), generator.md (Rule 1.4, which must be passed down into every teammate prompt -- 569 of the 574 /auto turns were inside subagents) and evaluator.md, so the discipline and its ratchet ship together."
+    },
+    {
       "id": "type-check",
       "axis": "maintainability",
       "type": "computational",
@@ -1764,6 +1948,18 @@
       "wired_at": ".claude/hooks/verify-on-save.js",
       "signal": "type errors",
       "description": "mypy per-file on save (block messages enriched per-rule via lib/sensor-guidance, gap G5); tsc --noEmit project-wide at pre-commit."
+    },
+    {
+      "id": "unattended-preflight",
+      "axis": "behaviour",
+      "type": "computational",
+      "cadence": "planning",
+      "status": "active",
+      "scope": "runtime",
+      "wired_at": ".claude/scripts/unattended-preflight.js",
+      "signal": "headless execution lacks a valid task contract, fail-closed sandbox, scrubbed subprocess environment, deny-by-default egress policy, verified isolation, credential separation, or required scanners",
+      "net_add_justification": "settings.auto.json previously carried only a warning to use a safe VM/container; nothing verified the compensating controls before unattended delegation. This turns that procedural boundary into one fail-closed preflight while leaving environment provisioning outside core.",
+      "description": "Required /auto preflight when HARNESS_UNATTENDED=1. Verifies task envelope, sandbox.enabled+failIfUnavailable, CLAUDE_CODE_SUBPROCESS_ENV_SCRUB, deny-by-default unattended-policy.json, Docker/CI or explicit isolation evidence, absence of sensitive environment variables and mounted host credential stores, configured scanners, and external evidence that policy/authority paths are mounted read-only. Writes a diagnostic receipt and exits non-zero on any missing condition."
     },
     {
       "id": "unit-tests",
@@ -1799,6 +1995,18 @@
       "description": "Deterministic vocabulary-consistency sensor: extends the traceability axis from ID-linkage (trace-check) to term-linkage. Catches 'Account in the BRD, User in the API contract' before code is written. CONTEXT.md terms may originate from domain_concepts (Step 2.8) or, for any enabled vertical plugin registered in vertical-glossary-packs.json, from vertical-glossary-pack.js (Step 2.7) — vocabulary-check.js validates either origin identically."
     },
     {
+      "id": "work-claim-guard",
+      "axis": "behaviour",
+      "type": "computational",
+      "cadence": "commit",
+      "status": "active",
+      "scope": "runtime",
+      "wired_at": ".claude/scripts/work-claim.js",
+      "signal": "a second generator lead or implementer was dispatched for a group/story that another live session is already implementing",
+      "net_add_justification": "concurrency-gate.js caps HOW MANY subagents run (18) but knows nothing about WHAT they work on, so a quantity gate structurally cannot express \"this group already has a lead\". Nothing else owned work identity: parallel-implement.lock is read only by git-safety.js to gate destructive git commands, and features.json records completion, not in-flight ownership. The audited failure: /auto ran twice in one session, each invocation dispatched a generator lead for Group A, and two implementer agents implemented story E1-S1 concurrently (35 min and 29 min, ~15M cache reads) writing SEVEN of the same files -- auth_service.py, deps.py, main.py, session_repository.py, auth.py, logging_config.py, test_auth_service.py -- leaving last-writer-wins contents across files meant to be mutually consistent. Found by the live sprint-1 e2e build; no unit test could see it and a green suite afterwards would not disprove it.",
+      "description": "Exclusive claim per unit of work, keyed <kind>:<id> (group:A, story:E1-S1). A claim is an atomic exclusive file create, so exactly one dispatcher wins a genuine race; a second claim exits 2 and names the holding session and how long it has held. /auto Section 4 claims the group before dispatching its lead and each story before its teammate spawns, releasing on every path including failure. That invocation is PROSE, so it binds only a cooperating agent: dispatch-integrity claims the same keys from a PreToolUse hook so an off-script agent cannot skip the ledger. A claim goes stale after 4 hours -- the TTL was 90 minutes against a 35-minute implementer until the 2026-08-21 sprint-1 baseline ran one for 133 minutes, which a 90-minute TTL would have declared stale WHILE IT WAS STILL WRITING FILES, letting a second dispatcher take it over and reproduce the very duplicate this guard exists to stop -- so a crashed run cannot block its group forever; a takeover is always reported, never silent, because it means a previous run died mid-implementation and its partial work is still on disk. Keys that could escape the state directory are refused rather than sanitised: a silently rewritten key would claim the wrong unit and the guard would pass while protecting nothing."
+    },
+    {
       "id": "write-scope",
       "axis": "behaviour",
       "type": "computational",
@@ -1809,154 +2017,6 @@
       "signal": "write outside the project / tmp / project-memory scope",
       "description": "PreToolUse(Write|Edit) block on any write resolving outside the project tree, /tmp, or this project's Claude memory dir (isWriteInScope). Stops an agent editing unrelated repos or home-directory config.",
       "net_add_justification": "Pre-existing control, previously UNREGISTERED. It has been running on every write/commit; registering it corrects the inventory rather than adding machinery. The budget rises because the old count understated what governs this repo."
-    },
-    {
-      "id": "plan-approval",
-      "axis": "traceability",
-      "type": "computational",
-      "cadence": "planning",
-      "status": "active",
-      "scope": "artifacts",
-      "wired_at": ".claude/scripts/plan-approval.js",
-      "signal": "a planning phase entered with no recorded human review, a review still in changes-requested, or an approval whose artifacts have changed since it was given",
-      "net_add_justification": "The human planning gates were prose-only and therefore unobservable: nothing downstream could tell whether /spec, /design or /test ever stopped for a human, what was said, or whether the plan still matches what was approved — the feedforward-only failure the sensor-value-meter cannot detect because no outcome was ever written. This is the feedback half. It owns one invariant no existing sensor covers (human review happened and still applies), distinct from trace-check.js, which owns machine ID-linkage between artifacts and says nothing about human sign-off. The digest check is the load-bearing part: without it an agent can rewrite the stories after approval and inherit a receipt for a plan the human never saw.",
-      "description": "Receipt + hard gate for the plan-review-loop at /spec, /design, /test. record/waive/check verbs write specs/reviews/<phase>-approval.json (rounds, verbatim feedback, changes, declined items, artifact sha256 digests). Rejects placeholder feedback and an approval that leaves earlier feedback unaccounted for; voids an approval whose artifacts changed. /design blocks on spec, /test on design, /auto on all three (check --phase all). Headless lanes record a waiver naming the lane; --require-human refuses waivers. Flags low_engagement (zero feedback, zero answered questions) as a rubber-stamp trend signal for /retro without blocking."
-    },
-    {
-      "id": "evidence-integrity",
-      "axis": "behaviour",
-      "type": "computational",
-      "cadence": "integration",
-      "status": "active",
-      "scope": "runtime",
-      "gap_ref": "G39",
-      "wired_at": ".claude/scripts/evidence-integrity-gate.js",
-      "signal": "a browser check recorded PASS in the evaluator's evidence ledger that is not backed by real user-path interaction against a pre-committed sprint-contract check — a functional assertion satisfied via browser_evaluate, a pass with no interaction at all, a contracted check with no evidence entry, an evidence entry for a check the contract never declared, or a missing/mismatched ledger",
-      "description": "Evidence-integrity gate (gap G39). The evaluator is granted browser_evaluate because it needs it to inject axe-core, so it can satisfy a UI assertion by reading state or firing a handler in JavaScript instead of driving the app — the \"JavaScript cheating\" failure mode Cognition documents for Devin's own computer-use testing (cognition.com/blog/testing-development). That silently voids the evaluator's own black-box premise (\"the running app produces the evidence; you never read source to decide it looks right\"), and no existing control observed it: browser_evaluate appeared in the evaluator's tool list and in the axe-core instructions, and nowhere else. The evaluator now emits specs/reviews/evaluator-evidence.json — one entry per browser check with the contract's check id, layer (playwright/accessibility), verdict (pass/fail/untested), the interaction tools actually used, matrix_ids and artifact paths — and hooks/lib/evidence-integrity.js cross-checks that ledger against the read-only sprint contract. Five findings, all BLOCK: js-bypass, no-interaction-pass, missing-evidence, undeclared-check, unbacked-axe (plus missing-ledger / group-mismatch / missing-contract as fail-loud input errors). Registered in .claude/config/gate-checks.json (pack: verification, trigger exists:sprint-contracts, blocking) so /gate runs it, folded into /evaluate as failure_layer \"evidence\", and read by quality-card.js. Recording an unexecutable check as \"untested\" rather than omitting it is what lets the gate distinguish not-attempted from verified; the untested list is reported, never a finding, because \"never report a layer as passed that you could not execute\" is already the evaluator's own rule (one owner per invariant). KNOWN LIMITATION (disclosed, not hidden — the same precedent G23 sets): three findings (missing-evidence, undeclared-check, no-interaction-pass) are arithmetic against the pre-committed contract and hold regardless of how honestly the evaluator describes its own method, but js-bypass and unbacked-axe read a self-declared interaction list. That is deliberate parity with Cognition's own control (annotate the expectation before acting, which makes rationalising an unexpected result as a pass harder) — it catches the rationalising evaluator, not a determined one. Tamper-proof enforcement needs a PostToolUse tap on the Playwright MCP browser_evaluate tool, which requires a .claude/settings.json matcher and is therefore inter-session work behind HARNESS_PREFIX_EDIT; the snippet is recorded in HARNESS.md G39.",
-      "net_add_justification": "Owns one invariant no existing control covers: that a claimed runtime PASS was earned through the user path. The harness's verification breadth is already ahead of published practice on obligation COVERAGE (verification matrix, constraint obligations, AT-first, record/replay boundary doubles, deterministic grounding gates), so the residual risk has moved to evidence INTEGRITY — whether a green verdict was earned at all. That is the same defect class CLAUDE.md principle 5 was written from (a gate reading a flat contract while real contracts nest under `contract` kept every test green while the feature was inert), and the one place the evaluator's black-box premise could be voided without any sensor noticing. Paid for at the /gate cadence with no new agent, no new hook, and no new prompt stage: one pure lib, one CLI, one registry row."
-    },
-    {
-      "id": "red-phase-record",
-      "axis": "behaviour",
-      "type": "computational",
-      "cadence": "session",
-      "status": "active",
-      "scope": "artifacts",
-      "gap_ref": "G41",
-      "wired_at": ".claude/hooks/red-phase-record.js",
-      "signal": "a Bash test run observed at PostToolUse: which runner, pass or fail, which test files, and the sha256 of each test file as it ran",
-      "net_add_justification": "The harness proved test EXISTENCE (tdd-test-first in pre-write-gate.js) but never test ORDERING — that gate's own comment says \"pair with tdd-guard for red-green ordering\", and no such pair existed. A test written to match code already written passed every control we had, so tautological tests were undetected. test-deletion-guard (G31) catches a test DELETED or newly SKIPPED; nothing caught the cheaper move — rewriting an assertion mid-loop so a failing test passes while the production code stays broken. ImpossibleBench measures that behaviour at 50-55% for frontier models on impossible tests, and read-only test paths was the strongest single mitigation reported. This control is the EVIDENCE half and has no substitute in the existing set: G42 and G43 are both arithmetic over its ledger, so without it neither can exist. It is observation-only and never blocks, so a misclassification costs a spurious ledger row rather than a wedged session. It also lands the PostToolUse tap HARNESS.md flags as the real tamper-proofing route for G39.",
-      "description": "PostToolUse(Bash) recorder. lib/red-phase.js classifies the command (pytest/vitest/jest/node --test/go test/npm test, with env assignments and delegates like `uv run --frozen`, `npx`, `poetry run` stripped) and the response as pass | fail | no-tests | env-broken, reusing toolchain.js MISSING_SIGNATURES rather than a second copy. node --test carries BOTH reporter shapes: Node >=22 defaults to `spec` (`ℹ fail 1`), not TAP (`# fail 1`) — matching TAP alone made every real run of this repo's own suite classify env-broken, so nothing was ever recorded. That dead control was invisible to hand-written fixtures and is now guarded by test/red-phase-real-runner.test.js, which drives the REAL runner and asserts on what it actually prints. env-broken is the other load-bearing distinction: pytest exiting non-zero because pytest is absent is NOT a red phase. FILTERED runs (-k / --test-name-pattern / --grep) are dropped entirely rather than parsed: the agent chooses which tests execute, so a filtered green must never close a cycle and a filtered red must never arm one — and no count check can catch it, because node reports `pass 1` even for a pattern matching nothing and for a file containing no tests (it counts the file itself). An unfiltered green sweep that names no files is attributed to the files currently failing (openRedFiles), or a cycle opened by a named red run could never be closed by a bare `pytest` and the file would stay locked forever. lib/red-phase-ledger.js appends a hash-chained event to .claude/state/red-phase.jsonl carrying test_files, a sha256 per file, head_sha and task_id; appendRun REFUSES an env-broken verdict, a run naming no files, or a run missing any file hash. The ledger path is registered as protected machinery (trust-boundary.js) alongside its peer task-lifecycle.jsonl. KNOWN LIMITATIONS (disclosed): only files the command or output NAMES are recorded for a red run; `rm <path>` is not recognised as a write by bash-targets.js, so the ledger can still be deleted via the shell — a PRE-EXISTING kernel gap that task-lifecycle.jsonl and the coverage baselines share. PROVENANCE, and its disclosed ceiling: the recorder fires at PostToolUse, AFTER the command, so hashing the file then captures the text as it stands when the HOOK runs, not as the RUNNER read it. pre-bash-gate (already PreToolUse(Bash), so no settings.json change) now snapshots the pre-run hashes; the recorder prefers those and DROPS any file whose text moved during the command, since which version produced the verdict is then unknowable. That closes the case where the file is left changed. It does NOT close write-run-restore-to-identical (`python -c \"...write(WEAK)\" ; pytest t.py ; git checkout t.py`), because pre == post and no before/after tap can see inside a single command. What IS visible is the co-tenancy, so provenanceUnverifiable() refuses to record a test run sharing its command line with inline interpreter code (python/node/perl/ruby -c/-e/-i) or a git restore/checkout/stash. Narrow on purpose: those combinations are vanishingly rare in honest use and a false positive costs one unrecorded run. A determined adversary with arbitrary shell can still defeat this; the control targets the rationalising agent, not the determined one — the same disclosed stance as G39."
-    },
-    {
-      "id": "test-write-lock",
-      "axis": "behaviour",
-      "type": "computational",
-      "cadence": "session",
-      "status": "active",
-      "scope": "artifacts",
-      "gap_ref": "G42",
-      "wired_at": ".claude/hooks/pre-write-gate.js",
-      "signal": "a Write/Edit/MultiEdit or a shell write (sed -i/tee/patch) targets a test file whose latest observed run is still failing",
-      "net_add_justification": "The harness proved test EXISTENCE but never test ORDERING (see red-phase-record). This is the in-loop BLOCK, and it is the control the source ranks highest by value-to-effort: read-only test paths outperformed strict prompting by ~8 points on realistic reward-hacking benchmarks while preserving legitimate task performance. It is not reducible to test-deletion-guard (G31), which fires at commit and only on deleted/skipped cases, nor to tdd-test-first, which only asks whether a test file exists. It costs zero when no test is red.",
-      "description": "Decision logic in lib/test-write-lock.js (pure), wired into BOTH pre-write-gate.js (Edit/Write/MultiEdit) and pre-bash-gate.js via bash-targets.js extractWriteTargets (sed/tee/patch) — a lock covering only the native edit tools is theatre when the agent has a shell. Both hooks relativise the target against realResolve(projectDir): relativising a /private/var path against a /var projectDir yields ../../.., which never matches a test-file pattern, and the lock then passes silently on an equivalent path form. That bug shipped in the first version on each side in turn and is now covered by a round-trip asserting both forms block through both hooks. KEYED ON (file, CONTENT HASH), deliberately not on task_id or the path alone — independent review showed both of those were agent-controlled unlocks: declaring a different task (or none) emptied the ledger and released every lock, and running a file once before adding the failing test marked it green-first forever. Content is the one part of the key an agent cannot restate without actually changing the test. The two narrowings that make the lock usable both survive under content-keying: green-first never arms (a pin-down runs green at text P and Step 4 flips PRODUCTION code, so it is still text P — no lane exemption needed), and the lock closes when the file legitimately goes green (locking for a whole task would block adding test 2 to a file whose test 1 passes). A tampered ledger BLOCKS rather than failing open, and the pre-bash call is guarded so a throw cannot unwind and skip the remaining scope/trust-boundary checks. Bypass HARNESS_TEST_LOCK=off."
-    },
-    {
-      "id": "test-integrity",
-      "axis": "behaviour",
-      "type": "computational",
-      "cadence": "commit",
-      "status": "active",
-      "scope": "artifacts",
-      "gap_ref": "G43",
-      "wired_at": ".claude/scripts/test-integrity-gate.js",
-      "signal": "a test file whose sha256 differs between the run that made it FAIL and the run that made it PASS",
-      "net_add_justification": "The harness proved test EXISTENCE but never test ORDERING (see red-phase-record). test-write-lock (G42) is a turn-level gate, and turn-level gates are steppable — hooks can be disabled, the agent can work outside Claude Code, --no-verify exists. The source names this exact failure mode (#6: a turn gate needs a merge-level backstop with no in-session override). This control is that backstop, and it is arithmetic over a hash-chained ledger rather than a judgement, so it holds in CI where no session state exists.",
-      "description": "Pure logic in lib/test-integrity.js; git/fs plumbing in scripts/test-integrity-gate.js; registered in gate-registry.js at order 155 with runsWithoutSource:true and exposed as gates-verification.js#checkTestIntegrity in the verification pack. ONE invariant: a test file must not change between the run that made it RED and the run that made it GREEN. The PAIR carries the proof — no single anchor can, because a tamperer edits and re-runs, after which every single-anchor rule agrees with itself. The anchor is the FIRST red of each cycle, not the last: anchoring on the last red let a weakened test launder itself (strip assertions but stay red, re-run to re-anchor at the weakened text, then fix the one survivor). A consequence, intended: correcting a test you believe is genuinely wrong now SURFACES rather than passing silently, because from the outside correcting and weakening are indistinguishable. NOT scoped by task_id — scoping by it made the gate a self-service unlock. Silent on still-red files (no pair yet), green-first pin-downs, and edits after the pair closed. Emits specs/reviews/test-integrity.json because the ledger is gitignored and a hash chain would conflict across branches. A ledger failing its own integrity check BLOCKS. VACUITY IS EXPLICIT: with no ledger there is nothing to check, so the verdict carries vacuous:true and prints a WARNING rather than a green; --strict turns that into a failure. CI runs NON-STRICT until the PostToolUse recorder is wired in settings.json, because until then there is no ledger to find. Bypass HARNESS_TEST_INTEGRITY_GATE=off. ADDITIONALLY reports a NEVER-RED finding (advisory, non-blocking): a test file newly added by the commit that the ledger never observed failing. Everything else in this control proves 'if a test was red it was not weakened to go green'; nothing proves 'every test was red first', so a tautological test — written to match code that already works and green on its first run — leaves no record and every cycle check is silent. That is failure mode #11 in its most common form, and neither independent review round raised it. mutation-smoke (G7) covers it from the other direction but early-returns on inAutoBuild, so /change, /vibe, /feature and ordinary work have nothing. It is ADVISORY on purpose rather than out of caution: at the ledger level a characterization pin-down is INDISTINGUISHABLE from a tautological test (both are green-only by design — pinning-down-behavior Step 3 runs pins green against unmodified code), so blocking would fail the legacy lane for following its own skill. Surfacing 'this test was never observed failing' is the honest ceiling without a signal that separates intent."
-    },
-    {
-      "id": "adopted-spine-integrity",
-      "axis": "traceability",
-      "type": "computational",
-      "cadence": "planning",
-      "status": "active",
-      "scope": "artifacts",
-      "wired_at": ".claude/scripts/brd-adopt.js",
-      "signal": "a BRD requirement whose id, text or PRD label differs from what brd-adopt.js produced from the immutable source",
-      "net_add_justification": "The one property of adoption that no existing gate can check. brd-render is told in plain words to fill `taxonomy` and leave `id`/`text` alone, and its own SKILL admits the consequence if it does not: an adopted spine passes the grounding gate as an IDENTITY, and a re-keyed or re-worded spine that still carries `traces` passes it as COVERAGE — the verdicts are indistinguishable. trace-check owns 'every id links'; this owns 'the ids are still the source's ids'. A live run re-keyed all 24 requirements from FRD-n to FR-n with nothing noticing, leaving two runs of the same pipeline emitting brd-requirements.json in two different id spaces and stranding the milestone-scoped grounding gate downstream.",
-      "description": "`brd-adopt.js --verify` re-derives the requirement spine from specs/brd/frd-requirements.json and compares id, text and PRD label against the on-disk brd-requirements.json. The adopter itself is the oracle, so the check cannot drift from what adoption produces. taxonomy and acceptance are deliberately not compared — filling them is the renderer's job and the ten-slot floor gates them separately. Exit 1 = the baseline was modified (dropped, invented, re-keyed or re-worded); exit 2 = nothing to verify against, which is a setup problem and never a pass. Hard block at /brd Step 4.2, --prd/--frd mode only; delta mode passes the same --out-dir it adopted with. The `label` field it checks is what closed the two-id-space join: milestones and acceptance key on the PRD identifier, requirements key on the spine id, and before this the identifier existed only inside free-text `section`."
-    },
-    {
-      "id": "phase-context-handoff",
-      "axis": "traceability",
-      "type": "computational",
-      "cadence": "planning",
-      "status": "active",
-      "scope": "artifacts",
-      "wired_at": ".claude/scripts/handoff-check.js",
-      "signal": "a planning phase starting inside the same session that approved its predecessor, or a render stretch starting inside the session that shaped its decisions",
-      "net_add_justification": "The /clear handoff existed but was advisory, and advisory lost: on a metered run it printed at /brd approval and /spec continued in the same session anyway, running 47 turns at a 273K average context against ~110K for a fresh one. No existing control covers this. plan-approval owns whether a human approved and whether the plan still matches — it says nothing about which conversation the successor starts in, and cannot: the approving session id was not recorded until now. Distinct invariant, deterministic signal, and it fires only at the three phase boundaries rather than after every task.",
-      "description": "Two checkpoints, one engine. (1) --stage boundary: hard block at Step 0 of /spec, /design and /test, refusing to start when the predecessor's approval receipt names the live session; plan-approval.js record stamps session_id into the receipt. (2) --stage render: hard block at /design Step 0.9 §3 when the design decisions verdict names the live session — /design still re-enters via --render-only. /spec is exempt (`same_session_render`): it dispatches spec-render in the same invocation so the command is not finished with an empty specs/stories/. --render-only remains the re-expand path after spec-unresolved.json. The stamp still records who SHAPED the decisions, carried forward by a sha256 of the decisions file. The live id comes from the run receipts record-run.js already writes. Every uncertain case passes — no record, no session id, a record written before stamping existed. Two exemptions ride on the record: in_session (/build) and waived_by (a headless lane)."
-    },
-    {
-      "id": "planning-gate-receipts",
-      "axis": "traceability",
-      "type": "computational",
-      "cadence": "session",
-      "status": "active",
-      "scope": "artifacts",
-      "wired_at": ".claude/hooks/lib/gate-receipt-sensor.js",
-      "signal": "a lane that owns planning gates ended a session with a phase whose artifacts exist but whose review recorded no approving receipt",
-      "net_add_justification": "R7 asked for the planning gates to be enforced by a hook or deleted. Enforcement is not available: hooks fire on tool calls and there is no phase-transition event to gate, and plan-approval#phaseRan tests directory EXISTENCE rather than authorship — so in any repo that has run /build once, specs/brd|stories|design stay populated and a hook keyed on them would block every later /feature, /change, /vibe and /refactor, lanes that reach /auto writing no BRD at all. What was actually missing on the audited run was not enforcement but VISIBILITY: two of three gates left no receipt and nobody could tell. plan-approval detects a bad receipt when something asks it; this detects that nothing asked. Distinct signal, and the only one that fires when the gate is skipped rather than failed.",
-      "description": "Stop-cadence sensor, reports and never blocks. For lanes that own planning gates (the lanes record-run writes: gated/auto/autonomous/lite* -> brd,spec,design,test; sprint -> brd,spec,design; finalize is not applicable) it reports any phase whose artifacts exist but whose receipt is absent or still changes-requested. A waiver is NOT a finding — a deliberately headless run and a gate nobody ran are different facts. A phase that never ran is not a finding either; it was not reached. Rides the existing review-on-stop Stop hook rather than adding one, so it needs no settings.json change."
-    },
-    {
-      "id": "agent-write-scope",
-      "axis": "behaviour",
-      "type": "computational",
-      "cadence": "session",
-      "status": "partial",
-      "scope": "universal",
-      "wired_at": ".claude/hooks/agent-write-scope.js",
-      "signal": "a subagent Write/Edit outside its contract",
-      "net_add_justification": "The runtime half of agent-write-contract. trust-boundary.js already states in a comment that evaluator-side tampering is the dominant spontaneous integrity failure documented for coding agents, and stops an agent editing the GATES; nothing stopped a reviewer editing the CODE it was judging, or a builder writing the verdict that judged it. Decides from agent_type, the field a real subagent payload carries (captured 2026-08-22).",
-      "description": "PreToolUse gate on Write/Edit/MultiEdit/NotebookEdit. Resolves the acting agent from agent_type, loads that agent contract from the PROJECT (so a scaffolded repo governs its own agents), and blocks a write outside the contract with a message naming where the agent MAY write. Fails open on every uncertainty: no agent_id (the main loop, where a human is driving), an ungoverned agent type, a path outside the project, malformed input. Session escape HARNESS_AGENT_SCOPE=off. Status partial: the decision logic and contracts are proven and canary-LIVE, but settings.json registration is a human inter-session step (prompt-cache prefix file) — run .claude/scripts/wire-agent-write-scope.js, which test/agent-write-scope-wiring.test.js asserts until done."
-    },
-    {
-      "id": "agent-contract-drift",
-      "axis": "behaviour",
-      "type": "computational",
-      "cadence": "commit",
-      "status": "active",
-      "scope": "repo",
-      "wired_at": ".claude/scripts/validate-agent-contracts.js",
-      "signal": "a contract that disagrees with the agent tools: grant",
-      "net_add_justification": "The static half of agent-write-contract, and the half that keeps it honest: a contract claiming read-only beside a grant carrying Write means the runtime gate enforces a scope nobody believes in, and the drift is invisible because both files look reasonable alone. Also catches an agent shipped with no contract at all — the silent way the control set stops covering the fleet.",
-      "description": "Cross-checks every .claude/agents/<name>.md against its contract: missing contract, contract for a deleted agent, agent-name mismatch, may_spawn:false beside the Agent tool, read-only beside Write/Edit, a root that is absolute or lacks a trailing slash, an allow/deny overlap that would make the decision ambiguous, and a missing why. Runs in npm test via test/agent-contract.test.js."
-    },
-    {
-      "id": "dead-path",
-      "axis": "maintainability",
-      "type": "computational",
-      "cadence": "commit",
-      "status": "active",
-      "scope": "repo",
-      "wired_at": ".claude/scripts/dead-path-gate.js",
-      "signal": "a definition whose last production caller this change removed",
-      "net_add_justification": "control-budget ratchets the count of CONTROLS; nothing ratcheted orphaned CODE, and the record says that is the live failure mode — 132 controls, a cut-to-half proposal overwhelmed by accretion in five weeks, a rewrite abandoned for accreting 6x faster. Adopted from SwarmForge squad redo plan: when a path dies, its functions, config and tests die in the same commit. Distinct from the drift report dead-code trend, which is report-only and cannot say which commit orphaned what.",
-      "description": "Commit gate. Candidates are symbols that lost their CALL SITES in the staged diff (not merely their textual presence — the call goes and the require line stays behind is the common shape). A candidate blocks when it had production callers at HEAD, has none in the staged tree, and its definition is still there. Export listings, imports and the definition itself never count as calls. Pre-existing dead code is out of scope by design. Escape marker // harness:keep-dead <why>, matching the harness:secret-ok convention. Bounded by --max-symbols, and the cap is always reported, never silent."
-    },
-    {
-      "id": "spec-mutation",
-      "axis": "behaviour",
-      "type": "computational",
-      "cadence": "commit",
-      "status": "active",
-      "scope": "artifacts",
-      "wired_at": ".claude/scripts/spec-mutation-gate.js",
-      "signal": "a sprint-contract expectation that can be corrupted with verification still passing",
-      "net_add_justification": "mutation-smoke and deep-mutation mutate CODE and ask whether the suite notices; nothing mutated the CONTRACT. The harness recurring defect is not a wrong implementation but a check wired to nothing while everything is green — a gate shipped reading a FLAT contract while real sprint contracts nest under a contract key, so it found zero checks and failed nothing. verification-matrix-gate proves a criterion has evidence assigned and prd-shape-gate proves it has a postcondition; neither can tell that the assertion does not discriminate. Adopted from the SwarmForge hardener role gherkin-mutator step.",
-      "description": "Corrupts one expected value in a sprint contract, re-runs the project verification command, and requires it to FAIL. A survivor means that criterion verifies nothing. The mutant is written OVER the real contract (a copy at a path nothing reads would reproduce the very defect being hunted) and restored in a finally, with a .spec-mutation-backup the next run replays after a crash. readChecks refuses the flat contract shape and an empty contract loudly rather than returning an empty list. A runner that could not execute is inconclusive, never a kill. Status active but unprovisioned until quality.spec_mutation.verify_command is set; canary-LIVE regardless. Playwright and design checks are not mutated — prose expectations a mechanical perturbation cannot corrupt meaningfully."
     }
   ],
   "drift_sensors_planned": {

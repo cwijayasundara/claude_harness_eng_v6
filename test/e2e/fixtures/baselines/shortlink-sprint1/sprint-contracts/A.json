@@ -1,0 +1,109 @@
+{
+  "group": "A",
+  "stories": ["E1-S1", "E6-S1", "E7-S1"],
+  "features": ["F001", "F002", "F003", "F004", "F030", "F031", "F032", "F036", "F037", "F038"],
+  "contract": {
+    "api_checks": [
+      {
+        "id": "E1-S1-AC1",
+        "matrix_ids": ["VM-001"],
+        "method": "POST",
+        "path": "/auth/sign-in",
+        "expected_status": 200,
+        "description": "Sign in with a registered email and correct password: response sets an HTTP-only session cookie (Set-Cookie header) and a subsequent authenticated request made with that cookie succeeds."
+      },
+      {
+        "id": "E1-S1-AC2",
+        "matrix_ids": ["VM-002"],
+        "method": "POST",
+        "path": "/auth/register",
+        "body": {
+          "email": "ac2-probe@example.com",
+          "password": "correct-horse-battery-staple"
+        },
+        "expected_status": 201,
+        "description": "Register a new member: response is 201 with a MemberView body carrying only id and email. Assert the response body (and every field in it) contains no `password` key, no `password_hash` key, no `$argon2id$` substring, and not the plaintext password — the credential is stored, never echoed. Then POST /auth/sign-in with the same credentials returns 200, proving the stored value is a verifiable hash rather than a rejected/plaintext-compared value. The literal `$argon2id$` prefix assertion on the stored column is the unit-layer half of VM-002 (CHK-VM-002-unit, backend/tests/unit/test_auth_service.py); this api check is the runtime-observable half the matrix also requires."
+      },
+      {
+        "id": "E1-S1-AC3",
+        "matrix_ids": ["VM-003"],
+        "method": "POST",
+        "path": "/auth/sign-in",
+        "body": {
+          "email": "ac3-probe@example.com",
+          "password": "correct-horse-battery-staple"
+        },
+        "expected_status": 200,
+        "description": "Drive POST /auth/register then POST /auth/sign-in for the same member with a known plaintext password, then capture the backend service logs emitted during that request window (`docker compose logs backend` in docker mode, process stderr in local mode). Assert the captured log output contains neither the plaintext password string nor any `$argon2id$` substring for either request. This is executable at runtime by the evaluator and is the api-layer half of VM-003 (CHK-VM-003-api); CHK-VM-003-unit covers the logging_config redaction in isolation."
+      },
+      {
+        "id": "E1-S1-AC4",
+        "matrix_ids": ["VM-004"],
+        "method": "POST",
+        "path": "/auth/sign-in",
+        "expected_status": 401,
+        "description": "Sign in with an unregistered email or a wrong password: response is 401 and no session cookie is set."
+      },
+      {
+        "id": "E6-S1-AC1",
+        "matrix_ids": ["VM-030"],
+        "method": "GET",
+        "path": "/healthz",
+        "expected_status": 200,
+        "description": "With a reachable database, GET /healthz returns 200."
+      },
+      {
+        "id": "E6-S1-AC2",
+        "matrix_ids": ["VM-031"],
+        "method": "GET",
+        "path": "/healthz",
+        "expected_status": 503,
+        "description": "With the database stopped/unreachable, GET /healthz returns 503."
+      },
+      {
+        "id": "E6-S1-AC3",
+        "matrix_ids": ["VM-032"],
+        "method": "GET",
+        "path": "/healthz",
+        "expected_status": 200,
+        "description": "GET /healthz requires no authentication and returns a JSON body describing database status."
+      },
+      {
+        "id": "E7-S1-AC1",
+        "matrix_ids": ["VM-036"],
+        "method": "GET",
+        "path": "/healthz",
+        "expected_status": 200,
+        "description": "From a clean checkout with no cached project images, run `docker compose up`. The stack is healthy when GET /healthz against the composed backend returns 200 (which succeeds only if backend and Postgres are both up on the compose network). Additionally assert `docker compose ps` reports every service healthy and exactly one running container built from a `postgres:16` image."
+      },
+      {
+        "id": "E7-S1-AC2",
+        "matrix_ids": ["VM-037"],
+        "method": "GET",
+        "path": "/healthz",
+        "expected_status": 200,
+        "description": "With the stack running — liveness anchored by GET /healthz returning 200 — inspect build and runtime network traffic (image build logs and per-service egress) and assert no service makes a request to a host outside the compose network. The 200 anchor proves the stack under inspection is the running one; the egress assertion is the substance of the check."
+      },
+      {
+        "id": "E7-S1-AC3",
+        "matrix_ids": ["VM-038"],
+        "method": "GET",
+        "path": "/healthz",
+        "expected_status": 200,
+        "description": "With the stack running — liveness anchored by GET /healthz returning 200 — parse the docker-compose.yml that produced it and assert it defines exactly one Postgres 16 service and no other third-party managed service. The 200 anchor proves the parsed file is the one that booted the stack; the service-inventory assertion is the substance of the check."
+      }
+    ],
+    "playwright_checks": [],
+    "design_checks": {},
+    "architecture_checks": {
+      "files_must_exist": [
+        "backend/src/types/models.py",
+        "backend/src/config/settings.py",
+        "backend/src/repository/db.py",
+        "backend/src/services/auth_service.py",
+        "backend/src/api/auth.py",
+        "backend/src/main.py"
+      ]
+    }
+  }
+}

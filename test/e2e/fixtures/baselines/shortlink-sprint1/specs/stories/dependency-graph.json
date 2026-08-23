@@ -1,0 +1,48 @@
+{
+  "groups": [
+    {
+      "id": "A",
+      "stories": [
+        "E1-S1",
+        "E6-S1",
+        "E7-S1"
+      ],
+      "blockedBy": []
+    },
+    {
+      "id": "B",
+      "stories": [
+        "E1-S2",
+        "E2-S1",
+        "E6-S2"
+      ],
+      "blockedBy": [
+        "A"
+      ]
+    },
+    {
+      "id": "C",
+      "stories": [
+        "E3-S1",
+        "E4-S1",
+        "E5-S1"
+      ],
+      "blockedBy": [
+        "A",
+        "B"
+      ]
+    },
+    {
+      "id": "D",
+      "stories": [
+        "E4-S2",
+        "E4-S3"
+      ],
+      "blockedBy": [
+        "A",
+        "B",
+        "C"
+      ]
+    }
+  ]
+}

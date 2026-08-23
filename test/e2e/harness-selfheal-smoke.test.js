@@ -26,9 +26,11 @@ const { randomUUID } = require('node:crypto');
 const { test } = require('node:test');
 
 const { runClaude } = require('./helpers/claude-runner');
+const { e2eWorkdir } = require('./helpers/e2e-workdir');
+const { assertDisposable } = require('./helpers/fresh-project');
 const { startApp, stopApp, assertInBrowser, DEFAULT_PORT } = require('./helpers/app-runtime');
 
-const PROJECT_DIR = path.join(__dirname, 'smoke-output');
+const PROJECT_DIR = e2eWorkdir('smoke');
 const SHOTS_DIR = path.join(__dirname, 'screenshots');
 const HARNESS_PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
 // Fresh id per run. `claude --session-id` (scaffold's create path) aborts with
@@ -104,10 +106,7 @@ async function verifyWithFix({ label, steps, fixGoal }) {
 // Confinement guard: never rm a path outside this package, even if a future
 // change makes PROJECT_DIR configurable. Then start each run from a clean dir.
 function prepareProjectDir() {
-  const resolved = path.resolve(PROJECT_DIR);
-  if (!resolved.startsWith(__dirname + path.sep)) {
-    throw new Error(`refusing to wipe ${resolved}: outside ${__dirname}`);
-  }
+  const resolved = assertDisposable(PROJECT_DIR);
   fs.rmSync(resolved, { recursive: true, force: true });
   fs.mkdirSync(PROJECT_DIR, { recursive: true });
   fs.mkdirSync(SHOTS_DIR, { recursive: true });

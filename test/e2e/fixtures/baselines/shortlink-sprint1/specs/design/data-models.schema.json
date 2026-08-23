@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://shortlink.example/design/data-models.schema.json",
+  "title": "shortlink data models",
+  "definitions": {
+    "Member": {
+      "type": "object",
+      "required": ["id", "email", "password_hash", "created_at"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "email": { "type": "string", "format": "email" },
+        "password_hash": {
+          "type": "string",
+          "pattern": "^\\$argon2id\\$"
+        },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "Session": {
+      "type": "object",
+      "required": ["id", "member_id", "created_at", "revoked_at"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "member_id": { "type": "string", "format": "uuid" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": ["string", "null"], "format": "date-time" },
+        "revoked_at": { "type": ["string", "null"], "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "Link": {
+      "type": "object",
+      "required": ["id", "owner_id", "code", "target_url", "created_at", "deleted_at"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "owner_id": { "type": "string", "format": "uuid" },
+        "code": {
+          "type": "string",
+          "minLength": 7,
+          "pattern": "^[A-Za-z0-9]{7,}$"
+        },
+        "target_url": { "type": "string", "format": "uri" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "deleted_at": { "type": ["string", "null"], "format": "date-time" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "properties": {
+    "Member": { "$ref": "#/definitions/Member" },
+    "Session": { "$ref": "#/definitions/Session" },
+    "Link": { "$ref": "#/definitions/Link" }
+  }
+}

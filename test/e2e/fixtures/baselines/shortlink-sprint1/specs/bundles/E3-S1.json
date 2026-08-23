@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "story_id": "E3-S1",
+  "sprint": 1,
+  "title": "Redirect a known code to its target",
+  "readiness": "ready",
+  "requirements": {
+    "ac_ids": [
+      "E3-S1-AC1",
+      "E3-S1-AC2",
+      "E3-S1-AC3"
+    ],
+    "brd_ids": [
+      "FRD-3"
+    ],
+    "br_acceptance_ids": [
+      "FRD-28"
+    ],
+    "scope_out": [
+      "Redirect for a deleted code (owned by E5-S1's delete acceptance); Click counts or analytics on redirect (SG-4)"
+    ]
+  },
+  "entities": [
+    {
+      "name": "Redirect a known code to its target",
+      "status": "unknown"
+    }
+  ],
+  "approach": {
+    "program_design": "specs/design/program-design.md",
+    "canvas": "specs/design/reasons-canvas.md",
+    "amendment": null
+  },
+  "structure": {
+    "owned_files": [
+      "backend/src/main.py"
+    ],
+    "layer": "backend"
+  },
+  "operations": {
+    "pending": false,
+    "files": [
+      "backend/src/api/redirect.py",
+      "GET /{code}",
+      "frontend/src/app/[code]/route.ts",
+      "backend/tests/integration/test_redirect_api.py"
+    ],
+    "text": "1. Create `backend/src/api/redirect.py` — `GET /{code}`; looks up `link_repository.get_by_code`, returns 302 with `Location` or 404.\n2. Create `frontend/src/app/[code]/route.ts` — relays the backend's `Location` header via `NextResponse.redirect`, never fetches the target.\n3. Add `backend/tests/integration/test_redirect_api.py` covering AC1–AC3."
+  },
+  "safeguards": {
+    "ids": [
+      "SG-1",
+      "SG-2",
+      "SG-3",
+      "SG-4",
+      "SG-5",
+      "SG-6",
+      "SG-7",
+      "SG-8",
+      "SG-9",
+      "SG-10",
+      "SG-11"
+    ],
+    "none": false
+  },
+  "tests": {
+    "matrix_ids": [
+      "VM-013",
+      "VM-014",
+      "VM-015"
+    ],
+    "case_ids": [
+      "VM-013",
+      "VM-014",
+      "VM-015"
+    ],
+    "layers": [
+      "api"
+    ]
+  },
+  "provenance": {
+    "story_path": "specs/stories/E3-S1.md",
+    "parents": [
+      "E2-S1"
+    ],
+    "tracker_key": null
+  }
+}

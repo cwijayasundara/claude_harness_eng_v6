@@ -12,18 +12,17 @@ const { test } = require('node:test');
 const { randomUUID } = require('crypto');
 
 const { runClaude } = require('./helpers/claude-runner');
+const { e2eWorkdir } = require('./helpers/e2e-workdir');
+const { assertDisposable } = require('./helpers/fresh-project');
 const { runProjectSuite } = require('./helpers/project-suite');
 
-const PROJECT_DIR = path.join(__dirname, 'feature-output');
+const PROJECT_DIR = e2eWorkdir('feature');
 const PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
 // Fresh id per run — hardcoded session ids fail with "already in use" on re-run.
 const SESSION = randomUUID();
 
 function resetExistingProject() {
-  const resolved = path.resolve(PROJECT_DIR);
-  if (!resolved.startsWith(__dirname + path.sep)) {
-    throw new Error(`refusing to wipe ${resolved}: outside ${__dirname}`);
-  }
+  const resolved = assertDisposable(PROJECT_DIR);
   fs.rmSync(resolved, { recursive: true, force: true });
   fs.mkdirSync(path.join(resolved, 'test'), { recursive: true });
   fs.writeFileSync(path.join(resolved, 'package.json'), `${JSON.stringify({

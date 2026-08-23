@@ -16,9 +16,11 @@ const { execFileSync } = require('child_process');
 const { test } = require('node:test');
 
 const { runClaude } = require('./helpers/claude-runner');
+const { e2eWorkdir } = require('./helpers/e2e-workdir');
+const { assertDisposable } = require('./helpers/fresh-project');
 const { summarizeSpecs, formatSummary } = require('./helpers/specs-summary');
 
-const PROJECT_DIR = path.join(__dirname, 'plan-output');
+const PROJECT_DIR = e2eWorkdir('plan');
 const SAMPLE_PRD = path.join(__dirname, 'fixtures', 'sample-prd.md');
 const HARNESS_PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
 const { randomUUID } = require('crypto');
@@ -26,10 +28,7 @@ const { randomUUID } = require('crypto');
 const SESSION_ID = randomUUID();
 
 function resetProject() {
-  const resolved = path.resolve(PROJECT_DIR);
-  if (!resolved.startsWith(__dirname + path.sep)) {
-    throw new Error(`refusing to wipe ${resolved}: outside ${__dirname}`);
-  }
+  const resolved = assertDisposable(PROJECT_DIR);
   fs.rmSync(resolved, { recursive: true, force: true });
   fs.mkdirSync(resolved, { recursive: true });
   execFileSync('git', ['init'], { cwd: resolved, stdio: 'ignore' });
@@ -51,18 +50,36 @@ test('plan-only: PRD -> specs/ for inspection (no code, no PR)', { timeout: 1200
     'scaffold must install harness before /build',
   );
 
+  // Measured: a real plan-only run of this fixture took ~26 min of model time
+  // (the whole layer, 31.5 min). The old 900s cap SIGKILLed it two phases in.
   const plan = runClaude('/build --autonomous --plan-only prd.md', {
-    ...opts, continueSession: true, budgetUsd: '6.00', timeoutMs: 900000,
+    ...opts, continueSession: true, budgetUsd: '9.00', timeoutMs: 2400000,
   });
   console.log('[plan] build --plan-only exit:', plan.exitCode);
 
   const summary = summarizeSpecs(PROJECT_DIR);
   t.after(() => console.log(`\n${formatSummary(PROJECT_DIR, summary)}\n→ inspect: ${PROJECT_DIR}/specs`));
 
-  // The plan must exist and decompose into clusters — that is what the per-cluster
+  // A killed run is not a passing run. spawnSync reports a SIGKILLed child as
+  // exitCode null; without this the timeout below is the only thing that
+  // notices, and it reports as a harness failure rather than a route failure.
+  assert.notStrictEqual(
+    plan.exitCode, null,
+    `/build --plan-only was killed before finishing (signal ${plan.signal}) — raise timeoutMs or budgetUsd`,
+  );
+
+  // Completeness, not a subset. This route once passed on a run that was killed
+  // two phases early: BRD + stories existed, design and the test plan did not,
+  // and every assertion below the summary was still green. summarizeSpecs
+  // already computes `missing` and formatSummary already PRINTS it — asserting
+  // on it is what turns the printout into a gate.
+  assert.deepStrictEqual(
+    summary.missing, [],
+    `plan-only must produce the whole architect half; missing: ${summary.missing.join(', ')}`,
+  );
+
+  // The plan must also decompose into clusters — that is what the per-cluster
   // fan-out (semi-/full-auto) keys off. No code or PR should appear.
-  assert.strictEqual(summary.present.brd, true, 'BRD must be generated');
-  assert.strictEqual(summary.present.dependencyGraph, true, 'dependency graph must be generated');
   assert.ok(summary.clusters >= 1, `expected >=1 cluster, got ${summary.clusters}`);
   assert.ok(summary.stories >= 1, `expected >=1 story, got ${summary.stories}`);
 });

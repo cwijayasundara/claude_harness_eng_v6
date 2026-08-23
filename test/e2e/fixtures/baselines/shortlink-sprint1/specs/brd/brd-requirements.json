@@ -1,0 +1,220 @@
+[
+  {
+    "id": "FRD-1",
+    "text": "Register and sign in with an email address and a password, receiving an HTTP-only session cookie.",
+    "label": "FR-1",
+    "traces": [
+      "FRD-1"
+    ],
+    "taxonomy": [
+      "functional",
+      "security_authz"
+    ],
+    "acceptance": [
+      "FRD-26"
+    ],
+    "section": "3. Functional Requirements / FR-1"
+  },
+  {
+    "id": "FRD-2",
+    "text": "Create a short link from a target URL while signed in, returning a code of at least seven characters.",
+    "label": "FR-2",
+    "traces": [
+      "FRD-2"
+    ],
+    "taxonomy": [
+      "functional"
+    ],
+    "acceptance": [
+      "FRD-27"
+    ],
+    "section": "3. Functional Requirements / FR-2"
+  },
+  {
+    "id": "FRD-3",
+    "text": "Redirect a request for a known, not-deleted code to its target URL with HTTP 302.",
+    "label": "FR-3",
+    "traces": [
+      "FRD-3"
+    ],
+    "taxonomy": [
+      "functional",
+      "data_lifecycle"
+    ],
+    "acceptance": [
+      "FRD-28"
+    ],
+    "section": "3. Functional Requirements / FR-3"
+  },
+  {
+    "id": "FRD-4",
+    "text": "List the signed-in member's own links on a console page, newest first, twenty per page. No other member's links appear.",
+    "label": "FR-4",
+    "traces": [
+      "FRD-4"
+    ],
+    "taxonomy": [
+      "functional"
+    ],
+    "acceptance": [
+      "FRD-29"
+    ],
+    "section": "3. Functional Requirements / FR-4"
+  },
+  {
+    "id": "FRD-5",
+    "text": "Delete one of the signed-in member's own links: the response is 204, a later request for that code returns 404, and the code is never reissued.",
+    "label": "FR-5",
+    "traces": [
+      "FRD-5"
+    ],
+    "taxonomy": [
+      "functional",
+      "data_lifecycle"
+    ],
+    "acceptance": [
+      "FRD-30"
+    ],
+    "section": "3. Functional Requirements / FR-5"
+  },
+  {
+    "id": "FRD-6",
+    "text": "Reject a target URL whose scheme is not `http` or `https`, whose host matches the configured `PUBLIC_BASE_URL`, or whose host is `localhost` or an IP literal in a private (RFC1918), loopback, link-local, unique-local, or cloud-metadata (`169.254.169.254`) range. Inspect the host literally at creation time — no DNS lookup and no outbound fetch.",
+    "label": "FR-6",
+    "traces": [
+      "FRD-6"
+    ],
+    "taxonomy": [
+      "functional"
+    ],
+    "acceptance": [
+      "FRD-31"
+    ],
+    "section": "3. Functional Requirements / FR-6"
+  },
+  {
+    "id": "FRD-7",
+    "text": "Sign out invalidates the session server-side; a later authenticated request returns 401.",
+    "label": "FR-7",
+    "traces": [
+      "FRD-7"
+    ],
+    "taxonomy": [
+      "functional",
+      "security_authz"
+    ],
+    "acceptance": [
+      "FRD-32"
+    ],
+    "section": "3. Functional Requirements / FR-7"
+  },
+  {
+    "id": "FRD-8",
+    "text": "Expose a `/healthz` endpoint that is 200 when the database is reachable and 503 when it is not.",
+    "label": "FR-8",
+    "traces": [
+      "FRD-8"
+    ],
+    "taxonomy": [
+      "functional",
+      "operability_failure"
+    ],
+    "acceptance": [
+      "FRD-33"
+    ],
+    "section": "3. Functional Requirements / FR-8"
+  },
+  {
+    "id": "FRD-9",
+    "text": "Create and list responses are p95 under 300 ms for an account holding 100 links.",
+    "label": "NFR-1",
+    "traces": [
+      "FRD-9"
+    ],
+    "taxonomy": [
+      "performance"
+    ],
+    "acceptance": [
+      "FRD-38"
+    ],
+    "section": "4. Non-Functional Requirements / NFR-1"
+  },
+  {
+    "id": "FRD-10",
+    "text": "Short codes are drawn from a cryptographically secure random source and carry at least 40 bits of entropy.",
+    "label": "NFR-2",
+    "traces": [
+      "FRD-10"
+    ],
+    "taxonomy": [
+      "security_authz",
+      "constraints"
+    ],
+    "acceptance": [
+      "FRD-34"
+    ],
+    "section": "4. Non-Functional Requirements / NFR-2"
+  },
+  {
+    "id": "FRD-11",
+    "text": "Passwords are stored using Argon2id and are never written to logs.",
+    "label": "NFR-3",
+    "traces": [
+      "FRD-11"
+    ],
+    "taxonomy": [
+      "security_authz",
+      "data_lifecycle"
+    ],
+    "acceptance": [
+      "FRD-35"
+    ],
+    "section": "4. Non-Functional Requirements / NFR-3"
+  },
+  {
+    "id": "FRD-12",
+    "text": "The console conforms to WCAG 2.2 level AA.",
+    "label": "NFR-4",
+    "traces": [
+      "FRD-12"
+    ],
+    "taxonomy": [
+      "ux_accessibility"
+    ],
+    "acceptance": [
+      "FRD-39"
+    ],
+    "section": "4. Non-Functional Requirements / NFR-4"
+  },
+  {
+    "id": "FRD-13",
+    "text": "The system runs from one `docker compose up` with a single Postgres 16 container and no third-party network calls at build or run time.",
+    "label": "NFR-5",
+    "traces": [
+      "FRD-13"
+    ],
+    "taxonomy": [
+      "integration",
+      "constraints"
+    ],
+    "acceptance": [
+      "FRD-36"
+    ],
+    "section": "4. Non-Functional Requirements / NFR-5"
+  },
+  {
+    "id": "FRD-14",
+    "text": "When the database is unreachable the API returns HTTP 503 with a JSON error body and never a stack trace.",
+    "label": "NFR-6",
+    "traces": [
+      "FRD-14"
+    ],
+    "taxonomy": [
+      "operability_failure"
+    ],
+    "acceptance": [
+      "FRD-37"
+    ],
+    "section": "4. Non-Functional Requirements / NFR-6"
+  }
+]

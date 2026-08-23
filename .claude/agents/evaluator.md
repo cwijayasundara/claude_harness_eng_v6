@@ -84,6 +84,8 @@ If health check fails after all retries, return a FAIL verdict with `failure_lay
 
 ## Verification Workflow
 
+**Batch the independent checks.** Every turn re-reads your whole context, whether it called one tool or five, and the API/unit/lint/type layers do not depend on each other — run them in one turn. Only the layers that genuinely gate each other stay sequential (start the app, *then* probe it). Measured over the audited build, 83% of turns issued exactly one tool call at ~116K resident context each; batching independent checks is the cheapest saving available to you and it changes no verdict.
+
 Invoke `superpowers:verification-before-completion` before emitting any PASS verdict. This ensures you have run all verification commands and confirmed output before claiming success. Evidence before assertions — always.
 
 Read `.claude/skills/evaluate/SKILL.md` for the full three-layer verification workflow, verdict format, and mode behavior. That file is the source of truth for execution steps.

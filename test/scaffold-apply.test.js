@@ -50,7 +50,7 @@ test('applyScaffold produces a real scaffold from a Minimal Node profile', () =>
   const target = path.join(workDir, 'project');
   try {
     const profilePath = writeProfile(workDir, MINIMAL_NODE_PROFILE);
-    applyScaffold({ profile: profilePath, pluginSource: PLUGIN_SOURCE, target });
+    applyScaffold({ installDeps: false, profile: profilePath, pluginSource: PLUGIN_SOURCE, target });
 
     const manifestRaw = fs.readFileSync(path.join(target, 'project-manifest.json'), 'utf8');
     const manifest = JSON.parse(manifestRaw);
@@ -159,7 +159,7 @@ test('a brownfield scaffold bootstraps code-map and wiki immediately for source-
     const profilePath = writeProfile(workDir, MINIMAL_NODE_PROFILE);
     // Brownfield profile still bootstraps the wiki at scaffold time; core
     // ships the same indexer and runs it from first-source /auto.
-    const result = applyScaffold({ profile: profilePath, pluginSource: PLUGIN_SOURCE, target, scaffoldProfile: 'brownfield' });
+    const result = applyScaffold({ installDeps: false, profile: profilePath, pluginSource: PLUGIN_SOURCE, target, scaffoldProfile: 'brownfield' });
 
     assert.strictEqual(result.navigation.status, 'fresh');
     assert.strictEqual(result.navigation.mode, 'bootstrap');
@@ -186,7 +186,7 @@ test('applyScaffold preserves an existing README.md while writing SCAFFOLD_READM
     fs.mkdirSync(target, { recursive: true });
     fs.writeFileSync(path.join(target, 'README.md'), '# Existing product README\n');
     const profilePath = writeProfile(workDir, MINIMAL_NODE_PROFILE);
-    applyScaffold({ profile: profilePath, pluginSource: PLUGIN_SOURCE, target });
+    applyScaffold({ installDeps: false, profile: profilePath, pluginSource: PLUGIN_SOURCE, target });
 
     const readme = fs.readFileSync(path.join(target, 'README.md'), 'utf8');
     const scaffoldReadme = fs.readFileSync(path.join(target, 'SCAFFOLD_README.md'), 'utf8');
@@ -203,7 +203,7 @@ test('core scaffold profile ships the lean product-development spine by default'
   const target = path.join(workDir, 'project');
   try {
     const profilePath = writeProfile(workDir, MINIMAL_NODE_PROFILE);
-    const result = applyScaffold({ profile: profilePath, pluginSource: PLUGIN_SOURCE, target });
+    const result = applyScaffold({ installDeps: false, profile: profilePath, pluginSource: PLUGIN_SOURCE, target });
 
     assert.strictEqual(result.scaffoldProfile, 'core');
     assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'build', 'SKILL.md')));
@@ -254,7 +254,7 @@ test('brownfield scaffold profile is core plus the brownfield pack, not an alias
   try {
     const profile = { ...MINIMAL_NODE_PROFILE, scaffoldProfile: 'brownfield' };
     const profilePath = writeProfile(workDir, profile);
-    const result = applyScaffold({ profile: profilePath, pluginSource: PLUGIN_SOURCE, target });
+    const result = applyScaffold({ installDeps: false, profile: profilePath, pluginSource: PLUGIN_SOURCE, target });
 
     assert.strictEqual(result.scaffoldProfile, 'brownfield');
     // Strict superset of core: everything core ships, plus the brownfield tooling.
@@ -291,7 +291,7 @@ test('full-stack projects also default to core; full is explicit only', () => {
       },
     };
     const profilePath = writeProfile(workDir, profile);
-    const result = applyScaffold({ profile: profilePath, pluginSource: PLUGIN_SOURCE, target });
+    const result = applyScaffold({ installDeps: false, profile: profilePath, pluginSource: PLUGIN_SOURCE, target });
 
     assert.strictEqual(result.scaffoldProfile, 'core');
     assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'feature', 'SKILL.md')));
@@ -314,7 +314,7 @@ test('full scaffold profile preserves the complete harness copy and can opt into
   try {
     const profile = { ...MINIMAL_NODE_PROFILE, scaffoldProfile: 'full', telemetry: true };
     const profilePath = writeProfile(workDir, profile);
-    const result = applyScaffold({ profile: profilePath, pluginSource: PLUGIN_SOURCE, target });
+    const result = applyScaffold({ installDeps: false, profile: profilePath, pluginSource: PLUGIN_SOURCE, target });
 
     assert.strictEqual(result.scaffoldProfile, 'full');
     assert.ok(fs.existsSync(path.join(target, '.claude', 'skills', 'tracker-publish', 'SKILL.md')));

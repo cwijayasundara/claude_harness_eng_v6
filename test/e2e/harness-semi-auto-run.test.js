@@ -17,11 +17,12 @@ const { test } = require('node:test');
 const { randomUUID } = require('crypto');
 
 const { runClaude } = require('./helpers/claude-runner');
+const { e2eWorkdir } = require('./helpers/e2e-workdir');
 const { runProjectSuite } = require('./helpers/project-suite');
 const { freshProject } = require('./helpers/fresh-project');
 const { alterAndVerify } = require('./helpers/alter-and-verify');
 
-const PROJECT_DIR = path.join(__dirname, 'semi-auto-output');
+const PROJECT_DIR = e2eWorkdir('semi-auto');
 const PLUGIN_DIR = path.join(__dirname, '..', '..', '.claude');
 // Fresh id per run — hardcoded session ids fail with "already in use" on re-run.
 const SESSION = randomUUID();

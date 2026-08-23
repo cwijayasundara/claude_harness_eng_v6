@@ -1,0 +1,314 @@
+[
+  {
+    "id": "FRD-1",
+    "kind": "requirement",
+    "traces": [
+      "FRD-1"
+    ],
+    "text": "Register and sign in with an email address and a password, receiving an HTTP-only session cookie."
+  },
+  {
+    "id": "FRD-2",
+    "kind": "requirement",
+    "traces": [
+      "FRD-2"
+    ],
+    "text": "Create a short link from a target URL while signed in, returning a code of at least seven characters."
+  },
+  {
+    "id": "FRD-3",
+    "kind": "requirement",
+    "traces": [
+      "FRD-3"
+    ],
+    "text": "Redirect a request for a known, not-deleted code to its target URL with HTTP 302."
+  },
+  {
+    "id": "FRD-4",
+    "kind": "requirement",
+    "traces": [
+      "FRD-4"
+    ],
+    "text": "List the signed-in member's own links on a console page, newest first, twenty per page. No other member's links appear."
+  },
+  {
+    "id": "FRD-5",
+    "kind": "requirement",
+    "traces": [
+      "FRD-5"
+    ],
+    "text": "Delete one of the signed-in member's own links: the response is 204, a later request for that code returns 404, and the code is never reissued."
+  },
+  {
+    "id": "FRD-6",
+    "kind": "requirement",
+    "traces": [
+      "FRD-6"
+    ],
+    "text": "Reject a target URL whose scheme is not `http` or `https`, whose host matches the configured `PUBLIC_BASE_URL`, or whose host is `localhost` or an IP literal in a private (RFC1918), loopback, link-local, unique-local, or cloud-metadata (`169.254.169.254`) range. Inspect the host literally at creation time — no DNS lookup and no outbound fetch."
+  },
+  {
+    "id": "FRD-7",
+    "kind": "requirement",
+    "traces": [
+      "FRD-7"
+    ],
+    "text": "Sign out invalidates the session server-side; a later authenticated request returns 401."
+  },
+  {
+    "id": "FRD-8",
+    "kind": "requirement",
+    "traces": [
+      "FRD-8"
+    ],
+    "text": "Expose a `/healthz` endpoint that is 200 when the database is reachable and 503 when it is not."
+  },
+  {
+    "id": "FRD-9",
+    "kind": "requirement",
+    "traces": [
+      "FRD-9"
+    ],
+    "text": "Create and list responses are p95 under 300 ms for an account holding 100 links."
+  },
+  {
+    "id": "FRD-10",
+    "kind": "requirement",
+    "traces": [
+      "FRD-10"
+    ],
+    "text": "Short codes are drawn from a cryptographically secure random source and carry at least 40 bits of entropy."
+  },
+  {
+    "id": "FRD-11",
+    "kind": "requirement",
+    "traces": [
+      "FRD-11"
+    ],
+    "text": "Passwords are stored using Argon2id and are never written to logs."
+  },
+  {
+    "id": "FRD-12",
+    "kind": "requirement",
+    "traces": [
+      "FRD-12"
+    ],
+    "text": "The console conforms to WCAG 2.2 level AA."
+  },
+  {
+    "id": "FRD-13",
+    "kind": "requirement",
+    "traces": [
+      "FRD-13"
+    ],
+    "text": "The system runs from one `docker compose up` with a single Postgres 16 container and no third-party network calls at build or run time."
+  },
+  {
+    "id": "FRD-14",
+    "kind": "requirement",
+    "traces": [
+      "FRD-14"
+    ],
+    "text": "When the database is unreachable the API returns HTTP 503 with a JSON error body and never a stack trace."
+  },
+  {
+    "id": "FRD-38",
+    "kind": "context",
+    "traces": [
+      "FRD-38"
+    ],
+    "text": "**M1 — Redirect works.** Done when: a signed-in member can create a link, be redirected by it, and sign out. (FR-1, FR-2, FR-3, FR-6, FR-7, NFR-2, NFR-3, NFR-5)"
+  },
+  {
+    "id": "FRD-39",
+    "kind": "context",
+    "traces": [
+      "FRD-39"
+    ],
+    "text": "**M2 — Console works.** Done when: the list page shows only the member's links, delete returns 404 on that code, and `/healthz` reports the database. (FR-4, FR-5, FR-8, NFR-1, NFR-4, NFR-6)"
+  },
+  {
+    "id": "FRD-26",
+    "kind": "acceptance",
+    "traces": [
+      "FRD-26"
+    ],
+    "text": "Given a registered email and correct password, when signing in, then the response sets an HTTP-only session cookie and a subsequent authenticated request succeeds."
+  },
+  {
+    "id": "FRD-27",
+    "kind": "acceptance",
+    "traces": [
+      "FRD-27"
+    ],
+    "text": "Given a signed-in member and `https://example.com/a/long/path`, when creating a link, then the response is 201 with a code of at least 7 characters."
+  },
+  {
+    "id": "FRD-28",
+    "kind": "acceptance",
+    "traces": [
+      "FRD-28"
+    ],
+    "text": "Given an existing code, when requesting `/{code}`, then the response is 302 with `Location` set to the target URL."
+  },
+  {
+    "id": "FRD-29",
+    "kind": "acceptance",
+    "traces": [
+      "FRD-29"
+    ],
+    "text": "Given a member owning 25 links, when listing page 1, then exactly 20 links are returned, newest first, and none belongs to another user."
+  },
+  {
+    "id": "FRD-30",
+    "kind": "acceptance",
+    "traces": [
+      "FRD-30"
+    ],
+    "text": "Given a member's own link, when deleting it, then the response is 204, a later request for that code returns 404, and the code is not issued to a new link."
+  },
+  {
+    "id": "FRD-31",
+    "kind": "acceptance",
+    "traces": [
+      "FRD-31"
+    ],
+    "text": "Given a target of `ftp://example.com`, when creating a link, then the response is 422; the same holds for a host matching `PUBLIC_BASE_URL` and for each of `http://192.168.1.1/`, `http://10.0.0.1/`, `http://127.0.0.1/`, `http://[::1]/`, `http://169.254.169.254/` and `http://localhost/`."
+  },
+  {
+    "id": "FRD-32",
+    "kind": "acceptance",
+    "traces": [
+      "FRD-32"
+    ],
+    "text": "Given a signed-in member, when signing out, then a subsequent authenticated request returns 401."
+  },
+  {
+    "id": "FRD-33",
+    "kind": "acceptance",
+    "traces": [
+      "FRD-33"
+    ],
+    "text": "Given a reachable database, when fetching `/healthz`, then the response is 200; when the database is stopped, the response is 503."
+  },
+  {
+    "id": "FRD-34",
+    "kind": "acceptance",
+    "traces": [
+      "FRD-34"
+    ],
+    "text": "Given 10,000 codes generated in one run, when they are inspected, then every code is at least 7 characters drawn from a 62-character alphanumeric alphabet (≥ 41.7 bits), no two are equal, and the bytes come from `secrets` / `os.urandom` rather than the `random` module."
+  },
+  {
+    "id": "FRD-35",
+    "kind": "acceptance",
+    "traces": [
+      "FRD-35"
+    ],
+    "text": "Given a member registering and then signing in, when the stored credential is read, then it begins with `$argon2id$`; and when the application's full log output for those two requests is scanned, then it contains neither the plaintext password nor the stored hash."
+  },
+  {
+    "id": "FRD-36",
+    "kind": "acceptance",
+    "traces": [
+      "FRD-36"
+    ],
+    "text": "Given a clean checkout with no project images cached, when `docker compose up` is run once, then the stack reaches healthy with exactly one Postgres 16 container, and no service makes a request to a host outside the compose network at build or run time."
+  },
+  {
+    "id": "FRD-37",
+    "kind": "acceptance",
+    "traces": [
+      "FRD-37"
+    ],
+    "text": "Given the Postgres container is stopped, when any API endpoint other than `/healthz` is called, then the response is 503 with a JSON body carrying an `error` field, and the body contains no stack trace, exception class name, or filesystem path."
+  },
+  {
+    "id": "FRD-15",
+    "kind": "safeguard",
+    "traces": [
+      "FRD-15"
+    ],
+    "text": "Custom or vanity codes — codes are generated, never chosen."
+  },
+  {
+    "id": "FRD-16",
+    "kind": "safeguard",
+    "traces": [
+      "FRD-16"
+    ],
+    "text": "Editing a link's target after creation — delete and recreate."
+  },
+  {
+    "id": "FRD-17",
+    "kind": "safeguard",
+    "traces": [
+      "FRD-17"
+    ],
+    "text": "Link expiry (sprint 2)."
+  },
+  {
+    "id": "FRD-18",
+    "kind": "safeguard",
+    "traces": [
+      "FRD-18"
+    ],
+    "text": "Click counts, analytics, referrers, charts, or GeoIP (sprint 2 for a count only)."
+  },
+  {
+    "id": "FRD-19",
+    "kind": "safeguard",
+    "traces": [
+      "FRD-19"
+    ],
+    "text": "Teams, shared ownership, or an admin role."
+  },
+  {
+    "id": "FRD-20",
+    "kind": "safeguard",
+    "traces": [
+      "FRD-20"
+    ],
+    "text": "Billing, plans, or usage quotas."
+  },
+  {
+    "id": "FRD-21",
+    "kind": "safeguard",
+    "traces": [
+      "FRD-21"
+    ],
+    "text": "Password reset by email, SSO, and multi-factor authentication."
+  },
+  {
+    "id": "FRD-22",
+    "kind": "safeguard",
+    "traces": [
+      "FRD-22"
+    ],
+    "text": "Rate limiting."
+  },
+  {
+    "id": "FRD-23",
+    "kind": "safeguard",
+    "traces": [
+      "FRD-23"
+    ],
+    "text": "Bulk import or export."
+  },
+  {
+    "id": "FRD-24",
+    "kind": "safeguard",
+    "traces": [
+      "FRD-24"
+    ],
+    "text": "Following redirect chains or resolving hostnames on FR-6 (an outbound fetch or DNS lookup would violate NFR-5)."
+  },
+  {
+    "id": "FRD-25",
+    "kind": "safeguard",
+    "traces": [
+      "FRD-25"
+    ],
+    "text": "OpenAPI publication, scheduled purge jobs, and structured request logs as required deliverables."
+  }
+]

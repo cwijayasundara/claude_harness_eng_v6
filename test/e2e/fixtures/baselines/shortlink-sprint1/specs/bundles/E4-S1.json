@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "story_id": "E4-S1",
+  "sprint": 1,
+  "title": "List the signed-in member's own links",
+  "readiness": "ready",
+  "requirements": {
+    "ac_ids": [
+      "E4-S1-AC1",
+      "E4-S1-AC2",
+      "E4-S1-AC3",
+      "E4-S1-AC4"
+    ],
+    "brd_ids": [
+      "FRD-4"
+    ],
+    "br_acceptance_ids": [
+      "FRD-29"
+    ],
+    "scope_out": [
+      "Editing a link from the list (SG-2); Any other member's links appearing (SG-5); Click counts, analytics, or export from the list (SG-4, SG-9)"
+    ]
+  },
+  "entities": [
+    {
+      "name": "List the signed-in member's own links",
+      "status": "unknown"
+    }
+  ],
+  "approach": {
+    "program_design": "specs/design/program-design.md",
+    "canvas": "specs/design/reasons-canvas.md",
+    "amendment": null
+  },
+  "structure": {
+    "owned_files": [
+      "backend/src/services/link_service.py",
+      "backend/src/api/links.py",
+      "POST /links",
+      "frontend/src/app/api/links/route.ts",
+      "GET /links",
+      "frontend/src/components/LinkList.tsx",
+      "DELETE /links/{code}",
+      "backend/CLAUDE.md",
+      "backend/src/repository/link_repository.py",
+      "POST/GET /links",
+      "frontend/src/components/Pagination.tsx"
+    ],
+    "layer": "fullstack"
+  },
+  "operations": {
+    "pending": false,
+    "files": [
+      "backend/src/repository/link_repository.py",
+      "backend/src/services/link_service.py",
+      "backend/src/api/links.py",
+      "GET /links",
+      "frontend/src/app/api/links/route.ts",
+      "frontend/src/types/link.ts",
+      "frontend/src/types/member.ts",
+      "frontend/src/api/linksClient.ts",
+      "frontend/src/components/LinkList.tsx",
+      "frontend/src/components/LinkRow.tsx",
+      "frontend/src/components/Pagination.tsx",
+      "frontend/src/components/EmptyState.tsx",
+      "frontend/src/app/console/page.tsx",
+      "backend/tests/integration/test_links_api.py::test_list*",
+      "frontend/tests/console/list.spec.ts"
+    ],
+    "text": "1. Extend `backend/src/repository/link_repository.py` — add paginated `list_for_owner(owner_id, page, page_size=20)`.\n2. Extend `backend/src/services/link_service.py` — add `list_links(owner_id, page)`.\n3. Extend `backend/src/api/links.py` — add `GET /links` returning `LinkPage`.\n4. Extend `frontend/src/app/api/links/route.ts` — add `GET` handler proxying to backend.\n5. Create `frontend/src/types/link.ts`, `frontend/src/types/member.ts` — `LinkView`/`LinkPage`/`MemberView` mirrors.\n6. Create `frontend/src/api/linksClient.ts` — `listLinks(page)`.\n7. Create `frontend/src/components/LinkList.tsx`, `frontend/src/components/LinkRow.tsx`, `frontend/src/components/Pagination.tsx`, `frontend/src/components/EmptyState.tsx`.\n8. Create `frontend/src/app/console/page.tsx` — server component rendering the list.\n9. Add `backend/tests/integration/test_links_api.py::test_list*` and `frontend/tests/console/list.spec.ts` covering AC1–AC4."
+  },
+  "safeguards": {
+    "ids": [
+      "SG-4",
+      "SG-5",
+      "SG-9"
+    ],
+    "none": false
+  },
+  "tests": {
+    "matrix_ids": [
+      "VM-016",
+      "VM-017",
+      "VM-018",
+      "VM-019"
+    ],
+    "case_ids": [
+      "VM-016",
+      "VM-017",
+      "VM-018",
+      "VM-019"
+    ],
+    "layers": [
+      "e2e",
+      "api"
+    ]
+  },
+  "provenance": {
+    "story_path": "specs/stories/E4-S1.md",
+    "parents": [
+      "E1-S1",
+      "E2-S1"
+    ],
+    "tracker_key": null
+  }
+}

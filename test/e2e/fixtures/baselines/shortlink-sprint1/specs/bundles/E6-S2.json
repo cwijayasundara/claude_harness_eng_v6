@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "story_id": "E6-S2",
+  "sprint": 1,
+  "title": "Return a safe 503 JSON envelope when the database is unreachable",
+  "readiness": "ready",
+  "requirements": {
+    "ac_ids": [
+      "E6-S2-AC1",
+      "E6-S2-AC2",
+      "E6-S2-AC3"
+    ],
+    "brd_ids": [
+      "FRD-14"
+    ],
+    "br_acceptance_ids": [
+      "FRD-37"
+    ],
+    "scope_out": [
+      "Structured request logging as a deliverable (SG-11)"
+    ]
+  },
+  "entities": [
+    {
+      "name": "Return a safe 503 JSON envelope when the database is unreachable",
+      "status": "unknown"
+    }
+  ],
+  "approach": {
+    "program_design": "specs/design/program-design.md",
+    "canvas": "specs/design/reasons-canvas.md",
+    "amendment": null
+  },
+  "structure": {
+    "owned_files": [
+      "backend/src/types/models.py",
+      "backend/src/main.py"
+    ],
+    "layer": "backend"
+  },
+  "operations": {
+    "pending": false,
+    "files": [
+      "backend/src/api/error_handlers.py",
+      ") with no stack trace/class name/path, when ",
+      "backend/src/types/models.py",
+      "backend/src/main.py",
+      "backend/tests/integration/test_error_handling.py"
+    ],
+    "text": "1. Create `backend/src/api/error_handlers.py` — global exception handler returning a 503 `ErrorBody` (`{\"error\": ...}`) with no stack trace/class name/path, when `check_db_reachable()` fails.\n2. Extend `backend/src/types/models.py` — reuse `ErrorBody` (already added by E6-S1's health work).\n3. Extend `backend/src/main.py` — register the global exception handler.\n4. Add `backend/tests/integration/test_error_handling.py` covering AC1–AC3."
+  },
+  "safeguards": {
+    "ids": [
+      "SG-11"
+    ],
+    "none": false
+  },
+  "tests": {
+    "matrix_ids": [
+      "VM-033",
+      "VM-034",
+      "VM-035"
+    ],
+    "case_ids": [
+      "VM-033",
+      "VM-034",
+      "VM-035"
+    ],
+    "layers": [
+      "api"
+    ]
+  },
+  "provenance": {
+    "story_path": "specs/stories/E6-S2.md",
+    "parents": [
+      "E6-S1"
+    ],
+    "tracker_key": null
+  }
+}

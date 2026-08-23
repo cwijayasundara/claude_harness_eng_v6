@@ -1,0 +1,12 @@
+[
+  {
+    "id": "FRD-38",
+    "text": "**M1 — Redirect works.** Done when: a signed-in member can create a link, be redirected by it, and sign out. (FR-1, FR-2, FR-3, FR-6, FR-7, NFR-2, NFR-3, NFR-5)",
+    "section": "7. Milestones"
+  },
+  {
+    "id": "FRD-39",
+    "text": "**M2 — Console works.** Done when: the list page shows only the member's links, delete returns 404 on that code, and `/healthz` reports the database. (FR-4, FR-5, FR-8, NFR-1, NFR-4, NFR-6)",
+    "section": "7. Milestones"
+  }
+]

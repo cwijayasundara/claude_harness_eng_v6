@@ -47,6 +47,12 @@ function parseTurn(line) {
     model: message.model || null,
     ts: row.timestamp ? Date.parse(row.timestamp) : null,
     sidechain: row.isSidechain === true,
+    // How many tools this turn called. A turn that called none did nothing but
+    // talk — and still paid a full context re-read. The share of those is what
+    // separates an expensive shaping dialogue from an expensive build.
+    tools: Array.isArray(message.content)
+      ? message.content.filter((b) => b && b.type === 'tool_use').length
+      : 0,
     usage,
   };
 }
@@ -158,7 +164,10 @@ function turnsFromSource(source) {
   const forced = typeof source === 'string' ? false : source.subagent === true;
   const turns = readTurns(file);
   if (!turns) return { turns: [], read: false };
-  return { turns: forced ? turns.map((t) => ({ ...t, sidechain: true })) : turns, read: true };
+  // `source` is carried so a caller can tell a session's legitimate COLD START
+  // (first turn, nothing to read) from a mid-session cache expiry. Pooled
+  // across files those look identical, and only the second one is waste.
+  return { turns: turns.map((t) => ({ ...t, source: file, sidechain: forced ? true : t.sidechain })), read: true };
 }
 
 /**
@@ -176,6 +185,38 @@ function loadTurns(sources) {
     turns.push(...loaded.turns);
   }
   return { turns, read };
+}
+
+/**
+ * Collapse a transcript's repeated block-lines into one turn each.
+ *
+ * A single assistant message is written once PER CONTENT BLOCK, and every line
+ * repeats the same usage object — which is why usage must be deduplicated. But
+ * `tools` is a property of the message, not of the line: the thinking block and
+ * each tool_use block arrive as separate lines, so keeping the first occurrence
+ * (as a plain dedup does) reads the thinking line and reports zero tools.
+ *
+ * That is not hypothetical. It made turnProfile report /auto as "5 turns, 100%
+ * toolless" for a phase that really ran 576 turns at 3% toolless, and it hid
+ * the largest cost driver in the harness: 695 of 835 turns issuing exactly ONE
+ * tool call, each paying a full ~116K context re-read.
+ *
+ * The unit fixtures never caught it because they put every content block in ONE
+ * line, a shape no real transcript has.
+ *
+ * Usage is taken from the first line and tool counts are SUMMED across lines.
+ */
+function mergeTurnsById(turns) {
+  const byKey = new Map();
+  for (const turn of turns) {
+    // Two agents can hold the same message id only across different files, so
+    // the source is part of the identity.
+    const key = `${turn.source || ''}|${turn.id}`;
+    const cur = byKey.get(key);
+    if (cur) { cur.tools += turn.tools || 0; continue; }
+    byKey.set(key, { ...turn, tools: turn.tools || 0 });
+  }
+  return [...byKey.values()];
 }
 
 /**
@@ -204,4 +245,6 @@ function usageFromTranscripts(sources, opts = {}) {
   };
 }
 
-module.exports = { usageFromTranscript, usageFromTranscripts, loadTurns, parseTurn, priceOf };
+module.exports = {
+  usageFromTranscript, usageFromTranscripts, loadTurns, mergeTurnsById, parseTurn, priceOf,
+};
