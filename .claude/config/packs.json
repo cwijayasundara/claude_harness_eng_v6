@@ -60,6 +60,7 @@
       "red-phase-command",
       "red-phase-ledger",
       "shell-lex",
+      "subagent-tool",
       "tdd",
       "test-discipline",
       "test-write-lock",
