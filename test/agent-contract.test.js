@@ -152,7 +152,19 @@ test('a root prefix must match a path SEGMENT, not a substring', () => {
 });
 
 test('a traversal path cannot escape the allow-list', () => {
+  // The original assertion was VACUOUS: path.posix.normalize collapses
+  // 'specs/reviews/../../backend/app.py' to 'backend/app.py' first, and the
+  // allow-list then denies it on its own merits — so the traversal branch
+  // never executed and could be deleted with the whole file still green.
+  // These cases actually reach it: they normalize to a path OUTSIDE the repo,
+  // which no allow-list or deny-list can rule on.
   assert.equal(writeDecision(REVIEWER, 'specs/reviews/../../backend/app.py').allow, false);
+  for (const escape of ['../outside.py', '../../etc/passwd', 'specs/../../x.js', '..']) {
+    const d = writeDecision(REVIEWER, escape);
+    assert.equal(d.allow, false, `${escape} must be refused`);
+    assert.match(d.reason, /escapes the project/,
+      `${escape} must be refused BY THE TRAVERSAL GUARD, not incidentally by the allow-list`);
+  }
 });
 
 // ---- the shipped contracts encode the ownership the prompts claim ----
