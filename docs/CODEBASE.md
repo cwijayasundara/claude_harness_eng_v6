@@ -13,8 +13,8 @@ _Source: `README.md`_
 
 | Metric | Value |
 |---|---|
-| Indexed files | 482 |
-| Graph edges | 2228 |
+| Indexed files | 497 |
+| Graph edges | 2319 |
 | Concept pages | 20 |
 | Wiki cluster pages | 20 |
 
@@ -35,14 +35,14 @@ npm run ask -- "..."     # ask the codebase
 |---|---|---|
 | `test/helpers/hook-fixture.js` | 25 | 0 |
 | `test/helpers/skill-corpus.js` | 25 | 0 |
-| `test/e2e/helpers/claude-runner.js` | 17 | 0 |
+| `test/e2e/helpers/claude-runner.js` | 18 | 0 |
 | `test/e2e/helpers/project-suite.js` | 9 | 0 |
 | `test/helpers/pre-commit-fixtures.js` | 9 | 0 |
 | `symphony_clone/src/orchestrator/scheduler.js` | 7 | 6 |
+| `test/e2e/helpers/fresh-project.js` | 6 | 1 |
 | `test/helpers/pack-membership.js` | 6 | 0 |
 | `symphony_clone/src/config.js` | 5 | 0 |
 | `symphony_clone/src/orchestrator/workspace-manager.js` | 5 | 0 |
-| `test/e2e/helpers/fresh-project.js` | 5 | 0 |
 | `test/helpers/record-run-fixture.js` | 5 | 0 |
 | `test/e2e/full-auto-output/src/server.js` | 4 | 1 |
 
@@ -68,13 +68,13 @@ npm run ask -- "..."     # ask the codebase
 - [test/accessibility-contract.test.js](specs/brownfield/wiki/concepts/test__accessibility-contract.test.js.md)
 - [test/adversarial-fixtures-contract.test.js](specs/brownfield/wiki/concepts/test__adversarial-fixtures-contract.test.js.md)
 - [test/adversarial-live-e2e-contract.test.js](specs/brownfield/wiki/concepts/test__adversarial-live-e2e-contract.test.js.md)
+- [test/agent-contract.test.js](specs/brownfield/wiki/concepts/test__agent-contract.test.js.md)
 - [test/agent-readiness-wiring-contract.test.js](specs/brownfield/wiki/concepts/test__agent-readiness-wiring-contract.test.js.md)
 - [test/agent-readiness.test.js](specs/brownfield/wiki/concepts/test__agent-readiness.test.js.md)
+- [test/agent-write-scope-hook.test.js](specs/brownfield/wiki/concepts/test__agent-write-scope-hook.test.js.md)
+- [test/agent-write-scope-wiring.test.js](specs/brownfield/wiki/concepts/test__agent-write-scope-wiring.test.js.md)
 - [test/amendment-provenance-check.test.js](specs/brownfield/wiki/concepts/test__amendment-provenance-check.test.js.md)
 - [test/approve-fixtures.test.js](specs/brownfield/wiki/concepts/test__approve-fixtures.test.js.md)
-- [test/approved-fixtures-gate.test.js](specs/brownfield/wiki/concepts/test__approved-fixtures-gate.test.js.md)
-- [test/archive-state.test.js](specs/brownfield/wiki/concepts/test__archive-state.test.js.md)
-- [test/artifact-eval-tier.test.js](specs/brownfield/wiki/concepts/test__artifact-eval-tier.test.js.md)
 
 ## DeepWiki cluster pages
 

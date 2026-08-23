@@ -1,6 +1,6 @@
-# `test/e2e/helpers/` — 14 module(s)
+# `test/e2e/helpers/` — 16 module(s)
 
-14 module(s).
+16 module(s).
 
 ## Dependencies
 
@@ -12,6 +12,8 @@ flowchart LR
   n_js_test_e2e_helpers_app_runtime_test_js["app-runtime.test.js"]
   n_js_test_e2e_helpers_claude_runner_js["claude-runner.js"]
   n_js_test_e2e_helpers_claude_runner_test_js["claude-runner.test.js"]
+  n_js_test_e2e_helpers_e2e_workdir_js["e2e-workdir.js"]
+  n_js_test_e2e_helpers_e2e_workdir_test_js["e2e-workdir.test.js"]
   n_js_test_e2e_helpers_fresh_project_js["fresh-project.js"]
   n_js_test_e2e_helpers_fresh_project_test_js["fresh-project.test.js"]
   n_js_test_e2e_helpers_grafana_checker_js["grafana-checker.js"]
@@ -26,6 +28,8 @@ flowchart LR
   n_js_test_e2e_helpers_claude_runner_test_js -->|imports| n_js_test_e2e_helpers_claude_runner_js
   n_js_test_e2e_helpers_fresh_project_test_js -->|imports| n_js_test_e2e_helpers_fresh_project_js
   n_js_test_e2e_helpers_specs_summary_test_js -->|imports| n_js_test_e2e_helpers_specs_summary_js
+  n_js_test_e2e_helpers_e2e_workdir_test_js -->|imports| n_js_test_e2e_helpers_e2e_workdir_js
+  n_js_test_e2e_helpers_fresh_project_js -->|imports| n_js_test_e2e_helpers_e2e_workdir_js
 ```
 
 ## `js:test/e2e/helpers/alter-and-verify.js`
@@ -63,7 +67,7 @@ flowchart LR
 
 ## `js:test/e2e/helpers/claude-runner.js`
 
-- fan-in: 17, fan-out: 4
+- fan-in: 18, fan-out: 4
 
 ### Symbols
   - `buildClaudeArgs` (function) → js:test/e2e/helpers/claude-runner.js:11 — `function buildClaudeArgs(model, budgetUsd, continueSession, pluginDir, sessionId, outputFormat)`
@@ -79,12 +83,31 @@ flowchart LR
 ### Symbols
   _(no extracted symbols)_
 
-## `js:test/e2e/helpers/fresh-project.js`
+## `js:test/e2e/helpers/e2e-workdir.js`
 
-- fan-in: 5, fan-out: 3
+- fan-in: 3, fan-out: 3
 
 ### Symbols
-  - `freshProject` (function) → js:test/e2e/helpers/fresh-project.js:13 — `function freshProject(projectDir, prdPath)`
+  - `e2eRoot` (function) → js:test/e2e/helpers/e2e-workdir.js:27 — `function e2eRoot()`
+  - `ensureDir` (function) → js:test/e2e/helpers/e2e-workdir.js:35 — `function ensureDir(dir)`
+  - `e2eWorkdir` (function) → js:test/e2e/helpers/e2e-workdir.js:47 — `function e2eWorkdir(name)`
+
+## `js:test/e2e/helpers/e2e-workdir.test.js`
+
+- fan-in: 0, fan-out: 6
+
+### Symbols
+  - `withEnv` (function) → js:test/e2e/helpers/e2e-workdir.test.js:11 — `function withEnv(value, fn)`
+
+## `js:test/e2e/helpers/fresh-project.js`
+
+- fan-in: 6, fan-out: 4
+
+### Symbols
+  - `allowedRoots` (function) → js:test/e2e/helpers/fresh-project.js:19 — `function allowedRoots()`
+  - `realish` (function) → js:test/e2e/helpers/fresh-project.js:25 — `function realish(p)`
+  - `assertDisposable` (function) → js:test/e2e/helpers/fresh-project.js:29 — `function assertDisposable(projectDir)`
+  - `freshProject` (function) → js:test/e2e/helpers/fresh-project.js:42 — `function freshProject(projectDir, prdPath)`
 
 ## `js:test/e2e/helpers/fresh-project.test.js`
 
@@ -129,7 +152,7 @@ flowchart LR
 
 ## `js:test/e2e/helpers/specs-summary.js`
 
-- fan-in: 2, fan-out: 2
+- fan-in: 3, fan-out: 2
 
 ### Symbols
   - `readOr` (function) → js:test/e2e/helpers/specs-summary.js:21 — `function readOr(projectDir, rel, fallback)`

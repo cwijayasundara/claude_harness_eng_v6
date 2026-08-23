@@ -57,7 +57,10 @@
     "test/e2e/smoke-output/server.js",
     "test/e2e/smoke-output/test/server.test.js",
     "test/e2e/vibe-output/calc.js",
-    "test/e2e/vibe-output/test/calc.test.js"
+    "test/e2e/vibe-output/test/calc.test.js",
+    "test/e2e/helpers/e2e-workdir.js",
+    "test/e2e/helpers/e2e-workdir.test.js",
+    "test/e2e/harness-front-half.test.js"
   ],
   "content_hashes": {
     "test/e2e/fixtures/adversarial/brownfield/file-ledger/src/ledger.js": "22e0a9ad51fcf3f4",
@@ -78,7 +81,7 @@
     "test/e2e/harness-pipeline-build.test.js": "dbda8abe4d5faeb7",
     "test/e2e/harness-pipeline.test.js": "c564628b7d86c191",
     "test/e2e/harness-plan-only.test.js": "bf3ce666525d40d2",
-    "test/e2e/harness-real-workflow.test.js": "eea4fc9134249e5f",
+    "test/e2e/harness-real-workflow.test.js": "1cd56ccf56386d56",
     "test/e2e/harness-selfheal-smoke.test.js": "1331e5c394a13891",
     "test/e2e/harness-semi-auto-run.test.js": "d8ab4c80f54e00d4",
     "test/e2e/harness-vibe-run.test.js": "4b8ea505613827df",
@@ -98,6 +101,6 @@
     "test/e2e/helpers/specs-summary.test.js": "c98815a76bfa0741",
     "test/e2e/run-pack.js": "9855df0e4f602b33"
   },
-  "content_hash": "86eb71943dcac0f5",
+  "content_hash": "252b80eb6f67f30f",
   "stale": false
 }

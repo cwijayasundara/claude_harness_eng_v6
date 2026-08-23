@@ -1,0 +1,11 @@
+{
+  "cluster_id": "test/agent-write-scope-wiring.test.js",
+  "member_paths": [
+    "test/agent-write-scope-wiring.test.js"
+  ],
+  "content_hashes": {
+    "test/agent-write-scope-wiring.test.js": "27e9442b485cb498"
+  },
+  "content_hash": "65ae6467c45bb43f",
+  "stale": false
+}

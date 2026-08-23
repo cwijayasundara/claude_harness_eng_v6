@@ -1,0 +1,11 @@
+{
+  "cluster_id": "test/agent-write-scope-hook.test.js",
+  "member_paths": [
+    "test/agent-write-scope-hook.test.js"
+  ],
+  "content_hashes": {
+    "test/agent-write-scope-hook.test.js": "d52b5ecd57ad8235"
+  },
+  "content_hash": "35683b826661a461",
+  "stale": false
+}

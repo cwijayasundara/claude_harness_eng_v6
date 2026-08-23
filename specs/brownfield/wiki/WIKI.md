@@ -3,7 +3,7 @@
 > Deterministic, always-current map rendered from `code-graph.json`. No LLM — re-rendered on graph change.
 
 - Producer: `vendored-ast`  ·  Language: `mixed`
-- Modules: 482  ·  Edges: 2228  ·  Clusters: 50
+- Modules: 497  ·  Edges: 2319  ·  Clusters: 50
 
 ## Hubs (most-depended-on)
 
@@ -11,14 +11,14 @@
 |---|---|---|
 | `js:test/helpers/hook-fixture.js` | 25 | 5 |
 | `js:test/helpers/skill-corpus.js` | 25 | 2 |
-| `js:test/e2e/helpers/claude-runner.js` | 17 | 4 |
+| `js:test/e2e/helpers/claude-runner.js` | 18 | 4 |
 | `js:test/e2e/helpers/project-suite.js` | 9 | 3 |
 | `js:test/helpers/pre-commit-fixtures.js` | 9 | 3 |
 | `js:symphony_clone/src/orchestrator/scheduler.js` | 7 | 6 |
+| `js:test/e2e/helpers/fresh-project.js` | 6 | 4 |
 | `js:test/helpers/pack-membership.js` | 6 | 2 |
 | `js:test/helpers/record-run-fixture.js` | 5 | 5 |
 | `js:symphony_clone/src/orchestrator/workspace-manager.js` | 5 | 4 |
-| `js:test/e2e/helpers/fresh-project.js` | 5 | 3 |
 
 ### Entry points (no inbound deps)
 
@@ -83,10 +83,10 @@ _(Hash-cached concept pages from `nav-concepts.js`.)_
 
 ## Pages
 
-- [`test/` — 338 module(s)](pages/01-test.md) — 338 module(s)
-- [`test/e2e/` — 18 module(s)](pages/02-test-e2e.md) — 18 module(s)
+- [`test/` — 350 module(s)](pages/01-test.md) — 350 module(s)
+- [`test/e2e/` — 19 module(s)](pages/02-test-e2e.md) — 19 module(s)
 - [`symphony_clone/src/orchestrator/` — 16 module(s)](pages/03-symphony_clone-src-orchestrator.md) — 16 module(s)
-- [`test/e2e/helpers/` — 14 module(s)](pages/04-test-e2e-helpers.md) — 14 module(s)
+- [`test/e2e/helpers/` — 16 module(s)](pages/04-test-e2e-helpers.md) — 16 module(s)
 - [`symphony_clone/test/` — 13 module(s)](pages/05-symphony_clone-test.md) — 13 module(s)
 - [`symphony_clone/src/tracker/` — 8 module(s)](pages/06-symphony_clone-src-tracker.md) — 8 module(s)
 - [`test/helpers/` — 6 module(s)](pages/07-test-helpers.md) — 6 module(s)

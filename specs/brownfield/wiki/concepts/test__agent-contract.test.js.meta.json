@@ -1,0 +1,11 @@
+{
+  "cluster_id": "test/agent-contract.test.js",
+  "member_paths": [
+    "test/agent-contract.test.js"
+  ],
+  "content_hashes": {
+    "test/agent-contract.test.js": "1adca5f94c602150"
+  },
+  "content_hash": "5553ea36788dd5ca",
+  "stale": false
+}

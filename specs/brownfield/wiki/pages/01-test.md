@@ -1,6 +1,6 @@
-# `test/` — 338 module(s)
+# `test/` — 350 module(s)
 
-338 module(s).
+350 module(s).
 
 ## Dependencies
 
@@ -9,8 +9,11 @@ flowchart LR
   n_js_test_accessibility_contract_test_js["accessibility-contract.test.js"]
   n_js_test_adversarial_fixtures_contract_test_js["adversarial-fixtures-contract.test.js"]
   n_js_test_adversarial_live_e2e_contract_test_js["adversarial-live-e2e-contract.test.js"]
+  n_js_test_agent_contract_test_js["agent-contract.test.js"]
   n_js_test_agent_readiness_wiring_contract_test_js["agent-readiness-wiring-contract.test.js"]
   n_js_test_agent_readiness_test_js["agent-readiness.test.js"]
+  n_js_test_agent_write_scope_hook_test_js["agent-write-scope-hook.test.js"]
+  n_js_test_agent_write_scope_wiring_test_js["agent-write-scope-wiring.test.js"]
   n_js_test_amendment_provenance_check_test_js["amendment-provenance-check.test.js"]
   n_js_test_approve_fixtures_test_js["approve-fixtures.test.js"]
   n_js_test_approved_fixtures_gate_test_js["approved-fixtures-gate.test.js"]
@@ -61,6 +64,7 @@ flowchart LR
   n_js_test_concurrency_gate_test_js["concurrency-gate.test.js"]
   n_js_test_constitution_invariants_test_js["constitution-invariants.test.js"]
   n_js_test_constraints_extract_test_js["constraints-extract.test.js"]
+  n_js_test_context_ceiling_test_js["context-ceiling.test.js"]
   n_js_test_context_compact_wrappers_test_js["context-compact-wrappers.test.js"]
   n_js_test_context_pack_test_js["context-pack.test.js"]
   n_js_test_context_store_test_js["context-store.test.js"]
@@ -81,11 +85,7 @@ flowchart LR
   n_js_test_custom_sensor_commit_test_js["custom-sensor-commit.test.js"]
   n_js_test_cycle_gate_wiring_contract_test_js["cycle-gate-wiring-contract.test.js"]
   n_js_test_cycle_gate_test_js["cycle-gate.test.js"]
-  n_js_test_deep_mutation_test_js["deep-mutation.test.js"]
-  n_js_test_deepwiki_determinism_test_js["deepwiki-determinism.test.js"]
-  n_js_test_diagnostics_parse_test_js["diagnostics-parse.test.js"]
-  n_js_test_diff_hunks_test_js["diff-hunks.test.js"]
-  n_js_test_dogfood_manifest_test_js["dogfood-manifest.test.js"]
+  n_js_test_dead_path_gate_cli_test_js["dead-path-gate-cli.test.js"]
 ```
 
 ## `js:test/accessibility-contract.test.js`
@@ -110,6 +110,13 @@ flowchart LR
 ### Symbols
   - `read` (function) → js:test/adversarial-live-e2e-contract.test.js:11 — `function read(relPath)`
 
+## `js:test/agent-contract.test.js`
+
+- fan-in: 0, fan-out: 6
+
+### Symbols
+  - `tempAgents` (function) → js:test/agent-contract.test.js:34 — `function tempAgents(agents)`
+
 ## `js:test/agent-readiness-wiring-contract.test.js`
 
 - fan-in: 0, fan-out: 6
@@ -128,6 +135,22 @@ flowchart LR
   - `allTrue` (function) → js:test/agent-readiness.test.js:33 — `allTrue = () => true`
   - `allFalse` (function) → js:test/agent-readiness.test.js:34 — `allFalse = () => false`
   - `graphWithHubs` (function) → js:test/agent-readiness.test.js:134 — `function graphWithHubs(hubs)`
+
+## `js:test/agent-write-scope-hook.test.js`
+
+- fan-in: 0, fan-out: 6
+
+### Symbols
+  - `run` (function) → js:test/agent-write-scope-hook.test.js:26 — `function run(payload, env = {})`
+  - `subagentWrite` (function) → js:test/agent-write-scope-hook.test.js:37 — `function subagentWrite(agentType, filePath, tool = 'Write')`
+
+## `js:test/agent-write-scope-wiring.test.js`
+
+- fan-in: 0, fan-out: 5
+
+### Symbols
+  - `preToolUseEntries` (function) → js:test/agent-write-scope-wiring.test.js:26 — `function preToolUseEntries()`
+  - `entriesRunning` (function) → js:test/agent-write-scope-wiring.test.js:31 — `function entriesRunning(hookFile)`
 
 ## `js:test/amendment-provenance-check.test.js`
 
@@ -523,6 +546,15 @@ flowchart LR
   - `byRule` (function) → js:test/constraints-extract.test.js:34 — `function byRule(obs, field, rule)`
   - `writeJson` (function) → js:test/constraints-extract.test.js:143 — `function writeJson(dir, name, data)`
 
+## `js:test/context-ceiling.test.js`
+
+- fan-in: 0, fan-out: 7
+
+### Symbols
+  - `transcriptAt` (function) → js:test/context-ceiling.test.js:94 — `function transcriptAt(ctx)`
+  - `runHook` (function) → js:test/context-ceiling.test.js:108 — `function runHook(payload)`
+  - `write` (function) → js:test/context-ceiling.test.js:113 — `write = (transcriptPath, filePath) => (`
+
 ## `js:test/context-compact-wrappers.test.js`
 
 - fan-in: 0, fan-out: 6
@@ -678,40 +710,13 @@ flowchart LR
 ### Symbols
   - `graphWith` (function) → js:test/cycle-gate.test.js:11 — `function graphWith(cycles)`
 
-## `js:test/deep-mutation.test.js`
-
-- fan-in: 0, fan-out: 6
-
-### Symbols
-  - `tmpProject` (function) → js:test/deep-mutation.test.js:13 — `function tmpProject()`
-  - `run` (function) → js:test/deep-mutation.test.js:19 — `function run(root, args = [])`
-
-## `js:test/deepwiki-determinism.test.js`
+## `js:test/dead-path-gate-cli.test.js`
 
 - fan-in: 0, fan-out: 7
 
 ### Symbols
-  - `tempProjectWithGraph` (function) → js:test/deepwiki-determinism.test.js:37 — `function tempProjectWithGraph()`
+  - `git` (function) → js:test/dead-path-gate-cli.test.js:18 — `function git(args, cwd)`
+  - `repoWithLiveHelper` (function) → js:test/dead-path-gate-cli.test.js:23 — `function repoWithLiveHelper()`
+  - `runGate` (function) → js:test/dead-path-gate-cli.test.js:46 — `function runGate(dir, args = [])`
 
-## `js:test/diagnostics-parse.test.js`
-
-- fan-in: 0, fan-out: 7
-
-### Symbols
-  _(no extracted symbols)_
-
-## `js:test/diff-hunks.test.js`
-
-- fan-in: 0, fan-out: 3
-
-### Symbols
-  _(no extracted symbols)_
-
-## `js:test/dogfood-manifest.test.js`
-
-- fan-in: 0, fan-out: 4
-
-### Symbols
-  _(no extracted symbols)_
-
-_+ 258 more module(s) not shown (page capped at 80)._
+_+ 270 more module(s) not shown (page capped at 80)._
