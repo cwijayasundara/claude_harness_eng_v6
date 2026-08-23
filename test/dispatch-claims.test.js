@@ -89,7 +89,12 @@ test('an unknown session on either side passes — over-blocking stalls the loop
   workClaim.claim(r, 'story:E1-S1', { session: 'lead-A' });
   assert.equal(checkClaims(r, ['E1-S1'], { sessionId: undefined }).allow, true);
   const r2 = root();
-  workClaim.claim(r2, 'story:E1-S1', {}); // session defaults to 'unknown'
+  // Explicitly unknown, not defaulted. claim() used to fall back to 'unknown'
+  // whenever no session was passed, which is what made this rule inert on the
+  // documented /auto path — it now resolves CLAUDE_CODE_SESSION_ID and the run
+  // receipts first. The invariant under test is unchanged: an owner the gate
+  // cannot identify must never block, because over-blocking stalls the loop.
+  workClaim.claim(r2, 'story:E1-S1', { session: 'unknown' });
   assert.equal(checkClaims(r2, ['E1-S1'], { sessionId: 'anyone' }).allow, true);
 });
 

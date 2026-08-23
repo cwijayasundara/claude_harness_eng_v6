@@ -154,3 +154,25 @@ test('work-claim.js list reports a live claim', () => {
   });
   assert.match(out, /story:E1-S1 held by/);
 });
+
+// The production path, which none of the tests above exercise: `/auto`'s prose
+// (skills/auto/references/section-4-4-agent-team-execution-step-4.md) runs
+//   node .claude/scripts/work-claim.js claim story:{id}
+// with NO --session. Every test above hands claim() a session programmatically,
+// a shape that command line can never produce. Claiming through the CLI is the
+// only way to catch a claim that records an owner the gate then skips.
+test('a claim made the way /auto actually makes it still blocks a foreign session', () => {
+  const dir = projectDir();
+  execFileSync('node', [CLI, 'claim', 'story:E1-S1', '--root', dir], {
+    encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: dir },
+  });
+
+  const [held] = workClaim.holders(dir);
+  assert.notEqual(held.session, 'unknown',
+    'a CLI claim must record a real owner: dispatch-claims skips an "unknown" owner, '
+    + 'so an unknown-owner claim is a claim the gate can never enforce');
+
+  const dup = runHook(dir, dispatch({ session_id: 'rogue-B' }));
+  assert.equal(dup.status, 2,
+    'a foreign session must be denied even when the claim came from the CLI with no --session');
+});

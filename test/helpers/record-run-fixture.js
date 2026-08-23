@@ -136,9 +136,11 @@ function runHook(projectDir, input, env) {
 // scripts/ copy fails to load and the hook silently pushes nothing.
 // phase-cost-core.js is here because phase-cost-persist.js requires it — the
 // attribution half that used to be reached back through the CLI.
+// run-command.js is here because record-run.js requires it — the command/lane
+// reading that used to sit inline in the hook.
 const HOOK_LIB_SCRIPTS = [
   'common.js', 'record-skills.js', 'agent-model.js', 'run-context.js', 'model-pricing.js',
-  'transcript-usage.js', 'phase-cost-core.js', 'phase-cost-persist.js',
+  'transcript-usage.js', 'phase-cost-core.js', 'phase-cost-persist.js', 'run-command.js',
 ];
 
 function copyHookLibFiles(hooksDir) {

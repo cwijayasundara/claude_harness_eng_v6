@@ -21,8 +21,9 @@ const fs = require('fs');
 const path = require('path');
 
 const {
-  costByPhase, aggregate, transcriptsFor, subagentTranscriptsFor, cacheProfile, turnProfile,
+  costByPhase, aggregate, transcriptsFor, subagentTranscriptsFor,
 } = require('../../../.claude/hooks/lib/phase-cost-core.js');
+const { cacheProfile, turnProfile } = require('../../../.claude/hooks/lib/phase-cost-profile.js');
 
 const E2E_DIR = path.join(__dirname, '..');
 const BASELINE_DIR = path.join(E2E_DIR, 'baselines');

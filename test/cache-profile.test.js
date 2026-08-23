@@ -10,7 +10,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { test } = require('node:test');
-const { cacheProfile } = require('../.claude/hooks/lib/phase-cost-core.js');
+const { cacheProfile } = require('../.claude/hooks/lib/phase-cost-profile.js');
 
 const T0 = Date.parse('2026-08-21T16:20:00.000Z');
 

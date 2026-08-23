@@ -57,6 +57,7 @@ const { refreshNavigation } = require('./navigation-refresh');
 const secBaseline = require('./scaffold-security-baseline');
 const { writeProjectFiles } = require('./scaffold-project-files');
 const { bootstrap: bootstrapProject, render: renderBootstrap } = require('./scaffold-bootstrap');
+const { telemetryEnabled, enableTelemetry } = require('./scaffold-telemetry');
 
 const OUTPUT_DIRS = [
   'specs/brd', 'specs/stories', 'specs/design/mockups', 'specs/design/amendments',
@@ -86,36 +87,6 @@ function parseArgs(argv) {
     else fail(`unknown argument: ${key}`);
   }
   return opts;
-}
-
-function telemetryEnabled(profile, opts = {}) {
-  if (typeof opts.telemetry === 'boolean') return opts.telemetry;
-  return profile.telemetry === true;
-}
-
-// Telemetry env is opt-in. When enabled, these keys are injected into the copied
-// settings, not the source. HARNESS_USER stays unset on purpose — record-run
-// derives it from git user.name / the OS user.
-const TELEMETRY_ENV = {
-  CLAUDE_CODE_ENABLE_TELEMETRY: '1',
-  OTEL_METRICS_EXPORTER: 'otlp',
-  OTEL_LOGS_EXPORTER: 'otlp',
-  OTEL_EXPORTER_OTLP_PROTOCOL: 'grpc',
-  OTEL_EXPORTER_OTLP_ENDPOINT: 'http://localhost:4317',
-  OTEL_LOG_TOOL_DETAILS: '1',
-  HARNESS_PUSHGATEWAY_URL: 'http://localhost:9091',
-};
-
-// Merge TELEMETRY_ENV into the copied settings files (interactive + headless).
-// Existing env keys are preserved.
-function enableTelemetry(target) {
-  for (const file of ['settings.json', 'settings.auto.json']) {
-    const p = path.join(target, '.claude', file);
-    if (!fs.existsSync(p)) continue;
-    const settings = JSON.parse(fs.readFileSync(p, 'utf8'));
-    settings.env = { ...(settings.env || {}), ...TELEMETRY_ENV };
-    fs.writeFileSync(p, `${JSON.stringify(settings, null, 2)}\n`);
-  }
 }
 
 function requireTemplate(src, rel) {

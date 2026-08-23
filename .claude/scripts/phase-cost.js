@@ -19,8 +19,9 @@ const fs = require('fs');
 const path = require('path');
 const {
   segmentsFromTranscript, costByPhase, commandOf, aggregate,
-  subagentTranscriptsFor, transcriptsFor, cacheProfile, turnProfile, FREEFORM,
+  subagentTranscriptsFor, transcriptsFor, FREEFORM,
 } = require('../hooks/lib/phase-cost-core.js');
+const { cacheProfile, turnProfile } = require('../hooks/lib/phase-cost-profile.js');
 
 function pad(value, width, left = false) {
   const s = String(value);

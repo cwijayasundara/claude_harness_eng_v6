@@ -27,6 +27,30 @@
 
 const fs = require('fs');
 const path = require('path');
+const { liveSessionId } = require('../hooks/lib/live-session.js');
+
+/**
+ * Who is making this claim.
+ *
+ * The env var is CLAUDE_CODE_SESSION_ID. `CLAUDE_SESSION_ID` — which this read
+ * used on its own — is a skill string substitution, not an environment
+ * variable, so it is never set in a Bash subprocess and every CLI claim
+ * recorded `unknown`. dispatch-claims.js skips an `unknown` owner by design
+ * (it cannot prove a duplicate against an owner it does not know), so the
+ * cross-session rule was inert on the only path /auto actually uses. The
+ * legacy name is kept as a fallback, and the run receipts are the last
+ * resort — they name the live session when no env var does.
+ *
+ * `unknown` remains a legitimate answer. It fails OPEN: an unenforceable
+ * claim must never become a block on evidence nobody has.
+ */
+function resolveSession(root, explicit) {
+  return explicit
+    || process.env.CLAUDE_CODE_SESSION_ID
+    || process.env.CLAUDE_SESSION_ID
+    || liveSessionId(root)
+    || 'unknown';
+}
 
 // The TTL exists only so a CRASHED run cannot block its group forever, not as a
 // normal expiry — so it must clear the longest LIVE implementer comfortably.
@@ -71,7 +95,7 @@ function claim(root, key, opts = {}) {
   const now = opts.now == null ? Date.now() : opts.now;
   const record = {
     key,
-    session: opts.session || process.env.CLAUDE_SESSION_ID || 'unknown',
+    session: resolveSession(root, opts.session),
     note: opts.note || null,
     claimed_at: now,
     // Who made the claim. dispatch-gate.js releases only its OWN records, so an

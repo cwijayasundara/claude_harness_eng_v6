@@ -63,6 +63,7 @@
       "sensor-schema",
       "sensor-tier",
       "shell-lex",
+      "run-command",
       "simulate",
       "story-bundle",
       "story-sync",
@@ -454,6 +455,7 @@
         "transcript-usage",
         "phase-cost-core",
         "phase-cost-persist",
+        "phase-cost-profile",
         "withhold-verdicts"
       ],
       "hook": [
@@ -491,6 +493,7 @@
         "scaffold-copy",
         "scaffold-encoding",
         "scaffold-render",
+        "scaffold-telemetry",
         "scaffold-upgrade",
         "scaffold-vertical-status"
       ],

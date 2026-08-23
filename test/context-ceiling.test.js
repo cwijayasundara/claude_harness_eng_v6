@@ -158,15 +158,22 @@ test('the hook allows an evaluator verdict past the hard ceiling', () => {
   assert.equal(r.status, 0, 'refusing evidence would break a downstream gate, not save money');
 });
 
-test('the soft warning goes to STDOUT, the channel the model actually reads', () => {
-  // token-advisor.js documents the rule: exit-2 feedback MUST go on stderr, a
-  // `warn` goes to stdout. This assertion used to pin stderr, so it could not
-  // tell "warned" from "warned into a void" — and a subagent 50K past the soft
-  // ceiling did write a file and receive nothing.
+test('the soft warning is emitted as additionalContext, the model-facing channel', () => {
+  // This assertion has been wrong twice. It first pinned stderr, then plain
+  // stdout — neither reaches the model on an exit-0 PreToolUse hook, and each
+  // time the test read as coverage while a subagent 50K past the ceiling wrote
+  // a file and received nothing. The documented channel is
+  // hookSpecificOutput.additionalContext, so the assertion parses the payload
+  // rather than matching text anywhere in stdout: a bare message printed to
+  // stdout must NOT satisfy it.
   const r = runHook(write(subagentAt(SOFT_CEILING_TOKENS + 1), '/w/backend/src/auth.py'));
   assert.equal(r.status, 0, 'the soft tier advises, it does not refuse');
-  assert.match(r.stdout, /approaching/, 'an advisory on stderr with exit 0 never reaches the model');
   assert.equal(r.stderr, '', 'stderr is reserved for the exit-2 tier');
+
+  const payload = JSON.parse(r.stdout);
+  assert.equal(payload.hookSpecificOutput.hookEventName, 'PreToolUse');
+  assert.match(payload.hookSpecificOutput.additionalContext, /approaching/,
+    'the advisory has to be INSIDE additionalContext — anywhere else the model never sees it');
 });
 
 test('the hook ignores the main loop entirely — no agent_id means not a subagent', () => {

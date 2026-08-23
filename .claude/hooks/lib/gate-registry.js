@@ -54,6 +54,7 @@ const GATE_CATALOG = Object.freeze([
   { id: 'live-externals', order: 36, runsWithoutSource: true, run: packRun('gates-live-externals', 'checkLiveExternalsGate', 'verification') },
   { id: 'registry-names', order: 37, runsWithoutSource: true, run: packRun('gates-registry-names', 'checkRegistryNames', 'verification') },
   // source-only exit sits here in the runner
+  { id: 'length-caps', order: 38, runsWithoutSource: false, run: quality.checkLengthCaps },
   { id: 'refactor-purity', order: 40, runsWithoutSource: false, run: early.checkRefactorPurity },
   { id: 'layer-imports', order: 50, runsWithoutSource: false, run: early.checkLayers },
   { id: 'bounded-context-rules', order: 60, runsWithoutSource: false, run: early.checkContexts },

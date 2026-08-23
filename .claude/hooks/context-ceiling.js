@@ -47,13 +47,25 @@ function main() {
       hard: ceilingFrom(process.env.HARNESS_CONTEXT_HARD_CEILING),
     });
 
-    // Channel matters, and the harness has one rule for it (token-advisor.js:
-    // exit-2 feedback MUST go on stderr; a `warn` goes to stdout). The soft tier
-    // wrote to stderr on an exit-0 path, which the model never sees — confirmed
-    // live by a subagent 50K past the soft ceiling that wrote a file and
-    // received nothing. A warning on the wrong channel is not a warning.
+    // Channel matters, and an advisory has exactly one model-facing channel on
+    // an exit-0 PreToolUse hook: `hookSpecificOutput.additionalContext`
+    // (upstream changelog: "Added support for PreToolUse hooks to return
+    // additionalContext to the model", and a later fix for it being dropped).
+    // This warning has now been on two channels the model never reads — stderr
+    // with exit 0, then plain stdout, which surfaces to the USER in transcript
+    // mode. A subagent 50K past the soft ceiling wrote a file and received
+    // nothing, twice. Exit 2 + stderr stays correct for the hard tier, which is
+    // a refusal rather than an advisory.
     if (verdict.level === 'hard') { process.stderr.write(`${verdict.message}\n`); process.exit(2); }
-    if (verdict.level === 'soft') { process.stdout.write(`${verdict.message}\n`); process.exit(0); }
+    if (verdict.level === 'soft') {
+      process.stdout.write(`${JSON.stringify({
+        hookSpecificOutput: {
+          hookEventName: 'PreToolUse',
+          additionalContext: verdict.message,
+        },
+      })}\n`);
+      process.exit(0);
+    }
   } catch (_) { process.exit(0); }
   process.exit(0);
 }
